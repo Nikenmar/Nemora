@@ -1,0 +1,22 @@
+{
+  "name": "tauri-audio-spike",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:web": "vite --port 5183 --strictPort",
+    "build:web": "vite build",
+    "tauri": "tauri",
+    "spike": "tauri dev",
+    "bench:node": "node bench/node-baseline.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-fs": "^2",
+    "music-metadata": "^11.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "vite": "^6.1.1"
+  }
+}

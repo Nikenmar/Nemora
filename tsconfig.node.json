@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/common/*",
+    "src/types/*.d.ts"
+  ],
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "customConditions": [ "node" ],
+    "composite": true,
+    "types": [
+      "electron-vite/node"
+    ],
+    "paths": {
+      "@main/*": [ "./src/main/*" ], },
+    "noImplicitAny": true,
+    "useUnknownInCatchVariables": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true
+  }
+}

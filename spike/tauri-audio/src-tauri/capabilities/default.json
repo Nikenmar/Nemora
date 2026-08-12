@@ -1,0 +1,20 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Spike capability: read the user's music folder for the fs benchmark.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:resources:allow-close",
+    "fs:allow-read-file",
+    "fs:allow-open",
+    "fs:allow-read",
+    "fs:allow-seek",
+    "fs:allow-stat",
+    "fs:allow-fstat",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "**" }]
+    }
+  ]
+}

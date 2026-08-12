@@ -1,0 +1,2136 @@
+import blacklistFolders from '../core/blacklist/blacklistFolders';
+import blacklistSongs from '../core/blacklist/blacklistSongs';
+import { isFolderBlacklisted, isSongBlacklisted } from '../core/blacklist/isBlacklisted';
+import restoreBlacklistedFolders from '../core/blacklist/restoreBlacklistedFolder';
+import restoreBlacklistedSongs from '../core/blacklist/restoreBlacklistedSongs';
+import toggleBlacklistFolders from '../core/blacklist/toggleBlacklistFolders';
+import filterArtists from '../core/filters/filterArtists';
+import paginateData from '../core/filters/paginateData';
+import filterSongs from '../core/filters/filterSongs';
+import addSongsToPlaylist from '../core/playlists/addSongsToPlaylist';
+import { addToSongsHistory } from '../core/playlists/addToSongsHistory';
+import addArtworkToAPlaylist from '../core/playlists/addArtworkToAPlaylist';
+import addNewPlaylist from '../core/playlists/addNewPlaylist';
+import clearSongHistory from '../core/playlists/clearSongHistory';
+import exportPlaylist from '../core/playlists/exportPlaylist';
+import importPlaylist from '../core/playlists/importPlaylist';
+import { generateRandomId } from '../core/playlists/randomId';
+import removePlaylists from '../core/playlists/removePlaylists';
+import removeSongFromPlaylist from '../core/playlists/removeSongFromPlaylist';
+import renameAPlaylist from '../core/playlists/renameAPlaylist';
+import sendPlaylistData from '../core/playlists/sendPlaylistData';
+import { REDISCOVER_PLAYLIST_TEMPLATE } from '../core/playlists/playlistTemplates';
+import type { PlaylistsRepository } from '../core/playlists/playlistRepository';
+import toggleLikeSongs from '../core/playlists/toggleLikeSongs';
+import type { NetworkRepository } from '../core/net/repository';
+import type { LyricsRepository } from '../core/lyrics/repository';
+import { removeDefaultAppProtocolFromFilePath } from '../core/lyrics/pathUtils';
+import exportAppData from '../core/appdata/exportAppData';
+import importAppData from '../core/appdata/importAppData';
+import resetAppData from '../core/appdata/resetAppData';
+import type { AppDataRepository } from '../core/appdata/appDataRepository';
+import exportStatsData from '../core/transfer/exportStats';
+import importStatsData from '../core/transfer/importStats';
+import type { StatsTransferRepository } from '../core/transfer/statsTransferRepository';
+import { embeddedArtwork, pathArtwork, urlArtwork, type ArtworkSource } from '../core/artwork';
+import {
+  deleteSongsFromSystem as deleteCatalogSongsFromSystem,
+  getSongFromUnknownSource as getCatalogSongFromUnknownSource,
+  isPathWithin,
+  reconcileCatalog,
+  removeMusicFolder as removeCatalogMusicFolder,
+  removeSongsFromLibrary,
+  type CatalogRepository,
+  type CatalogState,
+  type PathBackedAudioData
+} from '../core/catalog';
+import { SUPPORTED_MUSIC_EXTENSIONS } from '../core/library/constants';
+import { canonicalPathKey, parentPath } from '../core/library/path';
+import { scanTraversal } from '../core/library/scanner';
+import { walkMusicTrees } from '../core/library/traversal';
+import type {
+  LibraryFileSystemPort,
+  LibraryRepository,
+  MetadataParserPort,
+  ScannedLibraryTrack,
+  TraversalResult
+} from '../core/library/types';
+import {
+  MetadataService,
+  type MetadataArtworkSource,
+  type MetadataRepository,
+  type MetadataUpdateResult
+} from '../core/metadata';
+// Leaf imports rather than the `../core/watchers` barrel: the barrel also
+// re-exports tauriWatcher.ts, which pulls the Tauri fs plugin into this
+// module's graph and therefore into every runtime unit test.
+import { LibraryWatcherManager } from '../core/watchers/watcherManager';
+import { internalWriteSuppression } from '../core/watchers/suppression';
+import type { LibraryWatcherRepository } from '../core/watchers/types';
+import refreshRediscover, { type RediscoverRepo } from '../core/rediscover/rediscover';
+import { dedupeListeningRows } from '../core/stats/mergeListeningData';
+import clearSearchHistoryResults from '../core/search/clearSearchHistoryResults';
+import type { SearchRepository } from '../core/search/repository';
+import runSearch from '../core/search/search';
+import {
+  getSongGuessrPools,
+  getSongGuessrRound,
+  searchSongGuessrCandidates,
+  type SongGuessrRepository
+} from '../core/songGuessr';
+import getMegaShuffleWeights, {
+  getMegaShuffleData,
+  type MegaShuffleRepo
+} from '../core/shuffle/megaShuffle';
+import sortAlbums from '../core/sort/sortAlbums';
+import sortArtists from '../core/sort/sortArtists';
+import sortFolders from '../core/sort/sortFolders';
+import sortGenres from '../core/sort/sortGenres';
+import sortSongs from '../core/sort/sortSongs';
+import toggleLikeArtists from '../core/playlists/toggleLikeArtists';
+import {
+  getDuelPair,
+  getDuelPairByIds,
+  recordDuelSkip,
+  selectDuelAnchorFromCandidates,
+  submitDuelResult,
+  type EloDuelsRepo
+} from '../core/stats/eloDuels';
+import collectStatsData, { type StatsDataRepo } from '../core/stats/getStatsData';
+import {
+  addTierlist,
+  removeTierlists,
+  saveTierlist,
+  sendTierlistData,
+  type TierlistsRepo
+} from '../core/tierlists/tierlists';
+// Imported leaf-first, not through `../core/import`: the barrel re-exports the
+// port factory, which pulls the Tauri plugins into this module's graph and
+// would drag them into every runtime unit test. These two modules are pure —
+// they take the port as an argument.
+import { detectNoraSource, type NoraSourceInventory } from '../core/import/detectNoraSource';
+import { importNoraProfile, type NoraImportReport } from '../core/import/importNora';
+import type { NoraImportPort } from '../core/import/noraImportRepository';
+import { CachedStores, createDefaultStoreFiles, type StoreDefaults } from '../stores';
+import type { StorePort } from '../contracts/store';
+import { NotPortedYetError } from '../api/errors';
+import type { RuntimeArtworkPaths } from './artwork';
+import type { RuntimeEventSink } from './events';
+import { RuntimeNotHydratedError } from './errors';
+import { generateStorageMetrics } from './storage';
+import type {
+  RuntimeDiscordActivity,
+  RuntimeFileServices,
+  RuntimeServices,
+  RuntimeSingleInstanceController,
+  RuntimeSystemServices
+} from './services';
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const logger = {
+  debug: (message: string, data?: unknown): void => console.debug(message, data),
+  info: (message: string, data?: unknown): void => console.info(message, data),
+  warn: (message: string, data?: unknown): void => console.warn(message, data),
+  error: (message: string, data?: unknown): void => console.error(message, data)
+};
+
+interface RuntimeSnapshots {
+  songs: SavableSongData[];
+  artists: SavableArtist[];
+  albums: SavableAlbum[];
+  genres: SavableGenre[];
+  playlists: SavablePlaylist[];
+  userData: UserData;
+  listeningData: SongListeningData[];
+  blacklist: Blacklist;
+  tierlists: SavableTierlist[];
+  cmrStats: CmrStatsData;
+  palettes: PaletteData[];
+}
+
+export interface NoraRuntimeOptions {
+  version: string;
+  artwork: RuntimeArtworkPaths;
+  events: RuntimeEventSink;
+  defaults?: StoreDefaults;
+  services?: RuntimeServices;
+}
+
+export class NoraRuntime {
+  private readonly cache: CachedStores;
+  private readonly artwork: RuntimeArtworkPaths;
+  private readonly events: RuntimeEventSink;
+  private readonly version: string;
+  private readonly services: RuntimeServices;
+  private snapshots: RuntimeSnapshots | undefined;
+  private retainedTraversal: TraversalResult | undefined;
+  private metadataController: MetadataService | undefined;
+  private songGuessrRepo: SongGuessrRepository | undefined;
+  private singleInstanceController: RuntimeSingleInstanceController | undefined;
+  private libraryWatcher: LibraryWatcherManager | undefined;
+  private startupSongCaptureActive = false;
+  private startupSong: PathBackedAudioData | undefined;
+  private readonly outsideLibrarySongs: PathBackedAudioData[] = [];
+
+  constructor(port: StorePort, options: NoraRuntimeOptions) {
+    this.cache = new CachedStores(
+      port,
+      options.defaults ?? createDefaultStoreFiles(options.version)
+    );
+    this.artwork = options.artwork;
+    this.events = options.events;
+    this.version = options.version;
+    this.services = options.services ?? {};
+  }
+
+  async hydrate(): Promise<void> {
+    await this.cache.hydrate();
+    this.snapshots = {
+      songs: this.cache.get('songs'),
+      artists: this.cache.get('artists'),
+      albums: this.cache.get('albums'),
+      genres: this.cache.get('genres'),
+      playlists: this.cache.get('playlists'),
+      userData: this.cache.get('userData'),
+      // Deduped on every read, matching Electron's getListeningData
+      // (src/main/filesystem.ts:516). Profiles from builds before 3.3.0 hold
+      // several rows per song, and summing them inflated the statistics page
+      // more than sevenfold. This is the single read point, so fixing it here
+      // fixes every consumer.
+      listeningData: dedupeListeningRows(this.cache.get('listeningData')),
+      blacklist: this.cache.get('blacklist'),
+      tierlists: this.cache.get('tierlists'),
+      cmrStats: this.cache.get('cmrStats'),
+      palettes: this.cache.get('palettes')
+    };
+    if (this.services.singleInstance && !this.singleInstanceController) {
+      this.singleInstanceController = await this.services.singleInstance.create({
+        openAuthUri: (uri) => this.events.openAuthUri?.(uri),
+        openAudioFile: (path) => this.routeOpenedAudioFile(path)
+      });
+    }
+  }
+
+  isHydrated(): boolean {
+    return this.snapshots !== undefined;
+  }
+
+  private state(): RuntimeSnapshots {
+    if (!this.snapshots) throw new RuntimeNotHydratedError();
+    return this.snapshots;
+  }
+
+  private songsOutsideLibrary(): AudioPlayerData[] {
+    return [...(this.services.getSongsOutsideLibrary?.() ?? []), ...this.outsideLibrarySongs];
+  }
+
+  private setSnapshot<Key extends keyof RuntimeSnapshots>(
+    key: Key,
+    store: Key,
+    value: RuntimeSnapshots[Key]
+  ): void {
+    const next = clone(value);
+    this.state()[key] = next;
+    this.cache.set(store, next);
+  }
+
+  async flush(): Promise<void> {
+    this.state();
+    await this.cache.flush();
+  }
+
+  private selectedPalette(paletteId?: string): PaletteData | undefined {
+    return paletteId
+      ? this.state().palettes.find((palette) => palette.paletteId === paletteId)
+      : undefined;
+  }
+
+  private isSongBlacklisted(songId: string, songPath: string): boolean {
+    return isSongBlacklisted(this.blacklistRepository(), songId, songPath);
+  }
+
+  private artworkSource(value: string): ArtworkSource {
+    const localPath = this.artwork.localPath?.(value);
+    if (localPath) return pathArtwork(localPath);
+    return /^(?:https?|nora|asset):/iu.test(value) ? urlArtwork(value) : pathArtwork(value);
+  }
+
+  private requireArtworkService() {
+    const service = this.services.artwork;
+    if (!service) throw new NotPortedYetError('artwork service');
+    return service;
+  }
+
+  private requireMetadataFile() {
+    const service = this.services.metadata;
+    if (!service) throw new NotPortedYetError('metadata file service');
+    return service;
+  }
+
+  private metadataRepository(): MetadataRepository {
+    return {
+      getCatalog: () =>
+        clone({
+          songs: this.state().songs,
+          artists: this.state().artists,
+          albums: this.state().albums,
+          genres: this.state().genres
+        }),
+      commitCatalog: (catalog) => {
+        this.setSnapshot('songs', 'songs', catalog.songs);
+        this.setSnapshot('artists', 'artists', catalog.artists);
+        this.setSnapshot('albums', 'albums', catalog.albums);
+        this.setSnapshot('genres', 'genres', catalog.genres);
+      },
+      createId: generateRandomId,
+      file: {
+        read: (path) => this.requireMetadataFile().read(path),
+        write: (path, patch) => this.requireMetadataFile().write(path, patch),
+        healBlankPictureMime: (path) => this.requireMetadataFile().healBlankPictureMime(path)
+      },
+      getSongArtwork: (song) => this.artwork.song(song.songId, song.isArtworkAvailable),
+      replaceSongArtwork: async (songId, source?: MetadataArtworkSource) => {
+        const service = this.requireArtworkService();
+        if (!source) {
+          await service.removeStoredArtwork(songId);
+          return this.artwork.song(songId, false);
+        }
+        const artworkSource =
+          source.kind === 'path'
+            ? this.artworkSource(source.path)
+            : embeddedArtwork(source.picture.bytes, source.picture.mimeType);
+        const paths = await service.storeArtworks(songId, 'songs', artworkSource);
+        if (paths.isDefaultArtwork) throw new Error(`Failed to store artwork for song ${songId}.`);
+        return paths;
+      },
+      createTemporaryArtwork: async (path) => {
+        const localPath = await this.requireArtworkService().createTempArtwork(
+          this.artworkSource(path)
+        );
+        return localPath ? this.artwork.songFile(localPath) : undefined;
+      },
+      getUnknownSong: (path) =>
+        this.songsOutsideLibrary().find(
+          (song) =>
+            canonicalPathKey(removeDefaultAppProtocolFromFilePath(song.path)) ===
+            canonicalPathKey(removeDefaultAppProtocolFromFilePath(path))
+        ),
+      updateUnknownSong: (songId, value) => {
+        const song = this.songsOutsideLibrary().find((entry) => entry.songId === songId);
+        if (song) Object.assign(song, clone(value));
+      },
+      createPlayerData: (song) => {
+        const artists = (song.artists ?? []).map((reference) => {
+          const artist = this.state().artists.find(
+            (candidate) => candidate.artistId === reference.artistId
+          );
+          return {
+            artistId: reference.artistId,
+            name: artist?.name ?? reference.name,
+            artworkPath: this.artwork.artist(artist?.artworkName).artworkPath,
+            onlineArtworkPaths: artist?.onlineArtworkPaths
+          };
+        });
+        const artworkPath = this.artwork.song(song.songId, song.isArtworkAvailable).artworkPath;
+        return {
+          songId: song.songId,
+          title: song.title,
+          artists,
+          duration: song.duration,
+          artwork: artworkPath,
+          artworkPath,
+          path: this.artwork.songFile(song.path),
+          isAFavorite: song.isAFavorite,
+          album: song.album,
+          paletteData: this.selectedPalette(song.paletteId),
+          isKnownSource: true,
+          isBlacklisted: this.isSongBlacklisted(song.songId, song.path)
+        };
+      },
+      emitDataUpdate: (type, ids) => this.events.dataUpdated(type, ids),
+      sendMessage: (messageCode, data) => this.events.message(messageCode, data)
+    };
+  }
+
+  private metadataService(): MetadataService {
+    this.metadataController ??= new MetadataService(this.metadataRepository());
+    return this.metadataController;
+  }
+
+  private playlistArtworkId(paths: ArtworkPaths): string {
+    const decoded = decodeURIComponent(paths.artworkPath);
+    const match = /([^/\\]+)\.webp(?:[?#].*)?$/iu.exec(decoded);
+    if (!match) throw new Error(`Unable to identify stored playlist artwork: ${paths.artworkPath}`);
+    return match[1];
+  }
+
+  private playlistRepository(): PlaylistsRepository {
+    return {
+      getPlaylists: (ids) => {
+        const playlists = this.state().playlists;
+        return ids && ids.length > 0
+          ? playlists.filter((playlist) => ids.includes(playlist.playlistId))
+          : playlists;
+      },
+      setPlaylists: (value) => this.setSnapshot('playlists', 'playlists', value),
+      getSongs: () => this.state().songs,
+      setSongs: (value) => this.setSnapshot('songs', 'songs', value),
+      getArtists: () => this.state().artists,
+      setArtists: (value) => this.setSnapshot('artists', 'artists', value),
+      getBlacklist: () => this.state().blacklist,
+      setBlacklist: (value) => this.setSnapshot('blacklist', 'blacklist', value),
+      storePlaylistArtwork: (id, artworkPath) =>
+        this.requireArtworkService().storeArtworks(
+          id,
+          'playlist',
+          artworkPath ? this.artworkSource(artworkPath) : undefined
+        ),
+      removePlaylistArtwork: (paths) =>
+        this.requireArtworkService().removeStoredArtwork(this.playlistArtworkId(paths)),
+      getPlaylistArtworkPath: (id, available) => this.artwork.playlist(id, available),
+      getSongArtworkPath: (id, available) => this.artwork.song(id, available),
+      getArtistArtworkPath: (name) => this.artwork.artist(name),
+      resetArtworkCache: () => undefined,
+      addAFavoriteToLastFM: (title, artists) => {
+        void import('../core/net/lastFm/sendFavoritesDataToLastFM')
+          .then(({ addAFavoriteToLastFM }) =>
+            addAFavoriteToLastFM(this.networkRepository(), title, artists)
+          )
+          .catch((error: unknown) => logger.warn('Failed to mirror a favorite to Last.fm.', error));
+      },
+      removeAFavoriteFromLastFM: (title, artists) => {
+        void import('../core/net/lastFm/sendFavoritesDataToLastFM')
+          .then(({ removeAFavoriteFromLastFM }) =>
+            removeAFavoriteFromLastFM(this.networkRepository(), title, artists)
+          )
+          .catch((error: unknown) =>
+            logger.warn('Failed to remove a favorite from Last.fm.', error)
+          );
+      },
+      emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
+      sendMessage: (code, data) => this.events.message(code, data)
+    };
+  }
+
+  private blacklistRepository() {
+    return {
+      getBlacklist: () => this.state().blacklist,
+      setBlacklist: (value: Blacklist) => this.setSnapshot('blacklist', 'blacklist', value),
+      getSongInfo: (ids: string[]) => Promise.resolve(this.getSongInfo(ids)),
+      emitDataUpdate: (type: DataUpdateEventTypes, data?: string[], message?: string) =>
+        this.events.dataUpdated(type, data, message),
+      sendMessage: (code: MessageCodes, data?: MessageToRendererData) =>
+        this.events.message(code, data)
+    };
+  }
+
+  private searchRepository(): SearchRepository {
+    return {
+      getSongs: () => this.state().songs,
+      getArtists: () => this.state().artists,
+      getAlbums: () => this.state().albums,
+      getGenres: () => this.state().genres,
+      getPlaylists: () => this.state().playlists,
+      getListeningData: () => this.state().listeningData,
+      getSongBlacklist: () => this.state().blacklist.songBlacklist,
+      getRecentSearches: () => this.state().userData.recentSearches,
+      setRecentSearches: (recentSearches) => this.saveUserData('recentSearches', recentSearches),
+      getSongArtworkPaths: (id, available) => this.artwork.song(id, available),
+      getArtistArtworkPaths: (name) => this.artwork.artist(name),
+      getAlbumArtworkPaths: (name) => this.artwork.album(name),
+      getPlaylistArtworkPaths: (id, available) => this.artwork.playlist(id, available),
+      notifyDataUpdated: (channel) => this.events.dataUpdated(channel as DataUpdateEventTypes),
+      log: logger
+    };
+  }
+
+  private networkRepository(): NetworkRepository {
+    return {
+      getSongs: () => this.state().songs,
+      getAlbums: () => this.state().albums,
+      getArtists: () => this.state().artists,
+      setArtists: (value) => this.setSnapshot('artists', 'artists', value),
+      getUserData: () => this.state().userData,
+      getSongsOutsideLibrary: () => this.songsOutsideLibrary(),
+      getBlacklist: () => this.state().blacklist,
+      getSongArtworkPath: (id, available) => this.artwork.song(id, available),
+      getArtistArtworkPath: (name) => this.artwork.artist(name),
+      getAlbumArtworkPath: (name) => this.artwork.album(name),
+      getSelectedPaletteData: (id) => this.selectedPalette(id),
+      generatePalette: async (imageUrl) => {
+        const palette = await this.services.palette?.generate(urlArtwork(imageUrl));
+        if (!palette) throw new Error('Failed to generate an artwork palette.');
+        return palette;
+      },
+      decrypt: async (encrypted) => {
+        if (!this.services.decrypt) {
+          throw new NotPortedYetError('Electron safeStorage decryption');
+        }
+        return this.services.decrypt(encrypted);
+      },
+      emitDataUpdate: (type, data) => this.events.dataUpdated(type, data)
+    };
+  }
+
+  private lyricsRepository(): LyricsRepository {
+    return {
+      getUserData: () => this.state().userData,
+      readEmbeddedLyrics: async (path) => {
+        if (!this.services.readEmbeddedLyrics) {
+          throw new NotPortedYetError('embedded lyrics reader');
+        }
+        return this.services.readEmbeddedLyrics(path);
+      },
+      writeEmbeddedLyrics: async (path, tags) => {
+        if (!this.services.writeEmbeddedLyrics) {
+          throw new NotPortedYetError('embedded lyrics writer');
+        }
+        await this.services.writeEmbeddedLyrics(path, tags);
+      },
+      decrypt: async (encrypted) => {
+        if (!this.services.decrypt) {
+          throw new NotPortedYetError('Electron safeStorage decryption');
+        }
+        return this.services.decrypt(encrypted);
+      },
+      searchUnsyncedLyrics: (query) =>
+        this.services.searchUnsyncedLyrics?.(query) ?? Promise.resolve(undefined),
+      sendMessage: ({ messageCode, data }) => this.events.message(messageCode, data),
+      emitDataUpdate: (type, data) => this.events.dataUpdated(type, data)
+    };
+  }
+
+  private requireFiles(): RuntimeFileServices {
+    const files = this.services.files;
+    if (!files) throw new NotPortedYetError('runtime file services');
+    return files;
+  }
+
+  private requireSystem(): RuntimeSystemServices {
+    const system = this.services.system;
+    if (!system) throw new NotPortedYetError('runtime system services');
+    return system;
+  }
+
+  private appDataRepository(): AppDataRepository {
+    const files = this.requireFiles();
+    return {
+      getSongsData: () => this.state().songs,
+      setSongsData: (value) => this.setSnapshot('songs', 'songs', value),
+      getPaletteData: () => this.state().palettes,
+      setPaletteData: (value) => this.setSnapshot('palettes', 'palettes', value),
+      getArtistsData: () => this.state().artists,
+      setArtistsData: (value) => this.setSnapshot('artists', 'artists', value),
+      getAlbumsData: () => this.state().albums,
+      setAlbumsData: (value) => this.setSnapshot('albums', 'albums', value),
+      getGenresData: () => this.state().genres,
+      setGenresData: (value) => this.setSnapshot('genres', 'genres', value),
+      getPlaylistData: (ids) =>
+        ids && ids.length > 0
+          ? this.state().playlists.filter((playlist) => ids.includes(playlist.playlistId))
+          : this.state().playlists,
+      setPlaylistData: (value) => this.setSnapshot('playlists', 'playlists', value),
+      getUserData: () => this.state().userData,
+      saveUserData: (value) => this.setSnapshot('userData', 'userData', value),
+      getBlacklistData: () => this.state().blacklist,
+      setBlacklist: (value) => this.setSnapshot('blacklist', 'blacklist', value),
+      getListeningData: () => this.state().listeningData,
+      saveListeningData: (value) => this.setSnapshot('listeningData', 'listeningData', value),
+      getCmrStatsData: () => this.state().cmrStats,
+      setCmrStatsData: (value) => this.setSnapshot('cmrStats', 'cmrStats', value),
+      profilePath: (...segments) => files.profilePath(...segments),
+      readTextFile: (path) => files.readTextFile(path),
+      readDir: (path) => files.readDir(path),
+      writeTextFileAtomic: (path, contents) => files.writeTextFileAtomic(path, contents),
+      makeDir: (path, options) => files.makeDir(path, options),
+      copyFile: (source, destination) => files.copyFile(source, destination),
+      remove: (path, options) => files.remove(path, options),
+      sendMessage: (code, data) => this.events.message(code, data),
+      restartApp: (reason, force) => this.services.restartApp?.(reason, force),
+      logger
+    };
+  }
+
+  private statsTransferRepository(): StatsTransferRepository {
+    const files = this.requireFiles();
+    return {
+      getSongsData: () => this.state().songs,
+      getListeningData: () => this.state().listeningData,
+      saveListeningData: (value) => this.setSnapshot('listeningData', 'listeningData', value),
+      getPlaylistData: (ids) =>
+        ids && ids.length > 0
+          ? this.state().playlists.filter((playlist) => ids.includes(playlist.playlistId))
+          : this.state().playlists,
+      setPlaylistData: (value) => this.setSnapshot('playlists', 'playlists', value),
+      getTierlistData: () => this.state().tierlists,
+      setTierlistData: (value) => this.setSnapshot('tierlists', 'tierlists', value),
+      getCmrStatsData: () => this.state().cmrStats,
+      setCmrStatsData: (value) => this.setSnapshot('cmrStats', 'cmrStats', value),
+      profilePath: (...segments) => files.profilePath(...segments),
+      readTextFile: (path) => files.readTextFile(path),
+      writeTextFileAtomic: (path, contents) => files.writeTextFileAtomic(path, contents),
+      exists: (path) => files.exists(path),
+      makeDir: (path, options) => files.makeDir(path, options),
+      copyFile: (source, destination) => files.copyFile(source, destination),
+      emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
+      appVersion: this.version,
+      logger
+    };
+  }
+
+  private mergeFolderStructures(incoming: FolderStructure[]): FolderStructure[] {
+    const current = clone(this.state().userData.musicFolders);
+    const mergeOne = (target: FolderStructure[], structure: FolderStructure): boolean => {
+      const key = canonicalPathKey(structure.path);
+      const existing = target.find((entry) => canonicalPathKey(entry.path) === key);
+      if (existing) {
+        existing.stats = structure.stats;
+        existing.noOfSongs = structure.noOfSongs;
+        for (const child of structure.subFolders) mergeOne(existing.subFolders, child);
+        return true;
+      }
+      for (const parent of target) {
+        const parentKey = canonicalPathKey(parent.path);
+        if (key.startsWith(`${parentKey}/`) && mergeOne(parent.subFolders, structure)) return true;
+      }
+      target.push(clone(structure));
+      return true;
+    };
+    for (const structure of incoming) mergeOne(current, structure);
+    return current;
+  }
+
+  private async commitScannedTracks(tracks: readonly ScannedLibraryTrack[]): Promise<string[]> {
+    const songs = clone(this.state().songs);
+    const artists = clone(this.state().artists);
+    const albums = clone(this.state().albums);
+    const genres = clone(this.state().genres);
+    const knownPaths = new Set(songs.map((song) => canonicalPathKey(song.path)));
+    const addedSongIds: string[] = [];
+    const newArtistIds: string[] = [];
+    const changedArtistIds: string[] = [];
+    const newAlbumIds: string[] = [];
+    const changedAlbumIds: string[] = [];
+    const newGenreIds: string[] = [];
+    const changedGenreIds: string[] = [];
+
+    for (const track of tracks) {
+      const pathKey = canonicalPathKey(track.path);
+      if (knownPaths.has(pathKey)) continue;
+
+      const songId = generateRandomId();
+      const picture = track.metadata.pictures.find((entry) => entry.data);
+      const pictureFormat = picture?.format.toLocaleLowerCase('en-US');
+      const pictureMimeType = pictureFormat?.includes('/')
+        ? pictureFormat
+        : pictureFormat === 'jpg'
+          ? 'image/jpeg'
+          : pictureFormat
+            ? `image/${pictureFormat}`
+            : 'application/octet-stream';
+      const pictureSource = picture?.data
+        ? embeddedArtwork(new Uint8Array(picture.data), pictureMimeType)
+        : undefined;
+      const artworkPaths = await this.requireArtworkService().storeArtworks(
+        songId,
+        'songs',
+        pictureSource
+      );
+      const hasArtwork = !artworkPaths.isDefaultArtwork;
+      const artworkName = hasArtwork ? `${songId}.webp` : undefined;
+      const fileName = track.path.slice(
+        Math.max(track.path.lastIndexOf('/'), track.path.lastIndexOf('\\')) + 1
+      );
+      const extensionIndex = fileName.lastIndexOf('.');
+      const title =
+        track.metadata.common.title?.trim() ||
+        (extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName) ||
+        'Unknown Title';
+      const artistNames = track.metadata.common.artist
+        ?.split(',')
+        .map((name) => name.trim())
+        .filter(Boolean);
+      const albumArtistNames = track.metadata.common.albumArtist
+        ?.split(',')
+        .map((name) => name.trim())
+        .filter(Boolean);
+      const genreNames = track.metadata.common.genres.map((name) => name.trim()).filter(Boolean);
+      const albumTitle = track.metadata.common.album?.trim();
+      const rawArtists = artistNames?.map((name) => ({ name, artistId: '' }));
+      const rawAlbumArtists = albumArtistNames?.map((name) => ({ name, artistId: '' }));
+
+      const song: SavableSongData = {
+        songId,
+        title,
+        artists: rawArtists,
+        albumArtists: rawAlbumArtists,
+        duration: Number((track.metadata.format.duration ?? 0).toFixed(2)),
+        album: albumTitle ? { name: albumTitle, albumId: '' } : undefined,
+        genres: genreNames.map((name) => ({ name, genreId: '' })),
+        year: track.metadata.common.year,
+        isAFavorite: false,
+        isArtworkAvailable: hasArtwork,
+        path: track.path,
+        sampleRate: track.metadata.format.sampleRate,
+        bitrate: track.metadata.format.bitrate,
+        noOfChannels: track.metadata.format.numberOfChannels,
+        discNo: track.metadata.common.discNumber,
+        trackNo: track.metadata.common.trackNumber,
+        addedDate: Date.now(),
+        createdDate: track.createdDate,
+        modifiedDate: track.modifiedDate
+      };
+
+      const albumPeople = rawAlbumArtists?.length ? rawAlbumArtists : (rawArtists ?? []);
+      let album = albumTitle ? albums.find((entry) => entry.title === albumTitle) : undefined;
+      if (albumTitle) {
+        if (album) {
+          album.songs.push({ songId, title });
+          changedAlbumIds.push(album.albumId);
+        } else {
+          album = {
+            albumId: generateRandomId(),
+            title: albumTitle,
+            artists: clone(albumPeople),
+            songs: [{ songId, title }],
+            year: song.year,
+            artworkName
+          };
+          albums.push(album);
+          newAlbumIds.push(album.albumId);
+        }
+        song.album = { albumId: album.albumId, name: album.title };
+      }
+
+      const resolveArtists = (names: string[] | undefined, albumOnly: boolean): SavableArtist[] =>
+        (names ?? []).map((name) => {
+          let artist = artists.find((entry) => entry.name === name);
+          if (!artist) {
+            artist = {
+              artistId: generateRandomId(),
+              name,
+              songs: [{ songId, title }],
+              albums: albumOnly && album ? [{ albumId: album.albumId, title: album.title }] : [],
+              artworkName,
+              isAFavorite: false
+            };
+            artists.push(artist);
+            newArtistIds.push(artist.artistId);
+          } else {
+            if (!albumOnly) artist.songs.push({ songId, title });
+            if (
+              albumOnly &&
+              album &&
+              !artist.albums?.some((entry) => entry.albumId === album?.albumId)
+            ) {
+              artist.albums ??= [];
+              artist.albums.push({ albumId: album.albumId, title: album.title });
+            }
+            changedArtistIds.push(artist.artistId);
+          }
+          return artist;
+        });
+
+      const songArtists = resolveArtists(artistNames, false);
+      const albumArtists = resolveArtists(albumArtistNames, true);
+      if (songArtists.length > 0) {
+        song.artists = songArtists.map(({ artistId, name }) => ({ artistId, name }));
+      }
+      if (albumArtists.length > 0) {
+        song.albumArtists = albumArtists.map(({ artistId, name }) => ({ artistId, name }));
+      }
+      if (album?.artists) {
+        for (const person of [...songArtists, ...albumArtists]) {
+          const unresolved = album.artists.find(
+            (entry) => entry.name === person.name && entry.artistId.length === 0
+          );
+          if (unresolved) unresolved.artistId = person.artistId;
+        }
+      }
+
+      const songGenres = genreNames.map((name) => {
+        let genre = genres.find((entry) => entry.name === name);
+        if (genre) {
+          genre.songs.push({ songId, title });
+          if (artworkName) genre.artworkName = artworkName;
+          changedGenreIds.push(genre.genreId);
+        } else {
+          genre = {
+            genreId: generateRandomId(),
+            name,
+            songs: [{ songId, title }],
+            artworkName
+          };
+          genres.push(genre);
+          newGenreIds.push(genre.genreId);
+        }
+        return genre;
+      });
+      song.genres = songGenres.map(({ genreId, name }) => ({ genreId, name }));
+
+      songs.push(song);
+      knownPaths.add(pathKey);
+      addedSongIds.push(songId);
+    }
+
+    if (addedSongIds.length === 0) return [];
+    this.setSnapshot('songs', 'songs', songs);
+    this.setSnapshot('artists', 'artists', artists);
+    this.setSnapshot('albums', 'albums', albums);
+    this.setSnapshot('genres', 'genres', genres);
+    this.events.dataUpdated('songs/newSong', addedSongIds);
+    if (newArtistIds.length > 0) this.events.dataUpdated('artists/newArtist', newArtistIds);
+    if (changedArtistIds.length > 0) this.events.dataUpdated('artists', changedArtistIds);
+    if (newAlbumIds.length > 0) this.events.dataUpdated('albums/newAlbum', newAlbumIds);
+    if (changedAlbumIds.length > 0) this.events.dataUpdated('albums', changedAlbumIds);
+    if (newGenreIds.length > 0) this.events.dataUpdated('genres/newGenre', newGenreIds);
+    if (changedGenreIds.length > 0) this.events.dataUpdated('genres', changedGenreIds);
+    return addedSongIds;
+  }
+
+  private libraryRepository(
+    addedSongIds: string[],
+    replaceFolderStructures = false
+  ): LibraryRepository {
+    return {
+      getKnownSongPaths: () => this.state().songs.map((song) => song.path),
+      commitFolderStructures: (structures) => {
+        const nextUserData = clone(this.state().userData);
+        nextUserData.musicFolders = replaceFolderStructures
+          ? clone(structures)
+          : this.mergeFolderStructures(structures);
+        this.setSnapshot('userData', 'userData', nextUserData);
+        this.events.dataUpdated('userData/musicFolder');
+      },
+      commitScanBatch: async (tracks) => {
+        addedSongIds.push(...(await this.commitScannedTracks(tracks)));
+      },
+      reportScanProgress: ({ completed, total }) =>
+        this.events.message('AUDIO_PARSING_PROCESS_UPDATE', { total, value: completed })
+    };
+  }
+
+  private catalogRepository(): CatalogRepository {
+    return {
+      getCatalogState: (): CatalogState => {
+        const state = this.state();
+        return clone({
+          songs: state.songs,
+          artists: state.artists,
+          albums: state.albums,
+          genres: state.genres,
+          playlists: state.playlists,
+          userData: state.userData,
+          listeningData: state.listeningData,
+          blacklist: state.blacklist,
+          tierlists: state.tierlists,
+          cmrStats: state.cmrStats
+        });
+      },
+      commitCatalogState: (next) => {
+        this.setSnapshot('songs', 'songs', next.songs);
+        this.setSnapshot('artists', 'artists', next.artists);
+        this.setSnapshot('albums', 'albums', next.albums);
+        this.setSnapshot('genres', 'genres', next.genres);
+        this.setSnapshot('playlists', 'playlists', next.playlists);
+        this.setSnapshot('userData', 'userData', next.userData);
+        this.setSnapshot('listeningData', 'listeningData', next.listeningData);
+        this.setSnapshot('blacklist', 'blacklist', next.blacklist);
+        this.setSnapshot('tierlists', 'tierlists', next.tierlists);
+        this.setSnapshot('cmrStats', 'cmrStats', next.cmrStats);
+      },
+      removeSongArtwork: async (songId) => {
+        await this.services.artwork?.removeStoredArtwork(songId);
+      },
+      removeDuelQueueReferences: (songIds) => this.services.removeDuelQueueReferences?.(songIds),
+      emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
+      sendMessage: (code, data) => this.events.message(code, data),
+      reportError: (error, context) =>
+        logger.error(`Catalog operation failed: ${context}`, { error })
+    };
+  }
+
+  private songGuessrRepository(): SongGuessrRepository {
+    if (this.songGuessrRepo) return this.songGuessrRepo;
+
+    let catalogSource: SavableSongData[] | undefined;
+    let availablePaths = new Set<string>();
+    const refreshAvailability = (): void => {
+      const songs = this.state().songs;
+      if (songs === catalogSource) return;
+      catalogSource = songs;
+      availablePaths = new Set(songs.map((song) => canonicalPathKey(song.path)));
+    };
+
+    this.songGuessrRepo = {
+      getSongs: () => this.state().songs,
+      getBlacklist: () => this.state().blacklist,
+      getPlaylists: () => this.state().playlists,
+      getGenres: () => this.state().genres,
+      isSongAvailable: (_songId, path) => {
+        // Watcher reconciliation removes missing paths from the catalog. This
+        // identity-cached set keeps autocomplete synchronous and avoids an
+        // expensive plugin-fs `exists` invoke for every indexed song.
+        refreshAvailability();
+        return availablePaths.has(canonicalPathKey(path));
+      },
+      resolveSongFilePath: (path) => this.artwork.songFile(path),
+      getSongArtworkPath: (id, available) => this.artwork.song(id, available),
+      romanizeForSearch: (value) => this.services.romanizeForSearch?.(value),
+      random: () => Math.random()
+    };
+    return this.songGuessrRepo;
+  }
+
+  private featureRepository(): MegaShuffleRepo & StatsDataRepo & EloDuelsRepo & RediscoverRepo {
+    return {
+      getSongsData: () => this.state().songs,
+      getTierlistData: () => this.state().tierlists,
+      getListeningData: () => this.state().listeningData,
+      getPlaylistData: (ids) => {
+        const playlists = this.state().playlists;
+        return ids && ids.length > 0
+          ? playlists.filter((playlist) => ids.includes(playlist.playlistId))
+          : playlists;
+      },
+      setPlaylistData: (value) => this.setSnapshot('playlists', 'playlists', value),
+      getGenresData: () => this.state().genres,
+      getCmrStatsData: () => this.state().cmrStats,
+      setCmrStatsData: (value) => this.setSnapshot('cmrStats', 'cmrStats', value),
+      getSongArtworkPath: (id, available) => this.artwork.song(id, available),
+      resolveSongFilePath: (path) => this.artwork.songFile(path),
+      isSongBlacklisted: (id, path) => this.isSongBlacklisted(id, path),
+      rediscoverPlaylistTemplate: REDISCOVER_PLAYLIST_TEMPLATE,
+      emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
+      logger
+    };
+  }
+
+  getUserData(): UserData {
+    return clone(this.state().userData);
+  }
+
+  async revealSongInFileExplorer(songId: string): Promise<void> {
+    const song = this.state().songs.find((candidate) => candidate.songId === songId);
+    if (!song) {
+      logger.warn("Revealing song failed because it is not in Nora's library.", { songId });
+      this.events.message('OPEN_SONG_IN_EXPLORER_FAILED');
+      return;
+    }
+    await this.requireSystem().revealSong(song.path);
+  }
+
+  async revealFolderInFileExplorer(folderPath: string): Promise<void> {
+    await this.requireSystem().revealFolder(folderPath);
+  }
+
+  async openLogFile(): Promise<void> {
+    await this.requireSystem().openLogFile();
+  }
+
+  async getStorageUsage(forceRefresh = false): Promise<StorageMetrics | undefined> {
+    const cached = this.state().userData.storageMetrics;
+    if (!forceRefresh) return cached ? clone(cached) : undefined;
+
+    const system = this.requireSystem();
+    const files = this.requireFiles();
+    const metrics = await generateStorageMetrics({
+      applicationDirectory: system.applicationDirectory,
+      profilePath: files.profilePath,
+      directorySize: system.directorySize,
+      diskCapacity: system.diskCapacity,
+      pathsShareVolume: system.pathsShareVolume
+    });
+    this.saveUserData('storageMetrics', metrics);
+    return clone(metrics);
+  }
+
+  async toggleAutoLaunch(enabled: boolean): Promise<void> {
+    await this.requireSystem().toggleAutoLaunch(enabled);
+    this.saveUserData('preferences.autoLaunchApp', enabled);
+  }
+
+  async openDevTools(): Promise<void> {
+    await this.requireSystem().openDevTools();
+  }
+
+  async stopScreenSleeping(): Promise<void> {
+    await this.requireSystem().setDisplaySleepInhibited(true);
+  }
+
+  async allowScreenSleeping(): Promise<void> {
+    await this.requireSystem().setDisplaySleepInhibited(false);
+  }
+
+  getDiscordClientId(): string | undefined {
+    return this.services.discordClientId;
+  }
+
+  async setDiscordActivity(activity: RuntimeDiscordActivity): Promise<void> {
+    const clientId = this.services.discordClientId;
+    if (!clientId) throw new Error('Discord Client ID not found.');
+    if (!this.services.setDiscordActivity) throw new NotPortedYetError('Discord IPC transport');
+    await this.services.setDiscordActivity(clientId, activity);
+  }
+
+  async disconnectDiscord(): Promise<void> {
+    await this.services.disconnectDiscord?.();
+  }
+
+  saveUserData(dataType: UserDataTypes, data: unknown): void {
+    // The api layer encrypts `customMusixmatchUserToken` before it reaches the
+    // runtime, so the value stored here is already ciphertext — same shape as
+    // the Electron build, where `filesystem.setUserData` encrypted on save.
+    const next = clone(this.state().userData) as UserData & Record<string, unknown>;
+    const segments = dataType.split('.');
+    let target: Record<string, unknown> = next;
+    for (const segment of segments.slice(0, -1)) {
+      const child = target[segment];
+      if (typeof child !== 'object' || child === null || Array.isArray(child)) return;
+      target = child as Record<string, unknown>;
+    }
+    target[segments.at(-1) ?? dataType] = data;
+    this.setSnapshot('userData', 'userData', next);
+
+    if (dataType === 'preferences.enableDiscordRPC' && data === false) {
+      void this.disconnectDiscord().catch((error: unknown) =>
+        logger.warn('Failed to disconnect Discord Rich Presence.', error)
+      );
+    }
+
+    if (dataType === 'musicFolders') this.events.dataUpdated('userData/musicFolder');
+    else if (dataType.startsWith('windowDiamensions.'))
+      this.events.dataUpdated('userData/windowDiamension');
+    else if (dataType.startsWith('windowPositions.'))
+      this.events.dataUpdated('userData/windowPosition');
+    else if (dataType.includes('sortingStates')) this.events.dataUpdated('userData/sortingStates');
+    else if (dataType.startsWith('preferences.')) this.events.dataUpdated('settings/preferences');
+    else if (dataType === 'recentSearches') this.events.dataUpdated('userData/recentSearches');
+    else this.events.dataUpdated('userData');
+  }
+
+  getListeningData(songIds: string[]): SongListeningData[] {
+    const rows = [
+      ...new Map(this.state().listeningData.map((entry) => [entry.songId, entry] as const)).values()
+    ];
+    const found = rows.filter((row) => songIds.includes(row.songId));
+    if (found.length > 0) return clone(found);
+    const year = new Date().getFullYear();
+    return clone(
+      songIds.map(
+        (songId): SongListeningData => ({
+          songId,
+          skips: 0,
+          fullListens: 0,
+          inNoOfPlaylists: 0,
+          listens: [{ year, listens: [] }],
+          seeks: []
+        })
+      )
+    );
+  }
+
+  getAllSongs(
+    sortType: SongSortTypes = 'aToZ',
+    filterType?: SongFilterTypes,
+    pagination?: PaginatingData
+  ): PaginatedResult<AudioInfo, SongSortTypes> {
+    const repository = {
+      isSongBlacklisted: (id: string, path: string) => this.isSongBlacklisted(id, path),
+      getFolderBlacklist: () => this.state().blacklist.folderBlacklist
+    };
+    const songs = sortSongs(
+      repository,
+      filterSongs(repository, [...this.state().songs], filterType),
+      sortType,
+      this.state().listeningData
+    ).map(
+      (song): AudioInfo => ({
+        title: song.title,
+        artists: song.artists,
+        album: song.album,
+        duration: song.duration,
+        artworkPaths: this.artwork.song(song.songId, song.isArtworkAvailable),
+        path: song.path,
+        year: song.year,
+        songId: song.songId,
+        paletteData: this.selectedPalette(song.paletteId),
+        addedDate: song.addedDate,
+        isAFavorite: song.isAFavorite,
+        isBlacklisted: this.isSongBlacklisted(song.songId, song.path)
+      })
+    );
+    return clone(paginateData(songs, sortType, pagination));
+  }
+
+  getSongInfo(
+    songIds: string[],
+    sortType?: SongSortTypes,
+    filterType?: SongFilterTypes,
+    limit = songIds.length,
+    preserveIdOrder = false
+  ): SongData[] {
+    const songs = preserveIdOrder
+      ? songIds.flatMap((id) => this.state().songs.filter((song) => song.songId === id))
+      : this.state().songs.filter((song) => songIds.includes(song.songId));
+    const decorated = songs.map(
+      (song): SongData => ({
+        ...song,
+        artworkPaths: this.artwork.song(song.songId, song.isArtworkAvailable),
+        paletteData: this.selectedPalette(song.paletteId),
+        isBlacklisted: this.isSongBlacklisted(song.songId, song.path)
+      })
+    );
+    const repository = {
+      isSongBlacklisted: (id: string, path: string) => this.isSongBlacklisted(id, path),
+      getFolderBlacklist: () => this.state().blacklist.folderBlacklist
+    };
+    const output =
+      sortType || filterType
+        ? sortSongs(
+            repository,
+            filterSongs(repository, decorated, filterType),
+            sortType,
+            this.state().listeningData
+          )
+        : decorated;
+    return clone(limit ? output.slice(0, limit) : output);
+  }
+
+  getArtists(
+    idsOrNames: string[] = [],
+    sortType?: ArtistSortTypes,
+    filterType?: ArtistFilterTypes,
+    limit = 0
+  ): Artist[] {
+    let results =
+      idsOrNames.length === 0
+        ? [...this.state().artists]
+        : idsOrNames.flatMap((id) =>
+            this.state().artists.filter((artist) => artist.artistId === id || artist.name === id)
+          );
+    if (sortType || filterType) results = sortArtists(filterArtists(results, filterType), sortType);
+    return clone(
+      results
+        .slice(0, limit || results.length)
+        .map((artist) => ({ ...artist, artworkPaths: this.artwork.artist(artist.artworkName) }))
+    );
+  }
+
+  toggleLikeArtists(artistIds: string[], likeArtist?: boolean): Promise<ToggleLikeSongReturnValue> {
+    return toggleLikeArtists(this.playlistRepository(), artistIds, likeArtist);
+  }
+
+  getAlbums(idsOrTitles: string[] = [], sortType?: AlbumSortTypes): Album[] {
+    const selected =
+      idsOrTitles.length === 0
+        ? [...this.state().albums]
+        : this.state().albums.filter(
+            (album) => idsOrTitles.includes(album.albumId) || idsOrTitles.includes(album.title)
+          );
+    const output = selected.map(
+      (album): Album => ({ ...album, artworkPaths: this.artwork.album(album.artworkName) })
+    );
+    return clone(sortType ? sortAlbums(output, sortType) : output);
+  }
+
+  getGenres(idsOrNames: string[] = [], sortType?: GenreSortTypes): Genre[] {
+    const selected =
+      idsOrNames.length === 0
+        ? [...this.state().genres]
+        : this.state().genres.filter(
+            (genre) => idsOrNames.includes(genre.genreId) || idsOrNames.includes(genre.name)
+          );
+    const output = selected.map(
+      (genre): Genre => ({
+        ...genre,
+        artworkPaths: this.artwork.genre(genre.artworkName),
+        paletteData: this.selectedPalette(genre.paletteId)
+      })
+    );
+    return clone(sortType ? sortGenres(output, sortType) : output);
+  }
+
+  getFolders(folderPaths: string[] = [], sortType?: FolderSortTypes): MusicFolder[] {
+    const select = (folders: FolderStructure[]): FolderStructure[] =>
+      folders.flatMap((folder) =>
+        folderPaths.includes(folder.path) ? [folder] : select(folder.subFolders)
+      );
+    const source =
+      folderPaths.length === 0
+        ? this.state().userData.musicFolders
+        : select(this.state().userData.musicFolders);
+    const decorate = (folders: FolderStructure[]): MusicFolder[] =>
+      folders.map((folder) => ({
+        ...folder,
+        subFolders: decorate(folder.subFolders),
+        songIds: this.state()
+          .songs.filter((song) => song.path.includes(folder.path))
+          .map((song) => song.songId),
+        isBlacklisted: isFolderBlacklisted(this.blacklistRepository(), folder.path)
+      }));
+    const output = decorate(source);
+    return clone(
+      sortType
+        ? sortFolders(
+            {
+              isSongBlacklisted: (id, path) => this.isSongBlacklisted(id, path),
+              getFolderBlacklist: () => this.state().blacklist.folderBlacklist
+            },
+            output,
+            sortType
+          )
+        : output
+    );
+  }
+
+  async getFolderStructures(): Promise<FolderStructure[]> {
+    const fileSystem = this.services.libraryFileSystem;
+    const selectFolders = this.services.selectMusicFolders;
+    if (!fileSystem || !selectFolders) throw new NotPortedYetError('library folder traversal');
+    const roots = await selectFolders();
+    if (roots.length === 0) {
+      this.retainedTraversal = undefined;
+      return [];
+    }
+    const traversal = await walkMusicTrees(fileSystem, roots);
+    this.retainedTraversal = traversal;
+    const folderCount = traversal.visitedDirectories.length;
+    this.events.message('FOLDER_PARSED_FOR_DIRECTORIES', {
+      count: folderCount,
+      folderCount: traversal.structures.length
+    });
+    return clone(traversal.structures);
+  }
+
+  async addSongsFromFolderStructures(
+    structures: FolderStructure[],
+    sortType?: SongSortTypes
+  ): Promise<SongData[]> {
+    const fileSystem = this.services.libraryFileSystem;
+    const parser = this.services.metadataParser;
+    if (!fileSystem || !parser) throw new NotPortedYetError('library metadata scanner');
+
+    const selectedFolderKeys = new Set<string>();
+    const collectSelectedFolders = (folders: FolderStructure[]): void => {
+      for (const folder of folders) {
+        selectedFolderKeys.add(canonicalPathKey(folder.path));
+        collectSelectedFolders(folder.subFolders);
+      }
+    };
+    collectSelectedFolders(structures);
+    const rootKeys = structures.map((structure) => canonicalPathKey(structure.path));
+    const isSelectedFolder = (path: string): boolean =>
+      selectedFolderKeys.has(canonicalPathKey(path));
+    const isSongInSelectedFolder = (path: string): boolean => isSelectedFolder(parentPath(path));
+    const retained = this.retainedTraversal;
+    const canReuseRetained =
+      retained !== undefined &&
+      rootKeys.every((root) =>
+        retained.visitedDirectories.some((path) => canonicalPathKey(path) === root)
+      );
+    const sourceTraversal = canReuseRetained
+      ? retained
+      : await walkMusicTrees(
+          fileSystem,
+          structures.map((structure) => structure.path)
+        );
+    const traversal = {
+      structures: clone(structures),
+      songPaths: sourceTraversal.songPaths.filter(isSongInSelectedFolder),
+      visitedDirectories: sourceTraversal.visitedDirectories.filter(isSelectedFolder)
+    };
+    this.retainedTraversal = undefined;
+
+    const addedSongIds: string[] = [];
+    await scanTraversal(this.libraryRepository(addedSongIds), fileSystem, parser, traversal, {
+      includeArtwork: true
+    });
+    // New roots mean new things to watch, and the reconciliation pass is worth
+    // paying for here: it closes the gap between the traversal above and the
+    // moment the listeners are actually installed.
+    void this.startLibraryWatcher({ reconcile: true }).catch((error: unknown) =>
+      logger.error('Could not arm the library watcher after a scan.', { error })
+    );
+    return this.getSongInfo(addedSongIds, sortType, undefined, 0, true);
+  }
+
+  async resyncSongsLibrary(): Promise<true> {
+    const fileSystem = this.services.libraryFileSystem;
+    const parser = this.services.metadataParser;
+    if (!fileSystem || !parser) throw new NotPortedYetError('library catalog reconciliation');
+    const roots = this.state().userData.musicFolders.map((folder) => folder.path);
+    if (roots.length > 0) {
+      const addedSongIds: string[] = [];
+      await reconcileCatalog(
+        this.catalogRepository(),
+        this.libraryRepository(addedSongIds, true),
+        fileSystem,
+        parser,
+        roots
+      );
+    }
+    this.events.message('RESYNC_SUCCESSFUL');
+    await this.flush();
+    this.restartLibraryWatcher();
+    return true;
+  }
+
+  /**
+   * The library folder watcher: picks up music added, changed or deleted
+   * outside the app.
+   *
+   * `LibraryWatcherManager` and its Tauri file-system port were written, tested
+   * and left unconstructed, and `tauri-plugin-fs` even carries the `watch`
+   * feature and the `fs:allow-watch` capability for them. Until this was
+   * connected, a track dropped into a music folder stayed invisible until the
+   * user ran a manual resync.
+   *
+   * The initial reconciliation pass is skipped on startup on purpose: it is a
+   * full traversal of every root, and paying it on every launch is the kind of
+   * startup re-index this project has already measured and rejected. Explicit
+   * scans re-arm the watcher and do run it.
+   */
+  async startLibraryWatcher(options: { reconcile?: boolean } = {}): Promise<void> {
+    const fileSystem = this.services.watcherFileSystem;
+    if (!fileSystem) return;
+    this.libraryWatcher ??= new LibraryWatcherManager(
+      this.watcherRepository(),
+      fileSystem,
+      internalWriteSuppression
+    );
+    await this.libraryWatcher.start(undefined, { reconcile: options.reconcile ?? false });
+  }
+
+  stopLibraryWatcher(): void {
+    this.libraryWatcher?.stop();
+  }
+
+  /** Re-arms the watcher over the current roots after the library changed. */
+  private restartLibraryWatcher(): void {
+    if (!this.libraryWatcher) return;
+    void this.startLibraryWatcher({ reconcile: false }).catch((error: unknown) =>
+      logger.error('Could not re-arm the library watcher.', { error })
+    );
+  }
+
+  private watcherRepository(): LibraryWatcherRepository {
+    const scanner = (): { fileSystem: LibraryFileSystemPort; parser: MetadataParserPort } | undefined => {
+      const fileSystem = this.services.libraryFileSystem;
+      const parser = this.services.metadataParser;
+      return fileSystem && parser ? { fileSystem, parser } : undefined;
+    };
+
+    return {
+      getMusicFolders: () => this.state().userData.musicFolders,
+      getKnownSongPaths: () => this.state().songs.map((song) => song.path),
+      scanSong: async (path) => {
+        const services = scanner();
+        if (!services) return;
+        const addedSongIds: string[] = [];
+        await scanTraversal(
+          {
+            getKnownSongPaths: () => this.state().songs.map((song) => song.path),
+            // One file, so the folder tree is not being re-derived here.
+            // Committing an empty structure list would rewrite userData and
+            // emit a UI update on every single watcher event.
+            commitFolderStructures: () => undefined,
+            commitScanBatch: async (tracks) => {
+              addedSongIds.push(...(await this.commitScannedTracks(tracks)));
+            },
+            reportScanProgress: () => undefined
+          },
+          services.fileSystem,
+          services.parser,
+          { structures: [], songPaths: [path], visitedDirectories: [parentPath(path)] },
+          { includeArtwork: true }
+        );
+        if (addedSongIds.length > 0) await this.flush();
+      },
+      removeSongs: async (paths) => {
+        if (paths.length === 0) return;
+        await removeSongsFromLibrary(this.catalogRepository(), [...paths]);
+        await this.flush();
+      },
+      reconcileFolder: async (path) => {
+        const services = scanner();
+        if (!services) return;
+        // Events arrive for files as well as directories, and for a path that
+        // has just been deleted. A file resolves to its parent; a vanished
+        // directory does too, which is what discovers the removal.
+        const isDirectory = await services.fileSystem
+          .stat(path)
+          .then((stats) => !stats.isFile)
+          .catch(() => false);
+        const directory = isDirectory ? path : parentPath(path);
+        if (!directory) return;
+
+        // Scope guard. The manager also watches the PARENT of every root, so it
+        // can notice the root itself being renamed away - which means an event
+        // can name a directory that owns nothing of ours. Reconciling that
+        // would find no songs on disk and delete every song recorded under it.
+        const roots = this.state().userData.musicFolders.map((folder) => folder.path);
+        if (!roots.some((root) => isPathWithin(directory, root))) return;
+
+        const addedSongIds: string[] = [];
+        await reconcileCatalog(
+          this.catalogRepository(),
+          this.libraryRepository(addedSongIds),
+          services.fileSystem,
+          services.parser,
+          [directory]
+        );
+        await this.flush();
+      },
+      reportWatcherError: (error, path) => logger.error('Library watcher failed.', { error, path })
+    };
+  }
+
+  async deleteSongsFromSystem(
+    absoluteFilePaths: string[],
+    isPermanentDelete: boolean
+  ): Promise<{ success: boolean; message?: string }> {
+    const result = await deleteCatalogSongsFromSystem(
+      this.catalogRepository(),
+      {
+        permanentlyDelete: async (path) => {
+          if (!this.services.permanentlyDeleteFile) {
+            const error = new Error('Permanent file deletion service is unavailable.');
+            error.name = 'PermanentFileDeletionUnavailableError';
+            throw error;
+          }
+          await this.services.permanentlyDeleteFile(path);
+        },
+        moveToTrash: async (path) => {
+          if (!this.services.moveFileToTrash) {
+            const error = new Error('Native recycle-bin service is unavailable.');
+            error.name = 'NativeTrashCommandUnavailableError';
+            throw error;
+          }
+          await this.services.moveFileToTrash(path);
+        }
+      },
+      absoluteFilePaths,
+      isPermanentDelete
+    );
+    await this.flush();
+    return result;
+  }
+
+  async removeMusicFolder(folderPath: string): Promise<void> {
+    await removeCatalogMusicFolder(this.catalogRepository(), folderPath);
+    await this.flush();
+    // One root fewer: stop watching it, or its files keep re-appearing.
+    this.restartLibraryWatcher();
+  }
+
+  async getSongFromUnknownSource(songPath: string): Promise<PathBackedAudioData> {
+    const fileSystem = this.services.libraryFileSystem;
+    const parser = this.services.metadataParser;
+    if (!fileSystem || !parser) throw new NotPortedYetError('outside-library metadata parser');
+    return getCatalogSongFromUnknownSource(
+      {
+        findKnownSongId: (path) =>
+          this.state().songs.find((song) => canonicalPathKey(song.path) === canonicalPathKey(path))
+            ?.songId,
+        getKnownSong: (songId) => this.getSong(songId),
+        createTempArtwork: (source) => this.requireArtworkService().createTempArtwork(source),
+        resolveFilePath: (path) => this.artwork.songFile(path),
+        defaultSongArtwork: () => this.artwork.song('', false).artworkPath,
+        rememberOutsideSong: (song) => {
+          const existing = this.outsideLibrarySongs.findIndex(
+            (candidate) => canonicalPathKey(candidate.path) === canonicalPathKey(song.path)
+          );
+          if (existing >= 0) this.outsideLibrarySongs.splice(existing, 1, clone(song));
+          else this.outsideLibrarySongs.push(clone(song));
+        },
+        sendMessage: (code, data) => this.events.message(code, data)
+      },
+      fileSystem,
+      parser,
+      songPath
+    );
+  }
+
+  async checkForStartUpSongs(): Promise<PathBackedAudioData | undefined> {
+    if (!this.singleInstanceController) return undefined;
+    this.startupSong = undefined;
+    this.startupSongCaptureActive = true;
+    try {
+      await this.singleInstanceController.markRendererReady();
+      return this.startupSong ? clone(this.startupSong) : undefined;
+    } finally {
+      this.startupSongCaptureActive = false;
+    }
+  }
+
+  private async routeOpenedAudioFile(path: string): Promise<void> {
+    try {
+      const data = await this.getSongFromUnknownSource(path);
+      if (this.startupSongCaptureActive && !this.startupSong) this.startupSong = data;
+      else this.events.playSongFromUnknownSource?.(data);
+    } catch (error) {
+      logger.error('Failed to open audio supplied by the single-instance service.', {
+        error,
+        path
+      });
+    }
+  }
+
+  search(filter: SearchFilters, value: string, updateHistory = true): SearchResult {
+    return clone(runSearch(this.searchRepository(), filter, value, updateHistory));
+  }
+
+  clearSearchHistory(searchText?: string[]): boolean {
+    return clearSearchHistoryResults(this.searchRepository(), searchText);
+  }
+
+  getPlaylists(ids?: string[], sortType?: PlaylistSortTypes, mutableOnly?: boolean): Playlist[] {
+    return clone(sendPlaylistData(this.playlistRepository(), ids, sortType, mutableOnly));
+  }
+
+  updateSongListeningData<DataType extends keyof ListeningDataTypes>(
+    songId: string,
+    dataType: DataType,
+    value: ListeningDataTypes[DataType]
+  ): void {
+    const rows = clone(this.state().listeningData);
+    let row = rows.find((entry) => entry.songId === songId);
+    if (!row) {
+      row = { songId, listens: [] };
+      rows.push(row);
+    }
+
+    if (dataType === 'listens' && typeof value === 'number') {
+      const now = new Date();
+      let yearly = row.listens.find((entry) => entry.year === now.getFullYear());
+      if (!yearly) {
+        yearly = { year: now.getFullYear(), listens: [] };
+        row.listens.push(yearly);
+      }
+      const today = yearly.listens.find(([timestamp]) => {
+        const date = new Date(timestamp);
+        return date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+      });
+      if (today) {
+        if (today[1] > 0) today[1] += value;
+      } else yearly.listens.push([now.getTime(), value]);
+    } else if (dataType === 'fullListens' && typeof value === 'number') {
+      row.fullListens = Math.max(0, (row.fullListens ?? 0) + value);
+    } else if (dataType === 'skips' && typeof value === 'number') {
+      row.skips = Math.max(0, (row.skips ?? 0) + value);
+    } else if (dataType === 'inNoOfPlaylists' && typeof value === 'number') {
+      row.inNoOfPlaylists = Math.max(0, (row.inNoOfPlaylists ?? 0) + value);
+    } else if (dataType === 'seeks' && Array.isArray(value)) {
+      const seeks = row.seeks ?? [];
+      for (const newSeek of value as SongSeek[]) {
+        const available = seeks.find(
+          (seek) => newSeek.position < seek.position + 5 && newSeek.position > seek.position - 5
+        );
+        if (available) available.seeks += newSeek.seeks;
+        seeks.push({ ...newSeek });
+      }
+      row.seeks = seeks;
+    } else throw new Error(`Unknown listening data type: ${String(dataType)}`);
+
+    this.setSnapshot('listeningData', 'listeningData', rows);
+    const eventType =
+      dataType === 'listens'
+        ? 'songs/listeningData/listens'
+        : dataType === 'fullListens'
+          ? 'songs/listeningData/fullSongListens'
+          : dataType === 'skips'
+            ? 'songs/listeningData/skips'
+            : 'songs/listeningData/inNoOfPlaylists';
+    this.events.dataUpdated(eventType, [songId]);
+  }
+
+  async getSong(songId: string) {
+    const song = this.state().songs.find((entry) => entry.songId === songId);
+    if (!song) throw new Error('SONG_NOT_FOUND' as ErrorCodes);
+    addToSongsHistory(this.playlistRepository(), songId);
+    this.updateSongListeningData(songId, 'listens', 1);
+
+    const artists = song.artists?.map((entry) => {
+      const artist = this.state().artists.find(
+        (candidate) => candidate.artistId === entry.artistId
+      );
+      if (!artist) return entry;
+      if (!artist.onlineArtworkPaths) {
+        void this.getArtistArtwork(artist.artistId).catch((error: unknown) =>
+          logger.warn('Failed to fetch artist information.', { error, artistId: artist.artistId })
+        );
+      }
+      return {
+        artistId: artist.artistId,
+        name: artist.name,
+        artworkPath: this.artwork.artist(artist.artworkName).artworkPath,
+        onlineArtworkPaths: artist.onlineArtworkPaths
+      };
+    });
+    const artworkPath = this.artwork.song(song.songId, song.isArtworkAvailable).artworkPath;
+    return {
+      songId: song.songId,
+      title: song.title,
+      artists,
+      duration: song.duration,
+      artwork: artworkPath,
+      artworkPath,
+      path: this.artwork.songFile(song.path),
+      isAFavorite: song.isAFavorite,
+      album: song.album,
+      paletteData: this.selectedPalette(song.paletteId),
+      isKnownSource: true,
+      isBlacklisted: this.isSongBlacklisted(song.songId, song.path)
+    };
+  }
+
+  addNewPlaylist(name: string, songIds?: string[], artworkPath?: string) {
+    return addNewPlaylist(this.playlistRepository(), name, songIds, artworkPath);
+  }
+
+  addSongsToPlaylist(playlistId: string, songIds: string[]): void {
+    addSongsToPlaylist(this.playlistRepository(), playlistId, songIds);
+  }
+
+  addPlaylistArtwork(playlistId: string, artworkPath: string): Promise<ArtworkPaths | undefined> {
+    return addArtworkToAPlaylist(this.playlistRepository(), playlistId, artworkPath);
+  }
+
+  renamePlaylist(playlistId: string, newName: string): void {
+    renameAPlaylist(this.playlistRepository(), playlistId, newName);
+  }
+
+  removePlaylists(ids: string[]): true {
+    return removePlaylists(this.playlistRepository(), ids);
+  }
+
+  removeSongFromPlaylist(playlistId: string, songId: string) {
+    return removeSongFromPlaylist(this.playlistRepository(), playlistId, songId);
+  }
+
+  toggleLikeSongs(songIds: string[], like?: boolean): Promise<ToggleLikeSongReturnValue> {
+    return toggleLikeSongs(this.playlistRepository(), songIds, like);
+  }
+
+  importPlaylist(): Promise<void> {
+    return Promise.resolve(
+      importPlaylist(this.playlistRepository(), [...SUPPORTED_MUSIC_EXTENSIONS])
+    ).then(() => undefined);
+  }
+
+  getMultipleArtworkPaths(songIds: string[]): string[] {
+    // Full artwork, not the optimized one. These covers are composed into the
+    // multi-artwork card on the Playlists and Tierlists pages, where the
+    // optimized variant - a 50x50 thumbnail - is stretched several times over
+    // and looks visibly mushy. src/main/core/getArtworksForMultipleArtworksCover.ts
+    // used artworkPath for the same reason.
+    return this.getSongInfo(songIds, undefined, undefined, 0, true).map(
+      (song) => song.artworkPaths.artworkPath
+    );
+  }
+
+  getArtistDuplicates(artistName: string): Artist[] {
+    const normalized = artistName
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
+    return this.getArtists().filter(
+      (artist) =>
+        artist.name
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .toLowerCase()
+          .trim() === normalized
+    );
+  }
+
+  exportPlaylist(id: string): Promise<void> {
+    return Promise.resolve(exportPlaylist(this.playlistRepository(), id)).then(() => undefined);
+  }
+
+  clearHistory(): true | undefined {
+    return clearSongHistory(this.playlistRepository());
+  }
+
+  async createTierlistArtworks(songIds: string[]): Promise<Record<string, string>> {
+    const service = this.requireArtworkService();
+    const entries = await Promise.all(
+      [...new Set(songIds)].map(
+        async (id) => [id, await service.createTierlistThumbnail(id)] as const
+      )
+    );
+    return Object.fromEntries(
+      entries.filter((entry): entry is readonly [string, string] => !!entry[1])
+    );
+  }
+
+  async saveArtwork(source: string, destination: string): Promise<void> {
+    await this.requireArtworkService().saveArtwork(this.artworkSource(source), destination);
+  }
+
+  async generatePalettes(): Promise<void> {
+    const generator = this.services.palette;
+    if (!generator) throw new NotPortedYetError('palette generator');
+
+    const songs = clone(this.state().songs);
+    const palettes = clone(this.state().palettes);
+    const pendingSongs = songs.filter((song) => !song.paletteId);
+    let completed = 0;
+    for (const song of pendingSongs) {
+      const source = song.isArtworkAvailable
+        ? urlArtwork(this.artwork.song(song.songId, true).optimizedArtworkPath)
+        : undefined;
+      const palette = await generator.generate(source);
+      if (palette) {
+        song.paletteId = palette.paletteId;
+        palettes.push(palette);
+      }
+      completed += 1;
+      this.events.message('SONG_PALETTE_GENERATING_PROCESS_UPDATE', {
+        total: pendingSongs.length,
+        value: completed
+      });
+    }
+    if (pendingSongs.length === 0) this.events.message('NO_MORE_SONG_PALETTES');
+
+    const genres = clone(this.state().genres);
+    const pendingGenres = genres.filter((genre) => !genre.paletteId);
+    completed = 0;
+    for (const genre of pendingGenres) {
+      const sourceSongId = genre.artworkName?.replace(/\.webp$/iu, '');
+      const sourceSong = sourceSongId
+        ? songs.find((song) => song.songId === sourceSongId)
+        : undefined;
+      if (sourceSong) genre.paletteId = sourceSong.paletteId;
+      else if (!genre.artworkName) {
+        const palette = await generator.generate();
+        if (palette) genre.paletteId = palette.paletteId;
+      }
+      completed += 1;
+      this.events.message('SONG_PALETTE_GENERATING_PROCESS_UPDATE', {
+        total: pendingGenres.length,
+        value: completed
+      });
+    }
+
+    this.setSnapshot('songs', 'songs', songs);
+    this.setSnapshot('genres', 'genres', genres);
+    this.setSnapshot('palettes', 'palettes', palettes);
+    this.events.dataUpdated('songs/palette');
+    this.events.dataUpdated('genres/backgroundColor');
+    if (pendingGenres.length === 0) this.events.message('NO_MORE_SONG_PALETTES');
+  }
+
+  getBlacklist(): Blacklist {
+    return clone(this.state().blacklist);
+  }
+
+  blacklistSongs(ids: string[]): void {
+    blacklistSongs(this.blacklistRepository(), ids);
+  }
+
+  restoreBlacklistedSongs(ids: string[]): Promise<void> {
+    return restoreBlacklistedSongs(this.blacklistRepository(), ids);
+  }
+
+  blacklistFolders(paths: string[]): void {
+    blacklistFolders(this.blacklistRepository(), paths);
+  }
+
+  restoreBlacklistedFolders(paths: string[]): Promise<void> {
+    return restoreBlacklistedFolders(this.blacklistRepository(), paths);
+  }
+
+  toggleBlacklistedFolders(paths: string[], value?: boolean) {
+    return toggleBlacklistFolders(this.blacklistRepository(), paths, value);
+  }
+
+  async getAlbumInfoFromLastFM(albumId: string) {
+    const { default: getAlbumInfoFromLastFM } = await import(
+      '../core/net/lastFm/getAlbumInfoFromLastFM'
+    );
+    return getAlbumInfoFromLastFM(this.networkRepository(), albumId);
+  }
+
+  async getSimilarTracks(songId: string) {
+    const { default: getSimilarTracks } = await import('../core/net/lastFm/getSimilarTracks');
+    return getSimilarTracks(this.networkRepository(), songId);
+  }
+
+  async scrobbleSong(songId: string, startTimeInSecs: number): Promise<void> {
+    const { default: scrobbleSong } = await import('../core/net/lastFm/scrobbleSong');
+    return Promise.resolve(scrobbleSong(this.networkRepository(), songId, startTimeInSecs)).then(
+      () => undefined
+    );
+  }
+
+  async sendNowPlayingSong(songId: string): Promise<void> {
+    const { default: sendNowPlayingSongDataToLastFM } = await import(
+      '../core/net/lastFm/sendNowPlayingSongDataToLastFM'
+    );
+    return Promise.resolve(sendNowPlayingSongDataToLastFM(this.networkRepository(), songId)).then(
+      () => undefined
+    );
+  }
+
+  async getArtistArtwork(artistId: string) {
+    const { default: getArtistInfoFromNet } = await import('../core/net/getArtistInfoFromNet');
+    return getArtistInfoFromNet(this.networkRepository(), artistId);
+  }
+
+  async searchSongMetadata(songTitle: string, songArtists: string[]) {
+    const { searchSongMetadataResultsInInternet } = await import(
+      '../core/net/fetchSongMetadataFromInternet'
+    );
+    return searchSongMetadataResultsInInternet(songTitle, songArtists);
+  }
+
+  async fetchSongMetadata(songTitle: string, songArtists: string[]) {
+    const { fetchSongMetadataFromInternet } = await import(
+      '../core/net/fetchSongMetadataFromInternet'
+    );
+    return fetchSongMetadataFromInternet(
+      songTitle as SongMetadataSource,
+      songArtists as unknown as string
+    );
+  }
+
+  async fetchSongInfo(songTitle: string, songArtists: string[]) {
+    const { default: fetchSongInfoFromLastFM } = await import(
+      '../core/net/fetchSongInfoFromLastFM'
+    );
+    return fetchSongInfoFromLastFM(songTitle, songArtists);
+  }
+
+  async getSongLyrics(
+    track: LyricsRequestTrackInfo,
+    lyricsType?: LyricsTypes,
+    requestType?: LyricsRequestTypes,
+    saveAutomatically?: AutomaticallySaveLyricsTypes
+  ) {
+    const { default: getSongLyrics } = await import('../core/lyrics/getSongLyrics');
+    return getSongLyrics(
+      this.lyricsRepository(),
+      track,
+      lyricsType,
+      requestType,
+      saveAutomatically
+    );
+  }
+
+  async getTranslatedLyrics(languageCode: LanguageCodes) {
+    const { default: getTranslatedLyrics } = await import('../core/lyrics/getTranslatedLyrics');
+    return getTranslatedLyrics(this.lyricsRepository(), String(languageCode));
+  }
+
+  async romanizeLyrics() {
+    const { default: romanizeLyrics } = await import('../core/lyrics/romanizeLyrics');
+    return romanizeLyrics(this.lyricsRepository());
+  }
+
+  async convertLyricsToPinyin() {
+    const { default: convertLyricsToPinyin } = await import('../core/lyrics/convertToPinyin');
+    return convertLyricsToPinyin(this.lyricsRepository());
+  }
+
+  async convertLyricsToRomaja() {
+    const { default: convertLyricsToRomaja } = await import('../core/lyrics/convertToRomaja');
+    return convertLyricsToRomaja(this.lyricsRepository());
+  }
+
+  async resetLyrics() {
+    const { default: resetLyrics } = await import('../core/lyrics/resetLyrics');
+    return resetLyrics(this.lyricsRepository());
+  }
+
+  async saveLyrics(songPath: string, text: SongLyrics) {
+    const { default: saveLyricsToSong } = await import('../core/lyrics/saveLyricsToSong');
+    return saveLyricsToSong(this.lyricsRepository(), songPath, text);
+  }
+
+  updateSongId3Tags(
+    songIdOrPath: string,
+    tags: SongTags,
+    sendUpdatedData: boolean,
+    isKnownSource: boolean
+  ): Promise<MetadataUpdateResult> {
+    return this.metadataService().updateSongId3Tags(
+      songIdOrPath,
+      tags,
+      sendUpdatedData,
+      isKnownSource
+    );
+  }
+
+  reParseSong(songPath: string): Promise<SavableSongData | undefined> {
+    return this.metadataService().reParseSong(songPath);
+  }
+
+  isMetadataUpdatesPending(songPath: string): boolean {
+    return this.metadataService().isMetadataUpdatesPending(songPath);
+  }
+
+  resolveArtistDuplicates(
+    selectedArtistId: string,
+    duplicateIds: string[]
+  ): Promise<MetadataUpdateResult | undefined> {
+    return this.metadataService().resolveArtistDuplicates(selectedArtistId, duplicateIds);
+  }
+
+  resolveSeparateArtists(
+    separateArtistId: string,
+    separateArtistNames: string[]
+  ): Promise<MetadataUpdateResult | undefined> {
+    return this.metadataService().resolveSeparateArtists(separateArtistId, separateArtistNames);
+  }
+
+  resolveFeaturingArtists(
+    songId: string,
+    featArtistNames: string[],
+    removeFeatInfoInTitle?: boolean
+  ): Promise<MetadataUpdateResult | undefined> {
+    return this.metadataService().resolveFeaturingArtists(
+      songId,
+      featArtistNames,
+      removeFeatInfoInTitle
+    );
+  }
+
+  async getSongTags(songIdOrPath: string, isKnownSource: boolean): Promise<SongTags> {
+    if (!this.services.readSongTags) throw new NotPortedYetError('song tag reader');
+    const [{ parseLyricsFromID3Format }, { isLyricsSavePending }] = await Promise.all([
+      import('../core/lyrics/getSongLyrics'),
+      import('../core/lyrics/saveLyricsToSong')
+    ]);
+
+    if (isKnownSource) {
+      const song = this.state().songs.find((entry) => entry.songId === songIdOrPath);
+      if (!song) throw new Error('SONG_NOT_FOUND' as MessageCodes);
+      const raw = await this.services.readSongTags(song.path);
+      const album = song.album
+        ? this.state().albums.find((entry) => entry.albumId === song.album?.albumId)
+        : undefined;
+      const artists = song.artists
+        ? this.state().artists.filter((artist) =>
+            song.artists?.some((entry) => entry.artistId === artist.artistId)
+          )
+        : undefined;
+      const albumArtists = song.albumArtists
+        ? this.state().artists.filter((artist) =>
+            song.albumArtists?.some((entry) => entry.artistId === artist.artistId)
+          )
+        : undefined;
+      const genres = song.genres
+        ? this.state().genres.filter((genre) =>
+            song.genres?.some((entry) => entry.genreId === genre.genreId)
+          )
+        : undefined;
+      const parsedLyrics = parseLyricsFromID3Format(
+        raw.synchronisedLyrics,
+        raw.unsynchronisedLyrics
+      );
+      return {
+        title: song.title ?? raw.title ?? 'Unknown Title',
+        artists:
+          artists ??
+          raw.artist?.split(',').map((name) => ({ name: name.trim(), artistId: undefined })),
+        albumArtists:
+          albumArtists ??
+          raw.performerInfo?.split(',').map((name) => ({ name: name.trim(), artistId: undefined })),
+        album: album
+          ? {
+              ...album,
+              noOfSongs: album.songs.length,
+              artists: album.artists?.map((artist) => artist.name),
+              artworkPath: this.artwork.album(album.artworkName).artworkPath
+            }
+          : raw.album
+            ? { title: raw.album, albumId: undefined }
+            : undefined,
+        genres:
+          genres ??
+          raw.genre?.split(',').map((name) => ({ name: name.trim(), genreId: undefined })),
+        releasedYear: Number(raw.year) || undefined,
+        composer: raw.composer,
+        synchronizedLyrics: parsedLyrics?.isSynced ? parsedLyrics.unparsedLyrics : undefined,
+        unsynchronizedLyrics: raw.unsynchronisedLyrics?.text,
+        artworkPath: this.artwork.song(song.songId, song.isArtworkAvailable).artworkPath,
+        duration: song.duration,
+        trackNumber: song.trackNo ?? (Number(raw.trackNumber?.split('/').at(0)) || undefined),
+        isLyricsSavePending: isLyricsSavePending(song.path),
+        isMetadataSavePending: this.metadataService().isMetadataUpdatesPending(song.path)
+      };
+    }
+
+    const outside = this.songsOutsideLibrary().find((song) => song.path === songIdOrPath);
+    if (!outside) throw new Error("Song couldn't be found outside the library.");
+    const raw = await this.services.readSongTags(
+      removeDefaultAppProtocolFromFilePath(songIdOrPath)
+    );
+    const parsedLyrics = parseLyricsFromID3Format(raw.synchronisedLyrics, raw.unsynchronisedLyrics);
+    return {
+      title: raw.title || '',
+      artists: raw.artist ? [{ name: raw.artist }] : undefined,
+      album: raw.album ? { title: raw.album } : undefined,
+      genres: raw.genre ? [{ name: raw.genre }] : undefined,
+      releasedYear: Number(raw.year) || undefined,
+      composer: raw.composer,
+      synchronizedLyrics: parsedLyrics?.isSynced ? parsedLyrics.unparsedLyrics : undefined,
+      unsynchronizedLyrics: raw.unsynchronisedLyrics?.text,
+      artworkPath: outside.artworkPath,
+      duration: outside.duration
+    };
+  }
+
+  exportAppData(localStorageData: string): Promise<void> {
+    return Promise.resolve(exportAppData(this.appDataRepository(), localStorageData)).then(
+      () => undefined
+    );
+  }
+
+  importAppData(): Promise<void | LocalStorage> {
+    return importAppData(this.appDataRepository());
+  }
+
+  async resetApplicationData(): Promise<void> {
+    await resetAppData(this.appDataRepository());
+    this.services.restartApp?.('Resetting app data', true);
+  }
+
+  private requireNoraImportPort(): NoraImportPort {
+    const createPort = this.services.createNoraImportPort;
+    if (!createPort) throw new Error('The Nora import port is not available in this runtime.');
+    return createPort();
+  }
+
+  /**
+   * Replaces this profile with the one in `%APPDATA%\Nora`.
+   *
+   * The ordering here is the whole safety of the operation. The import rewrites
+   * every store file underneath a live app, so the cache is flushed first (the
+   * backup the importer takes must capture the true current state, not a
+   * half-written one) and then sealed, which stops ordinary playback from
+   * draining pre-import state over the imported files.
+   *
+   * The seal is lifted only when the import failed before taking its backup,
+   * which is the one case where the profile is provably untouched. Once a
+   * backup exists, writes may have begun, so the cache stays sealed and the
+   * caller must relaunch — the in-memory state no longer describes the disk.
+   */
+  async importNoraProfileData(): Promise<NoraImportReport> {
+    await this.flush();
+    this.cache.seal();
+
+    let report: NoraImportReport;
+    try {
+      report = await importNoraProfile(this.requireNoraImportPort());
+    } catch (error) {
+      this.cache.unseal();
+      throw error;
+    }
+
+    if (!report.success && report.backupPath === undefined) this.cache.unseal();
+    return report;
+  }
+
+  detectNoraImportSource(): Promise<NoraSourceInventory> {
+    return detectNoraSource(this.requireNoraImportPort());
+  }
+
+  exportStats(options?: { tierShuffleIntensity?: number }) {
+    return exportStatsData(this.statsTransferRepository(), options);
+  }
+
+  importStats(mergeMode: StatsMergeMode, source: StatsImportSource) {
+    return importStatsData(this.statsTransferRepository(), mergeMode, source);
+  }
+
+  private tierlistsRepository(): TierlistsRepo {
+    return {
+      getTierlistData: (ids) =>
+        ids && ids.length > 0
+          ? this.state().tierlists.filter((tierlist) => ids.includes(tierlist.tierlistId))
+          : this.state().tierlists,
+      setTierlistData: (value) => this.setSnapshot('tierlists', 'tierlists', value),
+      generateRandomId,
+      emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
+      logger
+    };
+  }
+
+  getTierlists(ids?: string[], sortType?: TierlistSortTypes): SavableTierlist[] {
+    return clone(sendTierlistData(this.tierlistsRepository(), ids, sortType));
+  }
+
+  addTierlist(
+    name: string,
+    playlistIds?: string[],
+    labelMode?: TierlistLabelMode,
+    folderPaths?: string[]
+  ) {
+    return addTierlist(this.tierlistsRepository(), name, playlistIds, labelMode, folderPaths);
+  }
+
+  saveTierlist(value: SavableTierlist) {
+    return saveTierlist(this.tierlistsRepository(), value);
+  }
+
+  removeTierlists(ids: string[]) {
+    return removeTierlists(this.tierlistsRepository(), ids);
+  }
+
+  getMegaShuffleWeights(ids: string[], intensity?: number): Record<string, number> {
+    return clone(getMegaShuffleWeights(this.featureRepository(), ids, intensity));
+  }
+
+  getMegaShuffleData(ids: string[], intensity?: number): MegaShuffleData {
+    return clone(getMegaShuffleData(this.featureRepository(), ids, intensity));
+  }
+
+  getStats(timeRange: StatsTimeRange): StatsData {
+    return clone(collectStatsData(this.featureRepository(), timeRange));
+  }
+
+  getDuelPair(pinnedSongId?: string): DuelPair | null {
+    return clone(getDuelPair(this.featureRepository(), pinnedSongId));
+  }
+
+  selectDuelAnchor(candidates: DuelAnchorCandidate[], excluded?: string[]): string | null {
+    return selectDuelAnchorFromCandidates(this.featureRepository(), candidates, excluded);
+  }
+
+  getDuelPairByIds(songAId: string, songBId: string): DuelPair | null {
+    return clone(getDuelPairByIds(this.featureRepository(), songAId, songBId));
+  }
+
+  recordDuelSkip(songAId: string, songBId: string, reason?: DuelSkipReason): void {
+    recordDuelSkip(this.featureRepository(), songAId, songBId, reason);
+  }
+
+  submitDuelResult(songAId: string, songBId: string, winnerId: string): DuelResult {
+    return submitDuelResult(this.featureRepository(), songAId, songBId, winnerId);
+  }
+
+  refreshRediscover(thresholdDays?: number): { count: number } {
+    return refreshRediscover(this.featureRepository(), thresholdDays);
+  }
+
+  getSongGuessrRound(options: SongGuessrRoundOptions): SongGuessrRound | null {
+    return clone(getSongGuessrRound(this.songGuessrRepository(), options));
+  }
+
+  searchSongGuessrCandidates(
+    query: string,
+    limit?: number,
+    offset?: number
+  ): SongGuessrSearchResult {
+    return clone(searchSongGuessrCandidates(this.songGuessrRepository(), query, limit, offset));
+  }
+
+  getSongGuessrPools(): SongGuessrPoolOption[] {
+    return clone(getSongGuessrPools(this.songGuessrRepository()));
+  }
+}

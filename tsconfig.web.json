@@ -1,0 +1,42 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "src/renderer/src/env.d.ts",
+    "src/renderer/src/**/*",
+    "src/renderer/src/**/*.tsx",
+    "src/preload/*.d.ts",
+    "src/common/*",
+    "src/types/*.d.ts",
+    "src/platform/**/*"
+  ],
+  "exclude": [
+    "src/platform/**/__tests__/**",
+    "src/platform/**/*.test.ts"
+  ],
+  "compilerOptions": {
+    // Came from @electron-toolkit/tsconfig/tsconfig.web.json, which is the only
+    // thing that file added over the base. Without it a renderer targeting
+    // esnext gets no DOM at all.
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "composite": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ],
+      "@platform/*": [
+        "src/platform/*"
+      ],
+      "@common/*": [
+        "src/common/*"
+      ],
+    },
+    "types": [ "vite/client" ],
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true
+  }
+}

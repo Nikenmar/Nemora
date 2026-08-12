@@ -1,0 +1,81 @@
+[package]
+name = "nemora"
+version = "0.0.0"                       # real version comes from tauri.conf.json
+description = "Nemora - music player by nikenmar (CMR)"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-ico", "devtools"] }
+# `watch` backs the folder watchers that re-scan when the user adds music
+# outside the app. Without the feature the JS watch/watchImmediate calls compile
+# but fail at runtime.
+tauri-plugin-fs = { version = "2", features = ["watch"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-os = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-process = "2"
+tauri-plugin-log = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+# External APIs are fetched through Rust. Moving the network code out of the
+# Electron main process and into the webview put it under browser CORS, and
+# Deezer, Last.fm and Genius send no Access-Control-Allow-Origin - every call
+# failed with "TypeError: Failed to fetch".
+tauri-plugin-http = "2"
+tauri-plugin-updater = "2"
+# Launch at login, replacing Electron app.setLoginItemSettings.
+tauri-plugin-autostart = "2"
+percent-encoding = "2"
+# scrypt key derivation, matching the parameters the Electron build used for
+# stored Last.fm and Musixmatch credentials. Web Crypto has no scrypt, so this
+# is what lets an upgraded user keep their saved logins.
+scrypt = { version = "0.11", default-features = false }
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Windows-only: taskbar thumbbar buttons (ITaskbarList3) and AUMID handling.
+[target.'cfg(windows)'.dependencies]
+# MUST track the version tao/tauri-runtime-wry use (windows 0.61.x). A different
+# major means a different HWND type, and `window.hwnd()` then fails to type-check
+# against our COM calls.
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Com",
+  "Win32_Graphics_Gdi",
+  # ReplaceFileW / MoveFileExW / GetDiskFreeSpaceExW back the crash-safe write
+  # primitive in fsops.rs. Losing a store mid-write would fail goal #1.
+  "Win32_Storage_FileSystem",
+  # GetSystemPowerStatus backs the battery reporting the player uses to pause
+  # expensive work on battery, which plugin-os cannot provide.
+  "Win32_System_Power",
+  # The volume mixer labels a session after the process that owns it, which is
+  # the WebView2 child. Renaming it needs the audio session API plus a process
+  # snapshot to recognise our own children.
+  "Win32_Media_Audio",
+  "Win32_System_Diagnostics_ToolHelp",
+] }
+
+# Discord Rich Presence speaks over a named pipe, which a webview cannot open.
+discord-rich-presence = "0.2"
+
+# statvfs for the disk-capacity command. Windows uses GetDiskFreeSpaceExW above;
+# this keeps the non-Windows path honest instead of hand-rolling a struct layout.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

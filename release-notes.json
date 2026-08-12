@@ -1,0 +1,43 @@
+{
+  "latestVersion": {
+    "version": "1.0.0-stable",
+    "phase": "stable",
+    "releaseDate": "2026-08-12T17:00:00.000Z"
+  },
+  "versions": [
+    {
+      "version": "1.0.0-stable",
+      "releaseDate": "2026-08-12T17:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "First release. Nora's core in a Tauri shell: a twelfth of the disk space, roughly half the memory, and a fraction of the CPU while a track plays."
+          },
+          {
+            "note": "Tierlists, ELO duels and SongGuessr, a statistics tab that exports, a smart shuffle weighted by your own rankings, and a Rediscover playlist for music you loved and stopped hearing."
+          },
+          {
+            "note": "Search that forgives typos and finds text nobody can type as written, across scripts and keyboard layouts."
+          },
+          {
+            "note": "Music folders are watched, so tracks added, changed or deleted outside Nemora appear without a manual resync."
+          },
+          {
+            "note": "Everything from a Nora profile can be imported in one action, from Settings > About. Nora's own data is only ever read."
+          }
+        ],
+        "fixed": [],
+        "knownIssues": [
+          {
+            "note": "Editing tags is supported for MP3 only, as in Nora."
+          }
+        ],
+        "developerUpdates": [
+          {
+            "note": "Track metadata is parsed in a worker rather than on the interface thread, and embedded cover art is found even when it sits past the first 256 KB of a file."
+          }
+        ]
+      }
+    }
+  ]
+}

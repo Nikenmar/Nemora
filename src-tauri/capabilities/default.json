@@ -1,0 +1,115 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Nora main window. The fs scope is deliberately broad: the user chooses arbitrary music folders anywhere on their drives, and the legacy profile lives under %APPDATA%\\Nora.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:resources:allow-close",
+    "core:window:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-available-monitors",
+    "core:window:allow-current-monitor",
+    "core:window:allow-primary-monitor",
+    "core:window:allow-outer-position",
+    "core:window:allow-outer-size",
+    "core:window:allow-set-focus",
+    "core:window:allow-request-user-attention",
+    "core:webview:allow-internal-toggle-devtools",
+    "core:webview:allow-set-webview-zoom",
+    "core:tray:default",
+    "core:menu:default",
+    "core:app:allow-default-window-icon",
+    "core:window:allow-set-min-size",
+    "core:window:allow-set-max-size",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-background-color",
+    "core:webview:allow-set-webview-background-color",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-copy-file",
+    "fs:allow-exists",
+    "fs:allow-stat",
+    "fs:allow-lstat",
+    "fs:allow-fstat",
+    "fs:allow-open",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-seek",
+    "fs:allow-truncate",
+    "fs:allow-watch",
+    "fs:allow-unwatch",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    "dialog:default",
+    "os:default",
+    "shell:allow-open",
+    "process:default",
+    "log:default",
+    "log:allow-log",
+    "global-shortcut:default",
+    "autostart:default",
+    "updater:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "http://ws.audioscrobbler.com/*"
+        },
+        {
+          "url": "https://ws.audioscrobbler.com/*"
+        },
+        {
+          "url": "https://api.deezer.com/*"
+        },
+        {
+          "url": "https://api.genius.com/*"
+        },
+        {
+          "url": "https://apic-desktop.musixmatch.com/*"
+        },
+        {
+          "url": "https://lrclib.net/*"
+        },
+        {
+          "url": "https://itunes.apple.com/*"
+        },
+        {
+          "url": "https://e-cdns-images.dzcdn.net/*"
+        },
+        {
+          "url": "https://i.scdn.co/*"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/*"
+        },
+        {
+          "url": "https://translate.googleapis.com/*"
+        }
+      ]
+    }
+  ]
+}

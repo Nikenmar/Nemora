@@ -1,0 +1,230 @@
+{
+  "measuredAt": "2026-08-12T15:56:34.129Z",
+  "library": {
+    "songs": 300,
+    "note": "Sampled from the real library; audio files stay in place."
+  },
+  "playbackGate": "Windows audio session peak meter; silent runs discarded.",
+  "results": {
+    "electron": {
+      "label": "Nora 3.1.0-stable (Electron)",
+      "runs": 5,
+      "installerBytes": 122180376,
+      "installedBytes": 400916043,
+      "startup": {
+        "windowMedianMs": 1761,
+        "windowSpreadMs": {
+          "min": 1759,
+          "max": 1783
+        },
+        "medianMs": 3746,
+        "spreadMs": {
+          "min": 3698,
+          "max": 3806
+        }
+      },
+      "memory": {
+        "workingSetBytes": 836354048,
+        "privateBytes": 745492480,
+        "peakWorkingSetBytes": 896638976
+      },
+      "idle": {
+        "cpuPercent": 1.0148575140050338
+      },
+      "playback": {
+        "confirmedAudible": 3,
+        "discarded": 0,
+        "cpuPercent": 9.51,
+        "workingSetBytes": 898629632
+      },
+      "processes": {
+        "count": 5
+      },
+      "raw": {
+        "startups": [
+          {
+            "windowMs": 1783,
+            "startupMs": 3806,
+            "workingSetBytes": 841572352,
+            "privateBytes": 750911488,
+            "peakWorkingSetBytes": 904122368,
+            "idleCpuPercent": 5.709500609013399,
+            "processCount": 5
+          },
+          {
+            "windowMs": 1759,
+            "startupMs": 3698,
+            "workingSetBytes": 834842624,
+            "privateBytes": 737738752,
+            "peakWorkingSetBytes": 884723712,
+            "idleCpuPercent": 1.0148575140050338,
+            "processCount": 5
+          },
+          {
+            "windowMs": 1770,
+            "startupMs": 3775,
+            "workingSetBytes": 832245760,
+            "privateBytes": 743333888,
+            "peakWorkingSetBytes": 896638976,
+            "idleCpuPercent": 0.8888663145062983,
+            "processCount": 5
+          },
+          {
+            "windowMs": 1759,
+            "startupMs": 3746,
+            "workingSetBytes": 836354048,
+            "privateBytes": 745492480,
+            "peakWorkingSetBytes": 875401216,
+            "idleCpuPercent": 5.457961007311129,
+            "processCount": 5
+          },
+          {
+            "windowMs": 1761,
+            "startupMs": 3745,
+            "workingSetBytes": 838021120,
+            "privateBytes": 761208832,
+            "peakWorkingSetBytes": 898084864,
+            "idleCpuPercent": 0.88893855656697,
+            "processCount": 5
+          }
+        ],
+        "playbacks": [
+          {
+            "audible": true,
+            "peak": 0.82383,
+            "audibleTicks": 80,
+            "totalTicks": 80,
+            "cpuPercent": 13.82,
+            "workingSetMb": 857
+          },
+          {
+            "audible": true,
+            "peak": 0.73134,
+            "audibleTicks": 80,
+            "totalTicks": 80,
+            "cpuPercent": 9.51,
+            "workingSetMb": 876
+          },
+          {
+            "audible": true,
+            "peak": 0.70471,
+            "audibleTicks": 80,
+            "totalTicks": 80,
+            "cpuPercent": 7.86,
+            "workingSetMb": 851
+          }
+        ]
+      }
+    },
+    "tauri": {
+      "label": "Nemora 1.0.0-stable (Tauri)",
+      "runs": 5,
+      "installerBytes": 27577917,
+      "installedBytes": 32857088,
+      "startup": {
+        "windowMedianMs": 945,
+        "windowSpreadMs": {
+          "min": 931,
+          "max": 981
+        },
+        "medianMs": 3687,
+        "spreadMs": {
+          "min": 3468,
+          "max": 6854
+        }
+      },
+      "memory": {
+        "workingSetBytes": 581554176,
+        "privateBytes": 448045056,
+        "peakWorkingSetBytes": 632070144
+      },
+      "idle": {
+        "cpuPercent": 1.3945233265720083
+      },
+      "playback": {
+        "confirmedAudible": 3,
+        "discarded": 0,
+        "cpuPercent": 1.06,
+        "workingSetBytes": 602931200
+      },
+      "processes": {
+        "count": 8
+      },
+      "raw": {
+        "startups": [
+          {
+            "windowMs": 947,
+            "startupMs": 3496,
+            "workingSetBytes": 578469888,
+            "privateBytes": 448045056,
+            "peakWorkingSetBytes": 624164864,
+            "idleCpuPercent": 1.0148575140050338,
+            "processCount": 8
+          },
+          {
+            "windowMs": 939,
+            "startupMs": 3468,
+            "workingSetBytes": 584454144,
+            "privateBytes": 451776512,
+            "peakWorkingSetBytes": 647163904,
+            "idleCpuPercent": 2.0239637305699483,
+            "processCount": 8
+          },
+          {
+            "windowMs": 931,
+            "startupMs": 6854,
+            "workingSetBytes": 577830912,
+            "privateBytes": 443686912,
+            "peakWorkingSetBytes": 623636480,
+            "idleCpuPercent": 1.3945233265720083,
+            "processCount": 8
+          },
+          {
+            "windowMs": 945,
+            "startupMs": 4035,
+            "workingSetBytes": 581554176,
+            "privateBytes": 443211776,
+            "peakWorkingSetBytes": 632070144,
+            "idleCpuPercent": 1.14115880873164,
+            "processCount": 8
+          },
+          {
+            "windowMs": 981,
+            "startupMs": 3687,
+            "workingSetBytes": 873037824,
+            "privateBytes": 1084948480,
+            "peakWorkingSetBytes": 936902656,
+            "idleCpuPercent": 1.647939315268538,
+            "processCount": 19
+          }
+        ],
+        "playbacks": [
+          {
+            "audible": true,
+            "peak": 0.13099,
+            "audibleTicks": 80,
+            "totalTicks": 80,
+            "cpuPercent": 1.66,
+            "workingSetMb": 575
+          },
+          {
+            "audible": true,
+            "peak": 0.11455,
+            "audibleTicks": 80,
+            "totalTicks": 80,
+            "cpuPercent": 1.06,
+            "workingSetMb": 565
+          },
+          {
+            "audible": true,
+            "peak": 0.11136,
+            "audibleTicks": 80,
+            "totalTicks": 80,
+            "cpuPercent": 0.91,
+            "workingSetMb": 581
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+ready — WebView2 UA:
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0
+
+=== TEST 1: 206 Partial Content + seek ===
+probe: E:\Музонон\disc - ☆NoAki☆.flac
+tauri url:    http://nora.localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac
+electron url: nora://localfiles/E%3A/%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD/disc%20-%20%E2%98%86NoAki%E2%98%86.flac
+--- control: Electron-shaped nora:// URL ---
+--- protocol probe via fetch() ---
+  fetch threw: Failed to fetch
+electron-style URL → FAILED (expected on Windows)
+ascii control: E:\tmp\spike_ascii_probe.flac
+--- protocol probe via fetch() ---
+  status 206 Partial Content
+  content-type:  audio/flac
+  content-range: bytes 0-1023/51100840
+  accept-ranges: bytes
+  bytes received: 1024
+  magic: "fLaC"
+ascii path → OK
+--- protocol probe via fetch() ---
+  status 206 Partial Content
+  content-type:  audio/flac
+  content-range: bytes 0-1023/51100840
+  accept-ranges: bytes
+  bytes received: 1024
+  magic: "fLaC"
+unicode path → OK
+canPlayType('audio/flac') = "probably"
+canPlayType('audio/mpeg') = "probably"
+duration: 96.87s
+seek → target 69.74s, landed 69.74s (drift 0.000s)
+playback advanced 0.85s after seek
+server saw 9 request(s):
+   GET uri=nora://localhost/E%3A%5Ctmp%5Cspike_ascii_probe.flac | decoded=E:\tmp\spike_ascii_probe.flac | Range: bytes=0-1023 | Origin: http://localhost:5183
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=0-1023 | Origin: http://localhost:5183
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=0- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=1015808- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=4194304- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=51085312- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=51052544- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=51019776- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=36864000- | Origin: <none>
+ranged requests: 9/9
+TEST 1: PASS
+
+=== TEST 2: CORS + MediaElementSource + gain ramp (declick) ===
+canplay fired with crossOrigin=anonymous
+RMS through the Web Audio graph: 0.404697
+TEST 2: PASS — audio reaches the graph, gain ramps applied
+
+=== TEST 3: fs throughput (tag parsing over the real library) ===
+100 files, head size 256 KB
+arm            elapsed   per-file   parsed        read      rate
+fs-head           0.51s      5.1 ms/file  parsed 100/100  read 25 MB  49 MB/s
+rust-head         2.98s     29.8 ms/file  parsed 100/100  read 25 MB  8 MB/s
+fs-whole         11.53s    115.3 ms/file  parsed 100/100  read 1824 MB  158 MB/s
+
+Compare against the Node baseline: npm run bench:node
+TEST 3: measured (no pass/fail — the numbers are the finding)
+
+=== SUMMARY: range/seek PASS | cors/declick PASS ===

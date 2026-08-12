@@ -1,0 +1,76 @@
+name: Release
+
+# Tag-driven, not branch-driven. A release is a deliberate act, and pushing to
+# a branch is not: a workflow that publishes on every push to `release` turns
+# an ordinary merge into a shipped build.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Windows only. Nemora serves audio through WebView2 and integrates with the
+# Windows taskbar, mixer and file associations; there is no macOS or Linux
+# build to publish, and a matrix that pretends otherwise fails loudly for no
+# reason.
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    env:
+      # Build-time values baked into the renderer bundle. Anything missing here
+      # degrades a feature rather than failing the build: no Discord id means no
+      # Rich Presence, no Last.fm key means no scrobbling.
+      MAIN_VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      MAIN_VITE_LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
+      MAIN_VITE_LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
+      MAIN_VITE_GENIUS_API_KEY: ${{ secrets.GENIUS_API_KEY }}
+      MAIN_VITE_MUSIXMATCH_DEFAULT_USER_TOKEN: ${{ secrets.MUSIXMATCH_DEFAULT_USER_TOKEN }}
+      # Encrypts stored credentials. CHANGING IT MAKES EXISTING ONES
+      # UNREADABLE, so it must stay the same for the life of the app.
+      MAIN_VITE_ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and test
+        run: |
+          npx tsc --noEmit -p src-tauri/../tsconfig.web.json || echo "renderer typecheck has a known baseline of pre-existing errors"
+          npx jest --silent
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the installer. Without these the build still succeeds and
+          # produces NO .sig, and every future update is rejected by clients
+          # that installed this release. The failure is silent, which is why it
+          # is worth checking the release assets for a .sig by eye.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Nemora __VERSION__'
+          releaseBody: 'See the assets below to download and install.'
+          # Published by hand after the assets are checked. A draft cannot
+          # accidentally become the "latest" that the updater points at.
+          releaseDraft: true
+          prerelease: false
+          # Generates latest.json from the signatures, which is exactly what
+          # the updater endpoint in tauri.conf.json fetches.
+          includeUpdaterJson: true

@@ -1,0 +1,82 @@
+{
+  "cSpell.words": [
+    "acoustid",
+    "aeiou",
+    "apic",
+    "armv",
+    "Brainz",
+    "Deezer",
+    "ecfg",
+    "EXTM",
+    "Fashni",
+    "FXJOE",
+    "horiz",
+    "isrc",
+    "lastfm",
+    "LRCLIB",
+    "Mamidwar",
+    "mbid",
+    "Motrix's",
+    "nsis",
+    "phin",
+    "pmmmwh",
+    "pyong",
+    "Resyncing",
+    "RIELL",
+    "samuelmeuli",
+    "scrobble",
+    "Spicetify",
+    "sspai",
+    "SYLT",
+    "unlove",
+    "unmaximize",
+    "unmaximized",
+    "Unmute",
+    "unsynced",
+    "USLT",
+    "vite",
+    "webm",
+    "xmark",
+    "Yosef",
+    "YYYYMMDDNN"
+  ],
+  "files.associations": {
+    ".eslintrc": "jsonc",
+    ".prettierrc": "jsonc",
+    ".eslintignore": "ignore"
+  },
+
+  "search.exclude": {
+    ".git": true,
+    ".eslintcache": true,
+    ".erb/dll": true,
+    "release/{build,app/dist}": true,
+    "node_modules": true,
+    "npm-debug.log.*": true,
+    "test/**/__snapshots__": true,
+    "package-lock.json": true,
+    "*.{css,sass,scss}.d.ts": true
+  },
+  "cSpell.ignoreWords": ["asar", "edata", "prettierrc"],
+  "rpc.enabled": true,
+  "docwriter.hotkey.windows": "Alt + .",
+  "tailwindCSS.emmetCompletions": true,
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "ngClass",
+    "iconClassName",
+    "titleClassName"
+  ],
+  "json.schemas": [
+    {
+      "fileMatch": ["../release-notes.json"],
+      "url": "../release-notes-schema.json"
+    }
+  ],
+  "editor.tokenColorCustomizations": {
+    "comments": "",
+    "textMateRules": []
+  },
+  "typescript.tsdk": "node_modules\\typescript\\lib"
+}

@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Main - attach",
+      "port": 5858,
+      "request": "attach",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "type": "node",
+      "timeout": 15000,
+      "restart": {
+        "delay": 1000,
+        "maxAttempts": 10
+      },
+      "showAsyncStacks": true,
+      "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/out/**/*.js", "!**/node_modules/**"]
+    },
+    {
+      "name": "Renderer - Attach",
+      "port": 9223,
+      "request": "attach",
+      "type": "chrome",
+      "webRoot": "${workspaceFolder}",
+      "showAsyncStacks": true,
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug All",
+      "configurations": ["Renderer - Attach", "Main - attach"],
+      "presentation": {
+        "order": 1
+      }
+    }
+  ]
+}

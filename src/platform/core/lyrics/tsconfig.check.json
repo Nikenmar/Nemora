@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client", "jest", "node"]
+  },
+  "include": [
+    "**/*.ts",
+    "../playlists/pathUtils.ts",
+    "../net/**/*.ts",
+    "../../../types/*.d.ts",
+    "../../../common/*",
+    "../../../renderer/src/env.d.ts"
+  ]
+}

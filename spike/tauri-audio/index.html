@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>nora:// spike</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0; padding: 20px;
+        font: 13px/1.5 Consolas, monospace;
+        background: #14161a; color: #d7dae0;
+      }
+      h1 { font-size: 15px; margin: 0 0 14px; color: #8ab4f8; }
+      button {
+        background: #232830; color: #d7dae0; border: 1px solid #39404d;
+        padding: 7px 13px; margin: 0 6px 8px 0; cursor: pointer; font: inherit;
+      }
+      button:hover:not(:disabled) { background: #2d333d; }
+      button:disabled { opacity: .4; cursor: default; }
+      #log {
+        white-space: pre-wrap; margin-top: 14px; padding: 12px;
+        background: #0e1013; border: 1px solid #262c35; min-height: 340px;
+        max-height: 62vh; overflow-y: auto;
+      }
+      .ok { color: #7ee787; }
+      .bad { color: #ff7b72; }
+      .warn { color: #e3b341; }
+      .dim { color: #6e7681; }
+    </style>
+  </head>
+  <body>
+    <h1>Tauri v2 / WebView2 — spike: nora:// ranges, CORS declick, fs throughput</h1>
+    <div>
+      <button id="t1">1. Range + seek</button>
+      <button id="t2">2. CORS + declick</button>
+      <button id="t3">3. fs throughput</button>
+      <button id="all">Run all</button>
+      <button id="clear">Clear</button>
+    </div>
+    <div id="log"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

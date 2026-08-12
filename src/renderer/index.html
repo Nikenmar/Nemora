@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nemora</title>
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'https://raw.githubusercontent.com'"
+    /> -->
+    <!--
+      Shared by both shells, so it must satisfy both.
+
+      A meta CSP INTERSECTS with the header CSP rather than replacing it, and
+      this tag predates the Tauri port: its connect-src listed only 'self' and
+      GitHub, which silently blocked every Tauri invoke() - IPC travels over
+      ipc:/http://ipc.localhost. The window opened, the bundle loaded, and then
+      every plugin call threw, so the app sat on its startup-error screen with
+      nothing in the log, because the logger is an invoke too.
+
+      media-src and img-src must also allow the custom scheme that serves audio
+      and artwork under Tauri. Keep that scheme in step with tauri.conf.json:
+      because the two policies INTERSECT, this tag still naming the old nora://
+      scheme after the rename left an EMPTY intersection for img-src and
+      media-src. Every cover and every track was then blocked in the webview,
+      before any request reached the protocol handler - which is why the app
+      showed default artwork and a bare MediaError with nothing logged
+      server-side.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost http://nemora.localhost nemora: https:; media-src 'self' http://nemora.localhost nemora: blob: data: file:; img-src 'self' http://nemora.localhost nemora: blob: data: file: https:;"
+    />
+    <!--
+      Paints the page before any stylesheet or script exists.
+
+      A webview's default page background is WHITE, and nothing in the bundle
+      runs early enough to change it: the window appeared white for a moment on
+      every launch, and a fast resize showed white along the edges the
+      compositor had not caught up with yet. `backgroundColor` in
+      tauri.conf.json covers the window and webview layers; this covers the
+      document itself. Both are needed - they are three different surfaces.
+
+      The value is `--dark-background-color-1` (hsl(228 7% 14%)) resolved to hex,
+      because a variable cannot be used before its stylesheet loads. The light
+      counterpart follows the SYSTEM theme, which is the best guess available
+      before the profile has been read.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background-color: #212226;
+      }
+      @media (prefers-color-scheme: light) {
+        html,
+        body {
+          background-color: #ffffff;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

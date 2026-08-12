@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Inlined from @electron-toolkit/tsconfig, which the rebrand removed from
+  // package.json along with the rest of the Electron toolchain while both
+  // tsconfigs went on extending it. That kept working only because the package
+  // was still sitting in node_modules; the first clean install pruned it and
+  // the project stopped type-checking and stopped running its tests, with
+  // 1500 errors pointing at node_modules rather than at the real cause.
+  //
+  // These are that package's options verbatim. Keeping them here means the
+  // build no longer depends on an Electron package in a project that has no
+  // Electron.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "sourceMap": false,
+    "strict": true,
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": true
+  }
+}

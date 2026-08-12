@@ -1,0 +1,12 @@
+{
+  "audioLibraryControls.getBlacklistData": "{folderBlacklist,songBlacklist}",
+  "audioLibraryControls.resyncSongsLibrary": "boolean",
+  "lyrics.convertLyricsToPinyin": "undefined",
+  "lyrics.convertLyricsToRomaja": "undefined",
+  "lyrics.romanizeLyrics": "undefined",
+  "settingsHelpers.compareEncryptedData": "boolean",
+  "songGuessr.getPools": "[{count,name,type} x17]",
+  "userData.getUserData": "{language,musicFolders,preferences,recentSearches,theme,windowDiamensions,windowPositions,windowState}",
+  "windowControls.hideApp": "undefined",
+  "windowControls.showApp": "undefined"
+}
