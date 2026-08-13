@@ -28,6 +28,20 @@ import { Resvg } from '@resvg/resvg-js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const data = JSON.parse(readFileSync(join(root, 'docs/tauri-port/benchmark-raw.json'), 'utf8'));
+
+/**
+ * The library build, measured separately and folded in here.
+ *
+ * Parsing every track and encoding every cover is the heaviest thing either
+ * player does, and neither scans on startup - so it cannot live in the same
+ * harness as the launch measurements. `bench-scan.mjs` times it from the
+ * profile on disk after a human clicks "add folder"; this reads what it wrote.
+ * Absent file, absent row.
+ */
+const scanPath = join(root, 'docs/tauri-port/benchmark-scan.json');
+const scan = existsSync(scanPath) ? JSON.parse(readFileSync(scanPath, 'utf8')) : { runs: [] };
+const scanOf = (needle) =>
+  scan.runs?.find((run) => run.label.toLowerCase().includes(needle));
 const { electron, tauri } = data.results;
 
 
@@ -72,12 +86,18 @@ const rows = [
     b: tauri.installedBytes,
     format: fmt.mb
   },
-  {
-    label: 'Installer download',
-    a: electron.installerBytes,
-    b: tauri.installerBytes,
-    format: fmt.mb
-  },
+  // Drawn only when BOTH sides actually have an installer to measure.
+  //
+  // A portable copy has none, and the row then showed "0 MB" against Nemora's
+  // 27 MB - which reads as an installer that weighs nothing rather than as a
+  // measurement that does not exist. An absent row says that honestly.
+  electron.installerBytes > 0 &&
+    tauri.installerBytes > 0 && {
+      label: 'Installer download',
+      a: electron.installerBytes,
+      b: tauri.installerBytes,
+      format: fmt.mb
+    },
   {
     label: 'Window on screen',
     a: electron.startup.windowMedianMs,
@@ -96,20 +116,28 @@ const rows = [
   //
   // What the card does show is `Window on screen`, which no update check can
   // move.
+  // The two memory rows are NOT the same number said twice, and their old
+  // names ("working set", "private") were jargon nobody reads off a picture.
+  //
+  //   RAM in use          - what Task Manager shows: physical memory the app
+  //                         occupies right now, shared Windows libraries and all.
+  //   RAM it alone holds  - the part that belongs to this app only and cannot
+  //                         be shared with anything else. It is the better
+  //                         predictor of what a second copy would cost.
   {
-    label: 'Memory, working set',
+    label: 'RAM in use',
     a: electron.memory.workingSetBytes,
     b: tauri.memory.workingSetBytes,
     format: fmt.mb
   },
   {
-    label: 'Memory, private',
+    label: 'RAM it alone holds',
     a: electron.memory.privateBytes,
     b: tauri.memory.privateBytes,
     format: fmt.mb
   },
   {
-    label: 'Memory, peak at launch',
+    label: 'RAM at its hungriest',
     a: electron.memory.peakWorkingSetBytes,
     b: tauri.memory.peakWorkingSetBytes,
     format: fmt.mb
@@ -130,14 +158,24 @@ const rows = [
   // on an error dialog, which is exactly how this row was wrong the first time.
   electron.playback?.confirmedAudible > 0 &&
     tauri.playback?.confirmedAudible > 0 && {
-      label: 'CPU, playing a track',
+      label: 'CPU while a track plays',
       a: electron.playback.cpuPercent,
       b: tauri.playback.cpuPercent,
       format: fmt.percent
     },
+  // Songs parsed and covers encoded, for the same 300 tracks. Both players are
+  // doing identical work here, so the row is a like-for-like time and the one
+  // most of this port went into.
+  scanOf('nora') &&
+    scanOf('nemora') && {
+      label: 'Building a 300-track library',
+      a: scanOf('nora').completeMs,
+      b: scanOf('nemora').completeMs,
+      format: fmt.seconds
+    },
   electron.playback?.confirmedAudible > 0 &&
     tauri.playback?.confirmedAudible > 0 && {
-      label: 'Memory, playing a track',
+      label: 'RAM while a track plays',
       a: electron.playback.workingSetBytes,
       b: tauri.playback.workingSetBytes,
       format: fmt.mb

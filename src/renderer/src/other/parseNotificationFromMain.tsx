@@ -177,7 +177,11 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
     }
   },
   {
-    trigger: ['SONG_REMOVE_PROCESS_UPDATE', 'AUDIO_PARSING_PROCESS_UPDATE'],
+    trigger: [
+      'SONG_REMOVE_PROCESS_UPDATE',
+      'AUDIO_PARSING_PROCESS_UPDATE',
+      'ARTWORK_GENERATING_PROCESS_UPDATE'
+    ],
     duration: 10000,
     iconClassName: 'material-icons-round-outlined',
     type: 'WITH_PROGRESS_BAR',
@@ -190,7 +194,9 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
         total: (data?.total as number) || 0,
         value: (data?.value as number) || 0
       };
-      this.iconName = messageCode === 'AUDIO_PARSING_PROCESS_UPDATE' ? 'add' : 'delete';
+      if (messageCode === 'AUDIO_PARSING_PROCESS_UPDATE') this.iconName = 'add';
+      else if (messageCode === 'ARTWORK_GENERATING_PROCESS_UPDATE') this.iconName = 'image';
+      else this.iconName = 'delete';
 
       return this;
     }

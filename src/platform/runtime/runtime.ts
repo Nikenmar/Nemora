@@ -5,7 +5,6 @@ import restoreBlacklistedFolders from '../core/blacklist/restoreBlacklistedFolde
 import restoreBlacklistedSongs from '../core/blacklist/restoreBlacklistedSongs';
 import toggleBlacklistFolders from '../core/blacklist/toggleBlacklistFolders';
 import filterArtists from '../core/filters/filterArtists';
-import paginateData from '../core/filters/paginateData';
 import filterSongs from '../core/filters/filterSongs';
 import addSongsToPlaylist from '../core/playlists/addSongsToPlaylist';
 import { addToSongsHistory } from '../core/playlists/addToSongsHistory';
@@ -32,7 +31,13 @@ import type { AppDataRepository } from '../core/appdata/appDataRepository';
 import exportStatsData from '../core/transfer/exportStats';
 import importStatsData from '../core/transfer/importStats';
 import type { StatsTransferRepository } from '../core/transfer/statsTransferRepository';
-import { embeddedArtwork, pathArtwork, urlArtwork, type ArtworkSource } from '../core/artwork';
+import {
+  audioArtwork,
+  embeddedArtwork,
+  pathArtwork,
+  urlArtwork,
+  type ArtworkSource
+} from '../core/artwork';
 import {
   deleteSongsFromSystem as deleteCatalogSongsFromSystem,
   getSongFromUnknownSource as getCatalogSongFromUnknownSource,
@@ -128,6 +133,27 @@ import type {
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/**
+ * How many covers to produce at once.
+ *
+ * Capped below the core count so a scan started in the background cannot take
+ * the whole machine away from playback, and floored at two so a host that
+ * reports nothing still overlaps its work.
+ */
+/**
+ * How many finished covers to announce at once.
+ *
+ * Small enough that a cover shows up while the scan is still running, large
+ * enough that a three-hundred-track scan is a dozen updates and not three
+ * hundred.
+ */
+const ARTWORK_ANNOUNCE_GROUP = 12;
+
+const artworkConcurrency = (): number => {
+  const cores = globalThis.navigator?.hardwareConcurrency ?? 0;
+  return Math.max(2, Math.min(8, cores > 0 ? cores - 1 : 4));
+};
+
 const logger = {
   debug: (message: string, data?: unknown): void => console.debug(message, data),
   info: (message: string, data?: unknown): void => console.info(message, data),
@@ -169,6 +195,19 @@ export class NoraRuntime {
   private songGuessrRepo: SongGuessrRepository | undefined;
   private singleInstanceController: RuntimeSingleInstanceController | undefined;
   private libraryWatcher: LibraryWatcherManager | undefined;
+  /** Serialises background cover generation so two batches cannot interleave. */
+  private artworkQueue: Promise<void> = Promise.resolve();
+  /**
+   * Progress across the WHOLE scan, not the current batch.
+   *
+   * A scan enqueues one batch per commit, so counting per batch would restart
+   * the bar at zero every hundred songs. The total grows as batches arrive and
+   * both counters reset once the queue has drained.
+   */
+  private artworkTotal = 0;
+  private artworkDone = 0;
+  /** Sorted and filtered song orders, keyed by the pair that produced them. */
+  private readonly orderedSongsCache = new Map<string, readonly SavableSongData[]>();
   private startupSongCaptureActive = false;
   private startupSong: PathBackedAudioData | undefined;
   private readonly outsideLibrarySongs: PathBackedAudioData[] = [];
@@ -228,11 +267,28 @@ export class NoraRuntime {
   private setSnapshot<Key extends keyof RuntimeSnapshots>(
     key: Key,
     store: Key,
-    value: RuntimeSnapshots[Key]
+    value: RuntimeSnapshots[Key],
+    /**
+     * True when the caller built this value itself and keeps no reference to
+     * it, which lets the copy be skipped.
+     *
+     * `clone` here is `JSON.parse(JSON.stringify(...))` over the WHOLE store.
+     * A library scan commits a batch at a time, and each commit was paying
+     * that round trip twice per store - once to take a working copy, once
+     * again on the way in - on a catalog that grows with every batch. That
+     * cost is what made the scan stall for longer and longer as it went.
+     */
+    owned = false
   ): void {
-    const next = clone(value);
+    const next = owned ? value : clone(value);
     this.state()[key] = next;
     this.cache.set(store, next);
+    // Every mutation reaches the stores through here, which makes this the one
+    // honest place to drop a derived order. Clearing all of it rather than the
+    // affected keys is deliberate: a sort can depend on songs, on listening
+    // data and on the blacklist at once, and a cache that is right only for the
+    // combinations someone remembered to enumerate is worse than none.
+    this.orderedSongsCache.clear();
   }
 
   async flush(): Promise<void> {
@@ -615,29 +671,57 @@ export class NoraRuntime {
     const newGenreIds: string[] = [];
     const changedGenreIds: string[] = [];
 
-    for (const track of tracks) {
+    // Each track's cover source is prepared here; the covers themselves are
+    // produced after the commit (see generateArtworkInBackground). The catalog
+    // mutation below stays sequential because it assigns ids and edits shared
+    // arrays.
+    const pending = tracks
+      .filter((track) => !knownPaths.has(canonicalPathKey(track.path)))
+      .map((track) => {
+        // A picture the scanner CARRIED, or one it merely found.
+        //
+        // The head parser returns the bytes it decoded; a native scan reports
+        // that a cover exists and how big it is, and leaves it in the file. Both
+        // are usable, and neither route below cares which one it got: the native
+        // artwork pipeline opens the audio file either way, and the browser
+        // route uses the bytes when it has them and asks for them when it does
+        // not.
+        const picture =
+          track.metadata.pictures.find((entry) => entry.data) ??
+          track.metadata.pictures.find((entry) => entry.byteLength > 0);
+        const pictureFormat = picture?.format.toLocaleLowerCase('en-US');
+        const pictureMimeType = pictureFormat?.includes('/')
+          ? pictureFormat
+          : pictureFormat === 'jpg'
+            ? 'image/jpeg'
+            : pictureFormat
+              ? `image/${pictureFormat}`
+              : 'application/octet-stream';
+        return {
+          track,
+          songId: generateRandomId(),
+          source: picture?.data
+            ? embeddedArtwork(new Uint8Array(picture.data), pictureMimeType, track.path)
+            : picture
+              ? audioArtwork(track.path, pictureMimeType)
+              : undefined
+        };
+      });
+
+    for (const entry of pending) {
+      const track = entry.track;
       const pathKey = canonicalPathKey(track.path);
       if (knownPaths.has(pathKey)) continue;
 
-      const songId = generateRandomId();
-      const picture = track.metadata.pictures.find((entry) => entry.data);
-      const pictureFormat = picture?.format.toLocaleLowerCase('en-US');
-      const pictureMimeType = pictureFormat?.includes('/')
-        ? pictureFormat
-        : pictureFormat === 'jpg'
-          ? 'image/jpeg'
-          : pictureFormat
-            ? `image/${pictureFormat}`
-            : 'application/octet-stream';
-      const pictureSource = picture?.data
-        ? embeddedArtwork(new Uint8Array(picture.data), pictureMimeType)
-        : undefined;
-      const artworkPaths = await this.requireArtworkService().storeArtworks(
-        songId,
-        'songs',
-        pictureSource
-      );
-      const hasArtwork = !artworkPaths.isDefaultArtwork;
+      const songId = entry.songId;
+      // Covers are produced AFTER these songs are in the library, not before.
+      //
+      // Generating them here is what made a scan look broken: reading and
+      // parsing 300 tracks takes about three seconds, generating their covers
+      // about ten, and with both in one step the list stayed empty for the whole
+      // time and then filled in a single jump. A song is useful the moment it
+      // exists; its cover can arrive a second later.
+      const hasArtwork = entry.source !== undefined;
       const artworkName = hasArtwork ? `${songId}.webp` : undefined;
       const fileName = track.path.slice(
         Math.max(track.path.lastIndexOf('/'), track.path.lastIndexOf('\\')) + 1
@@ -775,10 +859,14 @@ export class NoraRuntime {
     }
 
     if (addedSongIds.length === 0) return [];
-    this.setSnapshot('songs', 'songs', songs);
-    this.setSnapshot('artists', 'artists', artists);
-    this.setSnapshot('albums', 'albums', albums);
-    this.setSnapshot('genres', 'genres', genres);
+    this.generateArtworkInBackground(pending);
+    // These four are the working copies taken at the top of this method and
+    // nothing below reads them again, so they can be handed over rather than
+    // copied a second time.
+    this.setSnapshot('songs', 'songs', songs, true);
+    this.setSnapshot('artists', 'artists', artists, true);
+    this.setSnapshot('albums', 'albums', albums, true);
+    this.setSnapshot('genres', 'genres', genres, true);
     this.events.dataUpdated('songs/newSong', addedSongIds);
     if (newArtistIds.length > 0) this.events.dataUpdated('artists/newArtist', newArtistIds);
     if (changedArtistIds.length > 0) this.events.dataUpdated('artists', changedArtistIds);
@@ -787,6 +875,103 @@ export class NoraRuntime {
     if (newGenreIds.length > 0) this.events.dataUpdated('genres/newGenre', newGenreIds);
     if (changedGenreIds.length > 0) this.events.dataUpdated('genres', changedGenreIds);
     return addedSongIds;
+  }
+
+  /**
+   * Produces the covers for a batch that is already in the library.
+   *
+   * Every committed song already points at `<songId>.webp`, and the pipeline
+   * writes exactly that file, so a cover shows up as soon as it is encoded
+   * without a second catalog write. Only the tracks whose cover could NOT be
+   * produced need correcting, and they are corrected in one pass rather than
+   * one store rewrite per failure.
+   *
+   * Deliberately not awaited: a scan must not wait on image encoding, and a
+   * failure here must not fail a scan that already succeeded.
+   */
+  private generateArtworkInBackground(
+    entries: readonly { songId: string; source?: ArtworkSource }[]
+  ): void {
+    const withArtwork = entries.filter((entry) => entry.source !== undefined);
+    if (withArtwork.length === 0) return;
+
+    const service = this.services.artwork;
+    if (!service) return;
+
+    this.artworkTotal += withArtwork.length;
+    this.artworkQueue = this.artworkQueue
+      .then(async () => {
+        const failed: string[] = [];
+        // Each cover is a decode plus two encodes, and the native route runs
+        // them on a blocking thread - so this is bound by cores, not by IO.
+        // Four was a guess made when this ran inside the commit and had to stay
+        // polite; off the critical path it can use the machine it is on.
+        const inFlight = Math.min(artworkConcurrency(), withArtwork.length);
+        let next = 0;
+
+        // Covers are announced AS THEY LAND, not once the batch is done.
+        //
+        // A cover takes noticeably longer to produce than the song row it
+        // belongs to, and the row is already pointing at a file that does not
+        // exist yet - so the interface shows a placeholder and, without being
+        // told, keeps showing it until the view is rebuilt. Announcing in small
+        // groups rather than per cover keeps that from becoming three hundred
+        // separate refreshes.
+        let announcePending: string[] = [];
+        const announce = (force = false): void => {
+          if (announcePending.length === 0) return;
+          if (!force && announcePending.length < ARTWORK_ANNOUNCE_GROUP) return;
+          const ready = announcePending;
+          announcePending = [];
+          this.events.dataUpdated('songs/artworks', ready);
+        };
+
+        await Promise.all(
+          Array.from({ length: inFlight }, async () => {
+            for (let index = next++; index < withArtwork.length; index = next++) {
+              const entry = withArtwork[index];
+              const paths = await service
+                .storeArtworks(entry.songId, 'songs', entry.source)
+                .catch((error: unknown) => {
+                  logger.error('Failed to generate artwork for a scanned song.', {
+                    songId: entry.songId,
+                    error
+                  });
+                  return undefined;
+                });
+              if (!paths || paths.isDefaultArtwork) failed.push(entry.songId);
+              else announcePending.push(entry.songId);
+              announce();
+              this.artworkDone += 1;
+              this.events.message('ARTWORK_GENERATING_PROCESS_UPDATE', {
+                total: this.artworkTotal,
+                value: this.artworkDone
+              });
+            }
+          })
+        );
+        announce(true);
+
+        if (failed.length > 0) {
+          const missing = new Set(failed);
+          const songs = clone(this.state().songs);
+          for (const song of songs) {
+            if (!missing.has(song.songId)) continue;
+            song.isArtworkAvailable = false;
+          }
+          this.setSnapshot('songs', 'songs', songs, true);
+        }
+
+        // Reset only once nothing is left queued: an intermediate batch that
+        // reset here would drop the bar back to zero mid-scan.
+        if (this.artworkDone >= this.artworkTotal) {
+          this.artworkDone = 0;
+          this.artworkTotal = 0;
+        }
+      })
+      .catch((error: unknown) => {
+        logger.error('Background artwork generation failed.', { error });
+      });
   }
 
   private libraryRepository(
@@ -1036,16 +1221,16 @@ export class NoraRuntime {
     filterType?: SongFilterTypes,
     pagination?: PaginatingData
   ): PaginatedResult<AudioInfo, SongSortTypes> {
-    const repository = {
-      isSongBlacklisted: (id: string, path: string) => this.isSongBlacklisted(id, path),
-      getFolderBlacklist: () => this.state().blacklist.folderBlacklist
-    };
-    const songs = sortSongs(
-      repository,
-      filterSongs(repository, [...this.state().songs], filterType),
-      sortType,
-      this.state().listeningData
-    ).map(
+    const ordered = this.orderedSongs(sortType, filterType);
+    // Only the requested rows become AudioInfo.
+    //
+    // This used to convert the WHOLE catalog and then throw away everything but
+    // the page - 3400 conversions to show fifty rows, measured at 582 KB of
+    // garbage per read, which a scrolling list turns into tens of megabytes a
+    // second through the collector. The order itself is cached above, so a page
+    // now costs the page.
+    const page = pagination ? ordered.slice(pagination.start, pagination.end) : ordered;
+    const data = page.map(
       (song): AudioInfo => ({
         title: song.title,
         artists: song.artists,
@@ -1061,7 +1246,46 @@ export class NoraRuntime {
         isBlacklisted: this.isSongBlacklisted(song.songId, song.path)
       })
     );
-    return clone(paginateData(songs, sortType, pagination));
+
+    return clone({
+      data,
+      total: ordered.length,
+      sortType,
+      start: pagination?.start ?? 0,
+      end: pagination?.end ?? ordered.length
+    });
+  }
+
+  /**
+   * The catalog in one order, kept until the catalog changes.
+   *
+   * Sorting 3400 songs took 4 to 8 ms and happened on every read, including
+   * every page of a list the user is scrolling - the same answer, recomputed.
+   * The cache holds REFERENCES to the live song objects, so an edit to a song
+   * is visible immediately; only the ORDER could go stale, and `setSnapshot`
+   * drops the whole cache on any store write, which is the single point every
+   * mutation passes through.
+   */
+  private orderedSongs(
+    sortType: SongSortTypes,
+    filterType?: SongFilterTypes
+  ): readonly SavableSongData[] {
+    const key = `${sortType} ${filterType ?? ''}`;
+    const cached = this.orderedSongsCache.get(key);
+    if (cached) return cached;
+
+    const repository = {
+      isSongBlacklisted: (id: string, path: string) => this.isSongBlacklisted(id, path),
+      getFolderBlacklist: () => this.state().blacklist.folderBlacklist
+    };
+    const ordered = sortSongs(
+      repository,
+      filterSongs(repository, [...this.state().songs], filterType),
+      sortType,
+      this.state().listeningData
+    );
+    this.orderedSongsCache.set(key, ordered);
+    return ordered;
   }
 
   getSongInfo(
@@ -1194,7 +1418,9 @@ export class NoraRuntime {
       this.retainedTraversal = undefined;
       return [];
     }
-    const traversal = await walkMusicTrees(fileSystem, roots);
+    const traversal = await walkMusicTrees(fileSystem, roots, {
+      native: this.services.nativeLibrary
+    });
     this.retainedTraversal = traversal;
     const folderCount = traversal.visitedDirectories.length;
     this.events.message('FOLDER_PARSED_FOR_DIRECTORIES', {
@@ -1234,7 +1460,8 @@ export class NoraRuntime {
       ? retained
       : await walkMusicTrees(
           fileSystem,
-          structures.map((structure) => structure.path)
+          structures.map((structure) => structure.path),
+          { native: this.services.nativeLibrary }
         );
     const traversal = {
       structures: clone(structures),
@@ -1245,7 +1472,8 @@ export class NoraRuntime {
 
     const addedSongIds: string[] = [];
     await scanTraversal(this.libraryRepository(addedSongIds), fileSystem, parser, traversal, {
-      includeArtwork: true
+      includeArtwork: true,
+      native: this.services.nativeLibrary
     });
     // New roots mean new things to watch, and the reconciliation pass is worth
     // paying for here: it closes the gap between the traversal above and the
@@ -1271,10 +1499,51 @@ export class NoraRuntime {
         roots
       );
     }
+    await this.repairMissingDurations(parser);
     this.events.message('RESYNC_SUCCESSFUL');
     await this.flush();
     this.restartLibraryWatcher();
     return true;
+  }
+
+  /**
+   * Fills in durations for songs that were scanned before the host could read
+   * them from the file.
+   *
+   * A library scanned by an earlier build holds these as 00:00, and nothing
+   * would ever correct them: a resync reconciles which songs exist, not what is
+   * already known about them, so the only other cure was removing and re-adding
+   * the track. Only the broken rows are touched, and a host with no native
+   * route leaves them exactly as they are.
+   */
+  private async repairMissingDurations(parser: MetadataParserPort): Promise<void> {
+    if (!parser.properties) return;
+    const songs = clone(this.state().songs);
+    const broken = songs.filter((song) => !(song.duration > 0));
+    if (broken.length === 0) return;
+
+    const repaired: string[] = [];
+    const inFlight = Math.min(artworkConcurrency(), broken.length);
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: inFlight }, async () => {
+        for (let index = next++; index < broken.length; index = next++) {
+          const song = broken[index];
+          const properties = await parser.properties?.(song.path).catch(() => undefined);
+          if (!properties?.duration) continue;
+          song.duration = Number(properties.duration.toFixed(2));
+          song.sampleRate ??= properties.sampleRate;
+          song.bitrate ??= properties.bitrate;
+          song.noOfChannels ??= properties.numberOfChannels;
+          repaired.push(song.songId);
+        }
+      })
+    );
+
+    if (repaired.length === 0) return;
+    logger.info('Repaired songs that had no duration.', { count: repaired.length });
+    this.setSnapshot('songs', 'songs', songs, true);
+    this.events.dataUpdated('songs/updatedSong', repaired);
   }
 
   /**
@@ -1344,7 +1613,7 @@ export class NoraRuntime {
           services.fileSystem,
           services.parser,
           { structures: [], songPaths: [path], visitedDirectories: [parentPath(path)] },
-          { includeArtwork: true }
+          { includeArtwork: true, native: this.services.nativeLibrary }
         );
         if (addedSongIds.length > 0) await this.flush();
       },

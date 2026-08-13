@@ -51,6 +51,14 @@ const Notification = (props: AppNotification) => {
     } else updateNotifications((currNotifications) => currNotifications.filter((x) => x.id !== id));
   }, [id, preferences?.isReducedMotion, type, updateNotifications]);
 
+  // The countdown restarts on every progress update.
+  //
+  // Without `progressBarData.value` in the deps the timer was set once, so a
+  // process that ran longer than the notification's duration had its own
+  // progress bar disappear out from under it - and the next update put it back,
+  // which read as the notification flickering rather than as one that had
+  // expired. Measuring the duration from the LAST update means the bar stays
+  // for as long as there is something to report, and no longer.
   useLayoutEffect(() => {
     const notification = notificationRef.current;
     if (notification) {
@@ -64,7 +72,7 @@ const Notification = (props: AppNotification) => {
         updateNotifications((currNotifications) => currNotifications.filter((x) => x.id !== id));
       }
     };
-  }, [duration, id, removeNotification, updateNotifications]);
+  }, [duration, id, progressBarData.value, removeNotification, updateNotifications]);
 
   const notificationIcon = useMemo(() => {
     if (icon) return icon;

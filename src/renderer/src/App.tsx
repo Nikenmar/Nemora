@@ -310,6 +310,24 @@ export default function App() {
 
     const handleSkipForwardClickWithParams = () => handleSkipForwardClick('PLAYER_SKIP');
 
+    // The decoder knows the real length even when the stored metadata does not.
+    //
+    // A song whose duration was never established - an MP3 whose first audio
+    // frame sits past the head the scanner reads - shows 00:00 and gives the
+    // seek bar nothing to scale against. The element has decoded the file by
+    // now, so its duration is authoritative; it is adopted only when the stored
+    // one is missing, so a correctly scanned song is never second-guessed here.
+    const adoptDecodedDuration = () => {
+      const decoded = player.duration;
+      if (!Number.isFinite(decoded) || decoded <= 0) return;
+      if (store.state.currentSongData.duration > 0) return;
+      store.setState((state) => ({
+        ...state,
+        currentSongData: { ...state.currentSongData, duration: decoded }
+      }));
+    };
+    player.addEventListener('loadedmetadata', adoptDecodedDuration);
+
     // player.addEventListener('canplay', managePlayerNotStalledStatus);
     // player.addEventListener('canplaythrough', managePlayerNotStalledStatus);
     // player.addEventListener('loadeddata', managePlayerNotStalledStatus);
@@ -337,6 +355,7 @@ export default function App() {
       // player.removeEventListener('waiting', managePlayerStalledStatus);
       // player.removeEventListener('progress', managePlayerStalledStatus);
 
+      player.removeEventListener('loadedmetadata', adoptDecodedDuration);
       player.removeEventListener('canplay', playSongIfPlayable);
       player.removeEventListener('ended', handleSkipForwardClickWithParams);
       player.removeEventListener('play', addSongTitleToTitleBar);
@@ -492,15 +511,25 @@ export default function App() {
     };
   }, []);
 
+  /**
+   * A notification that is already on screen is updated WHERE IT IS.
+   *
+   * It used to be removed and unshifted back to the front, so every update
+   * moved it to the top of the list. With one notification that is a no-op;
+   * with two live progress bars they swapped places several times a second, and
+   * each swap moves the DOM node, which restarts its entrance animation. The
+   * bars looked like they were being recreated. Order is now decided once, when
+   * a notification first appears; only genuinely new ones go to the front.
+   */
   const addNewNotifications = useCallback((newNotifications: AppNotification[]) => {
     if (newNotifications.length > 0) {
       const maxNotifications = 4;
-      const currentNotifications = store.state.notificationPanelData.notifications;
-      const newNotificationIds = newNotifications.map((x) => x.id);
-      const resultNotifications = currentNotifications.filter(
-        (x, index) => !newNotificationIds.some((y) => y === x.id) && index < maxNotifications
-      );
-      resultNotifications.unshift(...newNotifications);
+      const current = store.state.notificationPanelData.notifications;
+      const replacements = new Map(newNotifications.map((x) => [x.id, x]));
+      const updated = current.map((existing) => replacements.get(existing.id) ?? existing);
+      const known = new Set(current.map((x) => x.id));
+      const fresh = newNotifications.filter((x) => !known.has(x.id));
+      const resultNotifications = [...fresh, ...updated].slice(0, maxNotifications);
 
       startTransition(() =>
         dispatch({
@@ -569,16 +598,28 @@ export default function App() {
     [addNewNotifications, t, managePlaybackErrors]
   );
 
+  /**
+   * One throttle per message code, kept across calls.
+   *
+   * `throttle(fn, 1000)()` built a NEW throttle on every message and called it
+   * immediately, so nothing was ever throttled - a scan pushed one store
+   * dispatch and one full re-render per parsed song, and again per generated
+   * cover. The throttles are kept per code because a shared one holds a single
+   * pending call: parse progress and artwork progress arrive interleaved, and
+   * one would keep displacing the other until its bar stopped moving.
+   */
+  const messageThrottles = useRef(new Map<MessageCodes, (data?: Record<string, unknown>) => void>());
+
   const displayMessageFromMain = useCallback(
     (_: unknown, messageCode: MessageCodes, data?: Record<string, unknown>) => {
-      // const isNotificationWithProgress = data && 'total' in data && 'value' in data;
-
-      // if(!isNotificationWithProgress)
-      throttle(() => {
-        const notification = parseNotificationFromMain(messageCode, data);
-
-        addNewNotifications([notification]);
-      }, 1000)();
+      let show = messageThrottles.current.get(messageCode);
+      if (!show) {
+        show = throttle((payload?: Record<string, unknown>) => {
+          addNewNotifications([parseNotificationFromMain(messageCode, payload)]);
+        }, 300);
+        messageThrottles.current.set(messageCode, show);
+      }
+      show(data);
     },
     [addNewNotifications]
   );

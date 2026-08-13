@@ -1,6 +1,10 @@
 import type { ArtworkService } from '../core/artwork';
 import type { PaletteGenerator } from '../core/artwork/palette';
-import type { LibraryFileSystemPort, MetadataParserPort } from '../core/library/types';
+import type {
+  LibraryFileSystemPort,
+  MetadataParserPort,
+  NativeLibraryPort
+} from '../core/library/types';
 import type { NoraImportPort } from '../core/import/noraImportRepository';
 import type { MetadataFilePort } from '../core/metadata';
 import type { Tags } from 'node-id3';
@@ -95,6 +99,12 @@ export interface RuntimeServices {
    */
   watcherFileSystem?: WatcherFileSystemPort;
   metadataParser?: MetadataParserPort;
+  /**
+   * A host that walks and parses the library itself. Optional like everything
+   * here: without it the scanner reads directories and file heads through
+   * `libraryFileSystem`, which is what the shared core does everywhere else.
+   */
+  nativeLibrary?: NativeLibraryPort;
   metadata?: MetadataFilePort;
   selectMusicFolders?: () => Promise<string[]>;
   romanizeForSearch?: (value: string) => string | undefined;

@@ -19,7 +19,14 @@ const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 const defaultUserData = () => ({
   language: 'en',
-  theme: { isDarkMode: false, useSystemTheme: true },
+  // Dark, and NOT following the system, unlike upstream.
+  //
+  // This is a music player: it sits open beside other work for hours, mostly
+  // showing cover art, and dark is what that was designed against. Following
+  // the system would also hand the choice to whatever the OS does at sunset.
+  // Existing profiles are unaffected - defaults apply only where a file has no
+  // value yet - and Settings still offers both plus "use system".
+  theme: { isDarkMode: true, useSystemTheme: false },
   musicFolders: [],
   preferences: {
     autoLaunchApp: false,

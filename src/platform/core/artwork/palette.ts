@@ -12,7 +12,7 @@ interface VibrantSwatchLike {
   population: number;
 }
 
-interface VibrantPaletteLike {
+export interface VibrantPaletteLike {
   DarkMuted?: VibrantSwatchLike | null;
   DarkVibrant?: VibrantSwatchLike | null;
   LightMuted?: VibrantSwatchLike | null;
@@ -64,13 +64,23 @@ export class PaletteGenerator {
   private readonly logger: ArtworkLogger;
   private readonly createId: () => string;
   private readonly pathToUrl: (path: string) => string;
+  /**
+   * Native extraction for artwork that exists as a file. It skips the decode
+   * inside the renderer entirely; anything it declines falls through to
+   * node-vibrant below, which is the only route a non-Tauri host has.
+   */
+  private readonly nativeExtract:
+    | ((path: string) => Promise<VibrantPaletteLike | undefined>)
+    | undefined;
 
   constructor(
     extractor: PaletteExtractor = new BrowserVibrantPaletteExtractor(),
     logger: ArtworkLogger = silentArtworkLogger,
     createId: () => string = generatePaletteId,
-    pathToUrl: (path: string) => string = (path) => convertFileSrc(path, 'nemora')
+    pathToUrl: (path: string) => string = (path) => convertFileSrc(path, 'nemora'),
+    nativeExtract?: (path: string) => Promise<VibrantPaletteLike | undefined>
   ) {
+    this.nativeExtract = nativeExtract;
     this.extractor = extractor;
     this.logger = logger;
     this.createId = createId;
@@ -79,6 +89,12 @@ export class PaletteGenerator {
 
   async generate(source?: ArtworkSource): Promise<PaletteData | undefined> {
     if (!source) return DEFAULT_SONG_PALETTE;
+
+    // A cover that exists as a file never has to be decoded in the renderer.
+    if (source.kind === 'path' && this.nativeExtract) {
+      const native = await this.nativeExtract(source.path).catch(() => undefined);
+      if (native) return this.toPaletteData(native);
+    }
 
     let objectUrl: string | undefined;
     try {
@@ -91,21 +107,25 @@ export class PaletteGenerator {
             : objectUrl;
       if (!sourceUrl) throw new Error('failed to create an artwork URL for palette extraction');
 
-      const palette = await this.extractor.extract(sourceUrl);
-      return {
-        paletteId: this.createId(),
-        Vibrant: convertSwatch(palette.Vibrant),
-        LightVibrant: convertSwatch(palette.LightVibrant),
-        DarkVibrant: convertSwatch(palette.DarkVibrant),
-        Muted: convertSwatch(palette.Muted),
-        LightMuted: convertSwatch(palette.LightMuted),
-        DarkMuted: convertSwatch(palette.DarkMuted)
-      };
+      return this.toPaletteData(await this.extractor.extract(sourceUrl));
     } catch (error) {
       this.logger.error('Failed to parse artwork to get a color palette.', { error });
       return undefined;
     } finally {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     }
+  }
+
+  /** One shape for both routes, so a swatch cannot be rounded two ways. */
+  private toPaletteData(palette: VibrantPaletteLike): PaletteData {
+    return {
+      paletteId: this.createId(),
+      Vibrant: convertSwatch(palette.Vibrant),
+      LightVibrant: convertSwatch(palette.LightVibrant),
+      DarkVibrant: convertSwatch(palette.DarkVibrant),
+      Muted: convertSwatch(palette.Muted),
+      LightMuted: convertSwatch(palette.LightMuted),
+      DarkMuted: convertSwatch(palette.DarkMuted)
+    };
   }
 }

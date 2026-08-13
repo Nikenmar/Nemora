@@ -6,14 +6,18 @@
 // tray, Windows taskbar buttons, Discord IPC, and window geometry.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod artwork;
 mod audio_session;
 mod discord;
 mod fsops;
+mod library;
 mod protocol;
 mod secrets;
 mod shellops;
 mod system;
+mod tags;
 mod taskbar;
+mod window_backdrop;
 mod window_state;
 
 fn main() {
@@ -40,6 +44,9 @@ fn main() {
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
+            artwork::artwork_transform_file,
+            artwork::artwork_transform_audio,
+            artwork::artwork_palette,
             fsops::write_file_atomic,
             // JSON stores go through the text form: `invoke` serialises a
             // Vec<u8> argument as a JSON array of numbers, so songs.json would
@@ -72,6 +79,13 @@ fn main() {
             system::profile_dir_override,
             system::selfcheck_output_path,
             system::benchmark_mode,
+            system::force_typescript,
+            library::library_walk,
+            library::library_parse,
+            tags::audio_properties,
+            tags::tags_read,
+            tags::tags_write,
+            tags::tags_heal_picture_mime,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Serving happens off the main thread: a cold 50 MB read must never
@@ -84,6 +98,29 @@ fn main() {
         .manage(shellops::ScreenSleepState::default())
         .setup(|app| {
             system::spawn_system_watcher(app.handle().clone());
+            // Paint BOTH layers before the first frame, from native code.
+            //
+            // What Windows shows while WebView2 has not composited yet - the
+            // strip along the edge being dragged - is the window layer, and
+            // under it the webview's own default background, which is black
+            // with no alpha. `backgroundColor` in tauri.conf.json reaches only
+            // the window, and the renderer's own call to `setBackgroundColor`
+            // arrives after the profile is readable, which is far too late for
+            // a resize the user starts immediately. Doing it here removes the
+            // timing question entirely; the renderer still re-applies it when
+            // the profile turns out to be a light theme.
+            {
+                use tauri::{webview::Color, Manager};
+                if let Some(window) = app.get_webview_window("main") {
+                    // Both Tauri layers, and then the one Tauri cannot reach.
+                    // The first two matter for the very first frame; the third
+                    // is what the user sees along a dragged edge.
+                    let _ = window.set_background_color(Some(Color(0x21, 0x22, 0x26, 0xff)));
+                    if let Err(error) = window_backdrop::install(&window, 0x212226) {
+                        eprintln!("[nemora] window backdrop unavailable: {error}");
+                    }
+                }
+            }
             // Debug builds open devtools automatically. A renderer that fails
             // before it can reach the logger leaves no trace anywhere else -
             // the logger is itself an IPC call.

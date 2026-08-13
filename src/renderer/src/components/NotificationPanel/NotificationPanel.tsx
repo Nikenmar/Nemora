@@ -11,6 +11,15 @@ const NotificationPanel = () => {
     const notificationData = notificationPanelData.notifications;
 
     if (notificationData.length > 0) {
+      // Reversed HERE, once, rather than at render time.
+      //
+      // The reversal used to happen in the JSX, on the array this memo hands
+      // back - so it mutated the cached value, and every re-render that did not
+      // change the notifications flipped the order again. With one notification
+      // on screen that was invisible. With two, they swapped places constantly,
+      // and each swap moves the DOM node, which restarts its entrance
+      // animation: the notification looked like it was being recreated over and
+      // over. Two simultaneous progress bars is what finally exposed it.
       return notificationData.map((data) => {
         const {
           content,
@@ -39,7 +48,7 @@ const NotificationPanel = () => {
             progressBarData={progressBarData}
           />
         );
-      });
+      }).reverse();
     }
     return undefined;
   }, [notificationPanelData]);
@@ -48,7 +57,7 @@ const NotificationPanel = () => {
     <>
       {Array.isArray(notifications) && notifications.length > 0 && (
         <div className="notifications-container absolute bottom-6 right-8 z-20 flex max-h-full flex-col-reverse items-end">
-          {notifications.reverse()}
+          {notifications}
           {notifications.length > 0 && <NotificationClearAllButton />}
         </div>
       )}

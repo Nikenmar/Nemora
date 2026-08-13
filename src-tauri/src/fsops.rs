@@ -24,7 +24,7 @@ const MAX_TEMP_ATTEMPTS: usize = 128;
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum FsOpsErrorCode {
+pub(crate) enum FsOpsErrorCode {
     AtomicInvalidPath,
     AtomicParent,
     AtomicTempCreate,
@@ -73,7 +73,7 @@ impl FsOpsErrorCode {
 }
 
 #[derive(Debug)]
-struct FsOpsError {
+pub(crate) struct FsOpsError {
     code: FsOpsErrorCode,
     path: PathBuf,
     detail: String,
@@ -248,7 +248,7 @@ pub async fn copy_file_atomic(source: String, destination: String) -> Result<(),
     .map_err(|error| error.to_string())
 }
 
-fn write_file_atomic_impl(path: &Path, contents: &[u8]) -> Result<(), FsOpsError> {
+pub(crate) fn write_file_atomic_impl(path: &Path, contents: &[u8]) -> Result<(), FsOpsError> {
     let (destination, directory) = atomic_destination(path)?;
     let mut temp = PendingTemp::create(&directory)?;
     temp.write_and_sync(contents)?;

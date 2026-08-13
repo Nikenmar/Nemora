@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from '@jest/globals';
 
 import { ArtworkService, UnsupportedArtworkFormatError } from '../artworkService';
-import { pathArtwork, urlArtwork } from '../artworkSource';
+import { audioArtwork, pathArtwork, urlArtwork } from '../artworkSource';
 import type { ArtworkStorage } from '../artworkStorage';
 import type { ArtworkWriter } from '../atomicArtworkWriter';
 import {
@@ -65,8 +65,92 @@ function createFixture() {
     undefined,
     () => 'TemporaryA'
   );
-  return { backend, copies, files, generatedWrites, service };
+  return { backend, copies, files, generatedWrites, service, storage };
 }
+
+describe('a cover that is still inside its audio file', () => {
+  test('the native route takes the path and never asks for bytes', async () => {
+    const fixture = createFixture();
+    const read = jest.fn(async () => ({ bytes: new Uint8Array([1]), mimeType: 'image/jpeg' }));
+    const written: string[] = [];
+    const service = new ArtworkService(
+      fixture.storage,
+      new ImageTransformer(fixture.backend),
+      undefined,
+      () => 'TemporaryA',
+      {
+        nativePath: (source) => (source.kind === 'audio' ? source.path : undefined),
+        write: async (source, jobs) => {
+          if (source.kind !== 'audio') return false;
+          written.push(...jobs.map((job) => job.destination));
+          return true;
+        }
+      },
+      { read }
+    );
+
+    const result = await service.storeArtworks(
+      'song-native',
+      'songs',
+      audioArtwork('E:\\Music\\track.mp3', 'image/jpeg')
+    );
+
+    expect(written).toEqual([
+      'E:\\tmp\\Nora\\song_covers\\song-native.webp',
+      'E:\\tmp\\Nora\\song_covers\\song-native-optimized.webp'
+    ]);
+    expect(read).not.toHaveBeenCalled();
+    expect(fixture.backend.sources).toEqual([]);
+    expect(result.isDefaultArtwork).toBe(false);
+  });
+
+  test('the browser route lifts the bytes out of the file when the native one declines', async () => {
+    const fixture = createFixture();
+    const read = jest.fn(async () => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      mimeType: 'image/png'
+    }));
+    const service = new ArtworkService(
+      fixture.storage,
+      new ImageTransformer(fixture.backend),
+      undefined,
+      () => 'TemporaryA',
+      undefined,
+      { read }
+    );
+
+    await service.storeArtworks(
+      'song-fallback',
+      'songs',
+      audioArtwork('E:\\Music\\track.mp3', 'image/jpeg')
+    );
+
+    expect(read).toHaveBeenCalledWith('E:\\Music\\track.mp3');
+    // The MIME the reader found wins over the one the scanner guessed.
+    const decoded = fixture.backend.sources[0];
+    expect(decoded).toBeInstanceOf(Blob);
+    expect((decoded as Blob).type).toBe('image/png');
+    expect(fixture.generatedWrites.map((entry) => entry.path)).toEqual([
+      'E:\\tmp\\Nora\\song_covers\\song-fallback.webp',
+      'E:\\tmp\\Nora\\song_covers\\song-fallback-optimized.webp'
+    ]);
+  });
+
+  test('a host that can neither transform nor read falls back to the default cover', async () => {
+    const fixture = createFixture();
+
+    const result = await fixture.service.storeArtworks(
+      'song-hopeless',
+      'songs',
+      audioArtwork('E:\\Music\\track.mp3')
+    );
+
+    // No reader was supplied, so there is no way to reach the picture. The song
+    // gets a placeholder rather than a broken image or a thrown scan.
+    expect(result.isDefaultArtwork).toBe(true);
+    expect(fixture.generatedWrites).toEqual([]);
+  });
+});
 
 describe('ArtworkService', () => {
   test('writes full and optimized WebP variants atomically and returns only nora URLs', async () => {

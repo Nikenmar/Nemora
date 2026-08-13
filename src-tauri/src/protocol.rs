@@ -163,7 +163,9 @@ pub fn serve(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             if let Err(e) = file.read_exact(&mut buf) {
                 return error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string());
             }
-            if trace { eprintln!("[trace]   served {} bytes in {:?}", len, started.elapsed()); }
+            if trace {
+                eprintln!("[trace]   served {} bytes in {:?}", len, started.elapsed());
+            }
             cors::<()>(Response::builder().status(StatusCode::PARTIAL_CONTENT))
                 .header(header::CONTENT_TYPE, ctype)
                 .header(header::ACCEPT_RANGES, "bytes")

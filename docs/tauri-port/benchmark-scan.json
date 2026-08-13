@@ -1,0 +1,25 @@
+{
+  "runs": [
+    {
+      "label": "Nora 3.1.0",
+      "measuredAt": "2026-08-13T00:42:58.023Z",
+      "profile": "E:\\tmp\\nemora-scan-bench\\electron\\Nora",
+      "songsAdded": 300,
+      "coversWritten": 600,
+      "usableMs": 7363,
+      "completeMs": 7363,
+      "msPerTrack": 24.543333333333333
+    },
+    {
+      "label": "Nemora 1.0.5",
+      "measuredAt": "2026-08-13T00:51:38.417Z",
+      "profile": "E:\\tmp\\nemora-scan-bench\\tauri\\Nemora",
+      "songsAdded": 300,
+      "coversWritten": 600,
+      "usableMs": 0,
+      "completeMs": 3353,
+      "msPerTrack": 11.176666666666666
+    }
+  ],
+  "note": "Time from the first song appearing to the library going quiet. Both halves are reported: songs listed, then covers finished. The folder is added by hand because neither player scans on startup; everything after that click is measured from the profile on disk."
+}

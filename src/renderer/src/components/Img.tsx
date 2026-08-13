@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
-import { type MouseEvent as ReactMouseEvent, memo, useRef } from 'react';
+import { type MouseEvent as ReactMouseEvent, memo, useEffect, useRef } from 'react';
 import log from '../utils/log';
 import DefaultImage from '../assets/images/webp/song_cover_default.webp';
 
@@ -93,6 +93,40 @@ const Img = memo((props: ImgProps) => {
   const imgPropsRef = useRef<ImgProperties>();
   const errorCountRef = useRef(0);
   const isFirstTimeRef = useRef(true);
+
+  /**
+   * Gives up on the placeholder once the real cover exists.
+   *
+   * `onError` below swaps the element's `src` for the fallback, and that swap
+   * is permanent - a library scan produces songs before their covers, so every
+   * new row asks for a file that is not written yet, takes the placeholder, and
+   * keeps it until something rebuilds the view. Changing tabs was what rebuilt
+   * it. Now the covers announce themselves, and an image that fell back gets
+   * another go at exactly the moment its file appears.
+   *
+   * Matched on the src because the cover file is named after the song id, and
+   * only images that actually failed retry - a picture already on screen is
+   * never reloaded.
+   */
+  useEffect(() => {
+    if (!src) return undefined;
+
+    const retryIfCoverArrived = (event: Event): void => {
+      if (!('detail' in event) || errorCountRef.current === 0 || !imgRef.current) return;
+      const updates = (event as DetailAvailableEvent<DataUpdateEvent[]>).detail;
+      const isMine = updates.some(
+        (update) =>
+          update.dataType === 'songs/artworks' &&
+          update.eventData.some((id) => typeof id === 'string' && src.includes(id))
+      );
+      if (!isMine) return;
+      errorCountRef.current = 0;
+      imgRef.current.src = src;
+    };
+
+    document.addEventListener('app/dataUpdates', retryIfCoverArrived);
+    return () => document.removeEventListener('app/dataUpdates', retryIfCoverArrived);
+  }, [src]);
 
   return (
     // <div className="inline-block relative">

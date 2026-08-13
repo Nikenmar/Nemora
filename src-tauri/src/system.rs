@@ -122,7 +122,11 @@ pub struct PendingSecondInstanceArgs(pub Mutex<Vec<Vec<String>>>);
 
 pub fn queue_second_instance_args(app: &AppHandle, argv: Vec<String>) {
     let state = app.state::<PendingSecondInstanceArgs>();
-    state.0.lock().expect("pending argv mutex poisoned").push(argv.clone());
+    state
+        .0
+        .lock()
+        .expect("pending argv mutex poisoned")
+        .push(argv.clone());
     // Emit as well: a renderer that is already listening handles it immediately,
     // and the drain below is idempotent because it clears what it returns.
     let _ = app.emit("nemora://second-instance", argv);
@@ -156,14 +160,32 @@ pub fn startup_args() -> Vec<String> {
 /// a copy.
 #[tauri::command]
 pub fn profile_dir_override() -> Option<String> {
-    std::env::var("NEMORA_PROFILE_DIR").ok().filter(|v| !v.is_empty())
+    std::env::var("NEMORA_PROFILE_DIR")
+        .ok()
+        .filter(|v| !v.is_empty())
 }
 
 /// Where the port self-check should write its report, or `None` for a normal
 /// launch. Set by `scripts/port-check.mjs` through `NEMORA_SELFCHECK_OUT`.
 #[tauri::command]
 pub fn selfcheck_output_path() -> Option<String> {
-    std::env::var("NEMORA_SELFCHECK_OUT").ok().filter(|v| !v.is_empty())
+    std::env::var("NEMORA_SELFCHECK_OUT")
+        .ok()
+        .filter(|v| !v.is_empty())
+}
+
+/// True when the native implementations must stand aside and the TypeScript
+/// route must run instead. Set through `NEMORA_FORCE_TS`.
+///
+/// It exists for two jobs: telling whether a defect belongs to the native side
+/// without rebuilding, and running both routes against each other in the
+/// benchmark. There is deliberately no setting for it in the interface - one
+/// more switch to forget to wire is not what this codebase needs.
+#[tauri::command]
+pub fn force_typescript() -> bool {
+    std::env::var("NEMORA_FORCE_TS")
+        .map(|value| !value.is_empty() && value != "0")
+        .unwrap_or(false)
 }
 
 /// True when the app is being measured and must not reach the network at

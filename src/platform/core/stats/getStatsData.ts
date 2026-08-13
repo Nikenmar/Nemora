@@ -40,6 +40,48 @@ const countListensInRange = (data: SongListeningData, rangeStart: number) => {
   return count;
 };
 
+/** What every listening row needs to know about the day it fell on. */
+interface DayInfo {
+  /** Local midnight of that day, in epoch milliseconds. */
+  start: number;
+  year: number;
+  month: number;
+}
+
+/**
+ * One Date per DAY in the history, not one per listening row.
+ *
+ * The obvious spelling - `new Date(d.getFullYear(), d.getMonth(), d.getDate())`
+ * - allocates two Dates per row, and the calendar and the activity chart each
+ * walk every listening row there is: 69 700 rows in a three-year history, so a
+ * quarter of a million Date objects to draw one dashboard. That allocation, not
+ * the arithmetic, was most of what the page cost.
+ *
+ * Keyed by UTC day, which is what keeps the cache bounded: a whole history is a
+ * few thousand days however many times its songs were played. Two approximations
+ * are deliberate and both are absorbed by the day-rounding every caller does:
+ * the local offset is read at the timestamp rather than at its own midnight, and
+ * one UTC day is assumed to have one offset - which is untrue only on the two
+ * daylight-saving days a year, and then only by an hour.
+ */
+const dayCache = new Map<number, DayInfo>();
+
+const dayInfo = (dateMs: number): DayInfo => {
+  const utcDay = Math.floor(dateMs / DAY_MS);
+  const cached = dayCache.get(utcDay);
+  if (cached) return cached;
+
+  const date = new Date(dateMs);
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  const info: DayInfo = {
+    start: Math.floor((dateMs - offsetMs) / DAY_MS) * DAY_MS + offsetMs,
+    year: date.getFullYear(),
+    month: date.getMonth()
+  };
+  dayCache.set(utcDay, info);
+  return info;
+};
+
 const toISODate = (ms: number) => {
   const date = new Date(ms);
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -66,9 +108,7 @@ const buildActivity = (
     for (const entry of listeningData)
       for (const year of entry.listens)
         for (const [dateMs, count] of year.listens) {
-          const date = new Date(dateMs);
-          const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-          const daysAgo = Math.round((startOfToday - dayStart) / DAY_MS);
+          const daysAgo = Math.round((startOfToday - dayInfo(dateMs).start) / DAY_MS);
           if (daysAgo >= 0 && daysAgo < 30) buckets[29 - daysAgo] += count;
         }
 
@@ -84,8 +124,8 @@ const buildActivity = (
   for (const entry of listeningData)
     for (const year of entry.listens)
       for (const [dateMs, count] of year.listens) {
-        const date = new Date(dateMs);
-        const monthsAgo = nowMonthIndex - (date.getFullYear() * 12 + date.getMonth());
+        const day = dayInfo(dateMs);
+        const monthsAgo = nowMonthIndex - (day.year * 12 + day.month);
         if (monthsAgo >= 0 && monthsAgo < 12) buckets[11 - monthsAgo] += count;
       }
 
@@ -111,9 +151,7 @@ const buildCalendar = (listeningData: SongListeningData[], nowMs: number) => {
   for (const entry of listeningData)
     for (const year of entry.listens)
       for (const [dateMs, count] of year.listens) {
-        const date = new Date(dateMs);
-        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-        const daysAgo = Math.round((startOfToday - dayStart) / DAY_MS);
+        const daysAgo = Math.round((startOfToday - dayInfo(dateMs).start) / DAY_MS);
         if (daysAgo >= 0 && daysAgo < dayCount) days[dayCount - 1 - daysAgo] += count;
       }
 

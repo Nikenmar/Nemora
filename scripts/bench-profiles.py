@@ -54,6 +54,15 @@ QUIET = (
 )
 
 
+# The base profile lists NO music folders, and that is a fairness rule.
+#
+# Nora re-checks its music folders on startup and adds anything it finds, so a
+# profile narrowed to 300 songs grew back to the full 1745 within a minute of
+# launching - measured, after the isolation below started working. Nemora only
+# installs watchers, so it stayed at 300. The comparison would then have been
+# one player carrying six times the library of the other. With no folders
+# listed, both hold exactly the seeded 300; playback still works because the
+# harness hands the player a track path on the command line.
 SAMPLE = 300
 SEED = 20260812
 
@@ -155,6 +164,11 @@ def build_base():
     for switch in QUIET:
         preferences[switch] = False
     user['userData']['recentSearches'] = []
+    # No music folders. See the note by SAMPLE: Nora re-scans them on startup
+    # and would grow this 300-song profile back to the whole library, leaving
+    # the two players carrying different libraries. It also means a benchmark
+    # never walks the user's real music folder.
+    user['userData']['musicFolders'] = []
     write('userData.json', user)
 
     covers_source = os.path.join(REAL, 'song_covers')

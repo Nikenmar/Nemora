@@ -51,7 +51,10 @@ mod tests {
     fn derives_a_different_key_for_a_different_secret() {
         let key = secrets_scrypt_key("short".to_string()).unwrap();
         let hex: String = key.iter().map(|byte| format!("{byte:02x}")).collect();
-        assert_eq!(hex, "84794af175389c24e03f3722796cdc38fc46f43f5eca29f87d020bc516b11f99");
+        assert_eq!(
+            hex,
+            "84794af175389c24e03f3722796cdc38fc46f43f5eca29f87d020bc516b11f99"
+        );
     }
 
     #[test]

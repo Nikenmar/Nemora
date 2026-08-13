@@ -23,6 +23,10 @@ import {
   TauriArtworkStorage,
   urlArtwork
 } from '../core/artwork';
+// Deep import, not the barrel: this module binds Tauri commands, and the barrel
+// is what non-Tauri consumers of the shared core import.
+import { createArtworkPipeline } from '../core/artwork/tauriPipeline';
+import { TauriMetadataFilePort } from '../core/metadata/tauriMetadataFilePort';
 import parseLyrics from '../../common/parseLyrics';
 import convertParsedLyricsToNodeID3Format from '../core/lyrics/convertParsedLyricsToNodeID3Format';
 import type { MetadataFilePort, MetadataTagPatch } from '../core/metadata';
@@ -35,7 +39,14 @@ import {
 } from '../core/tags';
 import { internalWriteSuppression, tauriWatcherFileSystem } from '../core/watchers';
 import { tauriLibraryFileSystem } from '../core/library/tauriFileSystem';
-import type { MetadataParserPort, ParsedPicture } from '../core/library/types';
+import type {
+  AudioStreamProperties,
+  MetadataParserPort,
+  NativeLibraryPort,
+  NativeParsedFile,
+  ParsedPicture,
+  WalkedDirectory
+} from '../core/library/types';
 import { getBuildEnvVariable } from '../core/net/buildEnv';
 import { romanizeForSearch } from '../core/search/romanizeForSearch';
 import { METADATA_HEAD_SIZE, SUPPORTED_MUSIC_EXTENSIONS } from '../core/library/constants';
@@ -207,6 +218,48 @@ const browserMetadataParser: MetadataParserPort = {
 };
 
 /**
+ * The library walk and parse, done by the host.
+ *
+ * Same two-tier failure rule as the artwork and tag routes: a build without
+ * these commands closes the route for the session, one bad answer closes
+ * nothing. Both methods answer `undefined` for "use the TypeScript route",
+ * which is a cue and not an error - the scanner then reads those files exactly
+ * as a browser or the Android port would.
+ */
+const createNativeLibrary = (forceTypeScript: boolean): NativeLibraryPort | undefined => {
+  if (forceTypeScript) return undefined;
+  let available = true;
+
+  const call = async <Result>(
+    command: string,
+    args: Record<string, unknown>
+  ): Promise<Result | undefined> => {
+    if (!available) return undefined;
+    try {
+      return await invoke<Result>(command, args);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/not found|not allowed|unknown command|missing/iu.test(message)) {
+        available = false;
+        productionLogger.warn('Native library scanning unavailable for this build.', { error });
+      } else {
+        productionLogger.warn('Native library scanning failed; using the TypeScript route.', {
+          command,
+          error
+        });
+      }
+      return undefined;
+    }
+  };
+
+  return {
+    walk: (roots, extensions) =>
+      call<WalkedDirectory[]>('library_walk', { roots: [...roots], extensions: [...extensions] }),
+    parse: (paths) => call<NativeParsedFile[]>('library_parse', { paths: [...paths] })
+  };
+};
+
+/**
  * Metadata parsing, moved off the UI thread and onto the worker written for it.
  *
  * `MetadataWorkerClient`, `metadata.worker.ts` and their protocol were built to
@@ -225,6 +278,7 @@ const browserMetadataParser: MetadataParserPort = {
 const createMetadataParser = (): MetadataParserPort => {
   let worker: ReturnType<typeof createMetadataWorkerClient> | undefined;
   let workerAttempted = false;
+  let nativePropertiesAvailable = true;
 
   // Spawned on the first parse, not at startup: a launch that never scans
   // anything should not pay for a worker, and this app measures its own
@@ -269,6 +323,24 @@ const createMetadataParser = (): MetadataParserPort => {
           worker = undefined;
         }
         return parseInProcess(path, includeArtwork);
+      }
+    },
+    properties: async (path) => {
+      if (!nativePropertiesAvailable) return undefined;
+      try {
+        return await invoke<AudioStreamProperties>('audio_properties', { path });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        // A missing command is a property of the BUILD, not of the file: every
+        // later call would fail identically, so the route closes for the
+        // session. A file that simply cannot be read keeps the route open.
+        if (/not found|not allowed|unknown command|missing/iu.test(message)) {
+          nativePropertiesAvailable = false;
+          productionLogger.warn('Native audio properties unavailable for this build.', { error });
+        } else {
+          productionLogger.warn('Could not read audio properties natively.', { path, error });
+        }
+        return undefined;
       }
     }
   };
@@ -427,20 +499,51 @@ const createMetadataFilePort = (
   };
 };
 
-const createProductionServices = (artworkPaths: ProductionArtworkPaths): RuntimeServices => {
+const createProductionServices = (
+  artworkPaths: ProductionArtworkPaths,
+  forceTypeScript: boolean
+): RuntimeServices => {
   installTagSuppressionHook();
   const artworkStorage = new TauriArtworkStorage(
     { album: albumCover, playlist: playlistCover, song: songCover },
     undefined
   );
+  // Native artwork first, browser route as the fallback. `createArtworkPipeline`
+  // returns undefined when the environment asks for TypeScript, and the service
+  // then behaves exactly as it did before this existed.
+  const artworkPipeline = createArtworkPipeline(productionLogger, forceTypeScript);
   const artwork = new ArtworkService(
     artworkStorage,
     new ImageTransformer(new BrowserImageBackend()),
-    productionLogger
+    productionLogger,
+    undefined,
+    artworkPipeline,
+    // Only reached when a native scan named a cover and the native artwork
+    // route then declined it - the same binary supplies both, so the pairing
+    // holds by construction.
+    {
+      read: async (path) => {
+        const tags = await invoke<{ pictureBytes?: number[]; pictureMimeType?: string }>(
+          'tags_read',
+          { path, includePicture: true }
+        );
+        if (!tags.pictureBytes?.length) return undefined;
+        return {
+          bytes: new Uint8Array(tags.pictureBytes),
+          mimeType: tags.pictureMimeType ?? ''
+        };
+      }
+    }
   );
   return {
     artwork,
-    palette: new PaletteGenerator(undefined, productionLogger),
+    palette: new PaletteGenerator(
+      undefined,
+      productionLogger,
+      undefined,
+      undefined,
+      artworkPipeline ? (path) => artworkPipeline.palette(path) : undefined
+    ),
     files: productionFiles,
     decrypt: (encrypted) => decryptCredential(encrypted),
     readEmbeddedLyrics: (path) => readNodeId3Tags(path),
@@ -457,7 +560,23 @@ const createProductionServices = (artworkPaths: ProductionArtworkPaths): Runtime
     libraryFileSystem: tauriLibraryFileSystem,
     watcherFileSystem: tauriWatcherFileSystem,
     metadataParser: createMetadataParser(),
-    metadata: createMetadataFilePort(artwork, artworkPaths),
+    nativeLibrary: createNativeLibrary(forceTypeScript),
+    // Native tags first, TagLib behind it. The TypeScript port stays the
+    // complete implementation - it is what a non-Tauri host runs, and it is
+    // still what writes artwork and lyrics.
+    metadata: forceTypeScript
+      ? createMetadataFilePort(artwork, artworkPaths)
+      : new TauriMetadataFilePort(
+          createMetadataFilePort(artwork, artworkPaths),
+          async (path) => {
+            const stats = await tauriLibraryFileSystem.stat(path);
+            return {
+              createdDate: stats.birthtime?.getTime(),
+              modifiedDate: stats.mtime?.getTime()
+            };
+          },
+          productionLogger
+        ),
     romanizeForSearch,
     permanentlyDeleteFile: (path) => remove(path),
     moveFileToTrash: (path) => invoke<void>('trash_item', { path }),
@@ -509,10 +628,13 @@ const createProductionServices = (artworkPaths: ProductionArtworkPaths): Runtime
 
 export async function createProductionRuntimeOptions(): Promise<NoraRuntimeOptions> {
   const artwork = new ProductionArtworkPaths(await songCoversDir());
+  // Resolved once, here, rather than consulted per call: a switch that answers
+  // differently halfway through a scan would be worse than either route.
+  const forceTypeScript = await invoke<boolean>('force_typescript').catch(() => false);
   return {
     version: await getVersion(),
     artwork,
     events: new LocalRuntimeEventSink(),
-    services: createProductionServices(artwork)
+    services: createProductionServices(artwork, forceTypeScript)
   };
 }

@@ -36,6 +36,10 @@ class MemoryStorePort implements StorePort {
   }
 }
 
+/** The songs actually persisted to the store, in the shape they were written. */
+const committedSongs = (port: MemoryStorePort): SavableSongData[] =>
+  (port.files.get('songs')?.payload as SavableSongData[] | undefined) ?? [];
+
 const artworkPath = (name: string): ArtworkPaths => ({
   isDefaultArtwork: false,
   artworkPath: `nemora://${name}`,
@@ -168,6 +172,246 @@ describe('runtime/API composition', () => {
     expect(getRuntime().getArtists()).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: 'Artist' })])
     );
+  });
+
+  test('commits scanned songs before their covers exist and repairs the ones that fail', async () => {
+    const port = new MemoryStorePort();
+    const root = 'E:\\Music';
+    const names = ['Good.mp3', 'Bad.mp3'];
+    let releaseArtwork = (): void => undefined;
+    const artworkGate = new Promise<void>((resolve) => {
+      releaseArtwork = resolve;
+    });
+    const storedFor: string[] = [];
+
+    const services: RuntimeServices = {
+      selectMusicFolders: async () => [root],
+      libraryFileSystem: {
+        readDir: async () =>
+          names.map((name) => ({ name, isDirectory: false, isFile: true, isSymlink: false })),
+        stat: async (path) => ({
+          isFile: path !== root,
+          isDirectory: path === root,
+          size: 42,
+          mtime: new Date('2025-01-02T00:00:00Z'),
+          birthtime: new Date('2025-01-01T00:00:00Z')
+        }),
+        readHead: async () => new Uint8Array([1, 2, 3])
+      },
+      metadataParser: {
+        parse: async (path) => ({
+          common: { title: path.includes('Bad') ? 'Bad' : 'Good', genres: [] },
+          format: { duration: 10 },
+          // Both tracks carry a picture; only one of them will encode.
+          pictures: [{ format: 'image/jpeg', data: new Uint8Array([7, 7, 7]), byteLength: 3 }],
+          metadataCompleteness: 'head'
+        })
+      },
+      artwork: {
+        storeArtworks: async (id: string) => {
+          storedFor.push(id);
+          await artworkGate;
+          const song = committedSongs(port)?.find(
+            (entry) => entry.songId === id
+          );
+          if (song?.title === 'Bad') throw new Error('cover encode failed');
+          return {
+            isDefaultArtwork: false,
+            artworkPath: `${id}.webp`,
+            optimizedArtworkPath: `${id}.webp`
+          };
+        }
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+    const structures = await getRuntime().getFolderStructures();
+    await getRuntime().addSongsFromFolderStructures(structures);
+
+    // The scan returned while both covers are still stuck in the pipeline.
+    const committed = committedSongs(port);
+    expect(committed).toHaveLength(2);
+    expect(committed.every((song) => song.isArtworkAvailable)).toBe(true);
+    expect(storedFor).toHaveLength(2);
+
+    releaseArtwork();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const repaired = committedSongs(port);
+    expect(repaired.find((song) => song.title === 'Good')?.isArtworkAvailable).toBe(true);
+    expect(repaired.find((song) => song.title === 'Bad')?.isArtworkAvailable).toBe(false);
+  });
+
+  test('announces covers in groups while they are still being generated', async () => {
+    const port = new MemoryStorePort();
+    const root = 'E:\\Music';
+    const names = Array.from({ length: 30 }, (_, index) => `track-${index}.mp3`);
+    jest.mocked(events.dataUpdated).mockClear();
+
+    const services: RuntimeServices = {
+      selectMusicFolders: async () => [root],
+      libraryFileSystem: {
+        readDir: async () =>
+          names.map((name) => ({ name, isDirectory: false, isFile: true, isSymlink: false })),
+        stat: async (path) => ({
+          isFile: path !== root,
+          isDirectory: path === root,
+          size: 42,
+          mtime: null,
+          birthtime: null
+        }),
+        readHead: async () => new Uint8Array([1, 2, 3])
+      },
+      metadataParser: {
+        parse: async () => ({
+          common: { title: 'Track', genres: [] },
+          format: { duration: 10 },
+          pictures: [{ format: 'image/jpeg', data: new Uint8Array([7]), byteLength: 1 }],
+          metadataCompleteness: 'head'
+        })
+      },
+      artwork: {
+        storeArtworks: async (id: string) => ({
+          isDefaultArtwork: false,
+          artworkPath: `${id}.webp`,
+          optimizedArtworkPath: `${id}.webp`
+        })
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+    const structures = await getRuntime().getFolderStructures();
+    await getRuntime().addSongsFromFolderStructures(structures);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const announcements = jest
+      .mocked(events.dataUpdated)
+      .mock.calls.filter(([type]) => type === 'songs/artworks');
+
+    // Thirty covers in groups of twelve: the interface hears about the first
+    // ones long before the last one is encoded.
+    expect(announcements.length).toBeGreaterThan(1);
+    expect(announcements.flatMap(([, ids]) => ids)).toHaveLength(30);
+  });
+
+  test('a resync fills in durations a previous build could not read', async () => {
+    const port = new MemoryStorePort();
+    const asked: string[] = [];
+    port.files.set('songs', {
+      unknownRootKeys: {},
+      payload: [
+        {
+          songId: 'broken',
+          title: 'Late Frame',
+          path: 'E:\\Music\\late.mp3',
+          duration: 0,
+          isAFavorite: false,
+          isArtworkAvailable: false,
+          addedDate: 1,
+          genres: []
+        },
+        {
+          songId: 'fine',
+          title: 'Normal',
+          path: 'E:\\Music\\fine.flac',
+          duration: 180,
+          isAFavorite: false,
+          isArtworkAvailable: false,
+          addedDate: 1,
+          genres: []
+        }
+      ]
+    });
+
+    const services: RuntimeServices = {
+      libraryFileSystem: {
+        readDir: async () => [],
+        stat: async () => ({
+          isFile: true,
+          isDirectory: false,
+          size: 1,
+          mtime: null,
+          birthtime: null
+        }),
+        readHead: async () => new Uint8Array([1])
+      },
+      metadataParser: {
+        parse: async () => ({
+          common: { genres: [] },
+          format: {},
+          pictures: [],
+          metadataCompleteness: 'head'
+        }),
+        properties: async (path) => {
+          asked.push(path);
+          return { duration: 212.567, sampleRate: 44_100, bitrate: 320_000 };
+        }
+      }
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+    await getRuntime().resyncSongsLibrary();
+
+    // Only the broken row is asked about; the one that already had a duration
+    // is never re-read.
+    expect(asked).toEqual(['E:\\Music\\late.mp3']);
+    const songs = committedSongs(port);
+    expect(songs.find((song) => song.songId === 'broken')).toMatchObject({
+      duration: 212.57,
+      sampleRate: 44_100,
+      bitrate: 320_000
+    });
+    expect(songs.find((song) => song.songId === 'fine')?.duration).toBe(180);
+  });
+
+  test('a cached song order is dropped the moment the catalog changes', async () => {
+    const port = new MemoryStorePort();
+    const song = (id: string, title: string): SavableSongData =>
+      ({
+        songId: id,
+        title,
+        path: `E:\\Music\\${title}.mp3`,
+        duration: 100,
+        isAFavorite: false,
+        isArtworkAvailable: false,
+        addedDate: 1,
+        genres: []
+      }) as unknown as SavableSongData;
+
+    port.files.set('songs', {
+      unknownRootKeys: {},
+      payload: [song('c', 'Charlie'), song('a', 'Alpha')]
+    });
+
+    configureRuntime(port, { version: 'test', artwork, events });
+    await hydrateRuntime();
+    const runtime = getRuntime();
+
+    const first = runtime.getAllSongs('aToZ');
+    expect(first.data.map((entry) => entry.title)).toEqual(['Alpha', 'Charlie']);
+    expect(first.total).toBe(2);
+
+    // Read again: served from the cache, and identical.
+    expect(runtime.getAllSongs('aToZ').data.map((entry) => entry.title)).toEqual([
+      'Alpha',
+      'Charlie'
+    ]);
+
+    // A real catalog write, through the one path every mutation takes.
+    runtime.toggleLikeSongs(['a']);
+
+    const afterLike = runtime.getAllSongs('aToZ');
+    expect(afterLike.data.find((entry) => entry.songId === 'a')?.isAFavorite).toBe(true);
+
+    // Pagination reports the size of the whole result, not of the page.
+    const page = runtime.getAllSongs('aToZ', undefined, { start: 1, end: 2 });
+    expect(page.data.map((entry) => entry.title)).toEqual(['Charlie']);
+    expect(page.total).toBe(2);
+    expect(page.start).toBe(1);
+    expect(page.end).toBe(2);
   });
 
   test('holds Rust-delivered open-file arguments behind the startup-song gate', async () => {

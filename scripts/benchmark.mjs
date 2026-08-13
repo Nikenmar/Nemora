@@ -43,6 +43,8 @@ const IDLE_SAMPLE_MS = 12_000;
 const PLAYBACK_WARMUP_MS = 24_000;
 const PLAYBACK_SAMPLE_S = 20;
 const SAMPLE_INTERVAL_MS = 250;
+/** Both players run well under ten processes; anything near this is a mismatched tree. */
+const MAX_TREE_PROCESSES = 32;
 
 const BENCH = (process.env.NEMORA_BENCH_DIR ?? 'E:/tmp/nemora-bench2').replaceAll('\\', '/');
 const profileScript = join(root, 'scripts', 'bench-profiles.py');
@@ -185,7 +187,17 @@ const targets = [
     label: ELECTRON_LABEL,
     exe: join(ELECTRON_DIR, 'Nora.exe'),
     profileDir: `${BENCH}/electron/Nora`,
-    env: { APPDATA: `${BENCH}\\electron`.replaceAll('/', '\\') },
+    // ELECTRON IGNORES `APPDATA`. It resolves its data directory through the
+    // Windows known-folder API, so setting that variable - which is what this
+    // did - left the app reading the REAL profile: 1745 songs against the 300
+    // the other side was given, which flattered every memory figure on the
+    // card. Verified twice, through a shell launch and through spawn with an
+    // explicit environment; only the Chromium switch actually redirects it.
+    // Forward slashes deliberately: Chromium accepts them on Windows, and a
+    // backslash path is one escaping mistake away from being mangled into a
+    // directory that does not exist - which happened, and Chromium answers that
+    // by quietly falling back to the default profile, which is the real one.
+    args: [`--user-data-dir=${BENCH}/electron/Nora`],
     installedPath: ELECTRON_DIR,
     installer: () =>
       ELECTRON_INSTALLER ?? newestMatching(join(root, 'dist'), /-win-x64\.exe$/)
@@ -226,7 +238,7 @@ const childEnv = (target) => ({
 async function measureStartup(target) {
   restoreProfiles();
   const started = Date.now();
-  const child = spawn(target.exe, [], { env: childEnv(target), stdio: 'ignore' });
+  const child = spawn(target.exe, [...(target.args ?? [])], { env: childEnv(target), stdio: 'ignore' });
   const rootPid = child.pid;
 
   let peakWorkingSet = 0;
@@ -284,7 +296,7 @@ async function measureStartup(target) {
 
 async function measurePlayback(target, track) {
   restoreProfiles();
-  const child = spawn(target.exe, [track], { env: childEnv(target), stdio: 'ignore' });
+  const child = spawn(target.exe, [...(target.args ?? []), track], { env: childEnv(target), stdio: 'ignore' });
   const rootPid = child.pid;
 
   await sleep(PLAYBACK_WARMUP_MS);
@@ -311,9 +323,25 @@ for (const target of targets) {
   process.stdout.write(`\n${target.label}\n`);
 
   const startups = [];
+  const rejected = [];
   for (let run = 1; run <= RUNS; run += 1) {
     process.stdout.write(`  startup ${run}/${RUNS} ... `);
     const one = await measureStartup(target);
+    // A tree that suddenly holds twenty times the processes is not this app.
+    //
+    // Descendants are found by walking parent ids, so a recycled pid grafts an
+    // unrelated subtree onto ours: one run reported 139 processes and 5.4 GB
+    // where every other run of the same build reported 7 and 500 MB. Averaging
+    // that in would publish a number for a state the app was never in, which is
+    // the one thing this harness exists to prevent.
+    if (one.processCount && one.processCount > MAX_TREE_PROCESSES) {
+      rejected.push({ run, reason: 'implausible process tree', ...one });
+      process.stdout.write(`REJECTED, ${one.processCount} processes in the tree
+`);
+      run -= 1;
+      if (rejected.length > RUNS) throw new Error('the process tree never settled to a plausible size');
+      continue;
+    }
     startups.push(one);
     process.stdout.write(
       `window ${one.windowMs ? (one.windowMs / 1000).toFixed(2) : '?'} s, ` +
@@ -362,7 +390,7 @@ for (const target of targets) {
       workingSetBytes: median(playbacks.map((r) => r.workingSetMb * 1048576))
     },
     processes: { count: median(startups.map((r) => r.processCount)) },
-    raw: { startups, playbacks }
+    raw: { startups, playbacks, rejected }
   };
 }
 

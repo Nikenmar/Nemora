@@ -1153,6 +1153,7 @@
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "Lyrics cannot be saved because current song extension ({{ext}}) is not supported for modifying metadata.",
     "LASTFM_LOGIN_SUCCESS": "You successfully logged in to LastFM.",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{value}} completed out of {{total}} songs.",
+    "ARTWORK_GENERATING_PROCESS_UPDATE": "Generating artwork for {{value}} out of {{total}} songs.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "Generating palettes for {{value}} out of {{total}} songs.",
     "GENRE_PALETTE_GENERATING_PROCESS_UPDATE": "Generating palettes for {{value}} out of {{total}} genres.",
     "LYRICS_FIND_FAILED": "We couldn't find lyrics for `{{title}}`",

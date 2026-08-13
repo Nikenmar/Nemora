@@ -1,4 +1,9 @@
-export type TagWriteReason = 'flac-picture-mime-heal' | 'taglib-edit' | 'node-id3-edit';
+export type TagWriteReason =
+  | 'flac-picture-mime-heal'
+  | 'taglib-edit'
+  | 'node-id3-edit'
+  | 'native-tag-edit'
+  | 'native-picture-mime-heal';
 
 export type TagFileWrittenEvent = {
   path: string;

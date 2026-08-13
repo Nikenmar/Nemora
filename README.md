@@ -4,9 +4,11 @@
 
 ### A feature-rich music player *(that installs in 30~ MB)*
 
-Built with Tauri and React / Based on [Nora](https://github.com/Sandakan/Nora)
+Built with Rust, Tauri and React / Based on [Nora](https://github.com/Sandakan/Nora)
 
-[Download](https://github.com/Nikenmar/Nemora/releases/latest)
+<a href="https://github.com/Nikenmar/Nemora/releases/latest">
+  <img alt="Download Nemora for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=212226&color=4C8DD9">
+</a>
 
 </div>
 
@@ -54,14 +56,15 @@ A system playlist beside History and Favorites. It gathers tracks you clearly lo
 - **Volume that actually sounds smooth.** The stock slider was linear, so nearly all the audible change was crammed into the bottom and the top half sounded the same. It now follows a perceptual dB curve, the taper the Windows mixer uses, so loudness rises evenly the whole way across.
 - **Sticky selection.** Multi-select survives switching tabs and finishing an action. Select songs, wander around, then do the thing. Esc or the Unselect button clears it, and it never mixes songs with playlists.
 - **The demuxer fix, the one this all started from.** A picture embedded with an empty MIME type made Chromium throw `DEMUXER_ERROR_COULD_NOT_OPEN` and kill playback, which is how a high-quality FLAC could crash the player outright. Blank MIME types are repaired before playing.
+- **Partial Rust integration.** The work that is really "bytes in, bytes out" now happens in Rust instead of inside the webview: scanning your folders, reading and writing tags, and producing cover art. A scan of 300 tracks finished before it could be watched. Covers cost about half what they did, measured rather than guessed, and an embedded cover no longer travels into the browser and back out just to be resized — a 3 MB picture stays in the file it came from. Everything above it stayed TypeScript, and every native route keeps the original as a fallback: if a command is missing, the app scans and tags exactly as it did before. That is deliberate — the same core is meant to run somewhere other than Windows one day.
 
 ## 📊 Benchmark
 
 ![Nemora vs Nora benchmark](/resources/features/benchmark.png)
 
-Against [Nora 3.1.0](https://github.com/Sandakan/Nora/releases/tag/v3.1.0-stable), Nemora installs in a twelfth of the space, puts its window on screen in about half the time, holds some 240 MB less, and costs a ninth of the CPU while a track plays.
+Against [Nora 3.1.0](https://github.com/Sandakan/Nora/releases/tag/v3.1.0-stable), Nemora installs in a twelfth of the space, puts its window on screen in about half the time, holds some 216 MB less, costs a sixth of the CPU while a track plays, and builds the same library in less than half the time.
 
-Same machine, same 300-track library, median of 5 launches, every process counted. Playback only counts when Windows confirms the app is producing sound, so a silent run is discarded rather than averaged in. [Raw numbers](docs/tauri-port/benchmark-raw.json), [harness](scripts/benchmark.mjs).
+Same machine, same 300-track library, a separate profile copy for each player, median of 5 launches, every process counted. Playback only counts when Windows confirms the app is producing sound, so a silent run is discarded rather than averaged in. Building the library is timed by [its own harness](scripts/bench-scan.mjs). [Raw numbers](docs/tauri-port/benchmark-raw.json), [harness](scripts/benchmark.mjs).
 
 One honest asterisk on the size: Electron ships its own copy of Chromium, Nemora uses the WebView2 runtime already in Windows. That is the whole 382 MB against 31 MB.
 
@@ -82,6 +85,6 @@ _All songs, artists, albums, and cover art used in demonstrations are property o
 
 Built on [Nora](https://github.com/Sandakan/Nora) by [Sandakan Nipunajith](https://github.com/Sandakan) and MIT licensed, which is what made all of this possible. Nora in turn took its cues from [Oto Music for Android](https://play.google.com/store/apps/details?id=com.piyush.music) by Piyush Mamidwar.
 
-Built with [Tauri](https://tauri.app) and [React](https://react.dev). Lyrics come from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com), artist information from [Deezer](https://www.deezer.com) and [Genius](https://genius.com), and scrobbling from [Last.fm](https://www.last.fm).
+Built with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Lyrics come from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com), artist information from [Deezer](https://www.deezer.com) and [Genius](https://genius.com), and scrobbling from [Last.fm](https://www.last.fm).
 
 The full list of third-party licences ships with the app, under **Settings > About > Open-source licenses**.
