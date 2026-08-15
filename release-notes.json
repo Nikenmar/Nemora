@@ -1,10 +1,36 @@
 {
   "latestVersion": {
-    "version": "1.0.0-stable",
+    "version": "1.0.6-stable",
     "phase": "stable",
-    "releaseDate": "2026-08-12T17:00:00.000Z"
+    "releaseDate": "2026-08-15T12:00:00.000Z"
   },
   "versions": [
+    {
+      "version": "1.0.6-stable",
+      "releaseDate": "2026-08-15T12:00:00.000Z",
+      "notes": {
+        "new": [],
+        "fixed": [
+          {
+            "note": "Maximize button now works."
+          },
+          {
+            "note": "Show in file explorer now selects the file instead of only opening its folder."
+          },
+          {
+            "note": "Right click no longer opens the webview context menu."
+          },
+          {
+            "note": "Opening a file from Explorer while minimized now restores the window."
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Editing tags is supported for MP3 only, as in Nora."
+          }
+        ]
+      }
+    },
     {
       "version": "1.0.0-stable",
       "releaseDate": "2026-08-12T17:00:00.000Z",

@@ -2,6 +2,8 @@ import { Buffer } from 'buffer';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { suppressNativeContextMenu } from './other/nativeContextMenu';
+
 // Must happen before any dynamic import below. node-id3 and the base64 helpers
 // pulled in by the tag and artwork paths are CommonJS packages that expect a
 // GLOBAL Buffer to exist while their module body is evaluated - not merely an
@@ -11,6 +13,11 @@ import { createRoot } from 'react-dom/client';
 if (typeof (globalThis as { Buffer?: unknown }).Buffer === 'undefined') {
   (globalThis as { Buffer?: unknown }).Buffer = Buffer;
 }
+
+// Before anything renders, and outside `mount()` so a startup failure is
+// covered too: WebView2 offers its own Back/Reload/Save as/Print/Inspect menu
+// wherever the app does not open one, which Electron never did.
+suppressNativeContextMenu();
 
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);

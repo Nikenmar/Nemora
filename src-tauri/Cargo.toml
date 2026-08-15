@@ -49,6 +49,10 @@ lofty = "0.25.0"
 windows = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_UI_Shell",
+  # ITEMIDLIST and the IL* helpers live here, and SHOpenFolderAndSelectItems -
+  # the only way to reveal a file that survives quotes and commas in its name -
+  # is typed in terms of them.
+  "Win32_UI_Shell_Common",
   "Win32_UI_WindowsAndMessaging",
   "Win32_System_Com",
   "Win32_Graphics_Gdi",

@@ -154,20 +154,85 @@ fn shell_execute(
     Ok(())
 }
 
+/// Initializes COM for the calling thread, reporting whether we owe an uninit.
+///
+/// Same shape as the one in `taskbar.rs`, and for the same reason: a Tauri
+/// command runs on whichever thread the async runtime hands it, so neither the
+/// initialized state nor the apartment model can be assumed.
 #[cfg(windows)]
-fn explorer_select_parameters(path: &Path) -> std::ffi::OsString {
-    let mut parameters = std::ffi::OsString::from("/select,\"");
-    parameters.push(path.as_os_str());
-    parameters.push("\"");
-    parameters
+unsafe fn initialize_com() -> Result<bool, ShellOpsError> {
+    use windows::Win32::Foundation::RPC_E_CHANGED_MODE;
+    use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+
+    let result = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+    if result.is_ok() {
+        Ok(true)
+    } else if result == RPC_E_CHANGED_MODE {
+        // The thread is already in another apartment. COM is usable; this call
+        // simply must not be balanced with CoUninitialize.
+        Ok(false)
+    } else {
+        Err(ShellOpsError::new(
+            ShellOpsErrorCode::ShellLaunch,
+            format!("failed to initialize COM to reveal an item: {result:?}"),
+        ))
+    }
 }
 
+/// Opens the containing folder and SELECTS the item, by item id rather than by
+/// command line.
+///
+/// This used to spawn `explorer.exe /select,"<path>"`, which is the spelling
+/// every answer on the internet gives and which does not work: Explorer takes
+/// everything after the comma literally, the quotes become part of the name it
+/// searches for, nothing matches, and it settles for showing the folder with
+/// NOTHING selected. That is the whole bug, and it was invisible from inside
+/// the process - `ShellExecuteW` returns success, because launching Explorer is
+/// exactly what it did.
+///
+/// Dropping the quotes fixes that path and breaks a more common one: a comma in
+/// the file name then ends the argument early and Explorer opens no window at
+/// all. Music libraries are full of commas (`Artist1, Artist2 - Title.flac`).
+/// Both behaviours were measured on Windows 11, not reasoned about.
+///
+/// `SHOpenFolderAndSelectItems` takes a parsed item id list, so there is no
+/// command line to quote and no character is special. Passing the item as the
+/// folder argument with an empty selection is the documented way to say
+/// "select this in its parent", and it works for a directory too, which is what
+/// `reveal_folder_in_file_explorer` needs.
 #[cfg(windows)]
 fn reveal_item(path: &Path) -> Result<(), ShellOpsError> {
-    shell_execute(
-        std::ffi::OsStr::new("explorer.exe"),
-        Some(&explorer_select_parameters(path)),
-    )
+    use windows::core::PCWSTR;
+    use windows::Win32::System::Com::CoUninitialize;
+    use windows::Win32::UI::Shell::{ILCreateFromPathW, ILFree, SHOpenFolderAndSelectItems};
+
+    let wide_path = wide(path.as_os_str())?;
+
+    // SAFETY: `wide_path` is a live NUL-terminated buffer for the whole call,
+    // and every id list produced below is freed on both the ok and error path.
+    unsafe {
+        let balance_com = initialize_com()?;
+        let item = ILCreateFromPathW(PCWSTR::from_raw(wide_path.as_ptr()));
+        if item.is_null() {
+            if balance_com {
+                CoUninitialize();
+            }
+            return Err(ShellOpsError::at(
+                ShellOpsErrorCode::InvalidPath,
+                path,
+                "the shell could not parse this path into an item",
+            ));
+        }
+
+        let result = SHOpenFolderAndSelectItems(item, None, 0);
+        ILFree(Some(item));
+        if balance_com {
+            CoUninitialize();
+        }
+        result.map_err(|error| {
+            ShellOpsError::at(ShellOpsErrorCode::ShellLaunch, path, error.to_string())
+        })
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -740,13 +805,13 @@ mod tests {
         );
     }
 
-    #[cfg(windows)]
-    #[test]
-    fn explorer_parameters_select_the_quoted_item() {
-        let parameters = explorer_select_parameters(Path::new(r"E:\Music folder\song.flac"));
-        assert_eq!(
-            parameters,
-            std::ffi::OsString::from(r#"/select,"E:\Music folder\song.flac""#)
-        );
-    }
+    // There is deliberately no unit test for revealing an item any more.
+    //
+    // The one that stood here asserted that the command line came out as
+    // `/select,"E:\Music folder\song.flac"` - and it passed, for a year, while
+    // the feature did not work. The string was exactly what the code meant to
+    // build; what it could not know is that Explorer then selects nothing.
+    // Testing the shape of a request to another program proves the shape, and
+    // that is all it proves. The behaviour is now covered where it is visible:
+    // by opening a file from the app and looking at Explorer.
 }
