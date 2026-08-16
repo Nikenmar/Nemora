@@ -196,42 +196,75 @@ unsafe fn initialize_com() -> Result<bool, ShellOpsError> {
 /// Both behaviours were measured on Windows 11, not reasoned about.
 ///
 /// `SHOpenFolderAndSelectItems` takes a parsed item id list, so there is no
-/// command line to quote and no character is special. Passing the item as the
-/// folder argument with an empty selection is the documented way to say
-/// "select this in its parent", and it works for a directory too, which is what
-/// `reveal_folder_in_file_explorer` needs.
+/// command line to quote and no character is special.
+///
+/// WHICH FORM OF THAT CALL matters, and the difference is only visible with a
+/// COLD folder. Passing the file itself as the folder argument with an empty
+/// selection is the popular shorthand for "select this in its parent", and it
+/// selects nothing unless a window for that folder is ALREADY open: the
+/// shorthand makes Explorer resolve the parent and apply the selection through
+/// the caller's COM apartment, which a Tauri command thread tears down the
+/// moment the command returns. The documented form - the parent as the folder,
+/// the file as a one-element selection - hands Explorer everything up front and
+/// survives that. Measured with the folder closed, on Windows 11:
+///
+/// | form                       | uninitialize at once | apartment kept alive |
+/// |----------------------------|----------------------|----------------------|
+/// | file, empty selection      | NOTHING selected     | selected             |
+/// | parent + one item          | selected             | selected             |
+///
+/// Every one of those returned `S_OK`, including the row that did nothing.
+///
+/// A path with no parent is a drive root. There is nothing to select it in, so
+/// it is opened rather than revealed.
 #[cfg(windows)]
 fn reveal_item(path: &Path) -> Result<(), ShellOpsError> {
     use windows::core::PCWSTR;
     use windows::Win32::System::Com::CoUninitialize;
     use windows::Win32::UI::Shell::{ILCreateFromPathW, ILFree, SHOpenFolderAndSelectItems};
 
-    let wide_path = wide(path.as_os_str())?;
+    let item_path = wide(path.as_os_str())?;
+    let parent_path = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => Some(wide(parent.as_os_str())?),
+        _ => None,
+    };
 
-    // SAFETY: `wide_path` is a live NUL-terminated buffer for the whole call,
-    // and every id list produced below is freed on both the ok and error path.
+    // SAFETY: both buffers stay alive for the whole call, every id list is freed
+    // before returning, and COM is only balanced when this call initialised it.
     unsafe {
         let balance_com = initialize_com()?;
-        let item = ILCreateFromPathW(PCWSTR::from_raw(wide_path.as_ptr()));
-        if item.is_null() {
-            if balance_com {
-                CoUninitialize();
-            }
-            return Err(ShellOpsError::at(
+        let item = ILCreateFromPathW(PCWSTR::from_raw(item_path.as_ptr()));
+        let parent = parent_path
+            .as_ref()
+            .map(|value| ILCreateFromPathW(PCWSTR::from_raw(value.as_ptr())));
+
+        let unresolved = item.is_null() || parent.is_some_and(|pidl| pidl.is_null());
+        let outcome = if unresolved {
+            Err(ShellOpsError::at(
                 ShellOpsErrorCode::InvalidPath,
                 path,
                 "the shell could not parse this path into an item",
-            ));
-        }
+            ))
+        } else {
+            let selected = match parent {
+                Some(folder) => SHOpenFolderAndSelectItems(folder, Some(&[item.cast_const()]), 0),
+                None => SHOpenFolderAndSelectItems(item, None, 0),
+            };
+            selected.map_err(|error| {
+                ShellOpsError::at(ShellOpsErrorCode::ShellLaunch, path, error.to_string())
+            })
+        };
 
-        let result = SHOpenFolderAndSelectItems(item, None, 0);
-        ILFree(Some(item));
+        if !item.is_null() {
+            ILFree(Some(item));
+        }
+        if let Some(pidl) = parent.filter(|pidl| !pidl.is_null()) {
+            ILFree(Some(pidl));
+        }
         if balance_com {
             CoUninitialize();
         }
-        result.map_err(|error| {
-            ShellOpsError::at(ShellOpsErrorCode::ShellLaunch, path, error.to_string())
-        })
+        outcome
     }
 }
 
@@ -805,13 +838,35 @@ mod tests {
         );
     }
 
-    // There is deliberately no unit test for revealing an item any more.
+    // Revealing an item has no ordinary unit test, and that is the point.
     //
-    // The one that stood here asserted that the command line came out as
-    // `/select,"E:\Music folder\song.flac"` - and it passed, for a year, while
-    // the feature did not work. The string was exactly what the code meant to
-    // build; what it could not know is that Explorer then selects nothing.
-    // Testing the shape of a request to another program proves the shape, and
-    // that is all it proves. The behaviour is now covered where it is visible:
-    // by opening a file from the app and looking at Explorer.
+    // The one that stood here asserted the command line came out as
+    // `/select,"E:\Music folder\song.flac"`, and it passed while the feature
+    // did not work: the string was exactly what the code meant to build, and
+    // what a string comparison cannot know is that Explorer then selects
+    // nothing. Testing the shape of a request to another program proves the
+    // shape and nothing else.
+    //
+    // What follows opens a real Explorer window instead, which is why it is
+    // opt-in twice: ignored by default, and inert unless a path is named.
+    //
+    //   $env:NEMORA_REVEAL_TEST = 'E:\Music\Some, Artist - Track.flac'
+    //   cargo test --manifest-path src-tauri/Cargo.toml reveals_a_real_item -- --ignored --nocapture
+    //
+    // CLOSE EVERY WINDOW ON THAT FOLDER FIRST. With one already open, all
+    // three broken spellings of this call look correct, which is exactly how
+    // the second bug survived the fix for the first. And read the result off
+    // the screen: success here means the shell accepted the request, and every
+    // version that selected nothing also returned success.
+    #[cfg(windows)]
+    #[test]
+    #[ignore]
+    fn reveals_a_real_item() {
+        let Ok(target) = std::env::var("NEMORA_REVEAL_TEST") else {
+            println!("set NEMORA_REVEAL_TEST to the full path of a file");
+            return;
+        };
+        reveal_item(Path::new(&target)).expect("the shell should accept the item");
+        println!("asked Explorer to reveal {target}");
+    }
 }
