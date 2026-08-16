@@ -64,7 +64,7 @@ const createRepository = () => {
       write: async (path, patch) => {
         writes.push({ path, patch: clone(patch) });
       },
-      healBlankPictureMime: async () => undefined
+      healBlankPictureMime: async () => 0
     },
     getSongArtwork: (value) => ({
       isDefaultArtwork: false,
@@ -173,5 +173,29 @@ describe('metadata catalog reconciliation', () => {
     release?.();
     await update;
     expect(service.isMetadataUpdatesPending('E:\\Music\\one.mp3')).toBe(false);
+  });
+});
+
+describe('repairing a file the player refused to open', () => {
+  test('reports how many pictures were repaired', async () => {
+    const testRepository = createRepository();
+    const heals: string[] = [];
+    testRepository.repository.file.healBlankPictureMime = async (path: string) => {
+      heals.push(path);
+      return 2;
+    };
+    const service = new MetadataService(testRepository.repository);
+
+    await expect(service.healBlankPictureMime('E:\Music\one.mp3')).resolves.toBe(2);
+    expect(heals).toEqual(['E:\Music\one.mp3']);
+  });
+
+  test('reports zero for a file that had nothing wrong with it', async () => {
+    const testRepository = createRepository();
+    const service = new MetadataService(testRepository.repository);
+
+    // Zero is what stops the player retrying forever: the failure is something
+    // other than the blank MIME type, and a retry would only hide it.
+    await expect(service.healBlankPictureMime('E:\Music\one.mp3')).resolves.toBe(0);
   });
 });

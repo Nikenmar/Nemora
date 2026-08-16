@@ -564,9 +564,7 @@ const createMetadataFilePort = (
       };
     },
     write: writeTags,
-    healBlankPictureMime: async (path) => {
-      await healBlankFlacPictureMime(path);
-    }
+    healBlankPictureMime: async (path) => (await healBlankFlacPictureMime(path)).healedPictureCount
   };
 };
 

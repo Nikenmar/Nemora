@@ -79,7 +79,19 @@ export const removeSongsFromCatalogState = (
     ...playlist,
     songs: playlist.songs.filter((songId) => !removedIds.has(songId))
   }));
-  state.listeningData = state.listeningData.filter((entry) => !removedIds.has(entry.songId));
+  // Listening history OUTLIVES the library entry, as long as the row knows
+  // which track it belonged to.
+  //
+  // Removing a folder and adding it back is an ordinary thing to do - after a
+  // move, a rename, a rebuild - and it used to destroy every listen recorded
+  // for those tracks, permanently and silently. A kept row costs a few dozen
+  // bytes, contributes to no figure on the statistics page (which counts only
+  // tracks in the library), and is reattached by fingerprint the moment the
+  // same music is scanned again. A row without a fingerprint has nothing to be
+  // reattached by, so keeping it would only be dead weight.
+  state.listeningData = state.listeningData.filter(
+    (entry) => !removedIds.has(entry.songId) || entry.fingerprint !== undefined
+  );
   state.blacklist.songBlacklist = state.blacklist.songBlacklist.filter(
     (songId) => !removedIds.has(songId)
   );

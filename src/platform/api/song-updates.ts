@@ -33,6 +33,13 @@ export const songUpdates = {
     getRuntime().updateSongId3Tags(songIdOrPath, tags, sendUpdatedData, isKnownSource),
   reParseSong: (songPath: string): Promise<SavableSongData | undefined> =>
     getRuntime().reParseSong(songPath),
+  /**
+   * Repairs the embedded-picture defect that makes the webview refuse a file,
+   * resolving true only when something was actually repaired and the track is
+   * therefore worth retrying.
+   */
+  healSongForPlayback: (songId: string): Promise<boolean> =>
+    getRuntime().healSongForPlayback(songId),
   getSongId3Tags: (songIdOrPath: string, isKnownSource: boolean): Promise<SongTags> =>
     getRuntime().getSongTags(songIdOrPath, isKnownSource),
   getImgFileLocation: async (): Promise<string> => {

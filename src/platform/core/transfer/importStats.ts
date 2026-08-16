@@ -1,5 +1,6 @@
 import { basename } from '../playlists/pathUtils';
 import { logger } from '../playlists/logger';
+import { matchFingerprints } from '../stats/songFingerprint';
 import { showOpenDialog } from '../playlists/dialog';
 import { joinPath } from './joinPath';
 import { md5Hex } from './md5';
@@ -22,8 +23,6 @@ import type { StatsTransferRepository } from './statsTransferRepository';
  */
 
 const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
-
-const norm = (value: string) => value.trim().toLowerCase();
 
 const mergeScalar = (local = 0, foreign = 0, mergeMode: StatsMergeMode) =>
   mergeMode === 'separateDevices' ? local + foreign : Math.max(local, foreign);
@@ -210,66 +209,11 @@ const validateExportData = (data: StatsExportFile): string | undefined => {
 // 2. Fingerprint matching (foreign song -> local songId; songIds are random per install)
 // ---------------------------------------------------------------------------
 
-const matchForeignSongs = (foreignSongs: SongFingerprint[], localSongs: SavableSongData[]) => {
-  const byFileName = new Map<string, SavableSongData[]>();
-  const byTitleAndArtists = new Map<string, SavableSongData[]>();
-  const byTitle = new Map<string, SavableSongData[]>();
-
-  const pushTo = (map: Map<string, SavableSongData[]>, key: string, song: SavableSongData) => {
-    const list = map.get(key);
-    if (list) list.push(song);
-    else map.set(key, [song]);
-  };
-
-  for (const song of localSongs) {
-    pushTo(byFileName, norm(basename(song.path)), song);
-    pushTo(byTitle, norm(song.title), song);
-    const artistsKey = (song.artists ?? [])
-      .map((artist) => norm(artist.name))
-      .sort()
-      .join('|');
-    pushTo(byTitleAndArtists, `${norm(song.title)}|${artistsKey}`, song);
-  }
-
-  const matches = new Map<string, string>(); // foreign songId -> local songId
-
-  for (const foreign of foreignSongs) {
-    if (!foreign || typeof foreign.songId !== 'string') continue;
-    const duration = Number(foreign.duration) || 0;
-
-    // 1. file name + duration (±2s)
-    const fileNameCandidates = (byFileName.get(norm(`${foreign.fileName ?? ''}`)) ?? []).filter(
-      (song) => Math.abs(song.duration - duration) <= 2
-    );
-    if (fileNameCandidates.length === 1) {
-      matches.set(foreign.songId, fileNameCandidates[0].songId);
-      continue;
-    }
-    if (fileNameCandidates.length > 1) continue; // ambiguous — skip
-
-    // 2. title + sorted artists + duration (±2s)
-    const artistsKey = (foreign.artists ?? [])
-      .map((artist) => norm(`${artist}`))
-      .sort()
-      .join('|');
-    const titleArtistCandidates = (
-      byTitleAndArtists.get(`${norm(`${foreign.title ?? ''}`)}|${artistsKey}`) ?? []
-    ).filter((song) => Math.abs(song.duration - duration) <= 2);
-    if (titleArtistCandidates.length === 1) {
-      matches.set(foreign.songId, titleArtistCandidates[0].songId);
-      continue;
-    }
-    if (titleArtistCandidates.length > 1) continue; // ambiguous — skip
-
-    // 3. title + duration (±1s), only when unambiguous
-    const titleCandidates = (byTitle.get(norm(`${foreign.title ?? ''}`)) ?? []).filter(
-      (song) => Math.abs(song.duration - duration) <= 1
-    );
-    if (titleCandidates.length === 1) matches.set(foreign.songId, titleCandidates[0].songId);
-  }
-
-  return matches;
-};
+// One matcher for the whole app: the same rules reattach a row after a library
+// rebuild and move one between two installs. Two copies would eventually
+// disagree, and a track that reattaches locally but not on import (or the other
+// way round) is a bug nobody would think to look for.
+const matchForeignSongs = matchFingerprints;
 
 // ---------------------------------------------------------------------------
 // 3. Merge

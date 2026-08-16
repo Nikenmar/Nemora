@@ -69,6 +69,14 @@ const DURATION = 1000;
 // ? INITIALIZE PLAYER
 const player = new AudioPlayer();
 let repetitivePlaybackErrorsCount = 0;
+/**
+ * Tracks repaired once per session, by song id.
+ *
+ * The repair rewrites the file, so a track that still fails afterwards must not
+ * be rewritten again on every retry: whatever is wrong with it is not the blank
+ * MIME type.
+ */
+const attemptedPlaybackRepairs = new Set<string>();
 
 // ? / / / / / / /  PLAYER DEFAULT OPTIONS / / / / / / / / / / / / / /
 // player.addEventListener('player/trackchange', (e) => {
@@ -175,18 +183,47 @@ export default function App() {
         />
       );
 
+      // MEDIA_ERR_SRC_NOT_SUPPORTED is what a blank picture MIME type looks
+      // like from here: `DEMUXER_ERROR_COULD_NOT_OPEN` on a file that plays
+      // fine everywhere else. The repair for it has shipped since the fork
+      // began, but only behind a right-click menu item, so the error people
+      // actually met was this dialog. Try it once per track before giving up.
+      const { songId, path: songPath } = store.state.currentSongData;
+      if (playerErrorData?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && songId) {
+        if (!attemptedPlaybackRepairs.has(songId)) {
+          attemptedPlaybackRepairs.add(songId);
+          const positionBeforeRepair = player.currentTime;
+          void window.api.songUpdates
+            .healSongForPlayback(songId)
+            .then((repaired) => {
+              // Nothing was wrong with the file, so the failure is something
+              // else and reloading would only spin. Report it instead.
+              if (!repaired) return changePromptMenuData(true, prompt);
+              log('Repaired a track the player refused to open; retrying it.', { songPath });
+              player.load();
+              player.currentTime = positionBeforeRepair;
+              return undefined;
+            })
+            .catch((error: unknown) => {
+              log('Could not repair a track the player refused to open.', { error }, 'ERROR');
+              changePromptMenuData(true, prompt);
+            });
+          return undefined;
+        }
+      }
+
       if (repetitivePlaybackErrorsCount > 5) {
         changePromptMenuData(true, prompt);
         return log(
           'Playback errors exceeded the 5 errors limit.',
-          { appError, playerErrorData },
+          { appError, playerErrorData, songPath },
           'ERROR'
         );
       }
 
       repetitivePlaybackErrorsCount += 1;
       const prevSongPosition = player.currentTime;
-      log(`Error occurred in the player.`, { appError, playerErrorData }, 'ERROR');
+      log(`Error occurred in the player.`, { appError, playerErrorData, songPath }, 'ERROR');
 
       if (player.src && playerErrorData) {
         player.load();

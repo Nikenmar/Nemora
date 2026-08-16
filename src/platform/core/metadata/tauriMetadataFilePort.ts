@@ -137,7 +137,7 @@ export class TauriMetadataFilePort implements MetadataFilePort {
     }
   }
 
-  async healBlankPictureMime(path: string): Promise<void> {
+  async healBlankPictureMime(path: string): Promise<number> {
     if (!this.available) return this.fallback.healBlankPictureMime(path);
 
     try {
@@ -145,6 +145,7 @@ export class TauriMetadataFilePort implements MetadataFilePort {
       // Only a real repair touches the file, so only a real repair has an event
       // to suppress.
       if (healed > 0) emitTagFileWritten({ path, reason: 'native-picture-mime-heal' });
+      return healed;
     } catch (error) {
       if (this.disableOnMissingCommand(error, 'heal')) {
         return this.fallback.healBlankPictureMime(path);

@@ -137,6 +137,35 @@ describe('catalog song removal', () => {
     expect(result.state.artists[0].artworkName).toBe('keep-me.webp');
   });
 
+  test('keeps listening history that knows which track it belongs to', () => {
+    const source = state();
+    // The row a current build writes: it carries the track's identity, so it can
+    // find its way back if the same music is scanned again.
+    source.listeningData = [
+      {
+        songId: 'remove-me',
+        listens: [{ year: 2026, listens: [[1_770_000_000_000, 300]] }],
+        fullListens: 300,
+        fingerprint: {
+          songId: 'remove-me',
+          title: 'Removed Song',
+          artists: ['Artist'],
+          duration: 200,
+          fileName: 'remove.flac'
+        }
+      },
+      // A row from before fingerprints existed: nothing could ever reattach it,
+      // so keeping it would only be dead weight.
+      { songId: 'keep-me', listens: [] }
+    ];
+
+    const result = removeSongsFromCatalogState(source, ['E:\\Music\\remove.flac']);
+
+    const kept = result.state.listeningData.find((entry) => entry.songId === 'remove-me');
+    expect(kept?.fullListens).toBe(300);
+    expect(result.state.songs.map((entry) => entry.songId)).toEqual(['keep-me']);
+  });
+
   test('uses trash for recycle requests and never falls back to permanent deletion', async () => {
     let current = state();
     const repository: CatalogRepository = {

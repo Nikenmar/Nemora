@@ -206,6 +206,15 @@ declare global {
     listens: YearlyListeningRate[];
     /** an array of listening records for each year. */
     seeks?: SongSeek[];
+    /**
+     * Who this row belongs to, independent of `songId`.
+     *
+     * songIds are random per install and are handed out again when a library is
+     * rebuilt, so a row keyed only by one is lost the moment that happens. With
+     * this, the row is reattached on the next scan. Optional because rows
+     * written before it existed have none; those cannot be reattached.
+     */
+    fingerprint?: SongFingerprint;
   }
 
   interface SongSeek {

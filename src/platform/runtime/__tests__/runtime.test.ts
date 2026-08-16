@@ -174,6 +174,84 @@ describe('runtime/API composition', () => {
     );
   });
 
+  test('a rebuilt library gets its listening history back', async () => {
+    // The whole point of the fingerprint, end to end: the user removed the
+    // folder and added it again (or moved the files, or reset the catalog).
+    // The files are the same, the ids are new, and before this the history was
+    // simply lost - one real profile ended up with 1260 of 1280 rows pointing
+    // at ids that no longer existed.
+    const port = new MemoryStorePort();
+    const root = 'E:\\Music';
+    const songPath = `${root}\\Track.mp3`;
+    port.files.set('listeningData', {
+      payload: [
+        {
+          songId: 'id-from-the-old-library',
+          listens: [{ year: 2026, listens: [[1_770_000_000_000, 900]] }],
+          fullListens: 850,
+          skips: 12,
+          fingerprint: {
+            songId: 'id-from-the-old-library',
+            title: 'Track',
+            artists: ['Artist'],
+            duration: 123.46,
+            fileName: 'Track.mp3'
+          }
+        }
+      ]
+    } as unknown as StoreFile<unknown>);
+
+    const services: RuntimeServices = {
+      selectMusicFolders: async () => [root],
+      libraryFileSystem: {
+        readDir: async () => [
+          { name: 'Track.mp3', isDirectory: false, isFile: true, isSymlink: false }
+        ],
+        stat: async (path) => ({
+          isFile: path === songPath,
+          isDirectory: path === root,
+          size: 42,
+          mtime: new Date('2025-01-02T00:00:00Z'),
+          birthtime: new Date('2025-01-01T00:00:00Z')
+        }),
+        readHead: async () => new Uint8Array([1, 2, 3])
+      },
+      metadataParser: {
+        parse: async () => ({
+          common: { title: 'Track', artist: 'Artist', genres: [] },
+          format: { duration: 123.456 },
+          pictures: [],
+          metadataCompleteness: 'head'
+        })
+      },
+      artwork: {
+        storeArtworks: async () => ({
+          isDefaultArtwork: true,
+          artworkPath: 'default.webp',
+          optimizedArtworkPath: 'default.webp'
+        })
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+    const structures = await getRuntime().getFolderStructures();
+    const songs = await getRuntime().addSongsFromFolderStructures(structures);
+    await getRuntime().flush();
+
+    const newSongId = songs[0].songId;
+    expect(newSongId).not.toBe('id-from-the-old-library');
+
+    const rows = getRuntime().getListeningData([newSongId]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].songId).toBe(newSongId);
+    expect(rows[0].fullListens).toBe(850);
+    expect(rows[0].skips).toBe(12);
+    // And the statistics page counts it, which it would not do for a row that
+    // names a track the library does not have.
+    expect(getRuntime().getStats('allTime').totals.totalListens).toBe(900);
+  });
+
   test('commits scanned songs before their covers exist and repairs the ones that fail', async () => {
     const port = new MemoryStorePort();
     const root = 'E:\\Music';

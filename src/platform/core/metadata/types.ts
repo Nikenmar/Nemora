@@ -50,7 +50,13 @@ export interface MetadataTagPatch {
 export interface MetadataFilePort {
   read(path: string): Promise<MetadataFileData>;
   write(path: string, patch: MetadataTagPatch): Promise<void>;
-  healBlankPictureMime(path: string): Promise<void>;
+  /**
+   * Repairs embedded pictures whose MIME type is missing or blank and reports
+   * how many were repaired, so a caller can tell "nothing was wrong here" from
+   * "the file was broken and is now fixed" - the difference between retrying
+   * playback and giving up on it.
+   */
+  healBlankPictureMime(path: string): Promise<number>;
 }
 
 export type MetadataArtworkSource =

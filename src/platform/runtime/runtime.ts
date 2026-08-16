@@ -74,6 +74,7 @@ import { internalWriteSuppression } from '../core/watchers/suppression';
 import type { LibraryWatcherRepository } from '../core/watchers/types';
 import refreshRediscover, { type RediscoverRepo } from '../core/rediscover/rediscover';
 import { dedupeListeningRows } from '../core/stats/mergeListeningData';
+import { fingerprintOfSong, relinkOrphanedListeningRows } from '../core/stats/songFingerprint';
 import clearSearchHistoryResults from '../core/search/clearSearchHistoryResults';
 import type { SearchRepository } from '../core/search/repository';
 import runSearch from '../core/search/search';
@@ -243,12 +244,63 @@ export class NoraRuntime {
       cmrStats: this.cache.get('cmrStats'),
       palettes: this.cache.get('palettes')
     };
+    this.healListeningIdentity();
     if (this.services.singleInstance && !this.singleInstanceController) {
       this.singleInstanceController = await this.services.singleInstance.create({
         openAuthUri: (uri) => this.events.openAuthUri?.(uri),
         openAudioFile: (path) => this.routeOpenedAudioFile(path)
       });
     }
+  }
+
+  /**
+   * Keeps listening history attached to the music rather than to an id.
+   *
+   * Two passes, both cheap and both idempotent:
+   *
+   * 1. Stamp the fingerprint on rows that still resolve. This is what buys the
+   *    protection - a row can only be reattached later if it recorded what it
+   *    belonged to WHILE the song was still there. Rows written before this
+   *    existed get their fingerprint on the first launch after the update.
+   * 2. Reattach rows whose song is gone to the songs that now carry the same
+   *    files, which is what a rebuilt library looks like from here.
+   *
+   * The alternative - doing this only after a scan - would miss every profile
+   * where the library was rebuilt by an older build.
+   */
+  private healListeningIdentity(): void {
+    const songs = this.state().songs;
+    const songById = new Map(songs.map((song) => [song.songId, song]));
+
+    let changed = false;
+    let stamped = 0;
+    const withFingerprints = this.state().listeningData.map((row) => {
+      if (row.fingerprint) return row;
+      const song = songById.get(row.songId);
+      if (!song) return row;
+      changed = true;
+      stamped += 1;
+      return { ...row, fingerprint: fingerprintOfSong(song) };
+    });
+
+    const { rows, relinked } = relinkOrphanedListeningRows(withFingerprints, songs);
+    if (relinked > 0) changed = true;
+    if (!changed) return;
+
+    if (stamped > 0) logger.info('Recorded track identity on listening rows.', { count: stamped });
+    if (relinked > 0)
+      logger.info('Reattached listening history to rebuilt library entries.', { count: relinked });
+    this.setSnapshot('listeningData', 'listeningData', rows, true);
+    if (relinked > 0) this.events.dataUpdated('songs/listeningData');
+  }
+
+  /** The scan-time half of {@link healListeningIdentity}, for a batch just committed. */
+  private reattachListeningHistory(songs: readonly SavableSongData[]): void {
+    const { rows, relinked } = relinkOrphanedListeningRows(this.state().listeningData, songs);
+    if (relinked === 0) return;
+    logger.info('Reattached listening history to newly scanned tracks.', { count: relinked });
+    this.setSnapshot('listeningData', 'listeningData', rows, true);
+    this.events.dataUpdated('songs/listeningData');
   }
 
   isHydrated(): boolean {
@@ -867,6 +919,11 @@ export class NoraRuntime {
     this.setSnapshot('artists', 'artists', artists, true);
     this.setSnapshot('albums', 'albums', albums, true);
     this.setSnapshot('genres', 'genres', genres, true);
+    // A re-added folder is the case this protects: the files are the same, the
+    // ids are new, and the listening history is sitting there pointing at ids
+    // that no longer exist. Done per batch, so history comes back with the
+    // tracks rather than at the next launch.
+    this.reattachListeningHistory(songs);
     this.events.dataUpdated('songs/newSong', addedSongIds);
     if (newArtistIds.length > 0) this.events.dataUpdated('artists/newArtist', newArtistIds);
     if (changedArtistIds.length > 0) this.events.dataUpdated('artists', changedArtistIds);
@@ -1771,6 +1828,14 @@ export class NoraRuntime {
       rows.push(row);
     }
 
+    // Stamp the track's identity on every write. A row that knows only its
+    // songId is lost for good the next time the library is rebuilt, because the
+    // id it names stops existing and nothing on disk says which file it meant.
+    if (!row.fingerprint) {
+      const song = this.state().songs.find((candidate) => candidate.songId === songId);
+      if (song) row.fingerprint = fingerprintOfSong(song);
+    }
+
     if (dataType === 'listens' && typeof value === 'number') {
       const now = new Date();
       let yearly = row.listens.find((entry) => entry.year === now.getFullYear());
@@ -2136,6 +2201,38 @@ export class NoraRuntime {
 
   reParseSong(songPath: string): Promise<SavableSongData | undefined> {
     return this.metadataService().reParseSong(songPath);
+  }
+
+  /**
+   * Last resort before a playback failure becomes an error dialog: repair the
+   * one defect known to make WebView2 refuse a perfectly good file.
+   *
+   * A picture embedded with a blank MIME type makes Chromium answer
+   * `DEMUXER_ERROR_COULD_NOT_OPEN` and stop, which is the bug this whole fork
+   * started from. The repair existed but was only reachable by right-clicking
+   * the track and choosing to re-parse it - so a user whose library carried a
+   * few such files just met the error dialog over and over with no idea that
+   * one menu item away sat the fix.
+   *
+   * Reports whether anything was actually repaired: a file that had nothing
+   * wrong with it must not be retried forever, because then the failure is
+   * something else and retrying only hides it.
+   */
+  async healSongForPlayback(songId: string): Promise<boolean> {
+    // The renderer holds `convertFileSrc(path, 'nemora')`, not a path, so the
+    // song is resolved by id here rather than passing a URL to a file API and
+    // watching it not find the file. A track played from outside the library
+    // has no catalog entry, and for it the argument is the path.
+    const song = this.state().songs.find((entry) => entry.songId === songId);
+    const path = song?.path ?? removeDefaultAppProtocolFromFilePath(songId);
+    try {
+      const healed = await this.metadataService().healBlankPictureMime(path);
+      if (healed > 0) logger.info('Repaired a file that the player refused to open.', { path });
+      return healed > 0;
+    } catch (error) {
+      logger.error('Could not repair a file the player refused to open.', { error, path });
+      return false;
+    }
   }
 
   isMetadataUpdatesPending(songPath: string): boolean {

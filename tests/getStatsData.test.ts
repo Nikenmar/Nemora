@@ -101,6 +101,7 @@ describe('ported getStatsData', () => {
     const now = Date.now();
     const threeDaysAgo = now - 3 * DAY_MS;
     const repo = createRepo({
+      getSongsData: () => [song('a')],
       getListeningData: () => [listening('a', [threeDaysAgo])]
     });
 
@@ -114,6 +115,7 @@ describe('ported getStatsData', () => {
   test('activity: 12 monthly buckets ending at the current month', () => {
     const now = Date.now();
     const repo = createRepo({
+      getSongsData: () => [song('a')],
       getListeningData: () => [listening('a', [now - 2 * 30 * DAY_MS])]
     });
 
@@ -128,6 +130,7 @@ describe('ported getStatsData', () => {
     const yesterday = now - 1 * DAY_MS;
     const twoDaysAgo = now - 2 * DAY_MS;
     const repo = createRepo({
+      getSongsData: () => [song('a')],
       getListeningData: () => [listening('a', [yesterday, twoDaysAgo])]
     });
 

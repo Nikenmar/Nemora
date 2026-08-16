@@ -30,8 +30,9 @@ class RecordingFallback implements MetadataFilePort {
     this.writes.push({ path, patch });
   }
 
-  async healBlankPictureMime(path: string): Promise<void> {
+  async healBlankPictureMime(path: string): Promise<number> {
     this.heals.push(path);
+    return 0;
   }
 }
 

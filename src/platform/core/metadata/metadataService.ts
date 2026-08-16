@@ -224,6 +224,17 @@ export class MetadataService {
     return { success: true, updatedData: sendUpdatedData ? updated : undefined };
   }
 
+  /**
+   * Repairs blank picture MIME types in one file, reporting how many pictures
+   * were changed. Nothing else about the file or the catalog is touched, which
+   * is what makes it safe to run the moment playback fails.
+   */
+  healBlankPictureMime(filePath: string): Promise<number> {
+    return this.repository.file.healBlankPictureMime(
+      removeDefaultAppProtocolFromFilePath(filePath)
+    );
+  }
+
   async reParseSong(filePath: string): Promise<SavableSongData | undefined> {
     const diskPath = removeDefaultAppProtocolFromFilePath(filePath);
     return this.exclusive(async () => {

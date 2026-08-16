@@ -193,10 +193,23 @@ const getStatsData = (repo: StatsDataRepo, timeRange: StatsTimeRange): StatsData
   const rangeStart = getRangeStart(timeRange, now);
 
   const songs = repo.getSongsData();
-  const listeningData = repo.getListeningData();
   const elo = repo.getCmrStatsData().elo;
 
   const songById = new Map(songs.map((song) => [song.songId, song]));
+
+  // Only rows that still name a track in the library.
+  //
+  // The page used to mix two populations and looked broken because of it: the
+  // headline counters summed every row, while time listened, top songs, top
+  // artists and top albums could only ever include rows whose song was found.
+  // A profile whose library had been rebuilt showed 24 190 listens over 1280
+  // songs above a top-songs list whose entries added up to 198 - both numbers
+  // computed from the same file, neither of them wrong on its own.
+  //
+  // Detached rows are NOT discarded from the profile: they are kept so that
+  // rescanning the same music reattaches them (see `relinkOrphanedListeningRows`).
+  // They just do not count while the music they belong to is not in the library.
+  const listeningData = repo.getListeningData().filter((entry) => songById.has(entry.songId));
 
   // listens per song inside the selected range
   const listensBySongId = new Map<string, number>();

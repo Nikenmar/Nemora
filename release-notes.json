@@ -1,10 +1,39 @@
 {
   "latestVersion": {
-    "version": "1.0.7-stable",
+    "version": "1.0.8-stable",
     "phase": "stable",
-    "releaseDate": "2026-08-16T12:00:00.000Z"
+    "releaseDate": "2026-08-16T18:00:00.000Z"
   },
   "versions": [
+    {
+      "version": "1.0.8-stable",
+      "releaseDate": "2026-08-16T18:00:00.000Z",
+      "notes": {
+        "new": [],
+        "fixed": [
+          {
+            "note": "Importing stats no longer fails on creating a backup."
+          },
+          {
+            "note": "Listening history now survives a rebuilt library instead of detaching from it."
+          },
+          {
+            "note": "Removing songs no longer erases their listening history."
+          },
+          {
+            "note": "Statistics no longer mix tracks in your library with tracks that left it."
+          },
+          {
+            "note": "A track the player refuses to open is now repaired and retried instead of showing an error."
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Editing tags is supported for MP3 only, as in Nora."
+          }
+        ]
+      }
+    },
     {
       "version": "1.0.7-stable",
       "releaseDate": "2026-08-16T12:00:00.000Z",
@@ -22,9 +51,6 @@
           },
           {
             "note": "Opening a file from Explorer while minimized now restores the window."
-          },
-          {
-            "note": "Importing stats no longer fails on creating a backup."
           }
         ],
         "knownIssues": [
