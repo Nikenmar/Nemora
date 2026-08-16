@@ -149,3 +149,126 @@ export const relinkOrphanedListeningRows = (
 
   return { rows, relinked };
 };
+
+/**
+ * Reattaches detached ELO ratings and every durable duel reference that uses
+ * the same old song id. Ratings that cannot be matched unambiguously, or whose
+ * destination already has a rating, remain detached instead of overwriting
+ * newer data.
+ */
+export const relinkOrphanedRatings = (
+  cmrStats: CmrStatsData,
+  librarySongs: readonly SavableSongData[]
+): { cmrStats: CmrStatsData; relinked: number } => {
+  const liveIds = new Set(librarySongs.map((song) => song.songId));
+  const ratings = cmrStats.elo.ratings;
+  const orphanedRatings = Object.entries(ratings).filter(
+    ([songId, rating]) => !liveIds.has(songId) && rating.fingerprint !== undefined
+  );
+  if (orphanedRatings.length === 0) return { cmrStats, relinked: 0 };
+
+  const matches = matchFingerprints(
+    orphanedRatings.map(([songId, rating]) => ({
+      ...(rating.fingerprint as SongFingerprint),
+      songId
+    })),
+    librarySongs
+  );
+
+  const remappedIds = new Map<string, string>();
+  const nextRatings: Record<string, EloSongRating> = { ...ratings };
+  for (const [oldId, rating] of orphanedRatings) {
+    const newId = matches.get(oldId);
+    if (!newId || nextRatings[newId] !== undefined) continue;
+    const song = librarySongs.find((candidate) => candidate.songId === newId);
+    if (!song) continue;
+    delete nextRatings[oldId];
+    nextRatings[newId] = { ...rating, fingerprint: fingerprintOfSong(song) };
+    remappedIds.set(oldId, newId);
+  }
+  if (remappedIds.size === 0) return { cmrStats, relinked: 0 };
+
+  const remap = (songId: string) => remappedIds.get(songId) ?? songId;
+  return {
+    cmrStats: {
+      ...cmrStats,
+      elo: {
+        ...cmrStats.elo,
+        ratings: nextRatings,
+        history: cmrStats.elo.history.map((record) => ({
+          ...record,
+          songAId: remap(record.songAId),
+          songBId: remap(record.songBId)
+        }))
+      },
+      ...(cmrStats.duelMatchmaking
+        ? {
+            duelMatchmaking: {
+              ...cmrStats.duelMatchmaking,
+              skippedPairs: cmrStats.duelMatchmaking.skippedPairs.map((record) => ({
+                ...record,
+                songAId: remap(record.songAId),
+                songBId: remap(record.songBId)
+              }))
+            }
+          }
+        : {})
+    },
+    relinked: remappedIds.size
+  };
+};
+
+/**
+ * Reattaches tierlist cards that were kept outside the visible placement list
+ * while their songs were absent. The stored index restores their relative
+ * position without exposing dead song ids to existing tierlist consumers.
+ */
+export const relinkOrphanedTierlistItems = (
+  tierlists: readonly SavableTierlist[],
+  librarySongs: readonly SavableSongData[]
+): { tierlists: SavableTierlist[]; relinked: number } => {
+  const orphanedItems = tierlists.flatMap((tierlist) =>
+    tierlist.tiers.flatMap((tier) => tier.orphanedItems ?? [])
+  );
+  if (orphanedItems.length === 0) return { tierlists: [...tierlists], relinked: 0 };
+
+  const fingerprintByOldId = new Map<string, SongFingerprint>();
+  for (const item of orphanedItems) {
+    if (!fingerprintByOldId.has(item.songId)) fingerprintByOldId.set(item.songId, item.fingerprint);
+  }
+  const matches = matchFingerprints(
+    [...fingerprintByOldId].map(([songId, fingerprint]) => ({ ...fingerprint, songId })),
+    librarySongs
+  );
+  if (matches.size === 0) return { tierlists: [...tierlists], relinked: 0 };
+
+  let relinked = 0;
+  const nextTierlists = tierlists.map((tierlist) => {
+    const placedIds = new Set(tierlist.tiers.flatMap((tier) => tier.items));
+    const tiers = tierlist.tiers.map((tier) => {
+      const detached = tier.orphanedItems ?? [];
+      if (detached.length === 0) return tier;
+
+      const items = [...tier.items];
+      const remaining: TierlistOrphanedItem[] = [];
+      for (const orphan of [...detached].sort((a, b) => a.index - b.index)) {
+        const newId = matches.get(orphan.songId);
+        if (!newId || placedIds.has(newId)) {
+          remaining.push(orphan);
+          continue;
+        }
+        items.splice(Math.max(0, Math.min(orphan.index, items.length)), 0, newId);
+        placedIds.add(newId);
+        relinked += 1;
+      }
+
+      const nextTier: TierRow = { ...tier, items };
+      if (remaining.length > 0) nextTier.orphanedItems = remaining;
+      else delete nextTier.orphanedItems;
+      return nextTier;
+    });
+    return { ...tierlist, tiers };
+  });
+
+  return { tierlists: nextTierlists, relinked };
+};

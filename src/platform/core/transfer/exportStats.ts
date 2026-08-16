@@ -2,6 +2,7 @@ import { basename } from '../playlists/pathUtils';
 import { logger } from '../playlists/logger';
 import { generateRandomId } from '../playlists/randomId';
 import { showSaveDialog } from '../playlists/dialog';
+import { trackKeyOf, type ListeningCounterFile } from '../stats/listeningEvents';
 import type { StatsTransferRepository } from './statsTransferRepository';
 
 /**
@@ -15,6 +16,25 @@ const EXPORT_FORMAT = 'nora-cmr-stats-export' as const;
 
 /** App-managed playlist ids — never exported (Favorites = likes, History/Rediscover are derived). */
 const EXCLUDED_PLAYLIST_IDS = new Set(['Favorites', 'History', 'Rediscover']);
+
+type StatsExportFileWithEvents = StatsExportFile & { events?: ListeningCounterFile };
+
+const countersForTracks = (
+  file: ListeningCounterFile,
+  fingerprints: readonly SongFingerprint[]
+): ListeningCounterFile => {
+  const includedKeys = new Set(fingerprints.map(trackKeyOf));
+  const tracks: ListeningCounterFile['tracks'] = {};
+  const counters: ListeningCounterFile['counters'] = {};
+
+  for (const key of includedKeys) {
+    if (!file.tracks[key]) continue;
+    tracks[key] = file.tracks[key];
+    if (file.counters[key]) counters[key] = file.counters[key];
+  }
+
+  return { version: 1, installId: file.installId, tracks, counters };
+};
 
 const exportStatsData = async (
   repo: StatsTransferRepository,
@@ -74,6 +94,7 @@ const exportStatsData = async (
     }
 
     const elo = repo.getCmrStatsData().elo;
+    const events = countersForTracks(repo.getListeningCounters(), fingerprints);
 
     const tierShuffleIntensity = options?.tierShuffleIntensity;
     const preferences: StatsExportPreferences | undefined =
@@ -81,7 +102,7 @@ const exportStatsData = async (
         ? { tierShuffleIntensity: Math.min(1, Math.max(0, tierShuffleIntensity)) }
         : undefined;
 
-    const exportFile: StatsExportFile = {
+    const exportFile: StatsExportFileWithEvents = {
       format: EXPORT_FORMAT,
       formatVersion: 1,
       exportId: generateRandomId(),
@@ -89,6 +110,7 @@ const exportStatsData = async (
       appVersion: repo.appVersion,
       songs: fingerprints,
       listeningData,
+      events,
       ...(elo.totalDuels > 0 ? { elo } : {}),
       ...(playlists.length > 0 ? { playlists } : {}),
       ...(tierlists.length > 0 ? { tierlists } : {}),
@@ -100,6 +122,7 @@ const exportStatsData = async (
     logger.info('Stats data exported successfully.', {
       destination,
       songs: fingerprints.length,
+      eventTracks: Object.keys(events.tracks).length,
       playlists: playlists.length,
       tierlists: tierlists.length
     });

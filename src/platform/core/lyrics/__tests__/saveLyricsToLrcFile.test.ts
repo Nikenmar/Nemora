@@ -140,16 +140,14 @@ describe('saveLyricsToLRCFile', () => {
     expect(mockWriteTextFile).toHaveBeenCalledTimes(1);
     const [path, content] = mockWriteTextFile.mock.calls[0];
     expect(path).toBe('C:/music\\halo.lrc');
-    expect(content).toContain('[re:Nora (https://github.com/Sandakan/Nora)]');
+    expect(content).toContain('[re:Nemora (https://github.com/Nikenmar/Nemora)]');
     expect(content).toContain('[ti:Halo]');
     expect(content).toContain('[01:02.34] Line one');
     expect(content).toContain('[01:02.34][lang:ru] Строка один');
   });
 
   test('writes into the custom LRC location when configured', async () => {
-    const repository = makeRepository(
-      makeUserData({ customLrcFilesSaveLocation: 'D:/lrc-files' })
-    );
+    const repository = makeRepository(makeUserData({ customLrcFilesSaveLocation: 'D:/lrc-files' }));
 
     await saveLyricsToLRCFile(repository, 'C:/music/halo.mp3', makeSongLyrics());
 
@@ -170,5 +168,20 @@ describe('saveLyricsToLRCFile', () => {
 
     const [, content] = mockWriteTextFile.mock.calls[0];
     expect(content).toContain('[copyright:Someone Records]');
+  });
+
+  test('keeps reading metadata from lyrics carrying the legacy Nora editor marker', () => {
+    const metadata = getLrcLyricsMetadata(
+      makeSongLyrics({
+        lyrics: {
+          ...makeSongLyrics().lyrics,
+          unparsedLyrics:
+            '[re:Nora (https://github.com/Sandakan/Nora)]\n[ti:Legacy title]\n[ar:Legacy artist]'
+        }
+      })
+    );
+
+    expect(metadata.title).toBe('Legacy title');
+    expect(metadata.artist).toBe('Legacy artist');
   });
 });

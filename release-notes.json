@@ -1,13 +1,67 @@
 {
   "latestVersion": {
-    "version": "1.0.8-stable",
+    "version": "1.1.0-stable",
     "phase": "stable",
     "releaseDate": "2026-08-16T18:00:00.000Z"
   },
   "versions": [
     {
+      "version": "1.1.0-stable",
+      "releaseDate": "2026-08-17T12:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "Statistics can now be viewed year by year."
+          },
+          {
+            "note": "New charts: which hours of the day and which days of the week you listen."
+          },
+          {
+            "note": "Recap: a slideshow of a year or a month, opened from the statistics page."
+          },
+          {
+            "note": "Duel tournaments: seed 8, 16 or 32 tracks by rating and play the bracket out."
+          },
+          {
+            "note": "SongGuessr can now be played within one artist or one album."
+          },
+          {
+            "note": "Every play now records the hour it happened, which is what the new hour chart reads."
+          }
+        ],
+        "fixed": [
+          {
+            "note": "Removing songs no longer erases their duel ratings or their place in a tierlist."
+          },
+          {
+            "note": "Importing the same stats file twice no longer counts a listen twice."
+          },
+          {
+            "note": "Hide the window at startup now works when the app is launched at login."
+          },
+          {
+            "note": "A failed deletion is now reported instead of passing silently."
+          },
+          {
+            "note": "Keeping the screen awake no longer depends on the battery animation setting."
+          },
+          {
+            "note": "A metadata provider outage is no longer reported as no results found."
+          },
+          {
+            "note": "Saved .lrc files are tagged with Nemora, and files with the old tag still read."
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Editing tags is supported for MP3 only, as in Nora."
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.8-stable",
-      "releaseDate": "2026-08-16T18:00:00.000Z",
+      "releaseDate": "2026-08-16T16:00:00.000Z",
       "notes": {
         "new": [],
         "fixed": [

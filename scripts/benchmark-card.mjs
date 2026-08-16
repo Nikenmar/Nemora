@@ -119,15 +119,18 @@ const rows = [
   // The two memory rows are NOT the same number said twice, and their old
   // names ("working set", "private") were jargon nobody reads off a picture.
   //
-  //   RAM in use          - what Task Manager shows: physical memory the app
-  //                         occupies right now, shared Windows libraries and all.
-  //   RAM it alone holds  - the part that belongs to this app only and cannot
-  //                         be shared with anything else. It is the better
+  //   RAM in use          - the private working set, which is the number Task
+  //                         Manager puts in its Memory column. Summing plain
+  //                         working sets instead counts a shared page once per
+  //                         process, so a player with more processes is charged
+  //                         for the same memory several times.
+  //   RAM it alone holds  - private committed memory: what the app has reserved
+  //                         for itself whether or not it is resident. The better
   //                         predictor of what a second copy would cost.
   {
     label: 'RAM in use',
-    a: electron.memory.workingSetBytes,
-    b: tauri.memory.workingSetBytes,
+    a: electron.memory.privateWorkingSetBytes,
+    b: tauri.memory.privateWorkingSetBytes,
     format: fmt.mb
   },
   {

@@ -69,7 +69,6 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
           label={t('deleteSongFromSystemConfirmPrompt.deleteSong')}
           className="delete-song-confirm-btn danger-btn float-right mt-6 h-10 w-48 cursor-pointer rounded-lg !bg-font-color-crimson font-medium text-font-color-white outline-none ease-in-out hover:border-font-color-crimson dark:!bg-font-color-crimson dark:text-font-color-white dark:hover:border-font-color-crimson"
           clickHandler={() => {
-            changePromptMenuData(false);
             return window.api.audioLibraryControls
               .deleteSongsFromSystem(
                 songsData.map((song) => song.path),
@@ -77,6 +76,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
               )
               .then((res) => {
                 if (res.success) {
+                  changePromptMenuData(false);
                   if (songsData.map((song) => song.songId).includes(currentSongData.songId)) {
                     clearAudioPlayerData();
                   }
@@ -97,8 +97,30 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
                       icon: <span className="material-icons-round icon">done_all</span>
                     }
                   ]);
+                } else {
+                  addNewNotifications([
+                    {
+                      id: 'songRemovalFailed',
+                      duration: 5000,
+                      content: res.message ?? 'Some songs could not be deleted.',
+                      iconName: 'warning',
+                      iconClassName: 'material-icons-round-outlined icon'
+                    }
+                  ]);
                 }
                 return undefined;
+              })
+              .catch((error: unknown) => {
+                addNewNotifications([
+                  {
+                    id: 'songRemovalFailed',
+                    duration: 5000,
+                    content:
+                      error instanceof Error ? error.message : 'Some songs could not be deleted.',
+                    iconName: 'warning',
+                    iconClassName: 'material-icons-round-outlined icon'
+                  }
+                ]);
               });
           }}
         />

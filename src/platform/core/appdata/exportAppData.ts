@@ -88,6 +88,11 @@ const exportAppData = async (repo: AppDataRepository, localStorageData: string):
       filename: 'listening_data.json',
       dataString: JSON.stringify({ listeningData: repo.getListeningData() })
     },
+    // MERGE-SAFE LISTENING COUNTERS
+    {
+      filename: 'listening_events.json',
+      dataString: JSON.stringify({ listeningEvents: repo.getListeningCounters() })
+    },
     // CMR STATS DATA (ELO duels and stats import history)
     {
       filename: 'cmr_stats.json',

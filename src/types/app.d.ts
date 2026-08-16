@@ -672,12 +672,31 @@ declare global {
   type TierlistLabelMode = 'track' | 'artistAndTrack';
 
   /** A single ranked row inside a tierlist (e.g. S, A, B ...). */
+  /**
+   * A placement whose song left the library, kept so it can come back.
+   *
+   * songIds are random per install, so removing and re-adding a folder used to
+   * erase every tier placement for those tracks. The fingerprint is what lets
+   * the next scan put the track back where the user put it.
+   */
+  interface TierlistOrphanedItem {
+    songId: string;
+    /** Position the item held in `items` when its song left. */
+    index: number;
+    fingerprint: SongFingerprint;
+  }
+
   interface TierRow {
     tierId: string;
     /** User editable label shown on the colored band. */
     name: string;
     /** Ordered songIds placed in this tier. Filtered against the live pool on render. */
     items: string[];
+    /**
+     * Placements waiting for their music to return. Never rendered, never
+     * counted; reattached by fingerprint when the same track is scanned again.
+     */
+    orphanedItems?: TierlistOrphanedItem[];
   }
 
   /**
@@ -716,6 +735,11 @@ declare global {
     draws?: number;
     /** ms timestamp of the last duel this song took part in. */
     lastDuelAt?: number;
+    /**
+     * Who this rating belongs to, independent of songId. Present from 1.1.0 on;
+     * a rating without it cannot be reattached after a library rebuild.
+     */
+    fingerprint?: SongFingerprint;
   }
 
   interface DuelRecord {
@@ -769,9 +793,42 @@ declare global {
     importedStatsExportIds: string[];
     /** Optional for migration compatibility with pre-matchmaker stores. */
     duelMatchmaking?: DuelMatchmakingData;
+    /** The bracket in progress, if any. Absent on every profile that never ran one. */
+    tournament?: TournamentState;
   }
 
-  type StatsTimeRange = 'allTime' | 'last12Months' | 'last30Days';
+  /**
+   * `year:2025` selects one calendar year. The three original values keep their
+   * exact meaning, so nothing that reads them has to change.
+   */
+  type StatsTimeRange = 'allTime' | 'last12Months' | 'last30Days' | `year:${number}`;
+
+  /**
+   * Whether a figure follows the selected range or is all-time by definition.
+   *
+   * The page mixes both on purpose - full listens and skips are stored as
+   * scalars with no dates, and the calendar is always the trailing 53 weeks -
+   * and the honest fix is to SAY which is which rather than pretend a year
+   * filter applies to everything.
+   */
+  type StatsFigureScope = 'range' | 'allTime';
+
+  interface StatsScopes {
+    totalListens: StatsFigureScope;
+    fullListens: StatsFigureScope;
+    skips: StatsFigureScope;
+    distinctSongsPlayed: StatsFigureScope;
+    approxListeningTimeSec: StatsFigureScope;
+    favorites: StatsFigureScope;
+    activity: StatsFigureScope;
+    calendar: StatsFigureScope;
+    topSongs: StatsFigureScope;
+    topArtists: StatsFigureScope;
+    topAlbums: StatsFigureScope;
+    topGenres: StatsFigureScope;
+    mostSkipped: StatsFigureScope;
+    elo: StatsFigureScope;
+  }
 
   /** separateDevices = sum both sides; sameOrigin = max (data originally came from this PC). */
   type StatsMergeMode = 'separateDevices' | 'sameOrigin';
@@ -864,8 +921,50 @@ declare global {
     listens: number;
   }
 
+  /** Bracket size for a duel tournament. */
+  type TournamentSize = 8 | 16 | 32;
+
+  interface TournamentMatch {
+    id: string;
+    round: number;
+    position: number;
+    songAId?: string;
+    songBId?: string;
+    winnerSongId?: string;
+    /**
+     * `forfeit` is what a participant whose song left the library gets: the
+     * bracket must never be blocked by music that is no longer there.
+     */
+    resolution?: 'played' | 'forfeit' | 'bye' | 'vacant';
+  }
+
+  /** A running or finished bracket, persisted beside the rest of the duel data. */
+  interface TournamentState {
+    version: 1;
+    size: TournamentSize;
+    createdAt: number;
+    status: 'active' | 'completed';
+    participants: { songId: string; seed: number }[];
+    matches: TournamentMatch[];
+    championSongId?: string;
+  }
+
   interface StatsData {
     timeRange: StatsTimeRange;
+    /** Which of the figures below the selected range actually applies to. */
+    scopes: StatsScopes;
+    /** Years that hold at least one listen, newest first. The UI never guesses. */
+    availableYears: number[];
+    /** 24 buckets, local hours 0..23, for the selected range. */
+    hourHistogram: number[];
+    /** 7 buckets, Monday first, for the selected range. */
+    weekdayHistogram: number[];
+    /**
+     * When hour-level data starts, or null when none exists yet. History
+     * migrated from before 1.1.0 has day resolution only, and an invented hour
+     * would be a lie the chart cannot walk back.
+     */
+    hourDataSince: number | null;
     totals: {
       distinctSongsPlayed: number;
       totalListens: number;

@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 import { joinPath } from '../../transfer/joinPath';
 import type { AppDataRepository } from '../appDataRepository';
 import type { CoreLogger } from '../../playlists/logger';
+import type { ListeningCounterFile } from '../../stats/listeningEvents';
 
 export const PROFILE_ROOT = 'C:\\Users\\test\\AppData\\Roaming\\Nora';
 
@@ -16,6 +17,7 @@ export interface MockAppDataState {
   userData: UserData;
   blacklist: Blacklist;
   listeningData: SongListeningData[];
+  listeningCounters: ListeningCounterFile;
   cmrStats: CmrStatsData;
 }
 
@@ -77,6 +79,12 @@ export const createMockAppDataRepo = (
     userData: initialState.userData ?? emptyUserData(),
     blacklist: initialState.blacklist ?? { songBlacklist: [], folderBlacklist: [] },
     listeningData: initialState.listeningData ?? [],
+    listeningCounters: initialState.listeningCounters ?? {
+      version: 1,
+      installId: 'test-install',
+      tracks: {},
+      counters: {}
+    },
     cmrStats: initialState.cmrStats ?? emptyCmrStats()
   };
 
@@ -134,6 +142,10 @@ export const createMockAppDataRepo = (
     getListeningData: () => state.listeningData,
     saveListeningData: (data) => {
       state.listeningData = data;
+    },
+    getListeningCounters: () => state.listeningCounters,
+    saveListeningCounters: (data) => {
+      state.listeningCounters = data;
     },
     getCmrStatsData: () => state.cmrStats,
     setCmrStatsData: (data) => {

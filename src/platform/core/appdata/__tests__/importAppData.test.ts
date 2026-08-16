@@ -9,7 +9,6 @@ jest.mock('@tauri-apps/plugin-dialog', () => ({
   save: jest.fn()
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pluginDialog = jest.requireMock('@tauri-apps/plugin-dialog') as {
   open: jest.Mock<() => Promise<string | null>>;
 };
@@ -49,6 +48,17 @@ const fullExportFolder = (): Record<string, string> => {
     ),
     file('userData.json', JSON.stringify({ userData: { language: 'ru' } })),
     file('listening_data.json', JSON.stringify({ listeningData: [{ songId: 's1', listens: [] }] })),
+    file(
+      'listening_events.json',
+      JSON.stringify({
+        listeningEvents: {
+          version: 1,
+          installId: 'source-install',
+          tracks: {},
+          counters: { track: { 'source-install': { '2026-08-16': { l: 3 } } } }
+        }
+      })
+    ),
     file(
       'blacklist.json',
       JSON.stringify({ blacklists: { songBlacklist: ['s1'], folderBlacklist: [] } })
@@ -104,6 +114,12 @@ describe('importAppData', () => {
     ]);
     expect(repo.state.userData).toEqual({ language: 'ru' });
     expect(repo.state.listeningData).toEqual([{ songId: 's1', listens: [] }]);
+    expect(repo.state.listeningCounters).toEqual({
+      version: 1,
+      installId: 'source-install',
+      tracks: {},
+      counters: { track: { 'source-install': { '2026-08-16': { l: 3 } } } }
+    });
     expect(repo.state.blacklist).toEqual({ songBlacklist: ['s1'], folderBlacklist: [] });
     expect(repo.state.cmrStats).toEqual({
       elo: { ratings: {}, history: [], totalDuels: 2 },
@@ -164,6 +180,7 @@ describe('importAppData', () => {
     for (const name of [
       'blacklist.json',
       'listening_data.json',
+      'listening_events.json',
       'cmr_stats.json',
       'localStorageData.json'
     ]) {
@@ -178,6 +195,22 @@ describe('importAppData', () => {
     expect(repo.state.blacklist).toEqual({ songBlacklist: [], folderBlacklist: [] });
     expect(repo.state.cmrStats.elo.totalDuels).toBe(0);
     expect(repo.restartAppMock).toHaveBeenCalled();
+  });
+
+  test('imports an older backup without listening counters', async () => {
+    const files = fullExportFolder();
+    delete files[joinPath(IMPORT_DIR, 'listening_events.json')];
+    const repo = repoFor(files);
+    const existingCounters = repo.state.listeningCounters;
+    const saveListeningCounters = jest.spyOn(repo, 'saveListeningCounters');
+    pluginDialog.open.mockResolvedValue(IMPORT_DIR);
+
+    await importAppData(repo);
+
+    expect(repo.state.listeningData).toEqual([{ songId: 's1', listens: [] }]);
+    expect(saveListeningCounters).not.toHaveBeenCalled();
+    expect(repo.state.listeningCounters).toBe(existingCounters);
+    expect(repo.sendMessageMock).toHaveBeenCalledWith('APPDATA_IMPORT_SUCCESS');
   });
 
   test('reports a failure when the folder picker is cancelled', async () => {

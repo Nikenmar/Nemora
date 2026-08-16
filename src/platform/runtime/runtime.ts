@@ -63,6 +63,7 @@ import type {
 import {
   MetadataService,
   type MetadataArtworkSource,
+  type MetadataFileData,
   type MetadataRepository,
   type MetadataUpdateResult
 } from '../core/metadata';
@@ -74,6 +75,15 @@ import { internalWriteSuppression } from '../core/watchers/suppression';
 import type { LibraryWatcherRepository } from '../core/watchers/types';
 import refreshRediscover, { type RediscoverRepo } from '../core/rediscover/rediscover';
 import { dedupeListeningRows } from '../core/stats/mergeListeningData';
+import {
+  absorbLegacySurplus,
+  countersFromLegacyRows,
+  deriveListeningRows,
+  legacyRowsDigest,
+  recordListening,
+  type ListeningCounterFile,
+  type ListeningKind
+} from '../core/stats/listeningEvents';
 import { fingerprintOfSong, relinkOrphanedListeningRows } from '../core/stats/songFingerprint';
 import clearSearchHistoryResults from '../core/search/clearSearchHistoryResults';
 import type { SearchRepository } from '../core/search/repository';
@@ -102,7 +112,17 @@ import {
   submitDuelResult,
   type EloDuelsRepo
 } from '../core/stats/eloDuels';
+import {
+  resumeTournament,
+  startTournament,
+  submitTournamentDuel,
+  type PreparedTournament,
+  type TournamentDuelSubmission,
+  type TournamentSize,
+  type TournamentState
+} from '../core/stats/tournaments';
 import collectStatsData, { type StatsDataRepo } from '../core/stats/getStatsData';
+import { buildRecap, type RecapPeriod, type RecapSlide } from '../core/stats/recap';
 import {
   addTierlist,
   removeTierlists,
@@ -170,10 +190,17 @@ interface RuntimeSnapshots {
   playlists: SavablePlaylist[];
   userData: UserData;
   listeningData: SongListeningData[];
+  listeningEvents: ListeningCounterFile;
   blacklist: Blacklist;
   tierlists: SavableTierlist[];
   cmrStats: CmrStatsData;
   palettes: PaletteData[];
+}
+
+interface NativeReparseData {
+  metadata: MetadataFileData;
+  audioPath: string;
+  pictureMimeType?: string;
 }
 
 export interface NoraRuntimeOptions {
@@ -186,6 +213,7 @@ export interface NoraRuntimeOptions {
 
 export class NoraRuntime {
   private readonly cache: CachedStores;
+  private readonly storePort: StorePort;
   private readonly artwork: RuntimeArtworkPaths;
   private readonly events: RuntimeEventSink;
   private readonly version: string;
@@ -212,8 +240,11 @@ export class NoraRuntime {
   private startupSongCaptureActive = false;
   private startupSong: PathBackedAudioData | undefined;
   private readonly outsideLibrarySongs: PathBackedAudioData[] = [];
+  private readonly nativeReparseData = new Map<string, NativeReparseData>();
+  private listeningEventsReady = false;
 
   constructor(port: StorePort, options: NoraRuntimeOptions) {
+    this.storePort = port;
     this.cache = new CachedStores(
       port,
       options.defaults ?? createDefaultStoreFiles(options.version)
@@ -225,6 +256,10 @@ export class NoraRuntime {
   }
 
   async hydrate(): Promise<void> {
+    const [listeningEventsExisted, listeningDataExisted] = await Promise.all([
+      this.storePort.exists('listeningEvents'),
+      this.storePort.exists('listeningData')
+    ]);
     await this.cache.hydrate();
     this.snapshots = {
       songs: this.cache.get('songs'),
@@ -239,18 +274,100 @@ export class NoraRuntime {
       // more than sevenfold. This is the single read point, so fixing it here
       // fixes every consumer.
       listeningData: dedupeListeningRows(this.cache.get('listeningData')),
+      listeningEvents: this.cache.get('listeningEvents'),
       blacklist: this.cache.get('blacklist'),
       tierlists: this.cache.get('tierlists'),
       cmrStats: this.cache.get('cmrStats'),
       palettes: this.cache.get('palettes')
     };
     this.healListeningIdentity();
+    await this.hydrateListeningEvents(listeningEventsExisted, listeningDataExisted);
     if (this.services.singleInstance && !this.singleInstanceController) {
       this.singleInstanceController = await this.services.singleInstance.create({
         openAuthUri: (uri) => this.events.openAuthUri?.(uri),
         openAudioFile: (path) => this.routeOpenedAudioFile(path)
       });
     }
+  }
+
+  /**
+   * Creates the merge-safe counter store once, without risking the only legacy
+   * copy of listening history. The old file is flushed and backed up before
+   * the first listening-events write can enter the store queue.
+   */
+  private async hydrateListeningEvents(
+    listeningEventsExisted: boolean,
+    listeningDataExisted: boolean
+  ): Promise<void> {
+    if (listeningEventsExisted) {
+      this.listeningEventsReady = true;
+    } else {
+      const files = this.services.files;
+      if (!files) {
+        logger.error('Could not migrate listening history: runtime file services are unavailable.');
+        return;
+      }
+
+      try {
+        // A genuinely fresh profile has no listening_data.json yet. Materialize
+        // its empty legacy view so the same backup rule applies to fresh and old
+        // profiles and every successful migration has a recovery file.
+        if (!listeningDataExisted) this.cache.set('listeningData', this.state().listeningData);
+        await this.cache.flush('listeningData');
+
+        const sourcePath = await files.profilePath('listening_data.json');
+        const backupPath = await files.profilePath(
+          'backups',
+          `listening_data.json.pre-events-${Date.now()}.json`
+        );
+        await files.copyFileAtomic(sourcePath, backupPath);
+
+        const installId = generateRandomId();
+        const migrationSourceId = `migrated:${legacyRowsDigest(this.state().listeningData)}`;
+        const migration = countersFromLegacyRows(
+          this.state().listeningData,
+          migrationSourceId,
+          installId
+        );
+        this.setSnapshot('listeningEvents', 'listeningEvents', migration.file, true);
+        await this.cache.flush('listeningEvents');
+        this.listeningEventsReady = true;
+
+        logger.info('Migrated listening history to merge-safe counters.', {
+          migrated: migration.migrated,
+          skipped: migration.skipped
+        });
+        if (migration.skipped > 0)
+          logger.warn('Kept listening rows without track identity in the legacy store.', {
+            count: migration.skipped
+          });
+      } catch (error) {
+        logger.error(
+          'Could not back up listening history; migration was aborted for this launch.',
+          { error }
+        );
+        return;
+      }
+    }
+
+    const reconciliation = absorbLegacySurplus(
+      this.state().listeningEvents,
+      this.state().listeningData,
+      'legacy-drift'
+    );
+    if (reconciliation.rowsAbsorbed > 0) {
+      this.setSnapshot('listeningEvents', 'listeningEvents', reconciliation.file, true);
+      logger.info('Absorbed listening history written by an older Nemora build.', {
+        rows: reconciliation.rowsAbsorbed,
+        listens: reconciliation.listensAbsorbed
+      });
+    }
+    const legacyView = deriveListeningRows(
+      reconciliation.file,
+      this.state().songs,
+      this.state().listeningData
+    );
+    this.setSnapshot('listeningData', 'listeningData', legacyView, true);
   }
 
   /**
@@ -296,6 +413,17 @@ export class NoraRuntime {
 
   /** The scan-time half of {@link healListeningIdentity}, for a batch just committed. */
   private reattachListeningHistory(songs: readonly SavableSongData[]): void {
+    if (this.listeningEventsReady) {
+      const rows = deriveListeningRows(
+        this.state().listeningEvents,
+        songs,
+        this.state().listeningData
+      );
+      this.setSnapshot('listeningData', 'listeningData', rows, true);
+      this.events.dataUpdated('songs/listeningData');
+      return;
+    }
+
     const { rows, relinked } = relinkOrphanedListeningRows(this.state().listeningData, songs);
     if (relinked === 0) return;
     logger.info('Reattached listening history to newly scanned tracks.', { count: relinked });
@@ -393,7 +521,10 @@ export class NoraRuntime {
       },
       createId: generateRandomId,
       file: {
-        read: (path) => this.requireMetadataFile().read(path),
+        read: (path) => {
+          const native = this.nativeReparseData.get(canonicalPathKey(path));
+          return native ? Promise.resolve(native.metadata) : this.requireMetadataFile().read(path);
+        },
         write: (path, patch) => this.requireMetadataFile().write(path, patch),
         healBlankPictureMime: (path) => this.requireMetadataFile().healBlankPictureMime(path)
       },
@@ -404,10 +535,14 @@ export class NoraRuntime {
           await service.removeStoredArtwork(songId);
           return this.artwork.song(songId, false);
         }
+        const song = this.state().songs.find((candidate) => candidate.songId === songId);
+        const native = song ? this.nativeReparseData.get(canonicalPathKey(song.path)) : undefined;
         const artworkSource =
           source.kind === 'path'
             ? this.artworkSource(source.path)
-            : embeddedArtwork(source.picture.bytes, source.picture.mimeType);
+            : native
+              ? audioArtwork(native.audioPath, native.pictureMimeType)
+              : embeddedArtwork(source.picture.bytes, source.picture.mimeType);
         const paths = await service.storeArtworks(songId, 'songs', artworkSource);
         if (paths.isDefaultArtwork) throw new Error(`Failed to store artwork for song ${songId}.`);
         return paths;
@@ -645,6 +780,12 @@ export class NoraRuntime {
       setBlacklist: (value) => this.setSnapshot('blacklist', 'blacklist', value),
       getListeningData: () => this.state().listeningData,
       saveListeningData: (value) => this.setSnapshot('listeningData', 'listeningData', value),
+      // A full-profile operation that knows only the legacy view would be
+      // overwritten by the first play afterwards, because the counters are what
+      // the derived view is rebuilt from.
+      getListeningCounters: () => this.state().listeningEvents,
+      saveListeningCounters: (value) =>
+        this.setSnapshot('listeningEvents', 'listeningEvents', value),
       getCmrStatsData: () => this.state().cmrStats,
       setCmrStatsData: (value) => this.setSnapshot('cmrStats', 'cmrStats', value),
       profilePath: (...segments) => files.profilePath(...segments),
@@ -666,6 +807,11 @@ export class NoraRuntime {
       getSongsData: () => this.state().songs,
       getListeningData: () => this.state().listeningData,
       saveListeningData: (value) => this.setSnapshot('listeningData', 'listeningData', value),
+      getListeningCounters: () => this.state().listeningEvents,
+      saveListeningCounters: (value) => {
+        this.setSnapshot('listeningEvents', 'listeningEvents', value);
+        this.listeningEventsReady = true;
+      },
       getPlaylistData: (ids) =>
         ids && ids.length > 0
           ? this.state().playlists.filter((playlist) => ids.includes(playlist.playlistId))
@@ -1130,6 +1276,8 @@ export class NoraRuntime {
       getSongsData: () => this.state().songs,
       getTierlistData: () => this.state().tierlists,
       getListeningData: () => this.state().listeningData,
+      // Hour-of-day exists only in the counters: the legacy rows carry days.
+      getListeningCounters: () => this.state().listeningEvents,
       getPlaylistData: (ids) => {
         const playlists = this.state().playlists;
         return ids && ids.length > 0
@@ -1327,7 +1475,7 @@ export class NoraRuntime {
     sortType: SongSortTypes,
     filterType?: SongFilterTypes
   ): readonly SavableSongData[] {
-    const key = `${sortType} ${filterType ?? ''}`;
+    const key = `${sortType}\u0000${filterType ?? ''}`;
     const cached = this.orderedSongsCache.get(key);
     if (cached) return cached;
 
@@ -1548,12 +1696,24 @@ export class NoraRuntime {
     const roots = this.state().userData.musicFolders.map((folder) => folder.path);
     if (roots.length > 0) {
       const addedSongIds: string[] = [];
-      await reconcileCatalog(
-        this.catalogRepository(),
+      const traversal = await walkMusicTrees(fileSystem, roots, {
+        native: this.services.nativeLibrary
+      });
+      const diskPaths = new Set(traversal.songPaths.map(canonicalPathKey));
+      const deletedPaths = this.state()
+        .songs.filter(
+          (song) =>
+            roots.some((root) => isPathWithin(song.path, root)) &&
+            !diskPaths.has(canonicalPathKey(song.path))
+        )
+        .map((song) => song.path);
+      await removeSongsFromLibrary(this.catalogRepository(), deletedPaths);
+      await scanTraversal(
         this.libraryRepository(addedSongIds, true),
         fileSystem,
         parser,
-        roots
+        traversal,
+        { includeArtwork: true, native: this.services.nativeLibrary }
       );
     }
     await this.repairMissingDurations(parser);
@@ -1642,7 +1802,9 @@ export class NoraRuntime {
   }
 
   private watcherRepository(): LibraryWatcherRepository {
-    const scanner = (): { fileSystem: LibraryFileSystemPort; parser: MetadataParserPort } | undefined => {
+    const scanner = ():
+      | { fileSystem: LibraryFileSystemPort; parser: MetadataParserPort }
+      | undefined => {
       const fileSystem = this.services.libraryFileSystem;
       const parser = this.services.metadataParser;
       return fileSystem && parser ? { fileSystem, parser } : undefined;
@@ -1816,11 +1978,55 @@ export class NoraRuntime {
     return clone(sendPlaylistData(this.playlistRepository(), ids, sortType, mutableOnly));
   }
 
+  private updateListeningCounter(
+    songId: string,
+    kind: ListeningKind,
+    amount: number,
+    atMs: number
+  ): boolean {
+    if (!this.listeningEventsReady || !Number.isInteger(amount) || amount <= 0) return false;
+    const song = this.state().songs.find((candidate) => candidate.songId === songId);
+    if (!song) return false;
+
+    let next = this.state().listeningEvents;
+    const fingerprint = fingerprintOfSong(song);
+    for (let count = 0; count < amount; count += 1)
+      next = recordListening(next, fingerprint, kind, atMs, next.installId);
+
+    this.setSnapshot('listeningEvents', 'listeningEvents', next, true);
+    const rows = deriveListeningRows(next, this.state().songs, this.state().listeningData);
+    this.setSnapshot('listeningData', 'listeningData', rows, true);
+    return true;
+  }
+
   updateSongListeningData<DataType extends keyof ListeningDataTypes>(
     songId: string,
     dataType: DataType,
     value: ListeningDataTypes[DataType]
   ): void {
+    const counterKind: ListeningKind | undefined =
+      dataType === 'listens'
+        ? 'listen'
+        : dataType === 'fullListens'
+          ? 'fullListen'
+          : dataType === 'skips'
+            ? 'skip'
+            : undefined;
+    if (
+      counterKind &&
+      typeof value === 'number' &&
+      this.updateListeningCounter(songId, counterKind, value, Date.now())
+    ) {
+      const eventType =
+        dataType === 'listens'
+          ? 'songs/listeningData/listens'
+          : dataType === 'fullListens'
+            ? 'songs/listeningData/fullSongListens'
+            : 'songs/listeningData/skips';
+      this.events.dataUpdated(eventType, [songId]);
+      return;
+    }
+
     const rows = clone(this.state().listeningData);
     let row = rows.find((entry) => entry.songId === songId);
     if (!row) {
@@ -2199,8 +2405,69 @@ export class NoraRuntime {
     );
   }
 
-  reParseSong(songPath: string): Promise<SavableSongData | undefined> {
-    return this.metadataService().reParseSong(songPath);
+  async reParseSong(songPath: string): Promise<SavableSongData | undefined> {
+    const diskPath = removeDefaultAppProtocolFromFilePath(songPath);
+    const native = this.services.nativeLibrary;
+    if (!native) return this.metadataService().reParseSong(diskPath);
+
+    const parsed = await native.parse([diskPath]).catch((error: unknown) => {
+      logger.error('Native song reparse failed; using the metadata-file route.', {
+        error,
+        path: diskPath
+      });
+      return undefined;
+    });
+    const track = parsed?.find(
+      (entry) => canonicalPathKey(entry.path) === canonicalPathKey(diskPath)
+    );
+    if (!track || track.error) return this.metadataService().reParseSong(diskPath);
+
+    const names = (value?: string): string[] =>
+      value
+        ?.split(',')
+        .map((name) => name.trim())
+        .filter(Boolean) ?? [];
+    const picture = track.pictures.find((entry) => entry.byteLength > 0);
+    const pictureFormat = picture?.format.toLocaleLowerCase('en-US');
+    const pictureMimeType = pictureFormat?.includes('/')
+      ? pictureFormat
+      : pictureFormat === 'jpg'
+        ? 'image/jpeg'
+        : pictureFormat
+          ? `image/${pictureFormat}`
+          : picture
+            ? 'image/jpeg'
+            : undefined;
+    const reparseData: NativeReparseData = {
+      audioPath: track.path,
+      pictureMimeType,
+      metadata: {
+        title: track.common.title,
+        artists: names(track.common.artist),
+        albumArtists: names(track.common.albumArtist),
+        album: track.common.album,
+        genres: track.common.genres,
+        year: track.common.year ?? null,
+        trackNumber: track.common.trackNumber ?? null,
+        discNumber: track.common.discNumber ?? null,
+        duration: track.format.duration ?? 0,
+        bitrate: track.format.bitrate ?? null,
+        sampleRate: track.format.sampleRate ?? null,
+        numberOfChannels: track.format.numberOfChannels ?? null,
+        createdDate: track.createdDate ?? null,
+        modifiedDate: track.modifiedDate ?? null,
+        picture: picture
+          ? { bytes: new Uint8Array(), mimeType: pictureMimeType ?? 'image/jpeg' }
+          : undefined
+      }
+    };
+    const key = canonicalPathKey(diskPath);
+    this.nativeReparseData.set(key, reparseData);
+    try {
+      return await this.metadataService().reParseSong(diskPath);
+    } finally {
+      if (this.nativeReparseData.get(key) === reparseData) this.nativeReparseData.delete(key);
+    }
   }
 
   /**
@@ -2478,6 +2745,39 @@ export class NoraRuntime {
 
   submitDuelResult(songAId: string, songBId: string, winnerId: string): DuelResult {
     return submitDuelResult(this.featureRepository(), songAId, songBId, winnerId);
+  }
+
+  // A tournament is a bracket over the ordinary duel path, not a second rating
+  // system: every match it resolves goes through `submitDuelResult` above, so
+  // the ELO a tournament produces is the same ELO everything else reads.
+  startTournament(size: TournamentSize, createdAt = Date.now()): TournamentState {
+    return startTournament(this.featureRepository(), size, createdAt);
+  }
+
+  resumeTournament(): PreparedTournament | undefined {
+    return resumeTournament(this.featureRepository());
+  }
+
+  submitTournamentDuel(matchId: string, winnerSongId: string): TournamentDuelSubmission {
+    return submitTournamentDuel(this.featureRepository(), matchId, winnerSongId);
+  }
+
+  /**
+   * The slides of a recap for one month or one year. Pure data: the renderer
+   * only paints what this returns, so the same numbers are testable without a
+   * screen.
+   */
+  getRecap(period: RecapPeriod): RecapSlide[] {
+    const state = this.state();
+    return buildRecap(
+      {
+        songs: state.songs,
+        listeningData: state.listeningData,
+        tierlists: state.tierlists,
+        cmrStats: state.cmrStats
+      },
+      period
+    );
   }
 
   refreshRediscover(thresholdDays?: number): { count: number } {

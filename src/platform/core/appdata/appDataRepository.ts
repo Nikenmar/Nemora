@@ -1,4 +1,5 @@
 import type { CoreLogger } from '../playlists/logger';
+import type { ListeningCounterFile } from '../stats/listeningEvents';
 
 /**
  * Data and side-effect seam for the app-data import/export subsystem.
@@ -38,6 +39,8 @@ export interface AppDataRepository {
   setBlacklist(blacklist: Blacklist): void;
   getListeningData(): SongListeningData[];
   saveListeningData(data: SongListeningData[]): void;
+  getListeningCounters(): ListeningCounterFile;
+  saveListeningCounters(data: ListeningCounterFile): void;
   getCmrStatsData(): CmrStatsData;
   setCmrStatsData(data: CmrStatsData): void;
 

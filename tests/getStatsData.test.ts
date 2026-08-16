@@ -1,5 +1,6 @@
-import getStatsData from '../src/platform/core/stats/getStatsData';
-import type { StatsDataRepo } from '../src/platform/core/stats/getStatsData';
+import { getStatsData, type StatsDataRepo } from '../src/platform/core/stats/getStatsData';
+import { createCounterFile, recordListening } from '../src/platform/core/stats/listeningEvents';
+import { fingerprintOfSong } from '../src/platform/core/stats/songFingerprint';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -33,6 +34,7 @@ const emptyCmrStats = (): CmrStatsData => ({
 const createRepo = (overrides: Partial<StatsDataRepo> = {}): StatsDataRepo => ({
   getSongsData: () => [],
   getListeningData: () => [],
+  getListeningCounters: () => createCounterFile('test-install'),
   getPlaylistData: () => [],
   getGenresData: () => [],
   getCmrStatsData: () => emptyCmrStats(),
@@ -58,7 +60,15 @@ describe('ported getStatsData', () => {
       ],
       getPlaylistData: (ids?: string[]) =>
         ids?.length
-          ? [{ playlistId: 'Favorites', name: 'Favorites', createdDate: new Date(), songs: ['a', 'b'], isArtworkAvailable: true }]
+          ? [
+              {
+                playlistId: 'Favorites',
+                name: 'Favorites',
+                createdDate: new Date(),
+                songs: ['a', 'b'],
+                isArtworkAvailable: true
+              }
+            ]
           : []
     });
 
@@ -69,6 +79,22 @@ describe('ported getStatsData', () => {
     expect(allTime.totals.favorites).toBe(2);
     expect(allTime.totals.distinctSongsPlayed).toBe(3);
     expect(allTime.totals.approxListeningTimeSec).toBe(600);
+    expect(allTime.scopes).toEqual({
+      totalListens: 'range',
+      fullListens: 'allTime',
+      skips: 'allTime',
+      distinctSongsPlayed: 'range',
+      approxListeningTimeSec: 'range',
+      favorites: 'range',
+      activity: 'range',
+      calendar: 'allTime',
+      topSongs: 'range',
+      topArtists: 'range',
+      topAlbums: 'range',
+      topGenres: 'range',
+      mostSkipped: 'allTime',
+      elo: 'allTime'
+    });
 
     const last30 = getStatsData(repo, 'last30Days');
     expect(last30.totals.totalListens).toBe(2); // b's listen is outside the window
@@ -125,6 +151,106 @@ describe('ported getStatsData', () => {
     expect(activity[11].label).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
+  test('year ranges filter every dated figure and show January through December', () => {
+    const january2025 = new Date(2025, 0, 4, 12).getTime();
+    const december2025 = new Date(2025, 11, 20, 12).getTime();
+    const june2026 = new Date(2026, 5, 2, 12).getTime();
+    const repo = createRepo({
+      getSongsData: () => [song('a'), song('b')],
+      getListeningData: () => [
+        listening('a', [january2025, december2025, june2026], 7, 3),
+        listening('b', [june2026], 2, 1)
+      ]
+    });
+
+    const stats = getStatsData(repo, 'year:2025');
+
+    expect(stats.availableYears).toEqual([2026, 2025]);
+    expect(stats.totals).toMatchObject({
+      totalListens: 2,
+      distinctSongsPlayed: 1,
+      approxListeningTimeSec: 400,
+      fullListens: 9,
+      skips: 4
+    });
+    expect(stats.topSongs.map((entry) => entry.songId)).toEqual(['a']);
+    expect(stats.activity).toHaveLength(12);
+    expect(stats.activity[0]).toEqual({ label: '2025-01-01', listens: 1 });
+    expect(stats.activity[11]).toEqual({ label: '2025-12-01', listens: 1 });
+    expect(stats.activity.reduce((total, month) => total + month.listens, 0)).toBe(2);
+
+    const emptyYear = getStatsData(repo, 'year:2030');
+    expect(emptyYear.availableYears).toEqual([2026, 2025]);
+    expect(emptyYear.totals).toMatchObject({
+      totalListens: 0,
+      distinctSongsPlayed: 0,
+      approxListeningTimeSec: 0,
+      fullListens: 9,
+      skips: 4
+    });
+    expect(emptyYear.activity).toHaveLength(12);
+    expect(emptyYear.activity.every((month) => month.listens === 0)).toBe(true);
+    expect(emptyYear.weekdayHistogram).toEqual(new Array<number>(7).fill(0));
+  });
+
+  test('hour data starts when counters first record it while weekdays cover legacy rows', () => {
+    const trackedSong = song('a');
+    const sundayBefore = new Date(2023, 11, 31, 23, 30).getTime();
+    const monday = new Date(2024, 0, 1, 5, 30).getTime();
+    const tuesday = new Date(2024, 0, 2, 6, 30).getTime();
+    const sunday = new Date(2024, 0, 7, 7, 30).getTime();
+    let counters = createCounterFile('install-a');
+    counters = recordListening(
+      counters,
+      fingerprintOfSong(trackedSong),
+      'listen',
+      sundayBefore,
+      'install-a'
+    );
+    counters = recordListening(
+      counters,
+      fingerprintOfSong(trackedSong),
+      'listen',
+      monday,
+      'install-a'
+    );
+    counters = recordListening(
+      counters,
+      fingerprintOfSong(trackedSong),
+      'listen',
+      monday,
+      'install-a'
+    );
+    const repo = createRepo({
+      getSongsData: () => [trackedSong],
+      getListeningData: () => [listening('a', [monday, tuesday, sunday])],
+      getListeningCounters: () => counters
+    });
+
+    const stats = getStatsData(repo, 'year:2024');
+
+    expect(stats.weekdayHistogram).toEqual([1, 1, 0, 0, 0, 0, 1]);
+    expect(stats.hourHistogram).toHaveLength(24);
+    expect(stats.hourHistogram.reduce((total, count) => total + count, 0)).toBe(2);
+    expect(stats.hourHistogram[5]).toBe(2);
+    expect(stats.hourHistogram[23]).toBe(0);
+    expect(stats.hourDataSince).toBe(new Date(2023, 11, 31).getTime());
+  });
+
+  test('legacy-only day buckets expose no invented hour data', () => {
+    const atMs = new Date(2024, 0, 1, 12).getTime();
+    const stats = getStatsData(
+      createRepo({
+        getSongsData: () => [song('a')],
+        getListeningData: () => [listening('a', [atMs])]
+      }),
+      'year:2024'
+    );
+
+    expect(stats.hourHistogram).toEqual(new Array<number>(24).fill(0));
+    expect(stats.hourDataSince).toBeNull();
+  });
+
   test('calendar: current streak survives a silent today, longest streak and most active day', () => {
     const now = Date.now();
     const yesterday = now - 1 * DAY_MS;
@@ -160,10 +286,7 @@ describe('ported getStatsData', () => {
     const now = Date.now();
     const repo = createRepo({
       getSongsData: () => [song('a'), song('b')],
-      getListeningData: () => [
-        listening('a', [now - DAY_MS]),
-        listening('b', [now - 2 * DAY_MS])
-      ],
+      getListeningData: () => [listening('a', [now - DAY_MS]), listening('b', [now - 2 * DAY_MS])],
       getGenresData: () => [
         {
           genreId: 'g1',

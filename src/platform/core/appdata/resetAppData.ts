@@ -18,6 +18,7 @@ const resourcePaths = [
   'playlists.json',
   'userData.json',
   'listening_data.json',
+  'listening_events.json',
   'blacklist.json',
   'song_covers'
 ];

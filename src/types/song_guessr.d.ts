@@ -17,7 +17,7 @@ interface SongGuessrEntry {
 }
 
 /** Where the answers are drawn from. */
-type SongGuessrPoolType = 'library' | 'playlist' | 'genre';
+type SongGuessrPoolType = 'library' | 'playlist' | 'genre' | 'artist' | 'album';
 
 interface SongGuessrPoolOption {
   type: SongGuessrPoolType;

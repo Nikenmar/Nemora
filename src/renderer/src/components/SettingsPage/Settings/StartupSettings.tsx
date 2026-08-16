@@ -63,8 +63,13 @@ const StartupSettings = () => {
             checkedStateUpdateFunction={(state) =>
               window.api.userData
                 .saveUserData('preferences.openWindowAsHiddenOnSystemStart', state)
-                .then(() =>
-                  updateUserData((prevUserData) => {
+                .then(() => {
+                  try {
+                    localStorage.setItem('nemora:openWindowAsHiddenOnSystemStart', String(state));
+                  } catch (error) {
+                    console.error('Could not persist hidden-startup state.', error);
+                  }
+                  return updateUserData((prevUserData) => {
                     return {
                       ...prevUserData,
                       preferences: {
@@ -72,8 +77,8 @@ const StartupSettings = () => {
                         openWindowAsHiddenOnSystemStart: state
                       }
                     };
-                  })
-                )
+                  });
+                })
             }
             labelContent={t('settingsPage.hideWindowAtStart')}
           />

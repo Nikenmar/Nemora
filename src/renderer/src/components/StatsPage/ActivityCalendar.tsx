@@ -6,6 +6,7 @@ type CalendarDay = { date: string; listens: number };
 type Props = {
   days: CalendarDay[];
   className?: string;
+  note?: string;
 };
 
 const WEEK_DAYS = 7;
@@ -21,7 +22,7 @@ const toLocalDate = (isoDate: string) => new Date(`${isoDate}T00:00:00`);
  * section width like its siblings; the fixed-size heatmap stays centered.
  */
 const ActivityCalendar = (props: Props) => {
-  const { days, className } = props;
+  const { days, className, note } = props;
   const { t, i18n } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -132,6 +133,7 @@ const ActivityCalendar = (props: Props) => {
           )}
         </div>
       </div>
+      {note && <p className="mt-2 text-center text-xs opacity-60">{note}</p>}
     </div>
   );
 };

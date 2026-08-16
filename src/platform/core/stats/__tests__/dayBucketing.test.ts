@@ -9,7 +9,8 @@
  */
 import { describe, expect, test } from '@jest/globals';
 
-import getStatsData, { type StatsDataRepo } from '../getStatsData';
+import { getStatsData, type StatsDataRepo } from '../getStatsData';
+import { createCounterFile } from '../listeningEvents';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,10 +39,10 @@ const repoWith = (rows: [number, number][]): StatsDataRepo => ({
       listens: [{ year: new Date(rows[0][0]).getFullYear(), listens: rows }]
     }
   ],
+  getListeningCounters: () => createCounterFile('test-install'),
   getPlaylistData: () => [],
   getGenresData: () => [],
-  getCmrStatsData: () =>
-    ({ elo: { ratings: {}, history: [] } }) as unknown as CmrStatsData,
+  getCmrStatsData: () => ({ elo: { ratings: {}, history: [] } }) as unknown as CmrStatsData,
   getSongArtworkPath: () => ({
     isDefaultArtwork: true,
     artworkPath: 'default.webp',

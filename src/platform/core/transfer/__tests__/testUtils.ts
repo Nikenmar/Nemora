@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 import { joinPath } from '../joinPath';
 import type { StatsTransferRepository } from '../statsTransferRepository';
 import type { CoreLogger } from '../../playlists/logger';
+import { createCounterFile, type ListeningCounterFile } from '../../stats/listeningEvents';
 
 export const PROFILE_ROOT = 'C:\\Users\\test\\AppData\\Roaming\\Nora';
 
@@ -62,6 +63,7 @@ const emptyCmrStats = (): CmrStatsData => ({
 export interface MockTransferState {
   songs: SavableSongData[];
   listeningData: SongListeningData[];
+  listeningCounters: ListeningCounterFile;
   playlists: SavablePlaylist[];
   tierlists: SavableTierlist[];
   cmrStats: CmrStatsData;
@@ -77,6 +79,7 @@ export interface MockTransferRepo extends StatsTransferRepository {
   events: string[];
   writes: { path: string; contents: string }[];
   saveListeningDataMock: jest.Mock<(data: SongListeningData[]) => void>;
+  saveListeningCountersMock: jest.Mock<(data: ListeningCounterFile) => void>;
   setCmrStatsDataMock: jest.Mock<(data: CmrStatsData) => void>;
   emitDataUpdateMock: jest.Mock<
     (dataType: DataUpdateEventTypes, data?: string[], message?: string) => void
@@ -94,6 +97,7 @@ const enoent = (path: string): Error & { code: string } =>
  */
 export const PROFILE_STORE_FILES = [
   'listening_data.json',
+  'listening_events.json',
   'cmr_stats.json',
   'playlists.json',
   'tierlists.json'
@@ -107,6 +111,7 @@ export const createMockTransferRepo = (
   const state: MockTransferState = {
     songs: initialState.songs ?? [],
     listeningData: initialState.listeningData ?? [],
+    listeningCounters: initialState.listeningCounters ?? createCounterFile('install-local'),
     playlists: initialState.playlists ?? [],
     tierlists: initialState.tierlists ?? [],
     cmrStats: initialState.cmrStats ?? emptyCmrStats()
@@ -131,6 +136,10 @@ export const createMockTransferRepo = (
     events.push('setCmrStatsData');
     state.cmrStats = data;
   });
+  const saveListeningCountersMock = jest.fn<(data: ListeningCounterFile) => void>((data) => {
+    events.push('saveListeningCounters');
+    state.listeningCounters = data;
+  });
   const emitDataUpdateMock = jest.fn<
     (dataType: DataUpdateEventTypes, data?: string[], message?: string) => void
   >((dataType) => {
@@ -144,11 +153,14 @@ export const createMockTransferRepo = (
     events,
     writes,
     saveListeningDataMock,
+    saveListeningCountersMock,
     setCmrStatsDataMock,
     emitDataUpdateMock,
     getSongsData: () => state.songs,
     getListeningData: () => state.listeningData,
     saveListeningData: saveListeningDataMock,
+    getListeningCounters: () => state.listeningCounters,
+    saveListeningCounters: saveListeningCountersMock,
     getPlaylistData: (playlistIds?: string[]) => {
       if (!playlistIds || playlistIds.length === 0) return state.playlists;
       return state.playlists.filter((playlist) => playlistIds.includes(playlist.playlistId));

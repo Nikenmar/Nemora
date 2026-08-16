@@ -1,6 +1,14 @@
 import { basename } from '../playlists/pathUtils';
 import { logger } from '../playlists/logger';
-import { matchFingerprints } from '../stats/songFingerprint';
+import {
+  countersFromLegacyRows,
+  deriveListeningRows,
+  mergeCounterFiles,
+  trackKeyOf,
+  type DayCounts,
+  type ListeningCounterFile
+} from '../stats/listeningEvents';
+import { fingerprintOfSong, matchFingerprints } from '../stats/songFingerprint';
 import { showOpenDialog } from '../playlists/dialog';
 import { joinPath } from './joinPath';
 import { md5Hex } from './md5';
@@ -11,6 +19,8 @@ import {
   isValidTierlistExport
 } from './importCollections';
 import type { StatsTransferRepository } from './statsTransferRepository';
+
+type StatsExportFileWithEvents = StatsExportFile & { events?: unknown };
 
 /**
  * Port of `src/main/core/statsTransfer/importStats.ts` — the fork's "portable
@@ -32,6 +42,9 @@ const isFiniteNumber = (value: unknown): value is number =>
 
 const isNonNegativeNumber = (value: unknown): value is number =>
   isFiniteNumber(value) && value >= 0;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 // ---------------------------------------------------------------------------
 // 1. Read + validate the import source fully in memory (before ANY write)
@@ -94,7 +107,7 @@ const readLegacyExportFolder = async (
 const readImportSource = async (
   repo: StatsTransferRepository,
   source: StatsImportSource
-): Promise<StatsExportFile> => {
+): Promise<StatsExportFileWithEvents> => {
   if (source === 'folder') {
     const folders = await showOpenDialog({
       title: 'Select a "Nora exports" folder',
@@ -111,7 +124,7 @@ const readImportSource = async (
   if (!files[0]) throw new Error('PROMPT_CLOSED_BEFORE_INPUT');
 
   const raw = await repo.readTextFile(files[0]);
-  const parsed = JSON.parse(raw) as StatsExportFile;
+  const parsed = JSON.parse(raw) as StatsExportFileWithEvents;
   if (parsed.format !== 'nora-cmr-stats-export')
     throw new Error('The selected file is not a Nora stats export.');
   if (parsed.formatVersion !== 1) throw new Error('Unsupported stats export file version.');
@@ -153,6 +166,71 @@ const isValidFingerprint = (song: SongFingerprint): boolean =>
   Array.isArray(song.artists) &&
   song.artists.every((artist) => typeof artist === 'string');
 
+/** 24 local hours, keyed as plain strings so the file stays readable. */
+const isValidHourHistogram = (value: unknown): boolean =>
+  isRecord(value) &&
+  Object.entries(value).every(([hour, count]) => {
+    const index = Number(hour);
+    return Number.isInteger(index) && index >= 0 && index <= 23 && isNonNegativeNumber(count);
+  });
+
+const isValidDayCounts = (value: unknown): value is DayCounts =>
+  isRecord(value) &&
+  Object.entries(value).every(([metric, count]) => {
+    // `h` arrived with hour-of-day statistics and is optional by design: an
+    // export written before it existed has none, and one written after it must
+    // not be rejected by an older validator that never heard of it. Rejecting
+    // here would silently drop the whole events block and fall back to the
+    // aggregate path, which is exactly the kind of quiet downgrade this
+    // subsystem is supposed to be free of.
+    if (metric === 'h') return isValidHourHistogram(count);
+    return (metric === 'l' || metric === 'f' || metric === 's') && isNonNegativeNumber(count);
+  });
+
+const isValidLocalDay = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+};
+
+const isValidEventsBlock = (
+  value: unknown,
+  exportedSongs: readonly SongFingerprint[]
+): value is ListeningCounterFile => {
+  if (
+    !isRecord(value) ||
+    value.version !== 1 ||
+    typeof value.installId !== 'string' ||
+    value.installId.length === 0 ||
+    !isRecord(value.tracks) ||
+    !isRecord(value.counters)
+  )
+    return false;
+
+  const referencedKeys = new Set(exportedSongs.map(trackKeyOf));
+  for (const [key, identity] of Object.entries(value.tracks)) {
+    if (
+      !isValidFingerprint(identity as SongFingerprint) ||
+      trackKeyOf(identity as SongFingerprint) !== key ||
+      !referencedKeys.has(key)
+    )
+      return false;
+  }
+
+  for (const [key, sources] of Object.entries(value.counters)) {
+    if (!Object.prototype.hasOwnProperty.call(value.tracks, key) || !isRecord(sources))
+      return false;
+    for (const [sourceId, days] of Object.entries(sources)) {
+      if (sourceId.length === 0 || !isRecord(days)) return false;
+      for (const [day, counts] of Object.entries(days)) {
+        if (!isValidLocalDay(day) || !isValidDayCounts(counts)) return false;
+      }
+    }
+  }
+  return true;
+};
+
 const isValidEloData = (elo: EloData): boolean => {
   if (
     !elo ||
@@ -190,7 +268,7 @@ const isValidEloData = (elo: EloData): boolean => {
 };
 
 /** Validates EVERY imported listening entry — a single bad entry aborts the whole import. */
-const validateExportData = (data: StatsExportFile): string | undefined => {
+const validateExportData = (data: StatsExportFileWithEvents): string | undefined => {
   if (!data || typeof data !== 'object') return 'The import file is not a valid stats export.';
   if (!Array.isArray(data.songs) || !Array.isArray(data.listeningData))
     return 'The import file is missing song or listening data.';
@@ -426,6 +504,7 @@ const mergeEloData = (
 
 const BACKED_UP_STORE_FILES = [
   'listening_data.json',
+  'listening_events.json',
   'cmr_stats.json',
   'playlists.json',
   'tierlists.json'
@@ -445,7 +524,7 @@ const backupCurrentStatsFiles = async (repo: StatsTransferRepository) => {
     // with the first duel, tierlists.json with the first tierlist. This used to
     // be handled by letting the copy fail and matching `error.code === 'ENOENT'`
     // on the rejection - a shape nothing in this app produces, because the copy
-    // commands reject with a bare string. Every install where one of these four
+    // commands reject with a bare string. Every install where one of these five
     // files was absent, or where the copy failed for any other reason, refused
     // the whole import with "Failed to create a backup".
     if (!(await repo.exists(source))) continue;
@@ -479,7 +558,7 @@ const importStatsData = async (
   if (source !== 'file' && source !== 'folder') return fail('Unknown stats import source.');
 
   // 1. Read + validate everything fully in memory — before ANY write.
-  let exportData: StatsExportFile;
+  let exportData: StatsExportFileWithEvents;
   try {
     exportData = await readImportSource(repo, source);
   } catch (error) {
@@ -515,6 +594,12 @@ const importStatsData = async (
     exportData = { ...exportData, preferences: undefined };
   }
 
+  let foreignEvents: ListeningCounterFile | undefined;
+  if (exportData.events !== undefined) {
+    if (isValidEventsBlock(exportData.events, exportData.songs)) foreignEvents = exportData.events;
+    else blockNotes.push('Skipped a malformed events block.');
+  }
+
   const cmrStats = repo.getCmrStatsData();
 
   // Double-import guard: summing the same export twice would double every number.
@@ -526,7 +611,8 @@ const importStatsData = async (
   }
 
   // 2. Fingerprint-match + merge fully in memory.
-  const matches = matchForeignSongs(exportData.songs, repo.getSongsData());
+  const songs = repo.getSongsData();
+  const matches = matchForeignSongs(exportData.songs, songs);
   const mergedListening = mergeListeningData(
     exportData,
     matches,
@@ -534,6 +620,22 @@ const importStatsData = async (
     repo.getListeningData()
   );
   const mergedElo = mergeEloData(exportData.elo, cmrStats.elo, matches, mergeMode);
+  const localCounters = repo.getListeningCounters();
+  const songById = new Map(songs.map((song) => [song.songId, song]));
+  const counters = foreignEvents
+    ? mergeCounterFiles(localCounters, foreignEvents)
+    : countersFromLegacyRows(
+        mergedListening.listeningData.map((row) => {
+          if (row.fingerprint) return row;
+          const song = songById.get(row.songId);
+          return song ? { ...row, fingerprint: fingerprintOfSong(song) } : row;
+        }),
+        `stats-export-${md5Hex(exportData.exportId)}`,
+        localCounters.installId
+      ).file;
+  const listeningData = foreignEvents
+    ? deriveListeningRows(counters, songs, mergedListening.listeningData)
+    : mergedListening.listeningData;
 
   // 3. Backup the current files before touching them.
   let backupPath: string | undefined;
@@ -545,7 +647,8 @@ const importStatsData = async (
   }
 
   // 4. Single write via the existing setters.
-  repo.saveListeningData(mergedListening.listeningData);
+  repo.saveListeningCounters(counters);
+  repo.saveListeningData(listeningData);
   repo.setCmrStatsData({
     elo: mergedElo.elo,
     importedStatsExportIds: cmrStats.importedStatsExportIds.includes(exportData.exportId)

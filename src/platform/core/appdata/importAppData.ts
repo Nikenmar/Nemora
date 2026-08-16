@@ -4,6 +4,7 @@ import { joinPath } from '../transfer/joinPath';
 import copyDir from './copyDir';
 import { songCoversFolderPath } from './exportAppData';
 import type { AppDataRepository } from './appDataRepository';
+import type { ListeningCounterFile } from '../stats/listeningEvents';
 
 /**
  * Port of `src/main/core/importAppData.ts`. Restores a full "Nora exports"
@@ -28,6 +29,7 @@ const optionalItemsForImport = [
   'localStorageData.json',
   'blacklist.json',
   'listening_data.json',
+  'listening_events.json',
   'cmr_stats.json'
 ];
 
@@ -95,6 +97,16 @@ const importOptionalData = async (
       );
       const listeningData: SongListeningData[] = JSON.parse(listeningDataString).listeningData;
       repo.saveListeningData(listeningData);
+    }
+
+    // MERGE-SAFE LISTENING COUNTERS
+    if (entries.includes('listening_events.json')) {
+      const listeningEventsString = await repo.readTextFile(
+        joinPath(importDir, 'listening_events.json')
+      );
+      const listeningEvents: ListeningCounterFile =
+        JSON.parse(listeningEventsString).listeningEvents;
+      repo.saveListeningCounters(listeningEvents);
     }
 
     // BLACKLIST DATA

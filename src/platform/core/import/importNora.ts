@@ -2,6 +2,13 @@ import { STORE_LAYOUT, type StoreName } from '../../contracts/store';
 import { parseStoreText } from '../../stores/storePort';
 import { LOCAL_STORAGE_KEYS, type LocalStorageKey } from '../../migration/types';
 import { joinPath } from '../transfer/joinPath';
+import { generateRandomId } from '../playlists/randomId';
+import {
+  countersFromLegacyRows,
+  legacyRowsDigest,
+  type ListeningCounterFile
+} from '../stats/listeningEvents';
+import { fingerprintOfSong } from '../stats/songFingerprint';
 import type { NoraSourceInventory } from './detectNoraSource';
 import { detectNoraSource } from './detectNoraSource';
 import type { NoraImportPort } from './noraImportRepository';
@@ -196,6 +203,42 @@ const fail = (message: string, partial: Partial<NoraImportReport> = {}): NoraImp
 
 const arrayLength = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
 
+const destinationInstallId = async (port: NoraImportPort): Promise<string> => {
+  const path = await port.nemoraProfilePath('listening_events.json');
+  if (!(await port.fileSystem.exists(path))) return generateRandomId();
+
+  const root = JSON.parse(await port.fileSystem.readText(path)) as {
+    listeningEvents?: { installId?: unknown };
+  };
+  const installId = root.listeningEvents?.installId;
+  return typeof installId === 'string' && installId.length > 0 ? installId : generateRandomId();
+};
+
+const countersFromNoraStores = (
+  stores: readonly SourceStore[],
+  installId: string
+): { file: ListeningCounterFile; skipped: number } => {
+  const songs =
+    (stores.find((store) => store.store === 'songs')?.payload as SavableSongData[] | undefined) ??
+    [];
+  const rows =
+    (stores.find((store) => store.store === 'listeningData')?.payload as
+      | SongListeningData[]
+      | undefined) ?? [];
+  const songsById = new Map(songs.map((song) => [song.songId, song]));
+  const identifiedRows = rows.map((row) => {
+    if (row.fingerprint) return row;
+    const song = songsById.get(row.songId);
+    return song ? { ...row, fingerprint: fingerprintOfSong(song) } : row;
+  });
+  const converted = countersFromLegacyRows(
+    identifiedRows,
+    `nora:${legacyRowsDigest(rows)}`,
+    installId
+  );
+  return { file: converted.file, skipped: converted.skipped };
+};
+
 export async function importNoraProfile(port: NoraImportPort): Promise<NoraImportReport> {
   // 1. Detect the source shape by inspecting contents (never the folder name).
   let inventory: NoraSourceInventory;
@@ -237,7 +280,9 @@ export async function importNoraProfile(port: NoraImportPort): Promise<NoraImpor
 
   // 3. Back up the current profile and verify the backup before touching data.
   let backup: BackupResult;
+  let installId: string;
   try {
+    installId = await destinationInstallId(port);
     backup = await backupCurrentProfile(port);
   } catch (error) {
     const message = (error as Error).message;
@@ -268,6 +313,7 @@ export async function importNoraProfile(port: NoraImportPort): Promise<NoraImpor
 
     // Wholesale replacement: a store the source profile lacks is removed.
     for (const store of Object.keys(STORE_LAYOUT) as StoreName[]) {
+      if (store === 'listeningEvents') continue;
       if (inventory.presentStores.includes(store)) continue;
       const destination = await port.nemoraProfilePath(STORE_LAYOUT[store].file);
       if (await port.fileSystem.exists(destination)) {
@@ -275,6 +321,18 @@ export async function importNoraProfile(port: NoraImportPort): Promise<NoraImpor
         removedStores.push(store);
       }
     }
+
+    const converted = countersFromNoraStores(sourceStores, installId);
+    const listeningEventsPath = await port.nemoraProfilePath('listening_events.json');
+    await port.writeTextFileAtomic(
+      listeningEventsPath,
+      `${JSON.stringify({ listeningEvents: converted.file }, null, 2)}\n`
+    );
+    writtenStores.push('listeningEvents');
+    if (converted.skipped > 0)
+      port.logger.warn('Nora listening rows without a matching song were not counted.', {
+        skipped: converted.skipped
+      });
 
     // song_covers: authoritative artwork, replaced wholesale per file. When
     // the source has no song_covers at all (pathological), existing covers

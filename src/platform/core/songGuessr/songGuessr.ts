@@ -37,6 +37,14 @@ interface SearchCache {
   rankedByQuery: Map<string, SearchIndexEntry[]>;
 }
 
+type CatalogPoolType = Extract<SongGuessrPoolType, 'artist' | 'album'>;
+
+interface CatalogPool {
+  id: string;
+  name: string;
+  songs: SavableSongData[];
+}
+
 const caches = new WeakMap<SongGuessrRepository, SearchCache>();
 
 const cacheFor = (repo: SongGuessrRepository): SearchCache => {
@@ -99,6 +107,43 @@ const getSongIds = (songIds: unknown): Set<string> => {
   return new Set(songIds.filter((songId): songId is string => typeof songId === 'string'));
 };
 
+const getCatalogPools = (songs: SavableSongData[], poolType: CatalogPoolType): CatalogPool[] => {
+  const pools = new Map<string, CatalogPool & { songIds: Set<string> }>();
+  const addSong = (id: string, name: string, song: SavableSongData) => {
+    if (
+      typeof id !== 'string' ||
+      typeof name !== 'string' ||
+      id.length === 0 ||
+      name.trim().length === 0
+    )
+      return;
+
+    const existing = pools.get(id) ?? { id, name, songs: [], songIds: new Set<string>() };
+    if (!existing.songIds.has(song.songId)) {
+      existing.songIds.add(song.songId);
+      existing.songs.push(song);
+    }
+    pools.set(id, existing);
+  };
+
+  for (const song of songs) {
+    if (poolType === 'artist') {
+      for (const artist of song.artists ?? []) addSong(artist.artistId, artist.name, song);
+    } else if (song.album) {
+      addSong(song.album.albumId, song.album.name, song);
+    }
+  }
+
+  return (
+    [...pools.values()]
+      // Reuse the established SongGuessr pool threshold: a catalogue should
+      // have enough answers for recent-track avoidance to remain meaningful.
+      .filter(({ songs: poolSongs }) => poolSongs.length >= MINIMUM_POOL_SIZE_FOR_EXCLUSIONS)
+      .sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id))
+      .map(({ id, name, songs: poolSongs }) => ({ id, name, songs: poolSongs }))
+  );
+};
+
 const getSongsForPool = (
   repo: SongGuessrRepository,
   songs: SavableSongData[],
@@ -115,10 +160,18 @@ const getSongsForPool = (
     return songs.filter((song) => songIds.has(song.songId));
   }
 
-  const genre = repo.getGenres().find((entry) => entry.genreId === poolId);
-  if (!genre) return [];
-  const songIds = getSongIds(genre.songs?.map((song) => song.songId));
-  return songs.filter((song) => songIds.has(song.songId));
+  if (poolType === 'artist' || poolType === 'album') {
+    return getCatalogPools(songs, poolType).find((pool) => pool.id === poolId)?.songs ?? [];
+  }
+
+  if (poolType === 'genre') {
+    const genre = repo.getGenres().find((entry) => entry.genreId === poolId);
+    if (!genre) return [];
+    const songIds = getSongIds(genre.songs?.map((song) => song.songId));
+    return songs.filter((song) => songIds.has(song.songId));
+  }
+
+  return [];
 };
 
 const getSearchIndex = (repo: SongGuessrRepository): SearchIndexEntry[] => {
@@ -213,7 +266,9 @@ export const getSongGuessrRound = (
       !options ||
       (options.poolType !== 'library' &&
         options.poolType !== 'playlist' &&
-        options.poolType !== 'genre')
+        options.poolType !== 'genre' &&
+        options.poolType !== 'artist' &&
+        options.poolType !== 'album')
     ) {
       return null;
     }
@@ -298,6 +353,11 @@ export const getSongGuessrPools = (repo: SongGuessrRepository): SongGuessrPoolOp
       const count = countEligibleSongIds(genre.songs?.map((song) => song.songId));
       if (count >= MINIMUM_POOL_SIZE_FOR_EXCLUSIONS) {
         pools.push({ type: 'genre', id: genre.genreId, name: genre.name, count });
+      }
+    }
+    for (const poolType of ['artist', 'album'] as const) {
+      for (const pool of getCatalogPools(eligibleSongs, poolType)) {
+        pools.push({ type: poolType, id: pool.id, name: pool.name, count: pool.songs.length });
       }
     }
     return pools;

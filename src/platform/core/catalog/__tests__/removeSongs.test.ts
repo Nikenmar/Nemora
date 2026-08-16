@@ -19,10 +19,7 @@ const song = (songId: string, path: string): SavableSongData => ({
 });
 
 const state = (): CatalogState => ({
-  songs: [
-    song('remove-me', 'E:\\Music\\remove.flac'),
-    song('keep-me', 'E:\\Music\\keep.flac')
-  ],
+  songs: [song('remove-me', 'E:\\Music\\remove.flac'), song('keep-me', 'E:\\Music\\keep.flac')],
   artists: [
     {
       artistId: 'artist',
@@ -111,9 +108,7 @@ const state = (): CatalogState => ({
     },
     importedStatsExportIds: [],
     duelMatchmaking: {
-      skippedPairs: [
-        { at: 1, songAId: 'remove-me', songBId: 'keep-me', reason: 'cantDecide' }
-      ]
+      skippedPairs: [{ at: 1, songAId: 'remove-me', songBId: 'keep-me', reason: 'cantDecide' }]
     }
   }
 });
@@ -128,9 +123,19 @@ describe('catalog song removal', () => {
     expect(result.state.tierlists[0].tiers[0].items).toEqual(['keep-me']);
     expect(result.state.listeningData.map((entry) => entry.songId)).toEqual(['keep-me']);
     expect(result.state.blacklist.songBlacklist).toEqual(['keep-me']);
-    expect(result.state.cmrStats.elo.ratings).not.toHaveProperty('remove-me');
-    expect(result.state.cmrStats.elo.history).toEqual([]);
-    expect(result.state.cmrStats.duelMatchmaking?.skippedPairs).toEqual([]);
+    // The rating is KEPT, stamped with the identity of the song being removed,
+    // so re-adding the same file brings its duel record back. It contributes to
+    // nothing while its song is away: standings and the matchmaker both join
+    // against the library.
+    expect(result.state.cmrStats.elo.ratings['remove-me']).toMatchObject({
+      rating: 1300,
+      fingerprint: { fileName: 'remove.flac' }
+    });
+    // The duel happened, so its record survives the song leaving the library and
+    // is remapped if the same file is scanned again. Nothing renders it in the
+    // meantime: the statistics page only lists duels whose songs it can name.
+    expect(result.state.cmrStats.elo.history).toHaveLength(1);
+    expect(result.state.cmrStats.duelMatchmaking?.skippedPairs).toHaveLength(1);
     expect(result.state.artists[0].songs.map((entry) => entry.songId)).toEqual(['keep-me']);
     expect(result.state.albums[0].songs.map((entry) => entry.songId)).toEqual(['keep-me']);
     expect(result.state.genres[0].songs.map((entry) => entry.songId)).toEqual(['keep-me']);
@@ -164,6 +169,33 @@ describe('catalog song removal', () => {
     const kept = result.state.listeningData.find((entry) => entry.songId === 'remove-me');
     expect(kept?.fullListens).toBe(300);
     expect(result.state.songs.map((entry) => entry.songId)).toEqual(['keep-me']);
+  });
+
+  test('keeps fingerprinted ELO, duel history, and tier placements for a later rescan', () => {
+    const result = removeSongsFromCatalogState(state(), ['E:\\Music\\remove.flac']);
+    const rating = result.state.cmrStats.elo.ratings['remove-me'] as EloSongRating & {
+      fingerprint?: SongFingerprint;
+    };
+    const tier = result.state.tierlists[0].tiers[0] as TierRow & {
+      orphanedItems?: Array<{ songId: string; index: number; fingerprint: SongFingerprint }>;
+    };
+
+    expect(rating.fingerprint).toMatchObject({
+      songId: 'remove-me',
+      title: 'remove-me',
+      fileName: 'remove.flac'
+    });
+    expect(result.state.cmrStats.elo.history).toHaveLength(1);
+    expect(result.state.cmrStats.elo.totalDuels).toBe(1);
+    expect(result.state.cmrStats.duelMatchmaking?.skippedPairs).toHaveLength(1);
+    expect(tier.items).toEqual(['keep-me']);
+    expect(tier.orphanedItems).toEqual([
+      {
+        songId: 'remove-me',
+        index: 0,
+        fingerprint: expect.objectContaining({ songId: 'remove-me', fileName: 'remove.flac' })
+      }
+    ]);
   });
 
   test('uses trash for recycle requests and never falls back to permanent deletion', async () => {

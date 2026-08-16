@@ -130,6 +130,11 @@ const SongMetadataResultsSelectPage = (props: SongMetadataResultsSelectPageProp)
         }`}
       >
         {songResultComponents.length > 0 && loadingStates === 'SUCCESS' && songResultComponents}
+        {loadingStates === 'FAILED' && (
+          <p className="text-center text-font-color-crimson dark:text-font-color-crimson">
+            Metadata providers are unavailable. Check your connection and try again.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,10 @@
 import { getRuntime } from '../runtime';
+import type {
+  PreparedTournament,
+  TournamentDuelSubmission,
+  TournamentSize,
+  TournamentState
+} from '../core/stats/tournaments';
 
 export const eloDuels = {
   getDuelPair: async (pinnedSongId?: string): Promise<DuelPair | null> =>
@@ -18,5 +24,15 @@ export const eloDuels = {
     songAId: string,
     songBId: string,
     winnerSongId: string
-  ): Promise<DuelResult> => getRuntime().submitDuelResult(songAId, songBId, winnerSongId)
+  ): Promise<DuelResult> => getRuntime().submitDuelResult(songAId, songBId, winnerSongId),
+  /** Seeds a fresh bracket by current rating and persists it. */
+  startTournament: async (size: TournamentSize): Promise<TournamentState> =>
+    getRuntime().startTournament(size),
+  /** The bracket in progress, already reconciled against the current library. */
+  resumeTournament: async (): Promise<PreparedTournament | undefined> =>
+    getRuntime().resumeTournament(),
+  submitTournamentDuel: async (
+    matchId: string,
+    winnerSongId: string
+  ): Promise<TournamentDuelSubmission> => getRuntime().submitTournamentDuel(matchId, winnerSongId)
 };

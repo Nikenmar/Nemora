@@ -41,6 +41,7 @@ fn main() {
         .plugin(
             tauri_plugin_autostart::Builder::new()
                 .app_name("Nemora")
+                .args(["--autostart"])
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![

@@ -12,7 +12,8 @@
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 
-import getStatsData, { type StatsDataRepo } from '../getStatsData';
+import { getStatsData, type StatsDataRepo } from '../getStatsData';
+import { createCounterFile } from '../listeningEvents';
 import { dedupeListeningRows } from '../mergeListeningData';
 
 const fixture = process.env.NORA_STATS_FIXTURE;
@@ -22,26 +23,26 @@ const read = (name: string) =>
   JSON.parse(nodeFs.readFileSync(nodePath.join(fixture!, name), 'utf8'));
 
 const build = (listeningData: unknown[]): StatsDataRepo =>
-    ({
-      getSongsData: () => read('songs.json').songs,
-      getListeningData: () => listeningData,
-      getPlaylistData: (ids?: string[]) => {
-        const all = read('playlists.json').playlists;
-        return ids ? all.filter((p: { playlistId: string }) => ids.includes(p.playlistId)) : all;
-      },
-      getGenresData: () => read('genres.json').genres,
-      getCmrStatsData: () => read('cmr_stats.json').cmrStats,
-      getSongArtworkPath: () => ({
-        isDefaultArtwork: true,
-        artworkPath: '',
-        optimizedArtworkPath: ''
-      }),
-      isSongBlacklisted: () => false,
-      logger: { debug: () => undefined }
-    }) as unknown as StatsDataRepo;
+  ({
+    getSongsData: () => read('songs.json').songs,
+    getListeningData: () => listeningData,
+    getListeningCounters: () => createCounterFile('fixture'),
+    getPlaylistData: (ids?: string[]) => {
+      const all = read('playlists.json').playlists;
+      return ids ? all.filter((p: { playlistId: string }) => ids.includes(p.playlistId)) : all;
+    },
+    getGenresData: () => read('genres.json').genres,
+    getCmrStatsData: () => read('cmr_stats.json').cmrStats,
+    getSongArtworkPath: () => ({
+      isDefaultArtwork: true,
+      artworkPath: '',
+      optimizedArtworkPath: ''
+    }),
+    isSongBlacklisted: () => false,
+    logger: { debug: () => undefined }
+  }) as unknown as StatsDataRepo;
 
 maybe('statistics over a real profile', () => {
-
   test('the total agrees with the sum of the per-song figures', () => {
     const rows = dedupeListeningRows(read('listening_data.json').listeningData);
     const stats = getStatsData(build(rows), 'allTime');

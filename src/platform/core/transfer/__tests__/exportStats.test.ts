@@ -2,6 +2,13 @@ import { jest } from '@jest/globals';
 
 import exportStatsData from '../exportStats';
 import {
+  createCounterFile,
+  recordListening,
+  trackKeyOf,
+  type ListeningCounterFile
+} from '../../stats/listeningEvents';
+import { fingerprintOfSong } from '../../stats/songFingerprint';
+import {
   createListeningEntry,
   createMockTransferRepo,
   createPlaylist,
@@ -14,12 +21,14 @@ jest.mock('@tauri-apps/plugin-dialog', () => ({
   save: jest.fn()
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pluginDialog = jest.requireMock('@tauri-apps/plugin-dialog') as {
   save: jest.Mock<() => Promise<string | null>>;
 };
 
-const parseExport = (contents: string): StatsExportFile => JSON.parse(contents) as StatsExportFile;
+type StatsExportFileWithEvents = StatsExportFile & { events?: ListeningCounterFile };
+
+const parseExport = (contents: string): StatsExportFileWithEvents =>
+  JSON.parse(contents) as StatsExportFileWithEvents;
 
 describe('exportStatsData', () => {
   const repoWithData = () =>
@@ -97,6 +106,33 @@ describe('exportStatsData', () => {
     expect(exported.tierlists).toHaveLength(1);
     expect(exported.elo?.totalDuels).toBe(12);
     expect(exported.listeningData).toHaveLength(1);
+  });
+
+  test('carries only referenced counters while an old reader sees unchanged listeningData', async () => {
+    const repo = repoWithData();
+    const originalListeningData = structuredClone(repo.state.listeningData);
+    const referenced = fingerprintOfSong(repo.state.songs[0]);
+    const unrelated = fingerprintOfSong(createSong('not-exported'));
+    let counters = createCounterFile('install-a');
+    counters = recordListening(counters, referenced, 'listen', new Date(2025, 0, 2).getTime(), 'a');
+    counters = recordListening(counters, unrelated, 'listen', new Date(2025, 0, 2).getTime(), 'a');
+    repo.state.listeningCounters = counters;
+    pluginDialog.save.mockResolvedValue('E:\\Exports\\stats.json');
+
+    await exportStatsData(repo);
+
+    const exported = parseExport(repo.writes[0]!.contents);
+    expect(exported.formatVersion).toBe(1);
+    expect(Object.keys(exported.events?.tracks ?? {})).toEqual([trackKeyOf(referenced)]);
+    expect(Object.keys(exported.events?.counters ?? {})).toEqual([trackKeyOf(referenced)]);
+
+    // This is the complete surface an older formatVersion-1 reader consumes.
+    const oldStyleReader = JSON.parse(repo.writes[0]!.contents) as {
+      listeningData: SongListeningData[];
+    };
+    expect(JSON.stringify(oldStyleReader.listeningData)).toBe(
+      JSON.stringify(originalListeningData)
+    );
   });
 
   test('omits elo and optional blocks when absent', async () => {

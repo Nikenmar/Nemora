@@ -9,7 +9,6 @@ jest.mock('@tauri-apps/plugin-dialog', () => ({
   save: jest.fn()
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pluginDialog = jest.requireMock('@tauri-apps/plugin-dialog') as {
   open: jest.Mock<() => Promise<string | null>>;
 };
@@ -24,6 +23,7 @@ const EXPORT_FILES = [
   'genres.json',
   'userData.json',
   'listening_data.json',
+  'listening_events.json',
   'cmr_stats.json',
   'localStorageData.json',
   'IMPORTANT - DO NOT EDIT CONTENTS IN THIS DIRECTORY.txt'
@@ -33,7 +33,17 @@ describe('exportAppData', () => {
   const repoWithData = () => {
     const repo = createMockAppDataRepo(
       {},
-      { songs: [{ songId: 's1' } as SavableSongData] },
+      {
+        songs: [{ songId: 's1' } as SavableSongData],
+        listeningCounters: {
+          version: 1,
+          installId: 'source-install',
+          tracks: {},
+          counters: {
+            track: { 'source-install': { '2026-08-16': { l: 3 } } }
+          }
+        }
+      },
       { [joinPath(PROFILE_ROOT, 'song_covers', 'a.webp')]: 'cover-bytes' }
     );
     repo.dirs.add(joinPath(PROFILE_ROOT, 'song_covers'));
@@ -69,6 +79,12 @@ describe('exportAppData', () => {
       write.path.endsWith('localStorageData.json')
     );
     expect(localStorageWrite?.contents).toBe('{"preferences":{}}');
+    const listeningEvents = repo.writes.find((write) =>
+      write.path.endsWith('listening_events.json')
+    );
+    expect(JSON.parse(listeningEvents!.contents)).toEqual({
+      listeningEvents: repo.state.listeningCounters
+    });
 
     // Song covers were copied recursively through the file seam.
     expect(repo.copies).toEqual([
@@ -78,11 +94,11 @@ describe('exportAppData', () => {
       }
     ]);
 
-    // One progress message per operation (13 = 12 files + song_covers), then the success message.
+    // One progress message per operation (14 = 13 files + song_covers), then the success message.
     expect(repo.sendMessageMock).toHaveBeenCalledTimes(EXPORT_FILES.length + 2);
     expect(repo.sendMessageMock).toHaveBeenCalledWith('APPDATA_EXPORT_STARTED', {
-      total: 13,
-      value: 13
+      total: 14,
+      value: 14
     });
     expect(repo.sendMessageMock).toHaveBeenLastCalledWith('APPDATA_EXPORT_SUCCESS');
   });

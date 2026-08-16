@@ -36,11 +36,42 @@ const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
  *
  * REVEALING MUST NOT DEPEND ON STARTUP SUCCEEDING. A window that is never shown
  * is an app that did not start, with no error on screen to say so - which is
- * worse than any flash. Hence: a timer arms the reveal immediately, the error
- * path reveals too, and the call is idempotent.
+ * worse than any flash. Hence: a timer arms a safety reveal unless a marked
+ * auto-launch has an explicitly mirrored hidden preference, the error path
+ * always reveals, and the call is idempotent.
  */
 const REVEAL_DEADLINE_MS = 4000;
+const AUTO_LAUNCH_ARGUMENT = '--autostart';
+const HIDDEN_STARTUP_PREFERENCE_KEY = 'nemora:openWindowAsHiddenOnSystemStart';
+const AUTO_LAUNCH_REPAIR_KEY = 'nemora:autostartMarkerRegistrationVersion';
+const AUTO_LAUNCH_REPAIR_VERSION = '1';
 let windowRevealed = false;
+let revealWindowOnSuccessfulMount = true;
+
+const readStartupState = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeStartupState = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.error('Could not persist startup state.', error);
+  }
+};
+
+const startupArgsPromise: Promise<string[]> = isTauri
+  ? import('@tauri-apps/api/core')
+      .then(({ invoke }) => invoke<string[]>('startup_args'))
+      .catch((error: unknown) => {
+        console.error('Could not read the startup arguments.', error);
+        return [];
+      })
+  : Promise.resolve([]);
 
 const revealWindow = (): void => {
   if (!isTauri || windowRevealed) return;
@@ -59,7 +90,18 @@ const revealWindowAfterPaint = (): void => {
   requestAnimationFrame(() => requestAnimationFrame(revealWindow));
 };
 
-if (isTauri) setTimeout(revealWindow, REVEAL_DEADLINE_MS);
+if (isTauri)
+  setTimeout(() => {
+    void startupArgsPromise.then((startupArgs) => {
+      const autoLaunched = startupArgs.includes(AUTO_LAUNCH_ARGUMENT);
+      const hiddenStartupPreference = readStartupState(HIDDEN_STARTUP_PREFERENCE_KEY);
+
+      // A marker plus an explicitly mirrored preference is the only state that
+      // may suppress the safety reveal. Missing or unreadable state means this
+      // was a normal launch until proven otherwise, so the user gets a window.
+      if (!autoLaunched || hiddenStartupPreference !== 'true') revealWindow();
+    });
+  }, REVEAL_DEADLINE_MS);
 
 /** Everything console.error saw, so the self-check can fail on silent errors. */
 const capturedConsoleErrors: string[] = [];
@@ -92,7 +134,9 @@ async function mount() {
     // (src/main/main.ts:173). Tauri has no such option, so without this the
     // whole interface renders 11% larger than the Electron build.
     const { getCurrentWebview } = await import('@tauri-apps/api/webview');
-    await getCurrentWebview().setZoom(0.9).catch(() => undefined);
+    await getCurrentWebview()
+      .setZoom(0.9)
+      .catch(() => undefined);
 
     // Renderer failures used to land only in a devtools console, which means a
     // user's bug report contains nothing. Forward them to the log file, where
@@ -137,8 +181,7 @@ ${reason.stack ?? ''}`
     const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
     const browserFetch = globalThis.fetch.bind(globalThis);
     globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-      const url =
-        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const isRemote = /^https?:\/\//i.test(url) && !/^https?:\/\/[^/]*\.localhost\//i.test(url);
       return isRemote ? tauriFetch(input, init) : browserFetch(input, init);
     }) as typeof globalThis.fetch;
@@ -160,6 +203,38 @@ ${reason.stack ?? ''}`
     // @platform/migration is still used - by that import.
     const { hydrateRuntime } = await import('@platform/runtime');
     await hydrateRuntime();
+
+    const startupArgs = await startupArgsPromise;
+    const userData = await window.api.userData.getUserData();
+    const autoLaunched = startupArgs.includes(AUTO_LAUNCH_ARGUMENT);
+    const hideAutoLaunchedWindow =
+      autoLaunched &&
+      userData.preferences?.autoLaunchApp === true &&
+      userData.preferences?.openWindowAsHiddenOnSystemStart === true;
+
+    revealWindowOnSuccessfulMount = !hideAutoLaunchedWindow;
+    writeStartupState(
+      HIDDEN_STARTUP_PREFERENCE_KEY,
+      String(userData.preferences?.openWindowAsHiddenOnSystemStart === true)
+    );
+
+    // Versions before the marker was added registered only the executable.
+    // Re-enabling through the configured plugin overwrites that old entry with
+    // `--autostart`. Persist a renderer-side migration version so a normal
+    // launch repairs it once rather than rewriting the registry every time.
+    if (userData.preferences?.autoLaunchApp) {
+      if (autoLaunched) {
+        writeStartupState(AUTO_LAUNCH_REPAIR_KEY, AUTO_LAUNCH_REPAIR_VERSION);
+      } else if (readStartupState(AUTO_LAUNCH_REPAIR_KEY) !== AUTO_LAUNCH_REPAIR_VERSION) {
+        try {
+          await window.api.settingsHelpers.toggleAutoLaunch(true);
+          writeStartupState(AUTO_LAUNCH_REPAIR_KEY, AUTO_LAUNCH_REPAIR_VERSION);
+          await info('Updated the auto-launch registration with the startup marker.');
+        } catch (error) {
+          console.error('Could not update the auto-launch registration.', error);
+        }
+      }
+    }
 
     await info(`Nemora started. navigator.onLine=${navigator.onLine}.`);
   }
@@ -269,14 +344,16 @@ ${reason.stack ?? ''}`
       <App />
     </StrictMode>
   );
-  revealWindowAfterPaint();
+  if (revealWindowOnSuccessfulMount) revealWindowAfterPaint();
 }
 
 mount().catch((error: unknown) => {
   // Never fall through to the app with un-migrated storage: that is how someone
   // silently loses their listening history. Show the failure instead.
   const detail =
-    error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : String(error);
+    error instanceof Error
+      ? `${error.name}: ${error.message}\n${error.stack ?? ''}`
+      : String(error);
   console.error('Nora failed to start', error);
 
   if (isTauri) {

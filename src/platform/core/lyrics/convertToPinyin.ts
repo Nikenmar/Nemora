@@ -63,7 +63,7 @@ const convertLyricsToPinyin = async (repository: LyricsRepository) => {
     const { title, artist, album, lang, length, offset, copyright } =
       getLrcLyricsMetadata(cachedLyrics);
 
-    lyricsArr.push(`[re:Nora (https://github.com/Sandakan/Nora)]`);
+    lyricsArr.push(`[re:Nemora (https://github.com/Nikenmar/Nemora)]`);
     lyricsArr.push(`[ve:${version}]`);
     lyricsArr.push(`[ti:${title}]`);
 

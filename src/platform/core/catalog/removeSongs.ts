@@ -1,4 +1,5 @@
 import { canonicalPathKey } from '../library/path';
+import { fingerprintOfSong } from '../stats/songFingerprint';
 import type { CatalogRepository, CatalogState } from './repository';
 
 export interface CatalogRemovalResult {
@@ -42,6 +43,9 @@ export const removeSongsFromCatalogState = (
   if (removedSongs.length === 0) return { removedSongs: [], state };
 
   const removedIds = new Set(removedSongs.map((song) => song.songId));
+  const removedFingerprints = new Map(
+    removedSongs.map((song) => [song.songId, fingerprintOfSong(song)] as const)
+  );
   state.songs = state.songs.filter((song) => !removedIds.has(song.songId));
 
   state.albums = state.albums
@@ -97,28 +101,32 @@ export const removeSongsFromCatalogState = (
   );
   state.tierlists = state.tierlists.map((tierlist) => ({
     ...tierlist,
-    tiers: tierlist.tiers.map((tier) => ({
-      ...tier,
-      items: tier.items.filter((songId) => !removedIds.has(songId))
-    }))
+    tiers: tierlist.tiers.map((tier) => {
+      const existingOrphans = [...(tier.orphanedItems ?? [])];
+      const orphanedIds = new Set(existingOrphans.map((item) => item.songId));
+      const items: string[] = [];
+
+      tier.items.forEach((songId, index) => {
+        if (!removedIds.has(songId)) {
+          items.push(songId);
+          return;
+        }
+        const fingerprint = removedFingerprints.get(songId);
+        if (fingerprint && !orphanedIds.has(songId)) {
+          existingOrphans.push({ songId, index, fingerprint });
+          orphanedIds.add(songId);
+        }
+      });
+
+      const nextTier: TierRow = { ...tier, items };
+      if (existingOrphans.length > 0) nextTier.orphanedItems = existingOrphans;
+      return nextTier;
+    })
   }));
 
-  const removedHistoryCount = state.cmrStats.elo.history.filter(
-    (record) => removedIds.has(record.songAId) || removedIds.has(record.songBId)
-  ).length;
-  state.cmrStats.elo.history = state.cmrStats.elo.history.filter(
-    (record) => !removedIds.has(record.songAId) && !removedIds.has(record.songBId)
-  );
-  for (const songId of removedIds) delete state.cmrStats.elo.ratings[songId];
-  state.cmrStats.elo.totalDuels = Math.max(
-    state.cmrStats.elo.history.length,
-    state.cmrStats.elo.totalDuels - removedHistoryCount
-  );
-  if (state.cmrStats.duelMatchmaking) {
-    state.cmrStats.duelMatchmaking.skippedPairs =
-      state.cmrStats.duelMatchmaking.skippedPairs.filter(
-        (record) => !removedIds.has(record.songAId) && !removedIds.has(record.songBId)
-      );
+  for (const [songId, fingerprint] of removedFingerprints) {
+    const rating = state.cmrStats.elo.ratings[songId];
+    if (rating) state.cmrStats.elo.ratings[songId] = { ...rating, fingerprint };
   }
 
   return { removedSongs, state };
@@ -137,7 +145,11 @@ export const removeSongsFromLibrary = async (
 
   const result = removeSongsFromCatalogState(repository.getCatalogState(), songPaths);
   if (result.removedSongs.length === 0) {
-    return { success: true, message: 'No matching songs were present in the library.', removedCount: 0 };
+    return {
+      success: true,
+      message: 'No matching songs were present in the library.',
+      removedCount: 0
+    };
   }
 
   repository.commitCatalogState(result.state);

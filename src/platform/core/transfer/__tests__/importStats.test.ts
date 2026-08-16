@@ -2,6 +2,8 @@ import { jest } from '@jest/globals';
 
 import importStatsData from '../importStats';
 import { configureLogger } from '../../playlists/logger';
+import { createCounterFile, recordListening, trackKeyOf } from '../../stats/listeningEvents';
+import { fingerprintOfSong } from '../../stats/songFingerprint';
 import { md5Hex } from '../md5';
 import { joinPath } from '../joinPath';
 import { PROFILE_ROOT, createMockTransferRepo, createSong } from './testUtils';
@@ -11,7 +13,6 @@ jest.mock('@tauri-apps/plugin-dialog', () => ({
   save: jest.fn()
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pluginDialog = jest.requireMock('@tauri-apps/plugin-dialog') as {
   open: jest.Mock<() => Promise<string | null>>;
 };
@@ -76,7 +77,11 @@ const LOCAL_SONGS: SavableSongData[] = [
   })
 ];
 
-const exportFile = (overrides: Partial<StatsExportFile> = {}): StatsExportFile => ({
+type StatsExportFileWithEvents = StatsExportFile & { events?: unknown };
+
+const exportFile = (
+  overrides: Partial<StatsExportFileWithEvents> = {}
+): StatsExportFileWithEvents => ({
   format: 'nora-cmr-stats-export',
   formatVersion: 1,
   exportId: 'fixture-export-1',
@@ -235,6 +240,102 @@ describe('importStatsData — fingerprint remap between two installs', () => {
     expect(maxed?.listens[0]?.listens).toEqual([[dayStart, 3]]); // max(1, 3)
   });
 
+  test('merges a valid events block idempotently and derives the legacy rows', async () => {
+    const localIdentity = fingerprintOfSong(LOCAL_SONGS[0]);
+    let localCounters = createCounterFile('install-local');
+    localCounters = recordListening(
+      localCounters,
+      localIdentity,
+      'listen',
+      new Date(2025, 0, 1, 12).getTime(),
+      'install-local'
+    );
+
+    let foreignCounters = createCounterFile('install-foreign');
+    foreignCounters = recordListening(
+      foreignCounters,
+      FOREIGN_SONGS[0],
+      'listen',
+      new Date(2025, 0, 1, 18).getTime(),
+      'install-foreign'
+    );
+    foreignCounters = recordListening(
+      foreignCounters,
+      FOREIGN_SONGS[0],
+      'listen',
+      new Date(2025, 0, 1, 19).getTime(),
+      'install-foreign'
+    );
+
+    const foreign = exportFile({ events: foreignCounters });
+    const repo = createMockTransferRepo(
+      {},
+      {
+        songs: LOCAL_SONGS,
+        listeningData: [
+          {
+            songId: 'l1',
+            listens: [{ year: 2025, listens: [[new Date(2025, 0, 1).getTime(), 1]] }],
+            fingerprint: localIdentity
+          }
+        ],
+        listeningCounters: localCounters
+      },
+      { 'E:\\Exports\\export.json': JSON.stringify(foreign) }
+    );
+    pluginDialog.open.mockResolvedValue('E:\\Exports\\export.json');
+
+    const first = await importStatsData(repo, 'sameOrigin', 'file');
+    const afterFirst = structuredClone(repo.state.listeningCounters);
+    const firstTotal = repo.state.listeningData[0].listens[0].listens[0][1];
+    const second = await importStatsData(repo, 'sameOrigin', 'file');
+
+    expect(first.success).toBe(true);
+    expect(second.success).toBe(true);
+    expect(firstTotal).toBe(3);
+    expect(repo.state.listeningData[0].listens[0].listens[0][1]).toBe(3);
+    expect(repo.state.listeningCounters).toEqual(afterFirst);
+    expect(Object.keys(repo.state.listeningCounters.counters[trackKeyOf(localIdentity)])).toEqual(
+      expect.arrayContaining(['install-local', 'install-foreign'])
+    );
+  });
+
+  test('converts an old export into one deterministic counter source', async () => {
+    const repo = repoWithLocalLibrary();
+    pluginDialog.open.mockResolvedValue('E:\\Exports\\export.json');
+
+    const first = await importStatsData(repo, 'sameOrigin', 'file');
+    const afterFirst = structuredClone(repo.state.listeningCounters);
+    const second = await importStatsData(repo, 'sameOrigin', 'file');
+
+    expect(first.success).toBe(true);
+    expect(second.success).toBe(true);
+    expect(repo.state.listeningCounters).toEqual(afterFirst);
+    const key = trackKeyOf(fingerprintOfSong(LOCAL_SONGS[0]));
+    expect(Object.keys(repo.state.listeningCounters.counters[key])).toEqual([
+      `stats-export-${md5Hex('fixture-export-1')}`
+    ]);
+  });
+
+  test('skips malformed events as an optional block and keeps the legacy import path', async () => {
+    const repo = createMockTransferRepo(
+      {},
+      { songs: LOCAL_SONGS },
+      {
+        'E:\\Exports\\export.json': JSON.stringify(
+          exportFile({ events: { version: 7, counters: 'broken' } })
+        )
+      }
+    );
+    pluginDialog.open.mockResolvedValue('E:\\Exports\\export.json');
+
+    const report = await importStatsData(repo, 'sameOrigin', 'file');
+
+    expect(report.success).toBe(true);
+    expect(report.notes).toContain('Skipped a malformed events block.');
+    expect(repo.state.listeningData.find((entry) => entry.songId === 'l1')?.fullListens).toBe(5);
+  });
+
   test('never merges into the Rediscover/History/Favorites system playlists', async () => {
     const repo = createMockTransferRepo(
       {},
@@ -300,16 +401,19 @@ describe('importStatsData — fingerprint remap between two installs', () => {
     await importStatsData(repo, 'separateDevices', 'file');
 
     const backupEvents = repo.events.filter((event) => event.startsWith('copyFileAtomic:'));
-    const saveIndex = repo.events.indexOf('saveListeningData');
+    const firstStoreWrite = Math.min(
+      repo.events.indexOf('saveListeningCounters'),
+      repo.events.indexOf('saveListeningData')
+    );
 
-    // Four profile files were copied into the backups folder first.
-    expect(backupEvents).toHaveLength(4);
+    // Five profile files, including the counter store, were copied first.
+    expect(backupEvents).toHaveLength(5);
     for (const event of backupEvents) {
       expect(event).toContain(joinPath(PROFILE_ROOT, 'backups'));
       expect(event).toMatch(/\.backup\.\d+\.json$/);
     }
     // Every backup copy happened strictly before the first store write.
-    expect(saveIndex).toBe(backupEvents.length);
+    expect(firstStoreWrite).toBe(backupEvents.length);
     // The import id is recorded so the same export cannot be summed twice.
     expect(repo.state.cmrStats.importedStatsExportIds).toEqual(['fixture-export-1']);
   });
@@ -317,14 +421,14 @@ describe('importStatsData — fingerprint remap between two installs', () => {
   test('tolerates a missing cmr_stats.json during backup (fresh install)', async () => {
     const repo = repoWithLocalLibrary();
     // A profile that has never run a duel has no cmr_stats.json. Nothing to back
-    // up is not a failure, and the other three files are still copied.
+    // up is not a failure, and the other four files are still copied.
     repo.files.delete(joinPath(PROFILE_ROOT, 'cmr_stats.json'));
     pluginDialog.open.mockResolvedValue('E:\\Exports\\export.json');
 
     const report = await importStatsData(repo, 'separateDevices', 'file');
 
     expect(report.success).toBe(true);
-    expect(repo.events.filter((event) => event.startsWith('copyFileAtomic:'))).toHaveLength(3);
+    expect(repo.events.filter((event) => event.startsWith('copyFileAtomic:'))).toHaveLength(4);
     expect(repo.state.cmrStats.importedStatsExportIds).toEqual(['fixture-export-1']);
   });
 
@@ -345,6 +449,7 @@ describe('importStatsData — fingerprint remap between two installs', () => {
     });
     // "Nothing was changed" has to be true: no store write may have happened.
     expect(repo.saveListeningDataMock).not.toHaveBeenCalled();
+    expect(repo.saveListeningCountersMock).not.toHaveBeenCalled();
     expect(repo.setCmrStatsDataMock).not.toHaveBeenCalled();
     expect(repo.state.listeningData).toHaveLength(0);
     // The reason must reach the core logger: this failure used to be discarded

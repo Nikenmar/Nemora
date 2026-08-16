@@ -1,6 +1,8 @@
 import { describe, expect, jest, test } from '@jest/globals';
 
-import importNoraProfile from '../importNora';
+import { importNoraProfile } from '../importNora';
+import { trackKeyOf, type ListeningCounterFile } from '../../stats/listeningEvents';
+import { fingerprintOfSong } from '../../stats/songFingerprint';
 import {
   BACKUP_DIR,
   NEMORA_ROOT,
@@ -10,6 +12,7 @@ import {
   buildUpstreamProfile,
   createMockNoraImportPort,
   FORK_LOCAL_STORAGE,
+  FORK_SONGS,
   FORK_SONG_GUESSR,
   storeText,
   textOf,
@@ -44,8 +47,9 @@ describe('importNoraProfile — wholesale replacement with a verified backup', (
 
     expect(report.success).toBe(true);
     expect(report.detectedSource).toBe('cmr-fork');
-    expect(report.storesImported).toHaveLength(11);
-    expect(report.storesAbsent).toHaveLength(0);
+    expect(report.storesImported).toHaveLength(12);
+    expect(report.storesImported).toContain('listeningEvents');
+    expect(report.storesAbsent).toEqual(['listeningEvents']);
     expect(report.storesRemoved).toHaveLength(0);
     expect(report.counts).toEqual({ songs: 3, playlists: 2, listeningRows: 2, artworkFiles: 4 });
     expect(report.localStorageSource).toBe('leveldb');
@@ -57,6 +61,22 @@ describe('importNoraProfile — wholesale replacement with a verified backup', (
     expect(report.backupPath).toBe(BACKUP_DIR);
     expect(report.backupVerified).toBe(true);
     expect(report.markerPath).toBe(`${NEMORA_ROOT}\\import-nora-v1.json`);
+
+    const counters = JSON.parse(textOf(source, `${NEMORA_ROOT}\\listening_events.json`)) as {
+      listeningEvents: ListeningCounterFile;
+    };
+    const firstTrackKey = trackKeyOf(fingerprintOfSong(FORK_SONGS[0] as SavableSongData));
+    expect(counters.listeningEvents.version).toBe(1);
+    expect(counters.listeningEvents.installId).toMatch(/^[a-zA-Z]{10}$/);
+    // The source id is derived from the imported profile's own rows, not a
+    // shared literal: two different Nora profiles must count as two sources, or
+    // the maximum merge would keep the larger of them instead of both.
+    const [noraSource] = Object.keys(counters.listeningEvents.counters[firstTrackKey]);
+    expect(noraSource).toMatch(/^nora:[0-9a-f]{32}$/u);
+    expect(counters.listeningEvents.counters[firstTrackKey][noraSource]).toEqual({
+      '2025-01-01': { l: 3, f: 5, s: 2 }
+    });
+    expect(port.events.some((event) => event.startsWith(`write:${NORA_ROOT}`))).toBe(false);
 
     // Stores are a byte-for-byte copy, not a transformation.
     for (const fileName of [
@@ -118,7 +138,8 @@ describe('importNoraProfile — wholesale replacement with a verified backup', (
 
     expect(report.success).toBe(true);
     expect(report.detectedSource).toBe('upstream');
-    expect(report.storesImported).toHaveLength(9);
+    expect(report.storesImported).toHaveLength(10);
+    expect(report.storesImported).toContain('listeningEvents');
     expect(report.storesAbsent).toEqual(expect.arrayContaining(['tierlists', 'cmrStats']));
     expect(report.storesRemoved).toEqual(expect.arrayContaining(['tierlists', 'cmrStats']));
     expect(report.counts).toEqual({ songs: 2, playlists: 1, listeningRows: 1, artworkFiles: 2 });
@@ -149,6 +170,19 @@ describe('importNoraProfile — wholesale replacement with a verified backup', (
     expect(source.has(`${BACKUP_DIR}\\songs.json`)).toBe(false);
     expect(source.has(`${NEMORA_ROOT}\\import-nora-v1.json`)).toBe(false);
     expect(port.events.some((event) => event.startsWith('storage:'))).toBe(false);
+  });
+
+  test('re-running the Nora import keeps the same deterministic counters', async () => {
+    const { source, port } = forkImport();
+
+    const first = await importNoraProfile(port);
+    const firstCounters = textOf(source, `${NEMORA_ROOT}\\listening_events.json`);
+    const second = await importNoraProfile(port);
+    const secondCounters = textOf(source, `${NEMORA_ROOT}\\listening_events.json`);
+
+    expect(first.success).toBe(true);
+    expect(second.success).toBe(true);
+    expect(secondCounters).toBe(firstCounters);
   });
 
   test('a store that parses but has the wrong shape aborts before any write', async () => {

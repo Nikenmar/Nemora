@@ -117,6 +117,43 @@ describe('SongGuessr rounds', () => {
     expect(round?.answer.songId).toBe('song-0');
     expect(round?.poolSize).toBe(1);
   });
+
+  test('limits artist and album rounds to the selected catalogue', () => {
+    const catalogue = Array.from({ length: 20 }, (_, index) =>
+      song(index, {
+        artists: [
+          {
+            artistId: index < 10 ? 'artist-a' : 'artist-b',
+            name: index < 10 ? 'Artist A' : 'Artist B'
+          }
+        ],
+        album: {
+          albumId: index < 10 ? 'album-a' : 'album-b',
+          name: index < 10 ? 'Album A' : 'Album B'
+        }
+      })
+    );
+    const repo = new FakeRepository(catalogue);
+
+    expect(
+      getSongGuessrRound(repo, { poolType: 'artist', poolId: 'artist-b' })?.answer.songId
+    ).toBe('song-10');
+    expect(getSongGuessrRound(repo, { poolType: 'album', poolId: 'album-b' })?.poolSize).toBe(10);
+  });
+
+  test('refuses an artist or album catalogue below the qualifying pool size', () => {
+    const repo = new FakeRepository(
+      Array.from({ length: 9 }, (_, index) =>
+        song(index, {
+          artists: [{ artistId: 'small-artist', name: 'Small Artist' }],
+          album: { albumId: 'small-album', name: 'Small Album' }
+        })
+      )
+    );
+
+    expect(getSongGuessrRound(repo, { poolType: 'artist', poolId: 'small-artist' })).toBeNull();
+    expect(getSongGuessrRound(repo, { poolType: 'album', poolId: 'small-album' })).toBeNull();
+  });
 });
 
 describe('SongGuessr autocomplete', () => {
@@ -212,6 +249,53 @@ describe('SongGuessr pools and failure behavior', () => {
       { type: 'playlist', id: 'road-trip', name: 'Road Trip', count: 10 },
       { type: 'genre', id: 'rock', name: 'Rock', count: 10 }
     ]);
+  });
+
+  test('reports qualifying artist and album catalogues in stable name order', () => {
+    const repo = new FakeRepository(
+      Array.from({ length: 20 }, (_, index) =>
+        song(index, {
+          artists: [
+            {
+              artistId: index < 10 ? 'artist-z' : 'artist-a',
+              name: index < 10 ? 'Zed Artist' : 'Alpha Artist'
+            }
+          ],
+          album: {
+            albumId: index < 10 ? 'album-z' : 'album-a',
+            name: index < 10 ? 'Zed Album' : 'Alpha Album'
+          }
+        })
+      )
+    );
+
+    expect(getSongGuessrPools(repo).slice(1)).toEqual([
+      { type: 'artist', id: 'artist-a', name: 'Alpha Artist', count: 10 },
+      { type: 'artist', id: 'artist-z', name: 'Zed Artist', count: 10 },
+      { type: 'album', id: 'album-a', name: 'Alpha Album', count: 10 },
+      { type: 'album', id: 'album-z', name: 'Zed Album', count: 10 }
+    ]);
+  });
+
+  test('does not offer undersized artist or album catalogues after eligibility filtering', () => {
+    const repo = new FakeRepository(
+      Array.from({ length: 11 }, (_, index) =>
+        song(index, {
+          duration: index === 10 ? 14 : 180,
+          artists: [{ artistId: 'artist', name: 'Artist' }],
+          album: { albumId: 'album', name: 'Album' }
+        })
+      )
+    );
+
+    expect(getSongGuessrPools(repo)).toEqual([
+      { type: 'library', name: 'library', count: 10 },
+      { type: 'artist', id: 'artist', name: 'Artist', count: 10 },
+      { type: 'album', id: 'album', name: 'Album', count: 10 }
+    ]);
+
+    repo.blacklist.songBlacklist.push('song-0');
+    expect(getSongGuessrPools(repo)).toEqual([{ type: 'library', name: 'library', count: 9 }]);
   });
 
   test('fails closed and reports repository errors through the logger seam', () => {

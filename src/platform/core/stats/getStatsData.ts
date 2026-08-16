@@ -1,7 +1,6 @@
-import {
-  getEffectiveEloRating,
-  getEloConfidence
-} from './duelMatchmaker';
+import { getEffectiveEloRating, getEloConfidence } from './duelMatchmaker';
+import { trackKeyOf, type ListeningCounterFile } from './listeningEvents';
+import { fingerprintOfSong } from './songFingerprint';
 
 /**
  * Stats dashboard aggregation (fork identity: exact bucket/streak semantics).
@@ -14,6 +13,7 @@ import {
 export interface StatsDataRepo {
   getSongsData(): SavableSongData[];
   getListeningData(): SongListeningData[];
+  getListeningCounters(): ListeningCounterFile;
   getPlaylistData(playlistIds?: string[]): SavablePlaylist[];
   getGenresData(): SavableGenre[];
   getCmrStatsData(): CmrStatsData;
@@ -32,11 +32,25 @@ const getRangeStart = (timeRange: StatsTimeRange, now: number) => {
   return 0;
 };
 
+const yearOfRange = (timeRange: StatsTimeRange): number | null => {
+  if (!timeRange.startsWith('year:')) return null;
+  const year = Number(timeRange.slice('year:'.length));
+  return Number.isInteger(year) && year >= 0 && year <= 9999 ? year : null;
+};
+
+interface RangeFilter {
+  start: number;
+  year: number | null;
+}
+
+const inRange = (dateMs: number, range: RangeFilter): boolean =>
+  range.year === null ? dateMs >= range.start : dayInfo(dateMs).year === range.year;
+
 /** Sums day-counts across all yearly buckets, keeping only days inside the range. */
-const countListensInRange = (data: SongListeningData, rangeStart: number) => {
+const countListensInRange = (data: SongListeningData, range: RangeFilter) => {
   let count = 0;
   for (const year of data.listens)
-    for (const [dateMs, dayCount] of year.listens) if (dateMs >= rangeStart) count += dayCount;
+    for (const [dateMs, dayCount] of year.listens) if (inRange(dateMs, range)) count += dayCount;
   return count;
 };
 
@@ -46,6 +60,8 @@ interface DayInfo {
   start: number;
   year: number;
   month: number;
+  /** Monday is 0 and Sunday is 6. */
+  weekday: number;
 }
 
 /**
@@ -76,7 +92,8 @@ const dayInfo = (dateMs: number): DayInfo => {
   const info: DayInfo = {
     start: Math.floor((dateMs - offsetMs) / DAY_MS) * DAY_MS + offsetMs,
     year: date.getFullYear(),
-    month: date.getMonth()
+    month: date.getMonth(),
+    weekday: (date.getDay() + 6) % 7
   };
   dayCache.set(utcDay, info);
   return info;
@@ -100,6 +117,23 @@ const buildActivity = (
   nowMs: number
 ) => {
   const now = new Date(nowMs);
+  const selectedYear = yearOfRange(timeRange);
+
+  if (selectedYear !== null) {
+    const buckets = new Array<number>(12).fill(0);
+
+    for (const entry of listeningData)
+      for (const year of entry.listens)
+        for (const [dateMs, count] of year.listens) {
+          const day = dayInfo(dateMs);
+          if (day.year === selectedYear) buckets[day.month] += count;
+        }
+
+    return buckets.map((listens, month) => ({
+      label: toISODate(new Date(selectedYear, month, 1).getTime()),
+      listens
+    }));
+  }
 
   if (timeRange === 'last30Days') {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -135,6 +169,75 @@ const buildActivity = (
     const month = ((monthIndex % 12) + 12) % 12;
     return { label: toISODate(new Date(year, month, 1).getTime()), listens };
   });
+};
+
+const getAvailableYears = (listeningData: readonly SongListeningData[]): number[] => {
+  const years = new Set<number>();
+  for (const entry of listeningData)
+    for (const yearly of entry.listens)
+      for (const [dateMs, count] of yearly.listens) if (count > 0) years.add(dayInfo(dateMs).year);
+  return [...years].sort((first, second) => second - first);
+};
+
+const buildWeekdayHistogram = (
+  listeningData: readonly SongListeningData[],
+  range: RangeFilter
+): number[] => {
+  const histogram = new Array<number>(7).fill(0);
+  for (const entry of listeningData)
+    for (const yearly of entry.listens)
+      for (const [dateMs, count] of yearly.listens)
+        if (inRange(dateMs, range)) histogram[dayInfo(dateMs).weekday] += count;
+  return histogram;
+};
+
+const localDayStart = (day: string): number => {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(year, month - 1, date).getTime();
+};
+
+const buildHourStats = (
+  file: ListeningCounterFile,
+  currentTrackKeys: ReadonlySet<string>,
+  range: RangeFilter
+): { histogram: number[]; dataSince: number | null } => {
+  const histogram = new Array<number>(24).fill(0);
+  let dataSince: number | null = null;
+
+  for (const [trackKey, sources] of Object.entries(file.counters)) {
+    if (!currentTrackKeys.has(trackKey)) continue;
+    for (const days of Object.values(sources)) {
+      for (const [day, counts] of Object.entries(days)) {
+        if (counts.h === undefined) continue;
+        const dayStart = localDayStart(day);
+        if (dataSince === null || dayStart < dataSince) dataSince = dayStart;
+        if (!inRange(dayStart, range)) continue;
+        for (const [hourText, count] of Object.entries(counts.h)) {
+          const hour = Number(hourText);
+          if (Number.isInteger(hour) && hour >= 0 && hour < 24) histogram[hour] += count;
+        }
+      }
+    }
+  }
+
+  return { histogram, dataSince };
+};
+
+const scopes: StatsScopes = {
+  totalListens: 'range',
+  fullListens: 'allTime',
+  skips: 'allTime',
+  distinctSongsPlayed: 'range',
+  approxListeningTimeSec: 'range',
+  favorites: 'range',
+  activity: 'range',
+  calendar: 'allTime',
+  topSongs: 'range',
+  topArtists: 'range',
+  topAlbums: 'range',
+  topGenres: 'range',
+  mostSkipped: 'allTime',
+  elo: 'allTime'
 };
 
 /**
@@ -190,7 +293,7 @@ const buildCalendar = (listeningData: SongListeningData[], nowMs: number) => {
 
 const getStatsData = (repo: StatsDataRepo, timeRange: StatsTimeRange): StatsData => {
   const now = Date.now();
-  const rangeStart = getRangeStart(timeRange, now);
+  const range: RangeFilter = { start: getRangeStart(timeRange, now), year: yearOfRange(timeRange) };
 
   const songs = repo.getSongsData();
   const elo = repo.getCmrStatsData().elo;
@@ -210,6 +313,8 @@ const getStatsData = (repo: StatsDataRepo, timeRange: StatsTimeRange): StatsData
   // rescanning the same music reattaches them (see `relinkOrphanedListeningRows`).
   // They just do not count while the music they belong to is not in the library.
   const listeningData = repo.getListeningData().filter((entry) => songById.has(entry.songId));
+  const currentTrackKeys = new Set(songs.map((song) => trackKeyOf(fingerprintOfSong(song))));
+  const hourStats = buildHourStats(repo.getListeningCounters(), currentTrackKeys, range);
 
   // listens per song inside the selected range
   const listensBySongId = new Map<string, number>();
@@ -217,9 +322,9 @@ const getStatsData = (repo: StatsDataRepo, timeRange: StatsTimeRange): StatsData
   let fullListens = 0;
   let skips = 0;
   for (const entry of listeningData) {
-    const inRange = countListensInRange(entry, rangeStart);
-    listensBySongId.set(entry.songId, inRange);
-    totalListens += inRange;
+    const listensInRange = countListensInRange(entry, range);
+    listensBySongId.set(entry.songId, listensInRange);
+    totalListens += listensInRange;
     fullListens += entry.fullListens ?? 0;
     skips += entry.skips ?? 0;
   }
@@ -340,14 +445,21 @@ const getStatsData = (repo: StatsDataRepo, timeRange: StatsTimeRange): StatsData
     .sort((a, b) => b.effectiveRating - a.effectiveRating || a.title.localeCompare(b.title))
     .slice(0, 10);
 
-  const recentDuels = elo.history.slice(0, 10).map((duel) => ({
-    at: duel.at,
-    titleA: songById.get(duel.songAId)?.title ?? '?',
-    titleB: songById.get(duel.songBId)?.title ?? '?',
-    winner: duel.winner,
-    deltaA: duel.deltaA,
-    deltaB: duel.deltaB
-  }));
+  // Duels whose songs left the library are KEPT in the store now, so that
+  // re-adding the music brings the duel record back with it. Until then they
+  // have no titles to show, and a list of "? beat ?" is worse than a shorter
+  // list, so they are filtered out here rather than rendered blank.
+  const recentDuels = elo.history
+    .filter((duel) => songById.has(duel.songAId) && songById.has(duel.songBId))
+    .slice(0, 10)
+    .map((duel) => ({
+      at: duel.at,
+      titleA: songById.get(duel.songAId)?.title ?? '?',
+      titleB: songById.get(duel.songBId)?.title ?? '?',
+      winner: duel.winner,
+      deltaA: duel.deltaA,
+      deltaB: duel.deltaB
+    }));
 
   const distinctSongsPlayed = [...listensBySongId.values()].filter((count) => count > 0).length;
 
@@ -355,6 +467,11 @@ const getStatsData = (repo: StatsDataRepo, timeRange: StatsTimeRange): StatsData
 
   return {
     timeRange,
+    scopes,
+    availableYears: getAvailableYears(listeningData),
+    hourHistogram: hourStats.histogram,
+    weekdayHistogram: buildWeekdayHistogram(listeningData, range),
+    hourDataSince: hourStats.dataSince,
     totals: {
       distinctSongsPlayed,
       totalListens,

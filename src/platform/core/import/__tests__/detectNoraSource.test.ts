@@ -24,7 +24,7 @@ describe('detectNoraSource — identify the app by profile CONTENTS, not the fol
     expect(inventory.presentStores).toHaveLength(11);
     expect(inventory.presentStores).toContain('tierlists');
     expect(inventory.presentStores).toContain('cmrStats');
-    expect(inventory.absentStores).toHaveLength(0);
+    expect(inventory.absentStores).toEqual(['listeningEvents']);
     expect(inventory.hasLevelDb).toBe(true);
     expect(inventory.hasSongCovers).toBe(true);
   });
@@ -37,7 +37,9 @@ describe('detectNoraSource — identify the app by profile CONTENTS, not the fol
 
     expect(inventory.kind).toBe('upstream');
     expect(inventory.presentStores).toHaveLength(9);
-    expect(inventory.absentStores).toEqual(expect.arrayContaining(['tierlists', 'cmrStats']));
+    expect(inventory.absentStores).toEqual(
+      expect.arrayContaining(['tierlists', 'cmrStats', 'listeningEvents'])
+    );
     expect(inventory.hasLevelDb).toBe(true);
   });
 

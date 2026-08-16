@@ -1,5 +1,5 @@
 /**
- * The persistence contract for Nora's eleven JSON stores.
+ * The persistence contract for Nemora's JSON stores.
  *
  * Shape rules taken from the real profile (docs/tauri-port/01-appdata-compat.md):
  *   * every file is a JSON OBJECT, never a bare array;
@@ -49,6 +49,7 @@ export type StoreName =
   | 'playlists'
   | 'userData'
   | 'listeningData'
+  | 'listeningEvents'
   | 'blacklist'
   | 'tierlists'
   | 'cmrStats'
@@ -103,6 +104,7 @@ export const STORE_LAYOUT: Record<StoreName, { file: string; payloadKey: string 
   playlists: { file: 'playlists.json', payloadKey: 'playlists' },
   userData: { file: 'userData.json', payloadKey: 'userData' },
   listeningData: { file: 'listening_data.json', payloadKey: 'listeningData' },
+  listeningEvents: { file: 'listening_events.json', payloadKey: 'listeningEvents' },
   blacklist: { file: 'blacklist.json', payloadKey: 'blacklist' },
   tierlists: { file: 'tierlists.json', payloadKey: 'tierlists' },
   cmrStats: { file: 'cmr_stats.json', payloadKey: 'cmrStats' },

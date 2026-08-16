@@ -1,4 +1,5 @@
 import type { CoreLogger } from '../playlists/logger';
+import type { ListeningCounterFile } from '../stats/listeningEvents';
 
 /**
  * Data and side-effect seam for the portable stats transfer subsystem.
@@ -21,6 +22,8 @@ export interface StatsTransferRepository {
   getSongsData(): SavableSongData[];
   getListeningData(): SongListeningData[];
   saveListeningData(data: SongListeningData[]): void;
+  getListeningCounters(): ListeningCounterFile;
+  saveListeningCounters(data: ListeningCounterFile): void;
   getPlaylistData(playlistIds?: string[]): SavablePlaylist[];
   setPlaylistData(playlists: SavablePlaylist[]): void;
   getTierlistData(): SavableTierlist[];

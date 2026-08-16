@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -16,10 +16,10 @@ import {
 } from '../../utils/songGuessr/persistence';
 import { buildShareText } from '../../utils/songGuessr/share';
 import { applyRoundResult, createEmptyStats } from '../../utils/songGuessr/stats';
-import Dropdown from '../Dropdown';
 import SongGuessrAttemptList from './SongGuessrAttemptList';
 import SongGuessrGuessInput from './SongGuessrGuessInput';
 import SongGuessrPlayer from './SongGuessrPlayer';
+import SongGuessrPoolSelector, { type SongGuessrPoolSelection } from './SongGuessrPoolSelector';
 import SongGuessrResult from './SongGuessrResult';
 import SongGuessrStatsPanel from './SongGuessrStatsPanel';
 
@@ -32,6 +32,11 @@ type SongGuessrPhase = 'loading' | 'playing' | 'won' | 'lost' | 'empty';
 
 const COPIED_RESET_MS = 1800;
 
+// Artist/album modes intentionally live for the renderer session, not in the
+// durable SongGuessr save. Closing and reopening the dock keeps the source;
+// restarting Nemora returns to the existing default/persisted library pools.
+let sessionPoolSelection: SongGuessrPoolSelection | undefined;
+
 const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
   const { changePromptMenuData, playSong } = useContext(AppUpdateContext);
   const { t } = useTranslation();
@@ -43,6 +48,14 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
       return { version: 1, stats: createEmptyStats(), poolType: 'library', recentSongIds: [] };
     }
   });
+  const [poolSelection, setPoolSelection] = useState<SongGuessrPoolSelection>(() =>
+    sessionPoolSelection
+      ? { ...sessionPoolSelection }
+      : {
+          poolType: persistedState.poolType,
+          ...(persistedState.poolId ? { poolId: persistedState.poolId } : {})
+        }
+  );
   const [pools, setPools] = useState<SongGuessrPoolOption[]>([]);
   const [round, setRound] = useState<SongGuessrRound>();
   const [phase, setPhase] = useState<SongGuessrPhase>('loading');
@@ -57,6 +70,7 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const persistedStateRef = useRef(persistedState);
+  const poolSelectionRef = useRef(poolSelection);
   /** Read inside the native key handler, which is bound once. */
   const phaseRef = useRef(phase);
   const requestIdRef = useRef(0);
@@ -73,55 +87,58 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
     setPersistedState(nextState);
   }, []);
 
-  const startRound = useCallback(async (state: SongGuessrPersistedState) => {
-    const requestId = ++requestIdRef.current;
-    actionLockedRef.current = true;
-    setIsActionLocked(true);
-    setPhase('loading');
-    setRound(undefined);
-    setAttempts([]);
-    setCopied(false);
-    setStartOffset(0);
-    setGuessInputKey((key) => key + 1);
+  const startRound = useCallback(
+    async (state: SongGuessrPersistedState, selection = poolSelectionRef.current) => {
+      const requestId = ++requestIdRef.current;
+      actionLockedRef.current = true;
+      setIsActionLocked(true);
+      setPhase('loading');
+      setRound(undefined);
+      setAttempts([]);
+      setCopied(false);
+      setStartOffset(0);
+      setGuessInputKey((key) => key + 1);
 
-    try {
-      const nextRound = await window.api.songGuessr.getRound({
-        poolType: state.poolType,
-        poolId: state.poolId,
-        excludedSongIds: state.recentSongIds
-      });
-
-      if (requestId !== requestIdRef.current) return;
-      if (!nextRound) {
-        setPhase('empty');
-        return;
-      }
-
-      committedRoundRef.current = false;
-      setRound(nextRound);
-      setPhase('playing');
-
-      // Plenty of tracks open on room tone, a fade-in or a run of digital
-      // silence, which would waste the whole 0.1 s rung. Finding the real start
-      // needs a decode, so it runs alongside the round instead of delaying it.
-      setIsAnalyzing(true);
-      void getTrackStartOffset(nextRound.answer.songId, nextRound.answer.path)
-        .then((offset) => {
-          if (requestId !== requestIdRef.current) return;
-          setStartOffset(offset);
-        })
-        .finally(() => {
-          if (requestId === requestIdRef.current) setIsAnalyzing(false);
+      try {
+        const nextRound = await window.api.songGuessr.getRound({
+          poolType: selection.poolType,
+          poolId: selection.poolId,
+          excludedSongIds: state.recentSongIds
         });
-    } catch {
-      if (requestId === requestIdRef.current) setPhase('empty');
-    } finally {
-      if (requestId === requestIdRef.current) {
-        actionLockedRef.current = false;
-        setIsActionLocked(false);
+
+        if (requestId !== requestIdRef.current) return;
+        if (!nextRound) {
+          setPhase('empty');
+          return;
+        }
+
+        committedRoundRef.current = false;
+        setRound(nextRound);
+        setPhase('playing');
+
+        // Plenty of tracks open on room tone, a fade-in or a run of digital
+        // silence, which would waste the whole 0.1 s rung. Finding the real start
+        // needs a decode, so it runs alongside the round instead of delaying it.
+        setIsAnalyzing(true);
+        void getTrackStartOffset(nextRound.answer.songId, nextRound.answer.path)
+          .then((offset) => {
+            if (requestId !== requestIdRef.current) return;
+            setStartOffset(offset);
+          })
+          .finally(() => {
+            if (requestId === requestIdRef.current) setIsAnalyzing(false);
+          });
+      } catch {
+        if (requestId === requestIdRef.current) setPhase('empty');
+      } finally {
+        if (requestId === requestIdRef.current) {
+          actionLockedRef.current = false;
+          setIsActionLocked(false);
+        }
       }
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -217,20 +234,25 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
   const skipGuess = useCallback(() => recordAttempt({ kind: 'skip' }, false), [recordAttempt]);
 
   const changePool = useCallback(
-    (value: string) => {
-      const nextPool = pools.find((pool) => `${pool.type}:${pool.id ?? ''}` === value);
-      if (!nextPool) return;
+    (selection: SongGuessrPoolSelection) => {
+      poolSelectionRef.current = selection;
+      sessionPoolSelection = selection;
+      setPoolSelection(selection);
 
-      const nextState: SongGuessrPersistedState = {
-        ...persistedStateRef.current,
-        poolType: nextPool.type,
-        ...(nextPool.id ? { poolId: nextPool.id } : { poolId: undefined })
-      };
-      updatePersistedState(nextState);
-      saveSongGuessrState(nextState);
-      void startRound(nextState);
+      let currentState = persistedStateRef.current;
+      if (selection.poolType !== 'artist' && selection.poolType !== 'album') {
+        currentState = {
+          ...currentState,
+          poolType: selection.poolType,
+          ...(selection.poolId ? { poolId: selection.poolId } : { poolId: undefined })
+        };
+        updatePersistedState(currentState);
+        saveSongGuessrState(currentState);
+      }
+
+      void startRound(currentState, selection);
     },
-    [pools, startRound, updatePersistedState]
+    [startRound, updatePersistedState]
   );
 
   const closePrompt = useCallback(() => {
@@ -300,18 +322,6 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
     return () => container.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const poolOptions = useMemo(
-    () =>
-      pools.map((pool) => ({
-        value: `${pool.type}:${pool.id ?? ''}`,
-        label: pool.type === 'library' ? t('songGuessr.libraryPool') : pool.name
-      })),
-    [pools, t]
-  );
-
-  const selectedPoolValue = `${persistedState.poolType}:${
-    persistedState.poolType === 'library' ? '' : (persistedState.poolId ?? '')
-  }`;
   const unlockedSnippet =
     SONG_GUESSR_SNIPPETS[Math.min(attempts.length, SONG_GUESSR_SNIPPETS.length - 1)];
   const showResult = phase === 'won' || phase === 'lost';
@@ -346,25 +356,11 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
           </span>
         </span>
 
-        {/*
-          Title only. The streak lives down by the attempt dots instead: the
-          header has a hard width budget (icon + title + pool + two buttons),
-          and a chip squeezed in here was getting clipped in half.
-        */}
+        {/* Title only. Source controls live below, where their labels and full
+            artist/album names do not compete with the window actions. */}
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold leading-tight tracking-tight">
           {t('songGuessr.promptTitle')}
         </h1>
-
-        {poolOptions.length > 0 && (
-          <Dropdown
-            name="song-guessr-pool"
-            value={selectedPoolValue}
-            options={poolOptions}
-            onChange={(event) => changePool(event.target.value)}
-            className="!ml-0 h-9 w-32 flex-shrink-0 !rounded-xl border-2 px-2 text-xs sm:w-40"
-            isDisabled={phase === 'loading'}
-          />
-        )}
 
         {onMinimize && (
           <button
@@ -390,6 +386,13 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
+        <SongGuessrPoolSelector
+          pools={pools}
+          selection={poolSelection}
+          disabled={phase === 'loading'}
+          onChange={changePool}
+        />
+
         {phase === 'loading' && (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
             <span
@@ -411,7 +414,13 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
               <span className="material-icons-round text-3xl opacity-50">library_music</span>
             </span>
             <h2 className="text-lg font-semibold">{t('songGuessr.noRound')}</h2>
-            <p className="mt-2 max-w-sm text-sm opacity-60">{t('songGuessr.noRoundHint')}</p>
+            <p className="mt-2 max-w-sm text-sm opacity-60">
+              {poolSelection.poolType === 'artist'
+                ? t('songGuessr.noArtistRoundHint')
+                : poolSelection.poolType === 'album'
+                  ? t('songGuessr.noAlbumRoundHint')
+                  : t('songGuessr.noRoundHint')}
+            </p>
             <button
               type="button"
               onClick={() => void startRound(persistedStateRef.current)}

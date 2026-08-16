@@ -129,10 +129,17 @@ for ($i = 0; $i -lt ($Seconds * 4); $i++) {
 $elapsed = ((Get-Date) - $startedAt).TotalSeconds
 $cpuPercent = ((Get-TreeCpuSeconds) - $cpuBefore) / $elapsed * 100
 
+# Two memory figures on purpose. WorkingSet64 counts a shared page once per
+# process, so a tree of eight children is flattered against a tree of five even
+# when both hold the same memory; the private working set is what Task Manager
+# shows and what a reader can check by hand.
 $workingSet = 0
+$privateWorkingSet = 0
 foreach ($id in $want) {
   $p = Get-Process -Id ([int]$id) -ErrorAction SilentlyContinue
   if ($p) { $workingSet += $p.WorkingSet64 }
+  $perf = Get-CimInstance Win32_PerfRawData_PerfProc_Process -Filter "IDProcess=$id" -ErrorAction SilentlyContinue
+  if ($perf) { $privateWorkingSet += [int64]$perf.WorkingSetPrivate }
 }
 
 [pscustomobject]@{
@@ -142,4 +149,5 @@ foreach ($id in $want) {
   producedSound = ($samples -gt 4)
   cpuPercent    = [math]::Round($cpuPercent, 2)
   workingSetMb  = [math]::Round($workingSet / 1MB, 0)
+  privateWorkingSetMb = [math]::Round($privateWorkingSet / 1MB, 0)
 } | ConvertTo-Json -Compress

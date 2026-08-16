@@ -85,6 +85,7 @@ export function createDefaultStoreFiles(
     ],
     userData: defaultUserData(),
     listeningData: [],
+    listeningEvents: { version: 1, installId: '', tracks: {}, counters: {} },
     blacklist: { songBlacklist: [], folderBlacklist: [] },
     tierlists: [],
     cmrStats: {
@@ -133,7 +134,7 @@ export class StoreWriteError extends Error {
 
 /**
  * Synchronous cache over StorePort with one serialized, coalescing queue per
- * store. Hydration stages all eleven stores before making any of them visible.
+ * store. Hydration stages every registered store before making any of them visible.
  */
 export class CachedStores {
   private readonly files = new Map<StoreName, StoreFile<unknown>>();

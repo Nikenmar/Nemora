@@ -10,12 +10,15 @@ import storage from '../../utils/localStorage';
 import { loadSongGuessrState } from '../../utils/songGuessr/persistence';
 
 import Dropdown, { type DropdownOption } from '../Dropdown';
+import Recap from './Recap/Recap';
+import type { RecapPeriod, RecapSlide } from '@platform/core/stats/recap';
 import MainContainer from '../MainContainer';
 import Button from '../Button';
 import Img from '../Img';
 import StatTile from './StatTile';
 import ActivityBarGraph from './ActivityBarGraph';
 import ActivityCalendar from './ActivityCalendar';
+import ListeningPatternCharts from './ListeningPatternCharts';
 import TopSongRow from './TopSongRow';
 import TopNameRow from './TopNameRow';
 import SongGuessrStatsSection from './SongGuessrStatsSection';
@@ -23,12 +26,6 @@ import SongGuessrStatsSection from './SongGuessrStatsSection';
 import NoStatsImage from '../../assets/images/svg/Summer landscape_Monochromatic.svg';
 
 const ImportStatsPrompt = lazy(() => import('./ImportStatsPrompt'));
-
-const statsTimeRangeOptions: DropdownOption<StatsTimeRange>[] = [
-  { label: i18n.t('statsPage.timeRange_allTime'), value: 'allTime' },
-  { label: i18n.t('statsPage.timeRange_last12Months'), value: 'last12Months' },
-  { label: i18n.t('statsPage.timeRange_last30Days'), value: 'last30Days' }
-];
 
 const monthNames = [
   'january',
@@ -70,6 +67,41 @@ const StatsPage = () => {
     () => loadSongGuessrState().stats
   );
   const statsRequestIdRef = useRef(0);
+
+  const isYearRange = timeRange.startsWith('year:');
+  // The recap reads the range the user is already looking at: a selected year
+  // recaps that year, anything else recaps the year in progress. No second
+  // period picker, because the page already has one.
+  const [recapSlides, setRecapSlides] = useState<RecapSlide[]>();
+  const recapPeriod = useMemo<RecapPeriod>(
+    () => ({
+      kind: 'year',
+      year: isYearRange ? Number(timeRange.slice('year:'.length)) : new Date().getFullYear()
+    }),
+    [isYearRange, timeRange]
+  );
+  const openRecap = useCallback(() => {
+    window.api.statsData
+      .getRecap(recapPeriod)
+      .then((slides) => setRecapSlides(slides))
+      .catch((error: unknown) => console.error('Could not build the recap.', error));
+  }, [recapPeriod]);
+  const timeRangeOptions = useMemo<DropdownOption<StatsTimeRange>[]>(() => {
+    const selectedYear = isYearRange ? Number(timeRange.slice('year:'.length)) : undefined;
+    const years = new Set(stats?.availableYears ?? []);
+    // A previously selected year may disappear after a library change. Keep
+    // that known selection visible while its honest empty response is shown.
+    if (selectedYear !== undefined && Number.isInteger(selectedYear)) years.add(selectedYear);
+
+    return [
+      { label: t('statsPage.timeRange_allTime'), value: 'allTime' },
+      { label: t('statsPage.timeRange_last12Months'), value: 'last12Months' },
+      { label: t('statsPage.timeRange_last30Days'), value: 'last30Days' },
+      ...[...years]
+        .sort((a, b) => b - a)
+        .map((year) => ({ label: `${year}`, value: `year:${year}` as StatsTimeRange }))
+    ];
+  }, [isYearRange, stats?.availableYears, t, timeRange]);
 
   useEffect(() => {
     setSongGuessrStats(loadSongGuessrState().stats);
@@ -197,9 +229,24 @@ const StatsPage = () => {
     );
   }, [stats]);
 
+  const allTimeLabel = useCallback(
+    (label: string, scope: StatsFigureScope | undefined) =>
+      scope === 'allTime' ? t('statsPage.allTimeLabel', { label }) : label,
+    [t]
+  );
+
+  const yearRangeLabel = useCallback(
+    (label: string, scope: StatsFigureScope | undefined) =>
+      isYearRange && scope === 'allTime' ? t('statsPage.notFilteredByYearLabel', { label }) : label,
+    [isYearRange, t]
+  );
+
   const hasData =
     !!stats &&
-    (stats.totals.totalListens > 0 || stats.elo.totalDuels > 0 || songGuessrStats.gamesPlayed > 0);
+    (stats.availableYears.length > 0 ||
+      stats.elo.totalDuels > 0 ||
+      songGuessrStats.gamesPlayed > 0 ||
+      isYearRange);
 
   return (
     <MainContainer className="stats-page appear-from-bottom !h-full overflow-hidden !pb-0 text-font-color-black dark:text-font-color-white">
@@ -207,6 +254,12 @@ const StatsPage = () => {
         <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
           <div className="container flex items-center">{t('statsPage.title')}</div>
           <div className="other-controls-container flex items-center">
+            <Button
+              label={t('statsPage.recap.open')}
+              iconName="auto_awesome"
+              className="stats-recap-btn mr-2 text-sm md:text-lg"
+              clickHandler={openRecap}
+            />
             <Button
               label={t('statsPage.exportStats')}
               iconName="download"
@@ -222,11 +275,19 @@ const StatsPage = () => {
             <Dropdown
               name="statsTimeRangeDropdown"
               value={timeRange}
-              options={statsTimeRangeOptions}
+              options={timeRangeOptions}
               onChange={(e) => setTimeRange(e.currentTarget.value as StatsTimeRange)}
             />
           </div>
         </div>
+
+        {recapSlides && (
+          <Recap
+            slides={recapSlides}
+            period={recapPeriod}
+            onClose={() => setRecapSlides(undefined)}
+          />
+        )}
 
         {hasData ? (
           <div className="stats-content-container h-full overflow-y-auto overflow-x-hidden p-1 pb-8 pr-4">
@@ -236,16 +297,26 @@ const StatsPage = () => {
                 value={valueRounder(stats.totals.totalListens)}
               />
               <StatTile
-                label={t('statsPage.fullListens')}
+                label={allTimeLabel(t('statsPage.fullListens'), stats.scopes.fullListens)}
                 value={valueRounder(stats.totals.fullListens)}
               />
-              <StatTile label={t('statsPage.skips')} value={valueRounder(stats.totals.skips)} />
+              <StatTile
+                label={allTimeLabel(t('statsPage.skips'), stats.scopes.skips)}
+                value={valueRounder(stats.totals.skips)}
+              />
               <StatTile label={t('statsPage.approxListeningTime')} value={approxListeningTime} />
               <StatTile
                 label={t('statsPage.songsPlayed')}
                 value={valueRounder(stats.totals.distinctSongsPlayed)}
               />
-              <ActivityCalendar days={stats.calendar.days} />
+              <ActivityCalendar
+                days={stats.calendar.days}
+                note={
+                  isYearRange && stats.scopes.calendar === 'allTime'
+                    ? t('statsPage.calendarRangeNote')
+                    : undefined
+                }
+              />
             </div>
 
             <section className="mb-6">
@@ -253,11 +324,16 @@ const StatsPage = () => {
                 {t('statsPage.listeningActivity')}
               </h2>
               <ActivityBarGraph key={stats.timeRange} data={activityData} />
+              <ListeningPatternCharts
+                hourHistogram={stats.hourHistogram}
+                weekdayHistogram={stats.weekdayHistogram}
+                hourDataSince={stats.hourDataSince}
+              />
             </section>
 
             <section className="mb-6">
               <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-                {t('statsPage.listeningCalendar')}
+                {yearRangeLabel(t('statsPage.listeningCalendar'), stats.scopes.calendar)}
               </h2>
               <div className="grid grid-cols-3 gap-3">
                 <StatTile
@@ -344,7 +420,7 @@ const StatsPage = () => {
               </section>
               <section>
                 <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-                  {t('statsPage.mostSkipped')}
+                  {yearRangeLabel(t('statsPage.mostSkipped'), stats.scopes.mostSkipped)}
                 </h2>
                 <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
                   <ul>
@@ -372,7 +448,7 @@ const StatsPage = () => {
             {stats.elo.totalDuels > 0 && (
               <section className="mb-6">
                 <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-                  {t('eloDuels.sectionTitle')}
+                  {yearRangeLabel(t('eloDuels.sectionTitle'), stats.scopes.elo)}
                 </h2>
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">

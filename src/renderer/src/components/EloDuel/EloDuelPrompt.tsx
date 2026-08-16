@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -8,6 +8,8 @@ import { getDuelTickets, peekFirstAliveDuelPair, setDuelTickets } from '../../ut
 
 import Button from '../Button';
 import DuelCard from './DuelCard';
+import TournamentPanel from './Tournament/TournamentPanel';
+import type { TournamentState } from '@platform/core/stats/tournaments';
 
 type DuelPhase = 'voting' | 'submitting' | 'result';
 
@@ -54,6 +56,12 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
   const [previewingSongId, setPreviewingSongId] = useState<string>();
   const [remainingQueuedDuels, setRemainingQueuedDuels] = useState(persistedQueuedDuels);
   const [showNextRetry, setShowNextRetry] = useState(false);
+  // The tournament is a second face of the same duel: it votes through the same
+  // path and writes the same ratings, so it lives beside the single duel rather
+  // than on a page of its own.
+  const [isTournamentOpen, setIsTournamentOpen] = useState(false);
+  const [tournament, setTournament] = useState<TournamentState>();
+  const tournamentSongs = useMemo(() => [pair.songA, pair.songB], [pair.songA, pair.songB]);
 
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const remainingQueuedDuelsRef = useRef(persistedQueuedDuels);
@@ -233,7 +241,15 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
   return (
     <>
       <div className="title-container relative mb-6 mt-1 flex items-center justify-center px-12 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        {t('eloDuels.promptTitle')}
+        {isTournamentOpen ? t('duels.tournament.title') : t('eloDuels.promptTitle')}
+        <Button
+          iconName={isTournamentOpen ? 'swords' : 'trophy'}
+          tooltipLabel={
+            isTournamentOpen ? t('duels.tournament.backToDuel') : t('duels.tournament.open')
+          }
+          className="absolute left-0 top-0 !m-0 h-8 w-8 !rounded-md !border-0 !bg-transparent !p-0 opacity-65 hover:!bg-background-color-2 hover:opacity-100 dark:hover:!bg-dark-background-color-2"
+          clickHandler={() => setIsTournamentOpen((open) => !open)}
+        />
         {onMinimize && (
           <Button
             iconName="minimize"
@@ -249,91 +265,117 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
         </div>
       )}
 
-      <div className="duel-cards-container flex items-center justify-center gap-6">
-        <DuelCard
-          entry={pair.songA}
-          onVote={() => vote(pair.songA.songId)}
-          onPreviewToggle={() => togglePreview(pair.songA)}
-          isPreviewing={previewingSongId === pair.songA.songId}
-          isDisabled={phase !== 'voting'}
-          showResult={phase === 'result'}
-          isWinner={winnerSongId === pair.songA.songId}
-          delta={result?.deltaA}
+      {isTournamentOpen ? (
+        <TournamentPanel
+          tournament={tournament}
+          songs={tournamentSongs}
+          previewingSongId={previewingSongId}
+          onStart={async (size) => {
+            const started = await window.api.eloDuels.startTournament(size);
+            setTournament(started);
+            return started;
+          }}
+          onResume={async () => {
+            const prepared = await window.api.eloDuels.resumeTournament();
+            setTournament(prepared?.state);
+            return prepared;
+          }}
+          onSubmit={async (matchId, winnerId) => {
+            const submission = await window.api.eloDuels.submitTournamentDuel(matchId, winnerId);
+            setTournament(submission.tournament);
+            return submission;
+          }}
+          onPreviewToggle={togglePreview}
         />
-        <span className="text-2xl font-semibold opacity-60">VS</span>
-        <DuelCard
-          entry={pair.songB}
-          onVote={() => vote(pair.songB.songId)}
-          onPreviewToggle={() => togglePreview(pair.songB)}
-          isPreviewing={previewingSongId === pair.songB.songId}
-          isDisabled={phase !== 'voting'}
-          showResult={phase === 'result'}
-          isWinner={winnerSongId === pair.songB.songId}
-          delta={result?.deltaB}
-        />
-      </div>
-
-      <div className="buttons-container mt-8 flex min-h-10 items-center justify-center gap-4">
-        <div
-          aria-hidden={phase === 'result'}
-          className={`flex flex-col items-center gap-2 transition-opacity duration-150 ${
-            phase === 'result'
-              ? 'pointer-events-none invisible'
-              : phase === 'submitting'
-                ? 'pointer-events-none opacity-50'
-                : ''
-          }`}
-        >
-          <span id="duel-skip-reason-label" className="text-xs opacity-65">
-            {t('eloDuels.skipReasonLabel')}
-          </span>
-          <div
-            role="group"
-            aria-labelledby="duel-skip-reason-label"
-            className="flex flex-wrap justify-center gap-2"
-          >
-            <Button
-              label={t('eloDuels.tooClose')}
-              iconName="balance"
-              tooltipLabel={t('eloDuels.tooCloseHint')}
-              isDisabled={phase !== 'voting'}
-              className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
-              clickHandler={() => skipDuel('tooClose')}
-            />
-            <Button
-              label={t('eloDuels.tooDifferent')}
-              iconName="call_split"
-              tooltipLabel={t('eloDuels.tooDifferentHint')}
-              isDisabled={phase !== 'voting'}
-              className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
-              clickHandler={() => skipDuel('tooDifferent')}
-            />
-            <Button
-              label={t('eloDuels.cantDecide')}
-              iconName="help_outline"
-              tooltipLabel={t('eloDuels.cantDecideHint')}
-              isDisabled={phase !== 'voting'}
-              className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
-              clickHandler={() => skipDuel('cantDecide')}
-            />
-          </div>
+      ) : (
+        <div className="duel-cards-container flex items-center justify-center gap-6">
+          <DuelCard
+            entry={pair.songA}
+            onVote={() => vote(pair.songA.songId)}
+            onPreviewToggle={() => togglePreview(pair.songA)}
+            isPreviewing={previewingSongId === pair.songA.songId}
+            isDisabled={phase !== 'voting'}
+            showResult={phase === 'result'}
+            isWinner={winnerSongId === pair.songA.songId}
+            delta={result?.deltaA}
+          />
+          <span className="text-2xl font-semibold opacity-60">VS</span>
+          <DuelCard
+            entry={pair.songB}
+            onVote={() => vote(pair.songB.songId)}
+            onPreviewToggle={() => togglePreview(pair.songB)}
+            isPreviewing={previewingSongId === pair.songB.songId}
+            isDisabled={phase !== 'voting'}
+            showResult={phase === 'result'}
+            isWinner={winnerSongId === pair.songB.songId}
+            delta={result?.deltaB}
+          />
         </div>
-        {phase === 'result' && showNextRetry && (
-          <Button
-            label={t('eloDuels.nextDuel')}
-            iconName="bolt"
-            className="next-duel-btn !bg-background-color-3 px-6 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
-            clickHandler={advanceAfterResult}
-          />
-        )}
-        {!onMinimize && (
-          <Button
-            label={t('eloDuels.close')}
-            className="close-duel-btn !bg-background-color-3 px-6 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
-            clickHandler={closePrompt}
-          />
-        )}
-      </div>
+      )}
+
+      {!isTournamentOpen && (
+        <div className="buttons-container mt-8 flex min-h-10 items-center justify-center gap-4">
+          <div
+            aria-hidden={phase === 'result'}
+            className={`flex flex-col items-center gap-2 transition-opacity duration-150 ${
+              phase === 'result'
+                ? 'pointer-events-none invisible'
+                : phase === 'submitting'
+                  ? 'pointer-events-none opacity-50'
+                  : ''
+            }`}
+          >
+            <span id="duel-skip-reason-label" className="text-xs opacity-65">
+              {t('eloDuels.skipReasonLabel')}
+            </span>
+            <div
+              role="group"
+              aria-labelledby="duel-skip-reason-label"
+              className="flex flex-wrap justify-center gap-2"
+            >
+              <Button
+                label={t('eloDuels.tooClose')}
+                iconName="balance"
+                tooltipLabel={t('eloDuels.tooCloseHint')}
+                isDisabled={phase !== 'voting'}
+                className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                clickHandler={() => skipDuel('tooClose')}
+              />
+              <Button
+                label={t('eloDuels.tooDifferent')}
+                iconName="call_split"
+                tooltipLabel={t('eloDuels.tooDifferentHint')}
+                isDisabled={phase !== 'voting'}
+                className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                clickHandler={() => skipDuel('tooDifferent')}
+              />
+              <Button
+                label={t('eloDuels.cantDecide')}
+                iconName="help_outline"
+                tooltipLabel={t('eloDuels.cantDecideHint')}
+                isDisabled={phase !== 'voting'}
+                className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                clickHandler={() => skipDuel('cantDecide')}
+              />
+            </div>
+          </div>
+          {phase === 'result' && showNextRetry && (
+            <Button
+              label={t('eloDuels.nextDuel')}
+              iconName="bolt"
+              className="next-duel-btn !bg-background-color-3 px-6 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+              clickHandler={advanceAfterResult}
+            />
+          )}
+          {!onMinimize && (
+            <Button
+              label={t('eloDuels.close')}
+              className="close-duel-btn !bg-background-color-3 px-6 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+              clickHandler={closePrompt}
+            />
+          )}
+        </div>
+      )}
     </>
   );
 };

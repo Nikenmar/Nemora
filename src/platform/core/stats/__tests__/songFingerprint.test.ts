@@ -1,4 +1,9 @@
-import { fingerprintOfSong, relinkOrphanedListeningRows } from '../songFingerprint';
+import {
+  fingerprintOfSong,
+  relinkOrphanedListeningRows,
+  relinkOrphanedRatings,
+  relinkOrphanedTierlistItems
+} from '../songFingerprint';
 
 /**
  * The regression this guards is not a crash, it is a year of listening history
@@ -117,5 +122,152 @@ describe('relinkOrphanedListeningRows', () => {
     const rows = [row('new-1', 5, fingerprintOfSong(live))];
 
     expect(relinkOrphanedListeningRows(rows, [live])).toEqual({ rows, relinked: 0 });
+  });
+});
+
+describe('relinkOrphanedRatings', () => {
+  test('reattaches the rating, history, and skip feedback without mutating the input', () => {
+    const before = song('old-1', { title: 'Slow Waves', path: 'D:\\Music\\slow.flac' });
+    const after = song('new-1', { title: 'Slow Waves', path: 'D:\\Music\\slow.flac' });
+    const cmrStats: CmrStatsData = {
+      elo: {
+        ratings: {
+          'old-1': {
+            rating: 1312,
+            games: 4,
+            wins: 3,
+            losses: 1,
+            fingerprint: fingerprintOfSong(before)
+          } as EloSongRating & { fingerprint: SongFingerprint }
+        },
+        history: [
+          {
+            at: 1,
+            songAId: 'old-1',
+            songBId: 'other',
+            winner: 'A',
+            deltaA: 12,
+            deltaB: -12
+          }
+        ],
+        totalDuels: 1
+      },
+      importedStatsExportIds: [],
+      duelMatchmaking: {
+        skippedPairs: [{ at: 2, songAId: 'other', songBId: 'old-1', reason: 'cantDecide' }]
+      }
+    };
+
+    const result = relinkOrphanedRatings(cmrStats, [after]);
+    const rating = result.cmrStats.elo.ratings['new-1'] as EloSongRating & {
+      fingerprint?: SongFingerprint;
+    };
+
+    expect(result.relinked).toBe(1);
+    expect(result.cmrStats.elo.ratings).not.toHaveProperty('old-1');
+    expect(rating).toMatchObject({ rating: 1312, fingerprint: { songId: 'new-1' } });
+    expect(result.cmrStats.elo.history[0]).toMatchObject({
+      songAId: 'new-1',
+      songBId: 'other'
+    });
+    expect(result.cmrStats.duelMatchmaking?.skippedPairs[0]).toMatchObject({
+      songAId: 'other',
+      songBId: 'new-1'
+    });
+    expect(cmrStats.elo.ratings).toHaveProperty('old-1');
+    expect(cmrStats.elo.history[0].songAId).toBe('old-1');
+  });
+
+  test('does not overwrite a rating already accumulated under the new id', () => {
+    const before = song('old-1', { path: 'D:\\Music\\same.flac' });
+    const after = song('new-1', { path: 'D:\\Music\\same.flac' });
+    const cmrStats: CmrStatsData = {
+      elo: {
+        ratings: {
+          'old-1': {
+            rating: 1400,
+            games: 8,
+            wins: 6,
+            losses: 2,
+            fingerprint: fingerprintOfSong(before)
+          } as EloSongRating & { fingerprint: SongFingerprint },
+          'new-1': { rating: 1210, games: 1, wins: 1, losses: 0 }
+        },
+        history: [],
+        totalDuels: 0
+      },
+      importedStatsExportIds: []
+    };
+
+    const result = relinkOrphanedRatings(cmrStats, [after]);
+
+    expect(result.relinked).toBe(0);
+    expect(result.cmrStats.elo.ratings['new-1'].rating).toBe(1210);
+    expect(result.cmrStats.elo.ratings).toHaveProperty('old-1');
+  });
+});
+
+describe('relinkOrphanedTierlistItems', () => {
+  test('restores a card to its stored tier and position', () => {
+    const before = song('old-1', { title: 'Slow Waves', path: 'D:\\Music\\slow.flac' });
+    const after = song('new-1', { title: 'Slow Waves', path: 'D:\\Music\\slow.flac' });
+    const tierlists: SavableTierlist[] = [
+      {
+        tierlistId: 'tierlist',
+        name: 'Ranking',
+        createdDate: new Date(0),
+        sourcePlaylistIds: [],
+        tiers: [
+          {
+            tierId: 's',
+            name: 'S',
+            items: ['keep'],
+            orphanedItems: [{ songId: 'old-1', index: 0, fingerprint: fingerprintOfSong(before) }]
+          } as TierRow & {
+            orphanedItems: Array<{
+              songId: string;
+              index: number;
+              fingerprint: SongFingerprint;
+            }>;
+          }
+        ],
+        labelMode: 'track'
+      }
+    ];
+
+    const result = relinkOrphanedTierlistItems(tierlists, [after]);
+    const tier = result.tierlists[0].tiers[0] as TierRow & { orphanedItems?: unknown[] };
+
+    expect(result.relinked).toBe(1);
+    expect(tier.items).toEqual(['new-1', 'keep']);
+    expect(tier.orphanedItems).toBeUndefined();
+    expect(tierlists[0].tiers[0].items).toEqual(['keep']);
+  });
+
+  test('keeps the detached placement when the fingerprint is ambiguous', () => {
+    const before = song('old-1', { title: 'Intro', path: 'D:\\Music\\intro.flac' });
+    const tier = {
+      tierId: 's',
+      name: 'S',
+      items: [],
+      orphanedItems: [{ songId: 'old-1', index: 0, fingerprint: fingerprintOfSong(before) }]
+    } as TierRow & {
+      orphanedItems: Array<{ songId: string; index: number; fingerprint: SongFingerprint }>;
+    };
+    const tierlist: SavableTierlist = {
+      tierlistId: 'tierlist',
+      name: 'Ranking',
+      createdDate: new Date(0),
+      sourcePlaylistIds: [],
+      tiers: [tier],
+      labelMode: 'track'
+    };
+    const first = song('new-1', { title: 'Intro', path: 'D:\\Music\\A\\intro.flac' });
+    const second = song('new-2', { title: 'Intro', path: 'D:\\Music\\B\\intro.flac' });
+
+    const result = relinkOrphanedTierlistItems([tierlist], [first, second]);
+
+    expect(result.relinked).toBe(0);
+    expect((result.tierlists[0].tiers[0] as typeof tier).orphanedItems[0].songId).toBe('old-1');
   });
 });

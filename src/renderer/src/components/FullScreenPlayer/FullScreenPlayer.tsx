@@ -21,6 +21,7 @@ const FullScreenPlayer = () =>
     const isCurrentSongPlaying = useStore(store, (state) => state.player.isCurrentSongPlaying);
     const currentSongData = useStore(store, (state) => state.currentSongData);
     const preferences = useStore(store, (state) => state.localStorage.preferences);
+    const isOnBatteryPower = useStore(store, (state) => state.isOnBatteryPower);
 
     const [isLyricsVisible, setIsLyricsVisible] = useState(false);
     const [isLyricsAvailable, setIsLyricsAvailable] = useState(false);
@@ -34,11 +35,11 @@ const FullScreenPlayer = () =>
     });
 
     useEffect(() => {
-      if (preferences.allowToPreventScreenSleeping && !preferences.removeAnimationsOnBatteryPower)
+      if (preferences.allowToPreventScreenSleeping && !isOnBatteryPower)
         window.api.appControls.stopScreenSleeping();
       else window.api.appControls.allowScreenSleeping();
       return () => window.api.appControls.allowScreenSleeping();
-    }, [preferences.allowToPreventScreenSleeping, preferences.removeAnimationsOnBatteryPower]);
+    }, [preferences.allowToPreventScreenSleeping, isOnBatteryPower]);
 
     const imgPath = useMemo(() => {
       const selectedArtist = currentSongData?.artists?.find(

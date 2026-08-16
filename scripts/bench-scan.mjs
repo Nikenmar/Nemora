@@ -42,7 +42,9 @@ const QUIET_MS = Number(flag('quiet', 6000));
 const POLL_MS = 250;
 
 if (!profile) {
-  console.error('usage: node scripts/bench-scan.mjs --profile <dir> [--label <name>] [--expect <songs>]');
+  console.error(
+    'usage: node scripts/bench-scan.mjs --profile <dir> [--label <name>] [--expect <songs>]'
+  );
   process.exit(1);
 }
 
@@ -120,8 +122,13 @@ for (;;) {
   }
 }
 
-const total = coversDoneAt - startedAt;
-const toSongs = songsDoneAt - startedAt;
+// Two anchors, both recorded. The click is the honest one; the first-write
+// anchor stays so runs published before this change remain comparable.
+const total = coversDoneAt - clickedAt;
+const toSongs = songsDoneAt - clickedAt;
+const firstWriteMs = startedAt ? startedAt - clickedAt : null;
+const legacyCompleteMs = startedAt ? coversDoneAt - startedAt : null;
+const legacyUsableMs = startedAt ? songsDoneAt - startedAt : null;
 const addedSongs = songs - baselineSongs;
 const addedCovers = covers - baselineCovers;
 
@@ -145,13 +152,23 @@ previous.runs.push({
   coversWritten: addedCovers,
   usableMs: toSongs,
   completeMs: total,
-  msPerTrack: total / Math.max(addedSongs, 1)
+  msPerTrack: total / Math.max(addedSongs, 1),
+  /** How long the app worked before it wrote anything at all. */
+  firstWriteMs,
+  /** The old first-write anchor, kept so earlier runs stay comparable. */
+  legacyUsableMs,
+  legacyCompleteMs,
+  startAnchor: process.argv.includes('--start-now') ? 'script' : 'operator-click'
 });
 previous.note =
-  'Time from the first song appearing to the library going quiet. Both halves are ' +
-  'reported: songs listed, then covers finished. The folder is added by hand because ' +
-  'neither player scans on startup; everything after that click is measured from the ' +
-  'profile on disk.';
+  'Timed from the operator clicking "add folder" to the library going quiet, which ' +
+  'includes the reading and parsing that happens before a player writes anything. ' +
+  'Both halves are reported: songs listed, then covers finished, plus how long the ' +
+  'app worked before its first write. Runs recorded before 2026-08-17 used the first ' +
+  'write as the anchor instead, which measured how a player BATCHES its writes rather ' +
+  'than how fast it scans: a player that commits its catalogue in one go scored 0.0 s ' +
+  'for "library usable". Those runs carry no startAnchor field and are not comparable ' +
+  'with the ones that do.';
 writeFileSync(outPath, JSON.stringify(previous, null, 2));
 console.log(`\nwrote ${outPath}`);
 

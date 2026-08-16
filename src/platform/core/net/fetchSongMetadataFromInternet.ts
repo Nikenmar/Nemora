@@ -37,43 +37,39 @@ async function fetchSongMetadataFromMusixmatch(songTitle: string, songArtist?: s
   url.searchParams.set('q_track', songTitle);
   if (songArtist) url.searchParams.set('q_artist', songArtist);
 
-  try {
-    const res = await fetch(url, { headers, signal: resultsController.signal });
-    if (res.ok) {
-      const data = (await res.json()) as MusixmatchLyricsAPI;
-      const metadata = await parseSongMetadataFromMusixmatchApiData(data, true);
-      const lyrics = await parseMusicmatchDataFromLyrics(data, 'ANY');
-
-      if (metadata) {
-        const { title, artist, duration, lang, album, album_artwork_urls } = metadata;
-        const result: SongMetadataResultFromInternet = {
-          title,
-          album,
-          artworkPaths: album_artwork_urls,
-          duration,
-          artists: [artist],
-          language: lang,
-          lyrics: lyrics ? lyrics.lyrics : undefined,
-          source: 'MUSIXMATCH',
-          // Musixmatch api isn't working as expected to provide searching for multiple hits.
-          sourceId: title
-        };
-
-        musixmatchHitCache.id = metadata.title;
-        musixmatchHitCache.data = result;
-
-        return [result];
-      }
-    }
+  const res = await fetch(url, { headers, signal: resultsController.signal });
+  if (!res.ok) {
     logger.warn(`Failed to fetch song metadata from Musixmatch`, {
       status: res.status,
       statusText: res.statusText
     });
-    return [];
-  } catch (error) {
-    logger.error(`Failed to fetch song metadata from Musixmatch`, { error });
-    return [];
+    throw new Error(`Musixmatch metadata request failed with status ${res.status}.`);
   }
+
+  const data = (await res.json()) as MusixmatchLyricsAPI;
+  const metadata = await parseSongMetadataFromMusixmatchApiData(data, true);
+  const lyrics = await parseMusicmatchDataFromLyrics(data, 'ANY');
+
+  if (!metadata) return [];
+
+  const { title, artist, duration, lang, album, album_artwork_urls } = metadata;
+  const result: SongMetadataResultFromInternet = {
+    title,
+    album,
+    artworkPaths: album_artwork_urls,
+    duration,
+    artists: [artist],
+    language: lang,
+    lyrics: lyrics ? lyrics.lyrics : undefined,
+    source: 'MUSIXMATCH',
+    // Musixmatch api isn't working as expected to provide searching for multiple hits.
+    sourceId: title
+  };
+
+  musixmatchHitCache.id = metadata.title;
+  musixmatchHitCache.data = result;
+
+  return [result];
 }
 
 const ITUNES_API_URL = 'https://itunes.apple.com/';
@@ -118,13 +114,14 @@ async function fetchSongMetadataResultsFromITunes(
       itunesHitsCache = outputResults;
       return outputResults;
     }
-    logger.warn(`Failed to fetch song metadata from itunes api.`, { songArtist, songTitle });
+    if (data?.errorMessage) throw new Error(data.errorMessage);
+    return [];
   }
-  logger.error('Failed to fetch song metadata results from LastFM', {
+  logger.error('Failed to fetch song metadata results from iTunes', {
     status: res.status,
     statusText: res.statusText
   });
-  return [];
+  throw new Error(`iTunes metadata request failed with status ${res.status}.`);
 }
 
 const fetchSongMetadataFromItunes = (sourceId: string) => {
@@ -183,11 +180,13 @@ async function fetchSongMetadataResultsFromLastFM(
     }
   }
 
+  if (res.ok) return [];
+
   logger.warn('Failed to fetch song metadata results from LastFM.', {
     status: res.status,
     statusText: res.statusText
   });
-  return [];
+  throw new Error(`LastFM metadata request failed with status ${res.status}.`);
 }
 
 const GENIUS_API_BASE_URL = 'https://api.genius.com/';
@@ -257,7 +256,7 @@ async function searchSongMetadataResultsInGenius(
     status: res.status,
     statusText: res.statusText
   });
-  return [];
+  throw new Error(`Genius metadata request failed with status ${res.status}.`);
 }
 
 async function fetchSongMetadataFromGenius(
@@ -355,13 +354,20 @@ async function searchSongMetadataResultsInDeezer(
       }
       return results;
     }
-    throw new Error(`No results found for the query in Deezer.`);
+    return [];
   }
   logger.warn(`Failed to fetch song metadata results from Deezer`, {
     status: res.status,
     statusText: res.statusText
   });
-  return [];
+  throw new Error(`Deezer metadata request failed with status ${res.status}.`);
+}
+
+export class MetadataProvidersUnavailableError extends Error {
+  constructor() {
+    super('All metadata providers failed.');
+    this.name = 'MetadataProvidersUnavailableError';
+  }
 }
 
 async function fetchSongMetadataFromDeezer(
@@ -417,36 +423,27 @@ export const searchSongMetadataResultsInInternet = async (
   songArtsits = [] as string[]
 ) => {
   // resultsController.abort();
-  const itunesHits = fetchSongMetadataResultsFromITunes(
-    songTitle,
-    songArtsits ? songArtsits.join(' ') : undefined
-  ).catch((error) => logger.warn(`Failed to fetch song metadata hits from iTunes API.`, { error }));
-  const geniusHits = searchSongMetadataResultsInGenius(
-    songTitle,
-    songArtsits ? songArtsits.join(' ') : undefined
-  ).catch((error) => logger.warn(`Failed to fetch song metadata hits from Genius API.`, { error }));
-  const lastFMHits = fetchSongMetadataResultsFromLastFM(
-    songTitle,
-    songArtsits ? songArtsits.join(' ') : undefined
-  ).catch((error) => logger.warn(`Failed to fetch song metadata hits from LastFM API.`, { error }));
-  const musixmatchHits = fetchSongMetadataFromMusixmatch(
-    songTitle,
-    songArtsits ? songArtsits.join(' ') : undefined
-  ).catch((error) =>
-    logger.warn(`Failed to fetch song metadata hits from Musixmatch API.`, { error })
-  );
-  const deezerHits = searchSongMetadataResultsInDeezer(
-    songTitle,
-    songArtsits ? songArtsits.join(' ') : undefined
-  ).catch((error) =>
-    logger.warn(`Failed to fetch song metadata hits from Deezer API.;`, { error })
-  );
+  const providers = [
+    fetchSongMetadataFromMusixmatch(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
+    fetchSongMetadataResultsFromITunes(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
+    searchSongMetadataResultsInGenius(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
+    searchSongMetadataResultsInDeezer(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
+    fetchSongMetadataResultsFromLastFM(songTitle, songArtsits ? songArtsits.join(' ') : undefined)
+  ];
 
-  const hits = await Promise.all([musixmatchHits, itunesHits, geniusHits, deezerHits, lastFMHits]);
-  const allHits = hits.flat(2);
+  const results = await Promise.allSettled(providers);
+  const failures = results.filter((result) => result.status === 'rejected');
 
-  if (Array.isArray(allHits) && allHits.length > 0) return allHits.filter((x) => x);
-  return [];
+  failures.forEach((failure) => {
+    if (failure.status === 'rejected')
+      logger.warn('Failed to fetch song metadata hits from a provider.', {
+        error: failure.reason
+      });
+  });
+
+  if (failures.length === providers.length) throw new MetadataProvidersUnavailableError();
+
+  return results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
 };
 
 export const fetchSongMetadataFromInternet = async (

@@ -21,11 +21,12 @@ describe('resetAppData', () => {
         'playlists.json',
         'userData.json',
         'listening_data.json',
+        'listening_events.json',
         'blacklist.json',
         'song_covers'
       ].map((name) => joinPath(PROFILE_ROOT, name))
     );
-    expect(repo.removed[8]?.options).toEqual({ recursive: true });
+    expect(repo.removed[9]?.options).toEqual({ recursive: true });
     expect(repo.removed[0]?.options).toEqual({ recursive: false });
   });
 
@@ -40,7 +41,7 @@ describe('resetAppData', () => {
 
     await resetAppData(repo);
 
-    expect(removedCount).toBe(9);
+    expect(removedCount).toBe(10);
   });
 
   test('swallows unrecoverable errors and reports them through the logger', async () => {
