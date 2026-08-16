@@ -1,13 +1,13 @@
 {
   "latestVersion": {
-    "version": "1.0.6-stable",
+    "version": "1.0.7-stable",
     "phase": "stable",
-    "releaseDate": "2026-08-15T12:00:00.000Z"
+    "releaseDate": "2026-08-16T12:00:00.000Z"
   },
   "versions": [
     {
-      "version": "1.0.6-stable",
-      "releaseDate": "2026-08-15T12:00:00.000Z",
+      "version": "1.0.7-stable",
+      "releaseDate": "2026-08-16T12:00:00.000Z",
       "notes": {
         "new": [],
         "fixed": [
@@ -22,6 +22,9 @@
           },
           {
             "note": "Opening a file from Explorer while minimized now restores the window."
+          },
+          {
+            "note": "Importing stats no longer fails on creating a backup."
           }
         ],
         "knownIssues": [

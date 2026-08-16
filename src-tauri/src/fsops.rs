@@ -676,6 +676,51 @@ mod tests {
     }
 
     #[test]
+    fn copy_file_atomic_backs_a_store_up_and_reports_a_missing_source() {
+        // The route the pre-import backup takes. It has to survive a backups
+        // folder that does not exist yet, and it has to FAIL LOUDLY on a missing
+        // source rather than leave a truncated file behind: the caller decides
+        // whether an absent store is normal, and it decides that by asking
+        // beforehand, not by reading this error.
+        let directory = TestDirectory::create();
+        let source = directory.path().join("cmr_stats.json");
+        fs::write(&source, br#"{"cmrStats":{"elo":{"totalDuels":7}}}"#)
+            .expect("fixture store should be writable");
+        let destination = directory
+            .path()
+            .join("backups")
+            .join("cmr_stats.json.backup.1.json");
+
+        tauri::async_runtime::block_on(copy_file_atomic(
+            source.to_string_lossy().into_owned(),
+            destination.to_string_lossy().into_owned(),
+        ))
+        .expect("copying a store into a missing backups folder should succeed");
+
+        assert_eq!(
+            fs::read(&destination).expect("backup should be readable"),
+            br#"{"cmrStats":{"elo":{"totalDuels":7}}}"#
+        );
+        assert!(temp_artifacts(destination.parent().unwrap()).is_empty());
+
+        let missing = directory.path().join("tierlists.json");
+        let error = tauri::async_runtime::block_on(copy_file_atomic(
+            missing.to_string_lossy().into_owned(),
+            directory
+                .path()
+                .join("backups")
+                .join("tierlists.json.backup.1.json")
+                .to_string_lossy()
+                .into_owned(),
+        ))
+        .expect_err("a missing source must not report success");
+        assert!(
+            !error.is_empty(),
+            "the rejection has to carry a reason, it is the only diagnostic the caller gets"
+        );
+    }
+
+    #[test]
     fn atomic_write_creates_a_missing_profile_directory() {
         // The first run of a real install: %APPDATA%\Nemora does not exist yet,
         // and the very first store write has to make it. This shipped broken in

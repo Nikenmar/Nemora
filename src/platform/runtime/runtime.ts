@@ -628,7 +628,7 @@ export class NoraRuntime {
       writeTextFileAtomic: (path, contents) => files.writeTextFileAtomic(path, contents),
       exists: (path) => files.exists(path),
       makeDir: (path, options) => files.makeDir(path, options),
-      copyFile: (source, destination) => files.copyFile(source, destination),
+      copyFileAtomic: (source, destination) => files.copyFileAtomic(source, destination),
       emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
       appVersion: this.version,
       logger

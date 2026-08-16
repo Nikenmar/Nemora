@@ -69,7 +69,7 @@ export interface MockTransferState {
 
 export interface MockTransferRepo extends StatsTransferRepository {
   state: MockTransferState;
-  /** All files "on disk" (used by readTextFile / exists / copyFile). */
+  /** All files "on disk" (used by readTextFile / exists / copyFileAtomic). */
   files: Map<string, string>;
   /** Folders created through makeDir. */
   dirs: Set<string>;
@@ -86,6 +86,19 @@ export interface MockTransferRepo extends StatsTransferRepository {
 const enoent = (path: string): Error & { code: string } =>
   Object.assign(new Error(`ENOENT: no such file or directory, open '${path}'`), { code: 'ENOENT' });
 
+/**
+ * The store files a populated profile has on disk, and therefore the ones the
+ * pre-import backup is expected to copy. Seeded by default so a test has to opt
+ * OUT of a file existing (a fresh install) instead of accidentally testing the
+ * empty-profile path everywhere.
+ */
+export const PROFILE_STORE_FILES = [
+  'listening_data.json',
+  'cmr_stats.json',
+  'playlists.json',
+  'tierlists.json'
+];
+
 export const createMockTransferRepo = (
   overrides: Partial<StatsTransferRepository> = {},
   initialState: Partial<MockTransferState> = {},
@@ -99,7 +112,13 @@ export const createMockTransferRepo = (
     cmrStats: initialState.cmrStats ?? emptyCmrStats()
   };
 
-  const files = new Map(Object.entries(initialFiles));
+  const files = new Map<string, string>(
+    PROFILE_STORE_FILES.map((fileName) => [
+      joinPath(PROFILE_ROOT, fileName),
+      `{"placeholder":"${fileName}"}`
+    ])
+  );
+  for (const [path, contents] of Object.entries(initialFiles)) files.set(path, contents);
   const dirs = new Set<string>();
   const events: string[] = [];
   const writes: { path: string; contents: string }[] = [];
@@ -161,10 +180,12 @@ export const createMockTransferRepo = (
       dirs.add(path);
       return { exist: false };
     },
-    copyFile: async (source, destination) => {
-      events.push(`copyFile:${destination}`);
+    copyFileAtomic: async (source, destination) => {
+      events.push(`copyFileAtomic:${destination}`);
       const contents = files.get(source);
-      if (contents === undefined) throw enoent(source);
+      // Mirrors the Rust command: a missing source is a plain rejection with no
+      // `code`, which is why callers have to check `exists` beforehand.
+      if (contents === undefined) throw new Error(`failed to copy file from path: ${source}`);
       files.set(destination, contents);
     },
     emitDataUpdate: emitDataUpdateMock,

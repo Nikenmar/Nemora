@@ -34,9 +34,6 @@ const isFiniteNumber = (value: unknown): value is number =>
 const isNonNegativeNumber = (value: unknown): value is number =>
   isFiniteNumber(value) && value >= 0;
 
-const isAnErrorWithCode = (error: unknown): error is Error & { code: string } =>
-  error instanceof Error && 'code' in error;
-
 // ---------------------------------------------------------------------------
 // 1. Read + validate the import source fully in memory (before ANY write)
 // ---------------------------------------------------------------------------
@@ -64,14 +61,16 @@ const readLegacyExportFolder = async (
   if (!Array.isArray(listeningJson.listeningData) || !Array.isArray(songsJson.songs))
     throw new Error('The selected folder does not contain valid Nora export files.');
 
+  // Stock and older CMR exports do not contain this optional file. Asked for
+  // rather than caught: a rejected read carries no `error.code` here, so an
+  // absent file was indistinguishable from an unreadable one and the second was
+  // being treated as the first.
   let elo: EloData | undefined;
-  try {
-    const cmrStatsRaw = await repo.readTextFile(joinPath(folder, 'cmr_stats.json'));
+  const cmrStatsPath = joinPath(folder, 'cmr_stats.json');
+  if (await repo.exists(cmrStatsPath)) {
+    const cmrStatsRaw = await repo.readTextFile(cmrStatsPath);
     const cmrStatsJson = JSON.parse(cmrStatsRaw) as { cmrStats?: { elo?: EloData } };
     elo = cmrStatsJson.cmrStats?.elo;
-  } catch (error) {
-    // Stock and older CMR exports do not contain this optional file.
-    if (!isAnErrorWithCode(error) || error.code !== 'ENOENT') throw error;
   }
 
   const foreignSongs = songsJson.songs as SavableSongData[];
@@ -481,6 +480,13 @@ const mergeEloData = (
 // 4. Backup (before the single write)
 // ---------------------------------------------------------------------------
 
+const BACKED_UP_STORE_FILES = [
+  'listening_data.json',
+  'cmr_stats.json',
+  'playlists.json',
+  'tierlists.json'
+];
+
 const backupCurrentStatsFiles = async (repo: StatsTransferRepository) => {
   const userDataPath = await repo.profilePath();
   const backupsFolder = joinPath(userDataPath, 'backups');
@@ -489,22 +495,20 @@ const backupCurrentStatsFiles = async (repo: StatsTransferRepository) => {
   const epoch = Date.now();
   let firstBackupPath: string | undefined;
 
-  for (const fileName of [
-    'listening_data.json',
-    'cmr_stats.json',
-    'playlists.json',
-    'tierlists.json'
-  ]) {
+  for (const fileName of BACKED_UP_STORE_FILES) {
     const source = joinPath(userDataPath, fileName);
+    // A store that was never written is not a failure: cmr_stats.json appears
+    // with the first duel, tierlists.json with the first tierlist. This used to
+    // be handled by letting the copy fail and matching `error.code === 'ENOENT'`
+    // on the rejection - a shape nothing in this app produces, because the copy
+    // commands reject with a bare string. Every install where one of these four
+    // files was absent, or where the copy failed for any other reason, refused
+    // the whole import with "Failed to create a backup".
+    if (!(await repo.exists(source))) continue;
+
     const destination = joinPath(backupsFolder, `${fileName}.backup.${epoch}.json`);
-    try {
-      await repo.copyFile(source, destination);
-      if (!firstBackupPath) firstBackupPath = destination;
-    } catch (error) {
-      // cmr_stats.json may not exist yet on fresh installs — nothing to back up then.
-      if (isAnErrorWithCode(error) && error.code === 'ENOENT') continue;
-      throw error;
-    }
+    await repo.copyFileAtomic(source, destination);
+    if (!firstBackupPath) firstBackupPath = destination;
   }
 
   return firstBackupPath;

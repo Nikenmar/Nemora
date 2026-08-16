@@ -33,6 +33,17 @@ export interface RuntimeFileServices {
   exists(path: string): Promise<boolean>;
   makeDir(path: string, options?: { recursive?: boolean }): Promise<{ exist: boolean }>;
   copyFile(source: string, destination: string): Promise<void>;
+  /**
+   * Crash-safe path-to-path copy through the Rust `copy_file_atomic` command:
+   * the destination is written to a temporary file and atomically replaced, and
+   * missing parent directories are created on the way.
+   *
+   * Preferred over {@link copyFile} for anything inside the profile. The
+   * plugin-fs route is a plain `std::fs::copy` behind the plugin's own scope
+   * resolution and rejects with a bare string, which is how the stats-import
+   * backup used to fail with no recoverable reason.
+   */
+  copyFileAtomic(source: string, destination: string): Promise<void>;
   remove(path: string, options?: { recursive?: boolean }): Promise<void>;
 }
 

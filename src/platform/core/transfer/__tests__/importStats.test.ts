@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 
 import importStatsData from '../importStats';
+import { configureLogger } from '../../playlists/logger';
 import { md5Hex } from '../md5';
 import { joinPath } from '../joinPath';
 import { PROFILE_ROOT, createMockTransferRepo, createSong } from './testUtils';
@@ -104,8 +105,21 @@ const repoWithLocalLibrary = (overrides = {}) =>
   );
 
 describe('importStatsData — fingerprint remap between two installs', () => {
+  const logged: { message: string; data?: Record<string, unknown> }[] = [];
+
   beforeEach(() => {
     jest.clearAllMocks();
+    logged.length = 0;
+    configureLogger({
+      debug: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: (message, data) => logged.push({ message, data })
+    });
+  });
+
+  afterEach(() => {
+    configureLogger(undefined);
   });
 
   test('matches foreign songs to local ids by file name, title+artists and title', async () => {
@@ -285,7 +299,7 @@ describe('importStatsData — fingerprint remap between two installs', () => {
 
     await importStatsData(repo, 'separateDevices', 'file');
 
-    const backupEvents = repo.events.filter((event) => event.startsWith('copyFile:'));
+    const backupEvents = repo.events.filter((event) => event.startsWith('copyFileAtomic:'));
     const saveIndex = repo.events.indexOf('saveListeningData');
 
     // Four profile files were copied into the backups folder first.
@@ -302,19 +316,43 @@ describe('importStatsData — fingerprint remap between two installs', () => {
 
   test('tolerates a missing cmr_stats.json during backup (fresh install)', async () => {
     const repo = repoWithLocalLibrary();
-    repo.copyFile = jest.fn(async (source: string, destination: string) => {
-      if (source.endsWith('cmr_stats.json'))
-        throw Object.assign(new Error('missing'), { code: 'ENOENT' });
-      if (!repo.files.has(source))
-        throw Object.assign(new Error(`missing ${source}`), { code: 'ENOENT' });
-      repo.files.set(destination, repo.files.get(source) ?? '');
-    });
+    // A profile that has never run a duel has no cmr_stats.json. Nothing to back
+    // up is not a failure, and the other three files are still copied.
+    repo.files.delete(joinPath(PROFILE_ROOT, 'cmr_stats.json'));
     pluginDialog.open.mockResolvedValue('E:\\Exports\\export.json');
 
     const report = await importStatsData(repo, 'separateDevices', 'file');
 
     expect(report.success).toBe(true);
+    expect(repo.events.filter((event) => event.startsWith('copyFileAtomic:'))).toHaveLength(3);
     expect(repo.state.cmrStats.importedStatsExportIds).toEqual(['fixture-export-1']);
+  });
+
+  test('a copy that genuinely fails aborts the import before any write', async () => {
+    const repo = repoWithLocalLibrary();
+    // The shape a real rejection has: the Rust command and plugin-fs both reject
+    // with a bare string, never a Node-style error carrying `code`.
+    repo.copyFileAtomic = jest.fn(async (_source: string, _destination: string) => {
+      throw new Error('failed to copy file from path: C:\\..., to path: C:\\...');
+    });
+    pluginDialog.open.mockResolvedValue('E:\\Exports\\export.json');
+
+    const report = await importStatsData(repo, 'separateDevices', 'file');
+
+    expect(report).toMatchObject({
+      success: false,
+      message: 'Failed to create a backup before importing. Nothing was changed.'
+    });
+    // "Nothing was changed" has to be true: no store write may have happened.
+    expect(repo.saveListeningDataMock).not.toHaveBeenCalled();
+    expect(repo.setCmrStatsDataMock).not.toHaveBeenCalled();
+    expect(repo.state.listeningData).toHaveLength(0);
+    // The reason must reach the core logger: this failure used to be discarded
+    // there, which is why a real one could not be diagnosed from the app at all.
+    expect(logged.map((entry) => entry.message)).toContain(
+      'Stats import aborted: failed to create a backup.'
+    );
+    expect(String(logged[0]?.data?.error)).toContain('failed to copy file');
   });
 
   test('refuses a second separateDevices import of the same export id', async () => {
@@ -339,7 +377,7 @@ describe('importStatsData — fingerprint remap between two installs', () => {
       alreadyImported: true
     });
     expect(repo.state.listeningData).toHaveLength(0);
-    expect(repo.events.filter((event) => event.startsWith('copyFile:'))).toHaveLength(0);
+    expect(repo.events.filter((event) => event.startsWith('copyFileAtomic:'))).toHaveLength(0);
   });
 
   test('validates fully before writing anything — malformed listening data aborts', async () => {
@@ -362,7 +400,7 @@ describe('importStatsData — fingerprint remap between two installs', () => {
       message: 'The import file contains malformed listening data.'
     });
     expect(repo.state.listeningData).toHaveLength(0);
-    expect(repo.events.filter((event) => event.startsWith('copyFile:'))).toHaveLength(0);
+    expect(repo.events.filter((event) => event.startsWith('copyFileAtomic:'))).toHaveLength(0);
     expect(repo.state.cmrStats.importedStatsExportIds).toEqual([]);
   });
 
@@ -476,7 +514,7 @@ describe('importStatsData — fingerprint remap between two installs', () => {
       success: false,
       message: 'Unsupported stats export file version.'
     });
-    expect(repo.events.filter((event) => event.startsWith('copyFile:'))).toHaveLength(0);
+    expect(repo.events.filter((event) => event.startsWith('copyFileAtomic:'))).toHaveLength(0);
   });
 
   test('imports a legacy "Nora exports" folder, resolving the nested layout', async () => {

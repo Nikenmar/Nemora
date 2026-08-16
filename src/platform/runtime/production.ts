@@ -5,6 +5,12 @@ import { copyFile, exists, mkdir, readDir, readTextFile, remove } from '@tauri-a
 import { createDefaultNoraImportPort } from '../core/import/noraImportRepository';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import {
+  debug as logDebug,
+  error as logError,
+  info as logInfo,
+  warn as logWarn
+} from '@tauri-apps/plugin-log';
 import { Buffer } from 'buffer/';
 
 import albumCover from '../../renderer/src/assets/images/webp/album_cover_default.webp';
@@ -48,6 +54,10 @@ import type {
   WalkedDirectory
 } from '../core/library/types';
 import { getBuildEnvVariable } from '../core/net/buildEnv';
+import { configureLogger as configureLyricsLogger } from '../core/lyrics/logger';
+import { configureLogger as configureNetLogger } from '../core/net/logger';
+import { configureLogger as configurePlaylistsLogger } from '../core/playlists/logger';
+import { configureLogger as configureSongGuessrLogger } from '../core/songGuessr/logger';
 import { romanizeForSearch } from '../core/search/romanizeForSearch';
 import { METADATA_HEAD_SIZE, SUPPORTED_MUSIC_EXTENSIONS } from '../core/library/constants';
 import { createMetadataWorkerClient } from '../core/library/metadataWorkerClient';
@@ -153,6 +163,65 @@ const productionLogger = {
   error: (message: string, data?: unknown): void => console.error(message, data)
 };
 
+/**
+ * Renders the structured second argument for the log file.
+ *
+ * `JSON.stringify` turns an Error into `{}` and throws on a cycle, and the
+ * interesting values here are exactly errors: a rejected Tauri command arrives
+ * as a bare string, a rejected plugin call as an Error.
+ */
+const describeLogData = (data?: Record<string, unknown>): string => {
+  if (!data) return '';
+  try {
+    const seen = new WeakSet<object>();
+    return ` ${JSON.stringify(data, (_key, value: unknown) => {
+      if (value instanceof Error) return `${value.name}: ${value.message}`;
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) return '[circular]';
+        seen.add(value);
+      }
+      return value;
+    })}`;
+  } catch {
+    return ' [unserialisable log data]';
+  }
+};
+
+/**
+ * The core packages log through injected seams that stay silent until something
+ * calls `configureLogger`. Nothing ever did, so every diagnostic the ported core
+ * writes - including the reason a stats import refused to run - was discarded
+ * before it reached the log file or the console.
+ */
+function wireCoreLoggers(): void {
+  const forward =
+    (
+      level: 'debug' | 'info' | 'warn' | 'error',
+      send: (message: string) => Promise<void>,
+      toConsole: (message: string, data?: unknown) => void
+    ) =>
+    (message: string, data?: Record<string, unknown>): void => {
+      toConsole(message, data);
+      // Logging must never break the caller it is reporting on.
+      void send(`[core] ${message}${describeLogData(data)}`).catch((error: unknown) =>
+        console.error(`Failed to write a ${level} log entry.`, error)
+      );
+    };
+
+  const coreLogger = {
+    debug: forward('debug', logDebug, productionLogger.debug),
+    info: forward('info', logInfo, productionLogger.info),
+    warn: forward('warn', logWarn, productionLogger.warn),
+    error: forward('error', logError, productionLogger.error)
+  };
+
+  configurePlaylistsLogger(coreLogger);
+  configureLyricsLogger(coreLogger);
+  configureNetLogger(coreLogger);
+  // Narrower interface: this one only ever reports errors.
+  configureSongGuessrLogger({ error: coreLogger.error });
+}
+
 const productionFiles: RuntimeFileServices = {
   profilePath,
   readTextFile,
@@ -167,6 +236,8 @@ const productionFiles: RuntimeFileServices = {
     return { exist };
   },
   copyFile,
+  copyFileAtomic: (source, destination) =>
+    invoke<void>('copy_file_atomic', { source, destination }),
   remove: async (path, options) => {
     if (await exists(path)) await remove(path, options);
   }
@@ -627,6 +698,7 @@ const createProductionServices = (
 };
 
 export async function createProductionRuntimeOptions(): Promise<NoraRuntimeOptions> {
+  wireCoreLoggers();
   const artwork = new ProductionArtworkPaths(await songCoversDir());
   // Resolved once, here, rather than consulted per call: a switch that answers
   // differently halfway through a scan would be worse than either route.

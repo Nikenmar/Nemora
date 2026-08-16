@@ -43,8 +43,16 @@ export interface StatsTransferRepository {
   exists(path: string): Promise<boolean>;
   /** Creates the directory; resolves `{ exist: true }` when it already exists. */
   makeDir(path: string, options?: { recursive?: boolean }): Promise<{ exist: boolean }>;
-  /** Copies one file; must reject with a `code === 'ENOENT'` error when the source is missing. */
-  copyFile(source: string, destination: string): Promise<void>;
+  /**
+   * Crash-safe path-to-path copy (the Rust `copy_file_atomic` command), used for
+   * the pre-import backup.
+   *
+   * A rejection is a real failure and aborts the import before any write. Callers
+   * must not treat "the source does not exist" as one of those: ask {@link exists}
+   * first. Nothing in this app rejects with a Node-style `error.code`, so a
+   * missing file cannot be recognised after the fact.
+   */
+  copyFileAtomic(source: string, destination: string): Promise<void>;
 
   // --- app ---
   /** Local data-update bus; expected to keep the one-second coalescing behavior. */
