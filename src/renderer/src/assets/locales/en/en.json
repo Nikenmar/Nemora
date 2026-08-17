@@ -747,8 +747,12 @@
     "allTimeLabel": "{{label}} (all time)",
     "notFilteredByYearLabel": "{{label}} (not filtered by year)",
     "calendarRangeNote": "Trailing 371 days, not filtered by year",
+    "calendarLess": "Less",
+    "calendarMore": "More",
     "hourlyActivity": "Hours of the day",
     "weekdayActivity": "Days of the week",
+    "chartPeak_one": "Peak {{label}}, {{count}} listen",
+    "chartPeak_other": "Peak {{label}}, {{count}} listens",
     "hourlyDataRecordedSince": "Hourly data recorded since {{date}}.",
     "noHourlyData": "Hourly listening data will appear after you play music with this version.",
     "recap": {
@@ -812,9 +816,9 @@
   "duels": {
     "tournament": {
       "title": "Duel tournament",
-      "subtitle": "A single-elimination bracket ranked by your current ELO.",
+      "subtitle": "A single-elimination bracket that puts ratings on tracks you have not duelled yet.",
       "newTournament": "New tournament",
-      "description": "Choose a bracket size. The highest-rated tracks are seeded against the lowest-rated tracks.",
+      "description": "Choose a bracket size. Tracks with the fewest duels are picked, then seeded highest rating against lowest.",
       "size_one": "{{count}} track",
       "size_other": "{{count}} tracks",
       "startSize": "Start a {{count}}-track tournament",

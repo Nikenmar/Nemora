@@ -1,5 +1,6 @@
 import {
   createTournament,
+  getTournamentOverview,
   getCurrentTournamentMatch,
   prepareTournament,
   recordTournamentWinner,
@@ -176,5 +177,75 @@ describe('duel tournaments', () => {
       winner: 'A'
     });
     expect(emitDataUpdate).toHaveBeenCalledWith('eloDuels');
+  });
+
+  it('reports the seedable library, not the running bracket, so the size buttons can be gated', () => {
+    let cmrStats = {
+      elo: eloFor(Array.from({ length: 12 }, (_, index) => 1300 - index * 10)),
+      importedStatsExportIds: []
+    } as CmrStatsData & { tournament?: TournamentState };
+    const songs = Array.from({ length: 12 }, (_, index) => ({
+      songId: `song-${index + 1}`,
+      title: `Song ${index + 1}`,
+      artists: [{ name: 'Someone' }],
+      duration: 180,
+      path: `E:\Music\song-${index + 1}.flac`
+    })) as unknown as SavableSongData[];
+    const repo = {
+      getSongsData: () => songs,
+      getListeningData: () => [],
+      getPlaylistData: () => [],
+      getTierlistData: () => [],
+      getCmrStatsData: () => cmrStats,
+      setCmrStatsData: (data: CmrStatsData) => {
+        cmrStats = data;
+      },
+      emitDataUpdate: jest.fn(),
+      getSongArtworkPath: () => ({ artworkPath: '', optimizedArtworkPath: '' }),
+      resolveSongFilePath: (path: string) => path,
+      isSongBlacklisted: (songId: string) => songId === 'song-12',
+      logger: { debug: jest.fn() }
+    } as unknown as TournamentRepo;
+
+    const idle = getTournamentOverview(repo);
+    expect(idle.eligibleTrackCount).toBe(11);
+    expect(idle.state).toBeUndefined();
+    expect(idle.songs).toEqual([]);
+
+    startTournament(repo, 8, 100);
+    const running = getTournamentOverview(repo);
+
+    expect(running.eligibleTrackCount).toBe(11);
+    expect(running.state?.size).toBe(8);
+    expect(running.currentMatch).toBeDefined();
+    expect(running.songs).toHaveLength(8);
+    expect(
+      running.songs.map(({ title }) => title).every((title) => title.startsWith('Song '))
+    ).toBe(true);
+  });
+
+  it('lets tracks nobody has duelled into the bracket, and varies between tournaments', () => {
+    const songIds = Array.from({ length: 300 }, (_, index) => `song-${index + 1}`);
+    const elo: EloData = {
+      ratings: Object.fromEntries(
+        Array.from({ length: 40 }, (_, index) => [
+          `song-${index + 1}`,
+          rating(1400 - index * 7, 12)
+        ])
+      ),
+      history: [],
+      totalDuels: 100
+    };
+    const idsOf = (state: TournamentState) => state.participants.map(({ songId }) => songId);
+
+    const first = createTournament(songIds, elo, 8, 1);
+    const second = createTournament(songIds, elo, 8, 2);
+
+    // A tournament exists to put ratings on tracks that have none.
+    expect(idsOf(first).every((songId) => !elo.ratings[songId])).toBe(true);
+    expect(idsOf(first)).not.toEqual(idsOf(second));
+    // Same creation time rebuilds the same bracket, so reconciliation stays deterministic.
+    expect(idsOf(createTournament(songIds, elo, 8, 1))).toEqual(idsOf(first));
+    expect(first.participants.map(({ seed }) => seed)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 });

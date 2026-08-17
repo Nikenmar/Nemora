@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type {
-  PreparedTournament,
-  TournamentDuelSubmission,
+  TournamentMatch,
   TournamentSize,
   TournamentState
 } from '@platform/core/stats/tournaments';
@@ -14,101 +13,60 @@ import TournamentSetup from './TournamentSetup';
 
 interface TournamentPanelProps {
   tournament?: TournamentState;
+  /** The match to play now, already reconciled against the library by core. */
+  currentMatch?: TournamentMatch;
+  /** Card data for the bracket's participants. */
   songs: readonly DuelSongEntry[];
+  /** Tracks a bracket can be seeded from. Not `songs.length`: those are participants. */
+  eligibleTrackCount: number;
   previewingSongId?: string;
-  onStart: (size: TournamentSize) => Promise<TournamentState>;
-  onResume: () => Promise<PreparedTournament | undefined>;
-  onSubmit: (matchId: string, winnerSongId: string) => Promise<TournamentDuelSubmission>;
+  onStart: (size: TournamentSize) => Promise<unknown>;
+  onSubmit: (matchId: string, winnerSongId: string) => Promise<unknown>;
   onPreviewToggle: (song: DuelSongEntry) => void;
 }
 
+/**
+ * Presentational on purpose: the parent owns the tournament data and refreshes it
+ * after every action. An earlier version refetched whenever the state object
+ * changed identity, which is every refresh, and span forever.
+ */
 const TournamentPanel = ({
   tournament,
+  currentMatch,
   songs,
+  eligibleTrackCount,
   previewingSongId,
   onStart,
-  onResume,
   onSubmit,
   onPreviewToggle
 }: TournamentPanelProps) => {
   const { t } = useTranslation();
-  const [localTournament, setLocalTournament] = useState(tournament);
-  const [currentMatch, setCurrentMatch] = useState<PreparedTournament['currentMatch']>();
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const songIdsKey = useMemo(() => songs.map(({ songId }) => songId).join('\u0000'), [songs]);
 
-  useEffect(() => setLocalTournament(tournament), [tournament]);
-
-  const resume = useCallback(() => {
+  /** Takes the message already translated: the i18n types want literal keys at the call site. */
+  const run = useCallback((action: () => Promise<unknown>, failureMessage: string) => {
     setIsBusy(true);
-    return onResume()
-      .then((prepared) => {
-        setLocalTournament(prepared?.state);
-        setCurrentMatch(prepared?.currentMatch);
-        setError(undefined);
-        return undefined;
-      })
-      .catch((reason) => {
+    setError(undefined);
+    return action()
+      .catch((reason: unknown) => {
         console.error(reason);
-        setError(t('duels.tournament.resumeFailed'));
+        setError(failureMessage);
       })
       .finally(() => setIsBusy(false));
-  }, [onResume, t]);
-
-  useEffect(() => {
-    if (!tournament || tournament.status === 'completed') {
-      setCurrentMatch(undefined);
-      return;
-    }
-    void resume();
-  }, [resume, songIdsKey, tournament]);
+  }, []);
 
   const start = useCallback(
-    (size: TournamentSize) => {
-      setIsBusy(true);
-      setError(undefined);
-      return onStart(size)
-        .then((state) => {
-          setLocalTournament(state);
-          return onResume();
-        })
-        .then((prepared) => {
-          setLocalTournament(prepared?.state);
-          setCurrentMatch(prepared?.currentMatch);
-          return undefined;
-        })
-        .catch((reason) => {
-          console.error(reason);
-          setError(t('duels.tournament.startFailed'));
-        })
-        .finally(() => setIsBusy(false));
-    },
-    [onResume, onStart, t]
+    (size: TournamentSize) => run(() => onStart(size), t('duels.tournament.startFailed')),
+    [onStart, run, t]
   );
 
   const vote = useCallback(
     (winnerSongId: string) => {
-      if (!currentMatch || isBusy) return;
-      setIsBusy(true);
-      setError(undefined);
-      return onSubmit(currentMatch.id, winnerSongId)
-        .then(({ tournament: nextTournament }) => {
-          setLocalTournament(nextTournament);
-          return onResume();
-        })
-        .then((prepared) => {
-          setLocalTournament(prepared?.state);
-          setCurrentMatch(prepared?.currentMatch);
-          return undefined;
-        })
-        .catch((reason) => {
-          console.error(reason);
-          setError(t('duels.tournament.submitFailed'));
-        })
-        .finally(() => setIsBusy(false));
+      if (!currentMatch || isBusy) return undefined;
+      return run(() => onSubmit(currentMatch.id, winnerSongId), t('duels.tournament.submitFailed'));
     },
-    [currentMatch, isBusy, onResume, onSubmit, t]
+    [currentMatch, isBusy, onSubmit, run, t]
   );
 
   return (
@@ -132,10 +90,10 @@ const TournamentPanel = ({
         </div>
       )}
 
-      {(!localTournament || localTournament.status === 'completed') && (
-        <TournamentSetup trackCount={songs.length} isBusy={isBusy} onStart={start} />
+      {(!tournament || tournament.status === 'completed') && (
+        <TournamentSetup trackCount={eligibleTrackCount} isBusy={isBusy} onStart={start} />
       )}
-      {localTournament?.status === 'active' && currentMatch && (
+      {tournament?.status === 'active' && currentMatch && (
         <TournamentDuel
           match={currentMatch}
           songs={songs}
@@ -145,7 +103,7 @@ const TournamentPanel = ({
           onPreviewToggle={onPreviewToggle}
         />
       )}
-      {localTournament && <TournamentBracket tournament={localTournament} songs={songs} />}
+      {tournament && <TournamentBracket tournament={tournament} songs={songs} />}
     </div>
   );
 };

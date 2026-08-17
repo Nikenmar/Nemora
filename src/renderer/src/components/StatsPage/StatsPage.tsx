@@ -291,7 +291,10 @@ const StatsPage = () => {
 
         {hasData ? (
           <div className="stats-content-container h-full overflow-y-auto overflow-x-hidden p-1 pb-8 pr-4">
-            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-6 sm:grid-cols-3">
+            {/* Max-width breakpoints here: the plain class is the wide layout. The
+                tiles used to sit in a two-column grid on a desktop window, which
+                also squeezed the calendar into half a row. */}
+            <div className="mb-3 grid grid-cols-5 gap-3 lg:grid-cols-3 sm:grid-cols-2">
               <StatTile
                 label={t('statsPage.totalListens')}
                 value={valueRounder(stats.totals.totalListens)}
@@ -309,6 +312,9 @@ const StatsPage = () => {
                 label={t('statsPage.songsPlayed')}
                 value={valueRounder(stats.totals.distinctSongsPlayed)}
               />
+            </div>
+
+            <div className="mb-6">
               <ActivityCalendar
                 days={stats.calendar.days}
                 note={

@@ -148,9 +148,9 @@ const getMatchmakerSongs = (
       .map(({ songId }) => songId)
   );
   const playlistIdsBySong = new Map<string, string[]>();
-  for (const playlist of repo.getPlaylistData().filter(
-    ({ playlistId }) => !['Favorites', 'History', 'Rediscover'].includes(playlistId)
-  )) {
+  for (const playlist of repo
+    .getPlaylistData()
+    .filter(({ playlistId }) => !['Favorites', 'History', 'Rediscover'].includes(playlistId))) {
     for (const songId of playlist.songs) {
       const memberships = playlistIdsBySong.get(songId) ?? [];
       memberships.push(playlist.playlistId);
@@ -281,6 +281,18 @@ export const recordDuelSkip = (
   });
   repo.emitDataUpdate('eloDuels');
   repo.logger.debug('Duel feedback recorded.', { songAId, songBId, reason });
+};
+
+/** Card data for an arbitrary set of songs, in the order asked for. Unknown ids are dropped. */
+export const getDuelSongEntries = (
+  repo: EloDuelsRepo,
+  songIds: readonly string[]
+): DuelSongEntry[] => {
+  const songById = new Map(repo.getSongsData().map((song) => [song.songId, song]));
+  const { elo } = repo.getCmrStatsData();
+  return songIds
+    .map((songId) => buildSongEntry(repo, songById, elo, songId))
+    .filter((entry): entry is DuelSongEntry => entry !== undefined);
 };
 
 /**

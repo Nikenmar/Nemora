@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -9,7 +9,7 @@ import { getDuelTickets, peekFirstAliveDuelPair, setDuelTickets } from '../../ut
 import Button from '../Button';
 import DuelCard from './DuelCard';
 import TournamentPanel from './Tournament/TournamentPanel';
-import type { TournamentState } from '@platform/core/stats/tournaments';
+import type { TournamentMatch, TournamentState } from '@platform/core/stats/tournaments';
 
 type DuelPhase = 'voting' | 'submitting' | 'result';
 
@@ -61,7 +61,25 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
   // than on a page of its own.
   const [isTournamentOpen, setIsTournamentOpen] = useState(false);
   const [tournament, setTournament] = useState<TournamentState>();
-  const tournamentSongs = useMemo(() => [pair.songA, pair.songB], [pair.songA, pair.songB]);
+  const [currentTournamentMatch, setCurrentTournamentMatch] = useState<TournamentMatch>();
+  // The bracket is seeded from the whole library, not from the pair on screen, so
+  // both the seedable count and the participants' card data come from core.
+  const [tournamentSongs, setTournamentSongs] = useState<DuelSongEntry[]>([]);
+  const [eligibleTrackCount, setEligibleTrackCount] = useState(0);
+
+  const refreshTournament = useCallback(async () => {
+    const overview = await window.api.eloDuels.getTournamentOverview();
+    setTournament(overview.state);
+    setCurrentTournamentMatch(overview.currentMatch);
+    setTournamentSongs(overview.songs);
+    setEligibleTrackCount(overview.eligibleTrackCount);
+    return overview;
+  }, []);
+
+  useEffect(() => {
+    if (!isTournamentOpen) return;
+    refreshTournament().catch((error: unknown) => console.error(error));
+  }, [isTournamentOpen, refreshTournament]);
 
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const remainingQueuedDuelsRef = useRef(persistedQueuedDuels);
@@ -268,22 +286,17 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
       {isTournamentOpen ? (
         <TournamentPanel
           tournament={tournament}
+          currentMatch={currentTournamentMatch}
           songs={tournamentSongs}
+          eligibleTrackCount={eligibleTrackCount}
           previewingSongId={previewingSongId}
           onStart={async (size) => {
-            const started = await window.api.eloDuels.startTournament(size);
-            setTournament(started);
-            return started;
-          }}
-          onResume={async () => {
-            const prepared = await window.api.eloDuels.resumeTournament();
-            setTournament(prepared?.state);
-            return prepared;
+            await window.api.eloDuels.startTournament(size);
+            return refreshTournament();
           }}
           onSubmit={async (matchId, winnerId) => {
-            const submission = await window.api.eloDuels.submitTournamentDuel(matchId, winnerId);
-            setTournament(submission.tournament);
-            return submission;
+            await window.api.eloDuels.submitTournamentDuel(matchId, winnerId);
+            return refreshTournament();
           }}
           onPreviewToggle={togglePreview}
         />

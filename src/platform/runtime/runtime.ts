@@ -113,11 +113,13 @@ import {
   type EloDuelsRepo
 } from '../core/stats/eloDuels';
 import {
+  getTournamentOverview,
   resumeTournament,
   startTournament,
   submitTournamentDuel,
   type PreparedTournament,
   type TournamentDuelSubmission,
+  type TournamentOverview,
   type TournamentSize,
   type TournamentState
 } from '../core/stats/tournaments';
@@ -2756,6 +2758,10 @@ export class NoraRuntime {
 
   resumeTournament(): PreparedTournament | undefined {
     return resumeTournament(this.featureRepository());
+  }
+
+  getTournamentOverview(): TournamentOverview {
+    return clone(getTournamentOverview(this.featureRepository()));
   }
 
   submitTournamentDuel(matchId: string, winnerSongId: string): TournamentDuelSubmission {

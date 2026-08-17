@@ -2,6 +2,7 @@ import { getRuntime } from '../runtime';
 import type {
   PreparedTournament,
   TournamentDuelSubmission,
+  TournamentOverview,
   TournamentSize,
   TournamentState
 } from '../core/stats/tournaments';
@@ -31,6 +32,9 @@ export const eloDuels = {
   /** The bracket in progress, already reconciled against the current library. */
   resumeTournament: async (): Promise<PreparedTournament | undefined> =>
     getRuntime().resumeTournament(),
+  /** Seedable track count plus the running bracket and its songs, in one call. */
+  getTournamentOverview: async (): Promise<TournamentOverview> =>
+    getRuntime().getTournamentOverview(),
   submitTournamentDuel: async (
     matchId: string,
     winnerSongId: string

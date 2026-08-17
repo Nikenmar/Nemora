@@ -1,5 +1,5 @@
 import { getEffectiveEloRating, getEloRating } from './duelMatchmaker';
-import { submitDuelResult, type EloDuelsRepo } from './eloDuels';
+import { getDuelSongEntries, submitDuelResult, type EloDuelsRepo } from './eloDuels';
 
 export const TOURNAMENT_SIZES = [8, 16, 32] as const;
 
@@ -38,6 +38,16 @@ export interface PreparedTournament {
   currentMatch?: TournamentMatch;
 }
 
+/** Everything the tournament screen needs in one read: what can be seeded, and what is running. */
+export interface TournamentOverview {
+  /** Tracks a bracket can be seeded from, which is what the size buttons are gated on. */
+  eligibleTrackCount: number;
+  state?: TournamentState;
+  currentMatch?: TournamentMatch;
+  /** Card data for the participants of the running bracket; empty when there is none. */
+  songs: DuelSongEntry[];
+}
+
 export interface TournamentDuelSubmission {
   tournament: TournamentState;
   result: DuelResult;
@@ -57,6 +67,35 @@ const seedOrder = (size: TournamentSize): number[] => {
   return order;
 };
 
+/**
+ * Stable pseudo-random key, so a bracket varies between tournaments but stays the
+ * same for one `createdAt`: reconciliation and tests must be able to rebuild it.
+ */
+const shuffleKey = (songId: string, createdAt: number) => {
+  let hash = 2166136261 ^ createdAt;
+  for (let index = 0; index < songId.length; index += 1) {
+    hash ^= songId.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967296;
+};
+
+/**
+ * Who gets INTO the bracket. Sorted by duels played, fewest first, because a
+ * tournament exists to put ratings on tracks that have none: seeding by rating
+ * here would replay the same already-rated top eight every single time.
+ */
+const compareEntryCandidates = (
+  elo: EloData,
+  createdAt: number,
+  songAId: string,
+  songBId: string
+) =>
+  getEloRating(elo, songAId).games - getEloRating(elo, songBId).games ||
+  shuffleKey(songAId, createdAt) - shuffleKey(songBId, createdAt) ||
+  songAId.localeCompare(songBId);
+
+/** Who meets whom: the conventional 1-vs-N bracket, by rating, among the chosen tracks. */
 const compareSeedCandidates = (elo: EloData, songAId: string, songBId: string) => {
   const ratingA = getEloRating(elo, songAId);
   const ratingB = getEloRating(elo, songBId);
@@ -110,8 +149,9 @@ export const createTournament = (
   }
 
   const participants = uniqueSongIds
-    .sort((songAId, songBId) => compareSeedCandidates(elo, songAId, songBId))
+    .sort((songAId, songBId) => compareEntryCandidates(elo, createdAt, songAId, songBId))
     .slice(0, size)
+    .sort((songAId, songBId) => compareSeedCandidates(elo, songAId, songBId))
     .map((songId, index) => ({ songId, seed: index + 1 }));
 
   return {
@@ -329,4 +369,19 @@ export const submitTournamentDuel = (
   );
   persistTournament(repo, tournament);
   return { tournament, result };
+};
+
+export const getTournamentOverview = (repo: TournamentRepo): TournamentOverview => {
+  const prepared = resumeTournament(repo);
+  return {
+    eligibleTrackCount: tournamentSongIds(repo).length,
+    state: prepared?.state,
+    currentMatch: prepared?.currentMatch,
+    songs: prepared
+      ? getDuelSongEntries(
+          repo,
+          prepared.state.participants.map(({ songId }) => songId)
+        )
+      : []
+  };
 };
