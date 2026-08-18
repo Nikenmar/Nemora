@@ -98,13 +98,13 @@ export class LibraryWatcherManager {
       this.unwatchers.push(parentUnwatch);
     }
 
-    // Close the snapshot-to-watch race: changes made between traversal and
-    // listener installation are discovered by this final pass.
+    // Closes two gaps at once: changes made between traversal and listener
+    // installation, and everything that happened while the app was not running
+    // at all - a watcher only ever reports what changes under its own eyes, so
+    // without this pass a track dropped into a music folder with the player
+    // closed stays invisible until the user runs a manual resync.
     //
-    // Skippable, because the pass is a full traversal of every root. That is
-    // the right price directly after a scan, which is what this was written
-    // for, and the wrong one on an ordinary launch: paying it at every startup
-    // is the re-index that once turned a 2-second start into a 12-second one.
+    // Still skippable, because the pass is a full traversal of every root.
     if (options.reconcile === false) return;
     // One root at a time, deliberately. A reconciliation is a read-modify-write
     // of the whole catalog, so running the roots concurrently lets one pass
@@ -112,7 +112,7 @@ export class LibraryWatcherManager {
     // songs that lost the race are simply gone from the library.
     for (const root of roots) {
       try {
-        await this.repository.reconcileFolder(root);
+        await this.repository.reconcileFolder(root, { initial: true });
       } catch (error) {
         this.repository.reportWatcherError(error, root);
       }

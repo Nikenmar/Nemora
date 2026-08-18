@@ -230,8 +230,8 @@ export class ArtworkService {
     }
   }
 
-  clearTempArtworkFolder(): Promise<void> {
-    return this.storage.clearTempDirectory();
+  clearTempArtworkFolder(olderThan?: Date): Promise<void> {
+    return this.storage.clearTempDirectory(olderThan);
   }
 
   async removeStoredArtwork(id: string): Promise<void> {

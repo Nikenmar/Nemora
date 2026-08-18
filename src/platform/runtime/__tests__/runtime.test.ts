@@ -252,6 +252,179 @@ describe('runtime/API composition', () => {
     expect(getRuntime().getStats('allTime').totals.totalListens).toBe(900);
   });
 
+  test('a rebuilt library gets its duel rating and tier placement back', async () => {
+    // The other half of the same protection. Removal already kept both - the
+    // rating carries a fingerprint, the tier card waits in `orphanedItems` -
+    // and the relinkers for them existed with tests and no caller, so the
+    // history came back after a rebuild while the ranking silently did not.
+    const port = new MemoryStorePort();
+    const root = 'E:\\Music';
+    const songPath = `${root}\\Track.mp3`;
+    const fingerprint = {
+      songId: 'id-from-the-old-library',
+      title: 'Track',
+      artists: ['Artist'],
+      duration: 123.46,
+      fileName: 'Track.mp3'
+    };
+
+    port.files.set('cmrStats', {
+      payload: {
+        elo: {
+          ratings: {
+            'id-from-the-old-library': {
+              rating: 1440,
+              games: 9,
+              wins: 6,
+              losses: 3,
+              fingerprint
+            }
+          },
+          history: [
+            {
+              at: 1,
+              songAId: 'id-from-the-old-library',
+              songBId: 'someone-else',
+              winner: 'A',
+              deltaA: 8,
+              deltaB: -8
+            }
+          ],
+          totalDuels: 1
+        },
+        importedStatsExportIds: []
+      }
+    } as unknown as StoreFile<unknown>);
+    port.files.set('tierlists', {
+      payload: [
+        {
+          tierlistId: 'tierlist',
+          name: 'Ranking',
+          createdDate: new Date(0),
+          sourcePlaylistIds: [],
+          labelMode: 'track',
+          tiers: [
+            {
+              tierId: 's',
+              name: 'S',
+              items: [],
+              orphanedItems: [{ songId: 'id-from-the-old-library', index: 0, fingerprint }]
+            }
+          ]
+        }
+      ]
+    } as unknown as StoreFile<unknown>);
+
+    const services: RuntimeServices = {
+      selectMusicFolders: async () => [root],
+      libraryFileSystem: {
+        readDir: async () => [
+          { name: 'Track.mp3', isDirectory: false, isFile: true, isSymlink: false }
+        ],
+        stat: async (path) => ({
+          isFile: path === songPath,
+          isDirectory: path === root,
+          size: 42,
+          mtime: null,
+          birthtime: null
+        }),
+        readHead: async () => new Uint8Array([1, 2, 3])
+      },
+      metadataParser: {
+        parse: async () => ({
+          common: { title: 'Track', artist: 'Artist', genres: [] },
+          format: { duration: 123.456 },
+          pictures: [],
+          metadataCompleteness: 'head'
+        })
+      },
+      artwork: {
+        storeArtworks: async () => ({
+          isDefaultArtwork: true,
+          artworkPath: 'default.webp',
+          optimizedArtworkPath: 'default.webp'
+        })
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+    const structures = await getRuntime().getFolderStructures();
+    const songs = await getRuntime().addSongsFromFolderStructures(structures);
+    await getRuntime().flush();
+
+    const newSongId = songs[0].songId;
+    expect(newSongId).not.toBe('id-from-the-old-library');
+
+    const stats = port.files.get('cmrStats')?.payload as {
+      elo: {
+        ratings: Record<string, { rating: number }>;
+        history: { songAId: string }[];
+      };
+    };
+    expect(stats.elo.ratings).not.toHaveProperty('id-from-the-old-library');
+    expect(stats.elo.ratings[newSongId]).toMatchObject({ rating: 1440, games: 9 });
+    // The duel history follows the rating, or the standings would disagree with
+    // the record they were computed from.
+    expect(stats.elo.history[0].songAId).toBe(newSongId);
+
+    const tierlists = port.files.get('tierlists')?.payload as {
+      tiers: { items: string[]; orphanedItems?: unknown[] }[];
+    }[];
+    expect(tierlists[0].tiers[0].items).toEqual([newSongId]);
+    expect(tierlists[0].tiers[0].orphanedItems).toBeUndefined();
+  });
+
+  test('reattaches a ranking at startup when the rebuild happened in an earlier run', async () => {
+    // The other call site. A library rebuilt by a build that kept the data but
+    // could not bring it back leaves the profile in this exact state: the songs
+    // are already there under new ids, and nothing is going to scan them again.
+    const port = new MemoryStorePort();
+    const fingerprint = {
+      songId: 'old',
+      title: 'Track',
+      artists: ['Artist'],
+      duration: 120,
+      fileName: 'Track.mp3'
+    };
+
+    port.files.set('songs', {
+      payload: [
+        {
+          songId: 'current',
+          title: 'Track',
+          path: 'E:\\Music\\Track.mp3',
+          duration: 120,
+          artists: [{ artistId: 'a', name: 'Artist' }],
+          isAFavorite: false,
+          isArtworkAvailable: false,
+          addedDate: 1,
+          genres: []
+        }
+      ]
+    } as unknown as StoreFile<unknown>);
+    port.files.set('cmrStats', {
+      payload: {
+        elo: {
+          ratings: { old: { rating: 1501, games: 2, wins: 1, losses: 1, fingerprint } },
+          history: [],
+          totalDuels: 0
+        },
+        importedStatsExportIds: []
+      }
+    } as unknown as StoreFile<unknown>);
+
+    configureRuntime(port, { version: 'test', artwork, events });
+    await hydrateRuntime();
+    await getRuntime().flush();
+
+    const stats = port.files.get('cmrStats')?.payload as {
+      elo: { ratings: Record<string, { rating: number }> };
+    };
+    expect(stats.elo.ratings).not.toHaveProperty('old');
+    expect(stats.elo.ratings.current).toMatchObject({ rating: 1501 });
+  });
+
   test('commits scanned songs before their covers exist and repairs the ones that fail', async () => {
     const port = new MemoryStorePort();
     const root = 'E:\\Music';
@@ -443,6 +616,307 @@ describe('runtime/API composition', () => {
       bitrate: 320_000
     });
     expect(songs.find((song) => song.songId === 'fine')?.duration).toBe(180);
+  });
+
+  describe('the library watcher startup pass', () => {
+    const root = 'E:\\Music';
+    const known = `${root}\\Old.mp3`;
+    const added = `${root}\\New.mp3`;
+
+    const seed = (port: MemoryStorePort): void => {
+      port.files.set('userData', {
+        unknownRootKeys: {},
+        payload: {
+          musicFolders: [
+            {
+              path: root,
+              stats: {
+                lastModifiedDate: new Date('2025-01-01T00:00:00Z'),
+                lastChangedDate: new Date('2025-01-01T00:00:00Z'),
+                fileCreatedDate: new Date('2025-01-01T00:00:00Z'),
+                lastParsedDate: new Date('2025-01-01T00:00:00Z')
+              },
+              subFolders: []
+            }
+          ],
+          preferences: {},
+          windowPositions: {},
+          windowDiamensions: {},
+          windowState: 'normal'
+        }
+      });
+      port.files.set('songs', {
+        unknownRootKeys: {},
+        payload: [
+          {
+            songId: 'old',
+            title: 'Old',
+            path: known,
+            duration: 100,
+            isAFavorite: false,
+            isArtworkAvailable: false,
+            addedDate: 1,
+            genres: []
+          }
+        ]
+      });
+    };
+
+    /** `onDisk` is what the walk finds under the root at this moment. */
+    const servicesFor = (
+      onDisk: readonly string[],
+      watchers: { callback?: (event: unknown) => void } = {}
+    ): RuntimeServices => ({
+      libraryFileSystem: {
+        readDir: async () =>
+          onDisk.map((path) => ({
+            name: path.slice(root.length + 1),
+            isDirectory: false,
+            isFile: true,
+            isSymlink: false
+          })),
+        stat: async (path) => ({
+          isFile: path !== root,
+          isDirectory: path === root,
+          size: 42,
+          mtime: null,
+          birthtime: null
+        }),
+        readHead: async () => new Uint8Array([1, 2, 3])
+      },
+      metadataParser: {
+        parse: async () => ({
+          common: { title: 'New', genres: [] },
+          format: { duration: 90 },
+          pictures: [],
+          metadataCompleteness: 'head'
+        })
+      },
+      watcherFileSystem: {
+        exists: async () => true,
+        watch: async (_paths, callback) => {
+          watchers.callback ??= callback as (event: unknown) => void;
+          return () => undefined;
+        }
+      },
+      artwork: {
+        storeArtworks: async () => ({
+          isDefaultArtwork: true,
+          artworkPath: 'default.webp',
+          optimizedArtworkPath: 'default.webp'
+        }),
+        removeStoredArtwork: async () => undefined
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    });
+
+    test('picks up a track added while the app was not running', async () => {
+      const port = new MemoryStorePort();
+      seed(port);
+
+      configureRuntime(port, {
+        version: 'test',
+        artwork,
+        events,
+        services: servicesFor([known, added])
+      });
+      await hydrateRuntime();
+      await getRuntime().startLibraryWatcher({ reconcile: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // The watches themselves see nothing here: the file appeared before any
+      // of this existed, which is exactly the case the pass is for.
+      expect(committedSongs(port).map((song) => song.path)).toEqual(
+        expect.arrayContaining([known, added])
+      );
+    });
+
+    test('writes nothing when the library has not changed', async () => {
+      const port = new MemoryStorePort();
+      seed(port);
+
+      configureRuntime(port, {
+        version: 'test',
+        artwork,
+        events,
+        services: servicesFor([known])
+      });
+      await hydrateRuntime();
+      const writesAfterHydration = port.writes.length;
+      const updatesAfterHydration = jest.mocked(events.dataUpdated).mock.calls.length;
+
+      await getRuntime().startLibraryWatcher({ reconcile: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // The pass runs on every launch, so the case where it finds nothing is
+      // the common one: no store write, and no telling the interface that the
+      // music folders changed when only the parse timestamp did.
+      expect(port.writes).toHaveLength(writesAfterHydration);
+      expect(jest.mocked(events.dataUpdated).mock.calls).toHaveLength(updatesAfterHydration);
+    });
+
+    test('keeps the catalog when the startup walk comes back empty', async () => {
+      const port = new MemoryStorePort();
+      seed(port);
+
+      configureRuntime(port, { version: 'test', artwork, events, services: servicesFor([]) });
+      await hydrateRuntime();
+      await getRuntime().startLibraryWatcher({ reconcile: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // A drive that has not finished mounting walks exactly like a folder the
+      // user emptied, and only one of the two is worth acting on unprompted.
+      expect(committedSongs(port).map((song) => song.path)).toEqual([known]);
+    });
+
+    test('still removes songs when a watcher event reports the folder as empty', async () => {
+      const port = new MemoryStorePort();
+      seed(port);
+      const watchers: { callback?: (event: unknown) => void } = {};
+
+      configureRuntime(port, {
+        version: 'test',
+        artwork,
+        events,
+        services: servicesFor([], watchers)
+      });
+      await hydrateRuntime();
+      await getRuntime().startLibraryWatcher({ reconcile: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      watchers.callback?.({
+        type: { remove: { kind: 'file' } },
+        paths: [root],
+        attrs: {}
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // The event is the evidence the startup pass lacks: the user just
+      // changed this directory, so an empty answer is an answer.
+      expect(committedSongs(port)).toEqual([]);
+    });
+  });
+
+  test('removing a music folder keeps the tierlist that was built from it', async () => {
+    const port = new MemoryStorePort();
+    const root = 'E:\\Music';
+    port.files.set('userData', {
+      unknownRootKeys: {},
+      payload: {
+        musicFolders: [
+          {
+            path: root,
+            stats: {
+              lastModifiedDate: new Date(0),
+              lastChangedDate: new Date(0),
+              fileCreatedDate: new Date(0),
+              lastParsedDate: new Date(0)
+            },
+            subFolders: []
+          }
+        ],
+        preferences: {},
+        windowPositions: {},
+        windowDiamensions: {},
+        windowState: 'normal'
+      }
+    } as unknown as StoreFile<unknown>);
+    port.files.set('songs', {
+      unknownRootKeys: {},
+      payload: [
+        {
+          songId: 'ranked',
+          title: 'Ranked Track',
+          path: `${root}\\Ranked.mp3`,
+          duration: 100,
+          isAFavorite: false,
+          isArtworkAvailable: false,
+          addedDate: 1,
+          genres: []
+        }
+      ]
+    } as unknown as StoreFile<unknown>);
+    port.files.set('tierlists', {
+      unknownRootKeys: {},
+      payload: [
+        {
+          tierlistId: 'tl',
+          name: 'Ranking',
+          createdDate: new Date(0),
+          sourcePlaylistIds: [],
+          sourceFolderPaths: [root],
+          labelMode: 'track',
+          tiers: [{ tierId: 'S', name: 'S', items: ['ranked'] }]
+        }
+      ]
+    } as unknown as StoreFile<unknown>);
+
+    configureRuntime(port, { version: 'test', artwork, events });
+    await hydrateRuntime();
+    await getRuntime().removeMusicFolder(root);
+
+    const tierlists = port.files.get('tierlists')?.payload as {
+      sourceFolderPaths?: string[];
+      tiers: { items: string[]; orphanedItems?: { songId: string }[] }[];
+    }[];
+
+    // Removing a folder is usually a step in a rebuild, not a decision about
+    // the tierlist. Forgetting where its music came from left the ranking
+    // attached to a tierlist with an empty pool once the folder came back.
+    expect(tierlists[0].sourceFolderPaths).toEqual([root]);
+    // The placement itself waits as an orphan, ready for the rescan.
+    expect(tierlists[0].tiers[0].items).toEqual([]);
+    expect(tierlists[0].tiers[0].orphanedItems?.[0].songId).toBe('ranked');
+  });
+
+  test('tierlist thumbnails are built a few at a time, not all at once', async () => {
+    const port = new MemoryStorePort();
+    const ids = Array.from({ length: 120 }, (_, index) => `song-${index}`);
+    let inFlight = 0;
+    let peak = 0;
+
+    const services: RuntimeServices = {
+      artwork: {
+        createTierlistThumbnail: async (id: string) => {
+          inFlight += 1;
+          peak = Math.max(peak, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          inFlight -= 1;
+          return `nemora://${id}-tl.webp`;
+        }
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+    const thumbnails = await getRuntime().createTierlistArtworks(ids);
+
+    expect(Object.keys(thumbnails)).toHaveLength(120);
+    // The unbounded version peaked at 120 here and at seventeen hundred on a
+    // real library, which stalled the whole desktop rather than just the app.
+    expect(peak).toBeLessThanOrEqual(8);
+    expect(peak).toBeGreaterThan(1);
+  });
+
+  test('one unbuildable thumbnail does not sink the rest of the grid', async () => {
+    const port = new MemoryStorePort();
+    const services: RuntimeServices = {
+      artwork: {
+        createTierlistThumbnail: async (id: string) => {
+          if (id === 'broken') throw new Error('cover is unreadable');
+          return `nemora://${id}-tl.webp`;
+        }
+      } as unknown as NonNullable<RuntimeServices['artwork']>
+    };
+
+    configureRuntime(port, { version: 'test', artwork, events, services });
+    await hydrateRuntime();
+
+    await expect(
+      getRuntime().createTierlistArtworks(['a', 'broken', 'b'])
+    ).resolves.toEqual({
+      a: 'nemora://a-tl.webp',
+      b: 'nemora://b-tl.webp'
+    });
   });
 
   test('a cached song order is dropped the moment the catalog changes', async () => {

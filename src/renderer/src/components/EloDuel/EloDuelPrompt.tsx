@@ -147,6 +147,24 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
     [previewingSongId, stopPreview, toggleSongPlayback]
   );
 
+  /**
+   * An audition belongs to the pair on screen, so it ends when that pair does.
+   *
+   * The single duel stops it by hand in every branch that moves on - vote, skip,
+   * minimize - and the tournament, which shares this same preview element, had
+   * no such call in its submit path: picking a winner advanced the bracket while
+   * the previous track kept playing underneath the next match, until something
+   * else happened to start.
+   *
+   * Keyed on what is being auditioned rather than on the handlers that change
+   * it, because the handlers are exactly what got forgotten. Switching between
+   * the duel and the tournament counts too: the view changes, the pair on screen
+   * changes with it, and the sound should not survive either.
+   */
+  useEffect(() => {
+    stopPreview();
+  }, [currentTournamentMatch?.id, isTournamentOpen, stopPreview]);
+
   const closePrompt = useCallback(
     () => (onClose ? onClose() : changePromptMenuData(false)),
     [changePromptMenuData, onClose]

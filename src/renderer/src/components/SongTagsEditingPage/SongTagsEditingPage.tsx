@@ -51,7 +51,18 @@ type AlbumResult = {
 
 type GenreResult = { genreId?: string; name: string; artworkPath?: string };
 
-const { metadataEditingSupportedExtensions } = appPreferences;
+/**
+ * Which formats this page can edit, which is NOT the same question as which
+ * formats can carry embedded lyrics.
+ *
+ * Tags are written by TagLib (and, for the text fields, by lofty in Rust), and
+ * both address whatever tag the container actually has - so FLAC is editable.
+ * Embedded lyrics still go through node-id3, which speaks ID3 alone, and
+ * `metadataEditingSupportedExtensions` still gates that. Merging the two lists
+ * would quietly stop FLAC lyrics from being written to their `.lrc` file,
+ * because that fallback is chosen precisely by "this format is not supported".
+ */
+const { tagEditingSupportedExtensions } = appPreferences;
 
 function SongTagsEditingPage() {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
@@ -100,7 +111,7 @@ function SongTagsEditingPage() {
   const pathExt = useMemo(() => window.api.utils.getExtension(songPath), [songPath]);
 
   const isMetadataEditingSupported = useMemo(() => {
-    const isASupportedFormat = metadataEditingSupportedExtensions.includes(pathExt);
+    const isASupportedFormat = tagEditingSupportedExtensions.includes(pathExt);
 
     return isASupportedFormat;
   }, [pathExt]);

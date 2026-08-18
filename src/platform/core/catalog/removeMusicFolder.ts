@@ -43,12 +43,15 @@ export const removeMusicFolder = async (
       (blacklistedPath) => !isPathWithin(blacklistedPath, folderPath)
     )
   };
-  next.tierlists = next.tierlists.map((tierlist) => ({
-    ...tierlist,
-    sourceFolderPaths: tierlist.sourceFolderPaths?.filter(
-      (sourcePath) => !isPathWithin(sourcePath, folderPath)
-    )
-  }));
+  // A tierlist's source folder is left alone on purpose.
+  //
+  // Stripping it looked like tidiness - the folder is gone, so is the source -
+  // but removing a folder from the library is routinely a step, not a decision:
+  // it is how a rebuild starts, and the folder comes back a minute later. The
+  // stripping did not, so the ranking came back attached to a tierlist that no
+  // longer knew where its music came from, with an empty pool and no way to
+  // rank anything else. A path that points at nothing costs nothing: the pool
+  // is simply empty until the folder returns.
   repository.commitCatalogState(next);
   repository.emitDataUpdate('userData/musicFolder');
   repository.emitDataUpdate('blacklist/folderBlacklist');

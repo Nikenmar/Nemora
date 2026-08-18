@@ -20,13 +20,25 @@ export class TrayController {
   private readonly window: WindowPort;
   private readonly factory: TrayFactory;
   private readonly process: ExitPort;
+  private readonly beforeExit: (() => Promise<void>) | undefined;
   private tray: TrayHandle | undefined;
   private exiting = false;
 
-  constructor(window: WindowPort, factory: TrayFactory, process: ExitPort) {
+  /**
+   * `beforeExit` runs before the process is killed. Exit from the tray does not
+   * pass through the window at all, so nothing else would give the renderer the
+   * chance to write the playback position and the repeat/shuffle state.
+   */
+  constructor(
+    window: WindowPort,
+    factory: TrayFactory,
+    process: ExitPort,
+    beforeExit?: () => Promise<void>
+  ) {
     this.window = window;
     this.factory = factory;
     this.process = process;
+    this.beforeExit = beforeExit;
   }
 
   async start(): Promise<void> {
@@ -55,6 +67,8 @@ export class TrayController {
   async exit(): Promise<void> {
     if (this.exiting) return;
     this.exiting = true;
+    // A failed persist must not trap the user in a running app: Exit means exit.
+    if (this.beforeExit) await this.beforeExit().catch(() => undefined);
     await this.process.exit(0);
   }
 }

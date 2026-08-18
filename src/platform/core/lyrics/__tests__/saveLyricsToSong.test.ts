@@ -119,15 +119,19 @@ describe('convertParsedLyricsToNodeID3Format', () => {
 });
 
 describe('saveLyricsToSong', () => {
-  test('queues the embedded-lyrics write for mp3 files and reports LYRICS_SAVE_QUEUED', async () => {
+  test('queues the embedded-lyrics write for mp3 files without promising the user a save', async () => {
     const state = makeState();
     const repository = makeRepository(state);
 
     const result = await saveLyricsToSong(repository, SONG_PATH, makeSyncedLyrics());
 
     expect(result).toBeUndefined();
-    expect(state.sentMessages).toContain('LYRICS_SAVE_QUEUED');
     expect(isLyricsSavePending('C:/music/halo.mp3')).toBe(true);
+    // No LYRICS_SAVE_QUEUED: nothing drains the queue in this build, so telling
+    // the user the lyrics "will be saved automatically" was a promise the app
+    // does not keep. The queue itself stays, and the LRC message still fires
+    // where the file really is written.
+    expect(state.sentMessages).not.toContain('LYRICS_SAVE_QUEUED');
   });
 
   test('writes the pending lyrics later through savePendingSongLyrics', async () => {

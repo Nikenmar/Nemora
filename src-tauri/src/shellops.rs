@@ -217,54 +217,152 @@ unsafe fn initialize_com() -> Result<bool, ShellOpsError> {
 ///
 /// A path with no parent is a drive root. There is nothing to select it in, so
 /// it is opened rather than revealed.
+///
+/// THE COLD FOLDER, ATTEMPT FOUR. The documented form above is necessary and
+/// was still not sufficient: with no window open on the folder, the first click
+/// opened the folder and selected nothing, and a second click - now that the
+/// window existed - selected correctly. Every call returned `S_OK` throughout.
+///
+/// The difference between the two clicks is who has to create the window.
+/// Selecting inside a window that already exists is a message to a live
+/// Explorer view. Creating one is a cross-process affair, and the shell
+/// finishes it by calling BACK into the apartment of whoever asked. That is
+/// where this failed: the call ran on the thread Tauri handed the command,
+/// which is a worker thread with no message loop. An STA without a pump can
+/// issue outbound calls perfectly well and can service nothing coming the other
+/// way, so the selection half of the operation had nowhere to land - and since
+/// the shell reports the launch, not the selection, the return value stayed
+/// `S_OK` and no log line ever appeared.
+///
+/// So the reveal now runs on a thread of its own that keeps its apartment alive
+/// and PUMPS it, and repeats the call while it waits. The repeat is deliberate
+/// belt and braces rather than superstition: it is exactly what the user did by
+/// hand and observed to work, and by the second attempt the window exists, so
+/// it takes the cheap path that never needed a pump. Repeating is harmless -
+/// the shell navigates the window it already opened instead of opening another.
+///
+/// Only the first attempt is reported back. The caller gets its answer in
+/// milliseconds and the thread keeps working; a failure worth showing the user
+/// (a path the shell cannot parse, a missing file) is decided before any of the
+/// waiting begins.
 #[cfg(windows)]
 fn reveal_item(path: &Path) -> Result<(), ShellOpsError> {
+    let owned = path.to_path_buf();
+    let (sender, receiver) = mpsc::channel();
+
+    thread::spawn(move || unsafe { reveal_on_shell_thread(&owned, &sender) });
+
+    // A thread that never answers is not evidence of failure: the shell may
+    // simply be slow to start Explorer. Waiting longer than this would hold the
+    // command open for no benefit, since the retries continue regardless.
+    receiver
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap_or(Ok(()))
+}
+
+#[cfg(windows)]
+const REVEAL_RETRIES: u8 = 2;
+#[cfg(windows)]
+const REVEAL_RETRY_DELAY: std::time::Duration = std::time::Duration::from_millis(400);
+#[cfg(windows)]
+const REVEAL_SETTLE: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Runs the shell call on a thread that owns its apartment, and reports only
+/// the first attempt to `first_attempt`.
+///
+/// SAFETY: every id list is freed before returning, the wide buffers outlive
+/// every call that reads them, and COM is balanced only when this thread
+/// initialised it.
+#[cfg(windows)]
+unsafe fn reveal_on_shell_thread(
+    path: &Path,
+    first_attempt: &mpsc::Sender<Result<(), ShellOpsError>>,
+) {
     use windows::core::PCWSTR;
     use windows::Win32::System::Com::CoUninitialize;
     use windows::Win32::UI::Shell::{ILCreateFromPathW, ILFree, SHOpenFolderAndSelectItems};
 
-    let item_path = wide(path.as_os_str())?;
+    let report = |outcome: Result<(), ShellOpsError>| {
+        let _ = first_attempt.send(outcome);
+    };
+
+    let item_path = match wide(path.as_os_str()) {
+        Ok(value) => value,
+        Err(error) => return report(Err(error)),
+    };
     let parent_path = match path.parent() {
-        Some(parent) if !parent.as_os_str().is_empty() => Some(wide(parent.as_os_str())?),
+        Some(parent) if !parent.as_os_str().is_empty() => match wide(parent.as_os_str()) {
+            Ok(value) => Some(value),
+            Err(error) => return report(Err(error)),
+        },
         _ => None,
     };
 
-    // SAFETY: both buffers stay alive for the whole call, every id list is freed
-    // before returning, and COM is only balanced when this call initialised it.
-    unsafe {
-        let balance_com = initialize_com()?;
-        let item = ILCreateFromPathW(PCWSTR::from_raw(item_path.as_ptr()));
-        let parent = parent_path
-            .as_ref()
-            .map(|value| ILCreateFromPathW(PCWSTR::from_raw(value.as_ptr())));
+    let balance_com = match initialize_com() {
+        Ok(value) => value,
+        Err(error) => return report(Err(error)),
+    };
 
-        let unresolved = item.is_null() || parent.is_some_and(|pidl| pidl.is_null());
-        let outcome = if unresolved {
-            Err(ShellOpsError::at(
-                ShellOpsErrorCode::InvalidPath,
-                path,
-                "the shell could not parse this path into an item",
-            ))
-        } else {
-            let selected = match parent {
-                Some(folder) => SHOpenFolderAndSelectItems(folder, Some(&[item.cast_const()]), 0),
-                None => SHOpenFolderAndSelectItems(item, None, 0),
-            };
-            selected.map_err(|error| {
-                ShellOpsError::at(ShellOpsErrorCode::ShellLaunch, path, error.to_string())
-            })
+    let item = ILCreateFromPathW(PCWSTR::from_raw(item_path.as_ptr()));
+    let parent = parent_path
+        .as_ref()
+        .map(|value| ILCreateFromPathW(PCWSTR::from_raw(value.as_ptr())));
+
+    if item.is_null() || parent.is_some_and(|pidl| pidl.is_null()) {
+        report(Err(ShellOpsError::at(
+            ShellOpsErrorCode::InvalidPath,
+            path,
+            "the shell could not parse this path into an item",
+        )));
+    } else {
+        let select = || match parent {
+            Some(folder) => SHOpenFolderAndSelectItems(folder, Some(&[item.cast_const()]), 0),
+            None => SHOpenFolderAndSelectItems(item, None, 0),
         };
 
-        if !item.is_null() {
-            ILFree(Some(item));
+        report(select().map_err(|error| {
+            ShellOpsError::at(ShellOpsErrorCode::ShellLaunch, path, error.to_string())
+        }));
+
+        for _ in 0..REVEAL_RETRIES {
+            pump_apartment(REVEAL_RETRY_DELAY);
+            let _ = select();
         }
-        if let Some(pidl) = parent.filter(|pidl| !pidl.is_null()) {
-            ILFree(Some(pidl));
+        pump_apartment(REVEAL_SETTLE);
+    }
+
+    if !item.is_null() {
+        ILFree(Some(item));
+    }
+    if let Some(pidl) = parent.filter(|pidl| !pidl.is_null()) {
+        ILFree(Some(pidl));
+    }
+    if balance_com {
+        CoUninitialize();
+    }
+}
+
+/// Services this thread's apartment for `duration`.
+///
+/// Sleeping instead would leave the STA deaf: an apartment-threaded COM object
+/// receives incoming calls as window messages, so a thread that does not
+/// dispatch them cannot complete anything the shell asks of it. This is the
+/// half the old implementation was missing.
+#[cfg(windows)]
+unsafe fn pump_apartment(duration: std::time::Duration) {
+    use std::time::Instant;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
+    };
+
+    let deadline = Instant::now() + duration;
+    let mut message = MSG::default();
+    while Instant::now() < deadline {
+        while PeekMessageW(&mut message, None, 0, 0, PM_REMOVE).as_bool() {
+            let _ = TranslateMessage(&message);
+            DispatchMessageW(&message);
         }
-        if balance_com {
-            CoUninitialize();
-        }
-        outcome
+        thread::sleep(std::time::Duration::from_millis(10));
     }
 }
 
@@ -867,6 +965,11 @@ mod tests {
             return;
         };
         reveal_item(Path::new(&target)).expect("the shell should accept the item");
+        // The command returns as soon as the first attempt is answered, and the
+        // retries that actually make a cold folder select run on after it. A
+        // test binary that returned here would kill that thread and measure the
+        // very failure this exists to catch; the application outlives it.
+        thread::sleep(std::time::Duration::from_secs(2));
         println!("asked Explorer to reveal {target}");
     }
 }

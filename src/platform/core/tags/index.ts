@@ -4,4 +4,5 @@ export * from './io';
 export * from './memoryFileAbstraction';
 export * from './nodeId3';
 export * from './tagLib';
+export * from './tagLibPatch';
 export * from './validation';

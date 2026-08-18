@@ -2,6 +2,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 
+import { persistSessionBeforeQuit } from '../api/window-controls';
 import type { UpdateProgress, UpdaterLogger } from './types';
 import { UpdaterClient } from './updaterClient';
 
@@ -41,7 +42,13 @@ export function createTauriUpdater(options: TauriUpdaterOptions): UpdaterClient 
             cancelLabel: 'Later'
           }
         ),
-      relaunch,
+      // The installer closes the app and reopens it, and that route never passes
+      // through the window, so the renderer would otherwise lose the playback
+      // position and the repeat/shuffle state to an update the user accepted.
+      relaunch: async () => {
+        await persistSessionBeforeQuit();
+        await relaunch();
+      },
       logger: options.logger ?? silentLogger,
       onProgress: options.onProgress
     },

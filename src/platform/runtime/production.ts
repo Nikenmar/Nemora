@@ -27,7 +27,8 @@ import {
   PaletteGenerator,
   pathArtwork,
   TauriArtworkStorage,
-  urlArtwork
+  urlArtwork,
+  type ArtworkLogger
 } from '../core/artwork';
 // Deep import, not the barrel: this module binds Tauri commands, and the barrel
 // is what non-Tauri consumers of the shared core import.
@@ -37,11 +38,15 @@ import parseLyrics from '../../common/parseLyrics';
 import convertParsedLyricsToNodeID3Format from '../core/lyrics/convertParsedLyricsToNodeID3Format';
 import type { MetadataFilePort, MetadataTagPatch } from '../core/metadata';
 import {
+  applyTagLibPatch,
+  createTagLibPicture,
   healBlankFlacPictureMime,
   onTagFileWritten,
   readNodeId3Tags,
   readTagLibFile,
-  updateNodeId3Tags
+  updateNodeId3Tags,
+  updateTagLibFile,
+  type TagLibPatch
 } from '../core/tags';
 import { internalWriteSuppression, tauriWatcherFileSystem } from '../core/watchers';
 import { tauriLibraryFileSystem } from '../core/library/tauriFileSystem';
@@ -58,6 +63,7 @@ import { configureLogger as configureLyricsLogger } from '../core/lyrics/logger'
 import { configureLogger as configureNetLogger } from '../core/net/logger';
 import { configureLogger as configurePlaylistsLogger } from '../core/playlists/logger';
 import { configureLogger as configureSongGuessrLogger } from '../core/songGuessr/logger';
+import { configureLogger as configureRuntimeLogger } from './logger';
 import { romanizeForSearch } from '../core/search/romanizeForSearch';
 import { METADATA_HEAD_SIZE, SUPPORTED_MUSIC_EXTENSIONS } from '../core/library/constants';
 import { createMetadataWorkerClient } from '../core/library/metadataWorkerClient';
@@ -193,7 +199,12 @@ const describeLogData = (data?: Record<string, unknown>): string => {
  * writes - including the reason a stats import refused to run - was discarded
  * before it reached the log file or the console.
  */
-function wireCoreLoggers(): void {
+function wireCoreLoggers(): {
+  debug: (message: string, data?: Record<string, unknown>) => void;
+  info: (message: string, data?: Record<string, unknown>) => void;
+  warn: (message: string, data?: Record<string, unknown>) => void;
+  error: (message: string, data?: Record<string, unknown>) => void;
+} {
   const forward =
     (
       level: 'debug' | 'info' | 'warn' | 'error',
@@ -220,6 +231,9 @@ function wireCoreLoggers(): void {
   configureNetLogger(coreLogger);
   // Narrower interface: this one only ever reports errors.
   configureSongGuessrLogger({ error: coreLogger.error });
+  // The runtime writes the lines that answer "did the scan reattach anything?".
+  configureRuntimeLogger(coreLogger);
+  return coreLogger;
 }
 
 const productionFiles: RuntimeFileServices = {
@@ -486,7 +500,51 @@ const createMetadataFilePort = (
     return /^(?:https?|nora|asset):/iu.test(value) ? urlArtwork(value) : pathArtwork(value);
   };
 
+  /**
+   * The route for everything that is not an MP3.
+   *
+   * node-id3 below writes ID3, which exists in MP3 and not in FLAC, so this is
+   * what makes a FLAC editable at all once a cover or lyrics are involved.
+   * TagLib writes whatever tag the container really has, and goes through the
+   * same validated, atomic commit as the blank-MIME repair does.
+   */
+  const writeTagsWithTagLib = async (path: string, patch: MetadataTagPatch): Promise<void> => {
+    const replacementArtwork = patch.artwork?.kind === 'replace' ? patch.artwork : undefined;
+    const picture = replacementArtwork
+      ? createTagLibPicture(
+          new Uint8Array(
+            await (await artwork.convertToPng(sourceFor(replacementArtwork.path))).arrayBuffer()
+          ),
+          'image/png'
+        )
+      : undefined;
+
+    const tagPatch: TagLibPatch = {};
+    if (Object.hasOwn(patch, 'title')) tagPatch.title = patch.title;
+    if (Object.hasOwn(patch, 'artists')) tagPatch.artists = patch.artists;
+    if (Object.hasOwn(patch, 'albumArtists')) tagPatch.albumArtists = patch.albumArtists;
+    if (Object.hasOwn(patch, 'album')) tagPatch.album = patch.album;
+    if (Object.hasOwn(patch, 'genres')) tagPatch.genres = patch.genres;
+    if (Object.hasOwn(patch, 'composer')) tagPatch.composer = patch.composer;
+    if (Object.hasOwn(patch, 'trackNumber')) tagPatch.trackNumber = patch.trackNumber;
+    if (Object.hasOwn(patch, 'year')) tagPatch.year = patch.year;
+    // One lyrics field in a Vorbis comment, and the synchronised form is LRC
+    // text, so it goes in as written rather than being flattened.
+    if (Object.hasOwn(patch, 'synchronizedLyrics')) tagPatch.lyrics = patch.synchronizedLyrics;
+    else if (Object.hasOwn(patch, 'unsynchronizedLyrics')) {
+      tagPatch.lyrics = patch.unsynchronizedLyrics;
+    }
+    if (replacementArtwork) tagPatch.picture = picture;
+    else if (patch.artwork?.kind === 'remove') tagPatch.picture = null;
+
+    await updateTagLibFile(path, (file) => applyTagLibPatch(file as never, tagPatch));
+  };
+
   const writeTags = async (path: string, patch: MetadataTagPatch): Promise<void> => {
+    // MP3 keeps the route it has always used. Everything else could not use it
+    // at all, which is the whole reason the editor was limited to MP3.
+    if (!/\.mp3$/iu.test(path.split(/[?#]/u)[0])) return writeTagsWithTagLib(path, patch);
+
     const hasSynchronizedLyrics = Object.hasOwn(patch, 'synchronizedLyrics');
     const replacementArtwork = patch.artwork?.kind === 'replace' ? patch.artwork : undefined;
     const previous = hasSynchronizedLyrics ? await readNodeId3Tags(path) : undefined;
@@ -570,7 +628,15 @@ const createMetadataFilePort = (
 
 const createProductionServices = (
   artworkPaths: ProductionArtworkPaths,
-  forceTypeScript: boolean
+  forceTypeScript: boolean,
+  /**
+   * The same logger the other core modules write through, so an artwork failure
+   * lands in Nemora.log with its reason attached. Wiring it here was worth a
+   * separate mention: a blocked cover host used to surface as "Failed to create
+   * artwork variants [object Object]" and nothing else, which says that
+   * something went wrong and refuses to say what.
+   */
+  coreLogger: ArtworkLogger
 ): RuntimeServices => {
   installTagSuppressionHook();
   const artworkStorage = new TauriArtworkStorage(
@@ -584,7 +650,7 @@ const createProductionServices = (
   const artwork = new ArtworkService(
     artworkStorage,
     new ImageTransformer(new BrowserImageBackend()),
-    productionLogger,
+    coreLogger,
     undefined,
     artworkPipeline,
     // Only reached when a native scan named a cover and the native artwork
@@ -696,7 +762,7 @@ const createProductionServices = (
 };
 
 export async function createProductionRuntimeOptions(): Promise<NoraRuntimeOptions> {
-  wireCoreLoggers();
+  const coreLogger = wireCoreLoggers();
   const artwork = new ProductionArtworkPaths(await songCoversDir());
   // Resolved once, here, rather than consulted per call: a switch that answers
   // differently halfway through a scan would be worse than either route.
@@ -705,6 +771,6 @@ export async function createProductionRuntimeOptions(): Promise<NoraRuntimeOptio
     version: await getVersion(),
     artwork,
     events: new LocalRuntimeEventSink(),
-    services: createProductionServices(artwork, forceTypeScript)
+    services: createProductionServices(artwork, forceTypeScript, coreLogger)
   };
 }

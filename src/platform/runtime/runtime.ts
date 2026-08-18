@@ -84,7 +84,12 @@ import {
   type ListeningCounterFile,
   type ListeningKind
 } from '../core/stats/listeningEvents';
-import { fingerprintOfSong, relinkOrphanedListeningRows } from '../core/stats/songFingerprint';
+import {
+  fingerprintOfSong,
+  relinkOrphanedListeningRows,
+  relinkOrphanedRatings,
+  relinkOrphanedTierlistItems
+} from '../core/stats/songFingerprint';
 import clearSearchHistoryResults from '../core/search/clearSearchHistoryResults';
 import type { SearchRepository } from '../core/search/repository';
 import runSearch from '../core/search/search';
@@ -144,6 +149,7 @@ import type { StorePort } from '../contracts/store';
 import { NotPortedYetError } from '../api/errors';
 import type { RuntimeArtworkPaths } from './artwork';
 import type { RuntimeEventSink } from './events';
+import { logger } from './logger';
 import { RuntimeNotHydratedError } from './errors';
 import { generateStorageMetrics } from './storage';
 import type {
@@ -177,12 +183,6 @@ const artworkConcurrency = (): number => {
   return Math.max(2, Math.min(8, cores > 0 ? cores - 1 : 4));
 };
 
-const logger = {
-  debug: (message: string, data?: unknown): void => console.debug(message, data),
-  info: (message: string, data?: unknown): void => console.info(message, data),
-  warn: (message: string, data?: unknown): void => console.warn(message, data),
-  error: (message: string, data?: unknown): void => console.error(message, data)
-};
 
 interface RuntimeSnapshots {
   songs: SavableSongData[];
@@ -283,6 +283,9 @@ export class NoraRuntime {
       palettes: this.cache.get('palettes')
     };
     this.healListeningIdentity();
+    // Covers the profile whose library was rebuilt by a build that kept these
+    // but had nothing to bring them back; a scan alone would never reach them.
+    this.reattachRankings(this.state().songs);
     await this.hydrateListeningEvents(listeningEventsExisted, listeningDataExisted);
     if (this.services.singleInstance && !this.singleInstanceController) {
       this.singleInstanceController = await this.services.singleInstance.create({
@@ -411,6 +414,43 @@ export class NoraRuntime {
       logger.info('Reattached listening history to rebuilt library entries.', { count: relinked });
     this.setSnapshot('listeningData', 'listeningData', rows, true);
     if (relinked > 0) this.events.dataUpdated('songs/listeningData');
+  }
+
+  /**
+   * Brings back the two rankings that outlive a song: its duel rating and its
+   * place in every tierlist.
+   *
+   * Removal already keeps them - `removeSongsFromCatalogState` stamps the
+   * fingerprint on the rating and moves the tier card into `orphanedItems`
+   * rather than deleting it - and both relinkers were written and tested with
+   * that. Neither was ever called, so the data survived removal and then sat
+   * there: a rebuilt library got its listening history back while the rating
+   * and the tier placement stayed detached forever. Half a mechanism looks
+   * exactly like a whole one until someone re-adds a folder.
+   *
+   * Matching is the shared three-level fingerprint matcher, and it SKIPS an
+   * ambiguous match rather than guessing: attaching a year of duel history to
+   * the wrong track is invisible and irreversible, while leaving it detached
+   * stays fixable.
+   */
+  private reattachRankings(songs: readonly SavableSongData[]): void {
+    const ratings = relinkOrphanedRatings(this.state().cmrStats, songs);
+    if (ratings.relinked > 0) {
+      logger.info('Reattached duel ratings to rebuilt library entries.', {
+        count: ratings.relinked
+      });
+      this.setSnapshot('cmrStats', 'cmrStats', ratings.cmrStats, true);
+      this.events.dataUpdated('eloDuels');
+    }
+
+    const tiers = relinkOrphanedTierlistItems(this.state().tierlists, songs);
+    if (tiers.relinked > 0) {
+      logger.info('Reattached tierlist placements to rebuilt library entries.', {
+        count: tiers.relinked
+      });
+      this.setSnapshot('tierlists', 'tierlists', tiers.tierlists, true);
+      this.events.dataUpdated('tierlists');
+    }
   }
 
   /** The scan-time half of {@link healListeningIdentity}, for a batch just committed. */
@@ -642,7 +682,7 @@ export class NoraRuntime {
           .then(({ addAFavoriteToLastFM }) =>
             addAFavoriteToLastFM(this.networkRepository(), title, artists)
           )
-          .catch((error: unknown) => logger.warn('Failed to mirror a favorite to Last.fm.', error));
+          .catch((error: unknown) => logger.warn('Failed to mirror a favorite to Last.fm.', { error }));
       },
       removeAFavoriteFromLastFM: (title, artists) => {
         void import('../core/net/lastFm/sendFavoritesDataToLastFM')
@@ -650,7 +690,7 @@ export class NoraRuntime {
             removeAFavoriteFromLastFM(this.networkRepository(), title, artists)
           )
           .catch((error: unknown) =>
-            logger.warn('Failed to remove a favorite from Last.fm.', error)
+            logger.warn('Failed to remove a favorite from Last.fm.', { error })
           );
       },
       emitDataUpdate: (type, data, message) => this.events.dataUpdated(type, data, message),
@@ -1072,6 +1112,7 @@ export class NoraRuntime {
     // that no longer exist. Done per batch, so history comes back with the
     // tracks rather than at the next launch.
     this.reattachListeningHistory(songs);
+    this.reattachRankings(songs);
     this.events.dataUpdated('songs/newSong', addedSongIds);
     if (newArtistIds.length > 0) this.events.dataUpdated('artists/newArtist', newArtistIds);
     if (changedArtistIds.length > 0) this.events.dataUpdated('artists', changedArtistIds);
@@ -1387,7 +1428,7 @@ export class NoraRuntime {
 
     if (dataType === 'preferences.enableDiscordRPC' && data === false) {
       void this.disconnectDiscord().catch((error: unknown) =>
-        logger.warn('Failed to disconnect Discord Rich Presence.', error)
+        logger.warn('Failed to disconnect Discord Rich Presence.', { error })
       );
     }
 
@@ -1775,10 +1816,14 @@ export class NoraRuntime {
    * connected, a track dropped into a music folder stayed invisible until the
    * user ran a manual resync.
    *
-   * The initial reconciliation pass is skipped on startup on purpose: it is a
-   * full traversal of every root, and paying it on every launch is the kind of
-   * startup re-index this project has already measured and rejected. Explicit
-   * scans re-arm the watcher and do run it.
+   * The initial reconciliation pass is what covers the time the app was NOT
+   * running: a watcher reports only what changes while it is installed, so
+   * music added with the player closed was invisible until a manual resync.
+   * It was once skipped on startup to avoid a re-index this project had
+   * measured and rejected, but that measurement predates the native walker:
+   * the pass now lists the roots in Rust and parses only the paths the catalog
+   * does not already hold. The caller is expected not to await it, so the cost
+   * that remains is paid behind the window rather than in front of it.
    */
   async startLibraryWatcher(options: { reconcile?: boolean } = {}): Promise<void> {
     const fileSystem = this.services.watcherFileSystem;
@@ -1793,6 +1838,26 @@ export class NoraRuntime {
 
   stopLibraryWatcher(): void {
     this.libraryWatcher?.stop();
+  }
+
+  /**
+   * Deletes temporary covers left behind by earlier runs.
+   *
+   * Playing a song from outside the library writes its embedded cover to
+   * `temp_artworks` so the interface has something to show. Electron emptied
+   * that directory on quit (src/main/other/artworks.ts:157, called from the
+   * before-quit handler); the port carried the implementation over and never
+   * called it, so the directory only ever grew.
+   *
+   * Startup rather than quit, deliberately: a quit hook is the least reliable
+   * moment in this app - the tray, the updater and the OS can all end the
+   * process without it - while startup is the one moment the previous session's
+   * files are provably nobody's. `startedAt` keeps the sweep off anything this
+   * run created, which matters because "Open with" can create a temp cover
+   * while the app is still starting.
+   */
+  async clearStaleTempArtwork(startedAt: Date): Promise<void> {
+    await this.services.artwork?.clearTempArtworkFolder(startedAt);
   }
 
   /** Re-arms the watcher over the current roots after the library changed. */
@@ -1843,7 +1908,7 @@ export class NoraRuntime {
         await removeSongsFromLibrary(this.catalogRepository(), [...paths]);
         await this.flush();
       },
-      reconcileFolder: async (path) => {
+      reconcileFolder: async (path, options = {}) => {
         const services = scanner();
         if (!services) return;
         // Events arrive for files as well as directories, and for a path that
@@ -1864,14 +1929,23 @@ export class NoraRuntime {
         if (!roots.some((root) => isPathWithin(directory, root))) return;
 
         const addedSongIds: string[] = [];
-        await reconcileCatalog(
+        const result = await reconcileCatalog(
           this.catalogRepository(),
           this.libraryRepository(addedSongIds),
           services.fileSystem,
           services.parser,
-          [directory]
+          [directory],
+          {
+            // The whole point of the startup pass is that it walks the entire
+            // root, which is the one place where the native walker earns its
+            // keep. Watcher events reach here too and cost the same call.
+            native: this.services.nativeLibrary,
+            keepCatalogWhenEmpty: options.initial === true
+          }
         );
-        await this.flush();
+        // A pass that changed nothing has nothing to write. The usual case for
+        // the startup pass is exactly that, and it runs on every launch.
+        if (result.scanned > 0 || result.removed > 0) await this.flush();
       },
       reportWatcherError: (error, path) => logger.error('Library watcher failed.', { error, path })
     };
@@ -2197,16 +2271,41 @@ export class NoraRuntime {
     return clearSongHistory(this.playlistRepository());
   }
 
+  /**
+   * Thumbnails for the tierlist grid, a few at a time.
+   *
+   * This used to be one `Promise.all` over every song in the tierlist's source,
+   * which on a first visit means decoding and re-encoding a cover per track with
+   * nothing holding the line: three hundred at once on a bench, seventeen
+   * hundred on a real library. The machine felt it - not the app, the machine,
+   * with the whole desktop stuttering while the GPU worked through the pile.
+   *
+   * The scan already learned this lesson and uses the same small pool
+   * (`artworkConcurrency`, two to eight workers). A cached thumbnail costs one
+   * `exists` check, so the pool is nearly free on every later visit; it is the
+   * first one that has to be paced.
+   */
   async createTierlistArtworks(songIds: string[]): Promise<Record<string, string>> {
     const service = this.requireArtworkService();
-    const entries = await Promise.all(
-      [...new Set(songIds)].map(
-        async (id) => [id, await service.createTierlistThumbnail(id)] as const
-      )
+    const ids = [...new Set(songIds)];
+    const thumbnails: Record<string, string> = {};
+    if (ids.length === 0) return thumbnails;
+
+    let next = 0;
+    const workers = Math.min(artworkConcurrency(), ids.length);
+    await Promise.all(
+      Array.from({ length: workers }, async () => {
+        for (let index = next++; index < ids.length; index = next++) {
+          const id = ids[index];
+          const thumbnail = await service.createTierlistThumbnail(id).catch((error: unknown) => {
+            logger.warn('Failed to build a tierlist thumbnail.', { error, id });
+            return undefined;
+          });
+          if (thumbnail) thumbnails[id] = thumbnail;
+        }
+      })
     );
-    return Object.fromEntries(
-      entries.filter((entry): entry is readonly [string, string] => !!entry[1])
-    );
+    return thumbnails;
   }
 
   async saveArtwork(source: string, destination: string): Promise<void> {

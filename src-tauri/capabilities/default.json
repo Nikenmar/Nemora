@@ -20,6 +20,7 @@
     "core:window:allow-is-visible",
     "core:window:allow-theme",
     "core:window:allow-close",
+    "core:window:allow-destroy",
     "core:window:allow-hide",
     "core:window:allow-show",
     "core:window:allow-center",
@@ -105,10 +106,25 @@
           "url": "https://itunes.apple.com/*"
         },
         {
-          "url": "https://e-cdns-images.dzcdn.net/*"
+          "url": "https://*.dzcdn.net/*"
         },
         {
           "url": "https://i.scdn.co/*"
+        },
+        {
+          "url": "https://*.mzstatic.com/*"
+        },
+        {
+          "url": "https://*.mxmcdn.net/*"
+        },
+        {
+          "url": "https://*.genius.com/*"
+        },
+        {
+          "url": "https://lastfm.freetls.fastly.net/*"
+        },
+        {
+          "url": "https://art-getter-reborncmr.vercel.app/*"
         },
         {
           "url": "https://raw.githubusercontent.com/*"

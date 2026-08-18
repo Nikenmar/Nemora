@@ -27,6 +27,12 @@ type Props = {
   duration: number;
   synchronizedLyrics?: string;
   unsynchronizedLyrics?: string;
+  /**
+   * Still passed by the page and deliberately unused: the banner it drove
+   * promised a save that never happens, because nothing drains the pending
+   * queue in this build. Kept so reconnecting the drain is a one-line change
+   * here rather than a hunt through the page above.
+   */
   isLyricsSavingPending?: boolean;
 
   updateSongInfo: (callback: (prevSongInfo: SongTags) => SongTags) => void;
@@ -46,7 +52,6 @@ const SongLyricsEditorInput = (props: Props) => {
     songArtists,
     synchronizedLyrics,
     unsynchronizedLyrics,
-    isLyricsSavingPending = false,
     updateSongInfo,
     duration,
     album,
@@ -305,12 +310,12 @@ const SongLyricsEditorInput = (props: Props) => {
           </p>
         )}
 
-        {isLyricsSavingPending && (
-          <p className="ml-2 mt-2 flex items-center text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-            <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
-            {t('songTagsEditingPage.pendingLyricsSavesAvailable')}
-          </p>
-        )}
+        {/*
+          The "pending lyrics will be saved after the song finishes" banner is
+          gone for the same reason its notification is: nothing drains that
+          queue in this build, so the wait it described never ends. The prop and
+          the string are left in place for whoever reconnects the drain.
+        */}
       </div>
       <div className="song-lyrics-buttons mt-12 flex flex-col items-end">
         <Button

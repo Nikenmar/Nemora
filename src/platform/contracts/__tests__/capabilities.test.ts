@@ -40,7 +40,8 @@ const EVENT_SUBSCRIPTIONS = new Set([
   'onResized',
   'onScaleChanged',
   'onThemeChanged',
-  'onFocusChanged'
+  'onFocusChanged',
+  'onCloseRequested'
 ]);
 
 /** The modules that own every call into the Tauri window API. */

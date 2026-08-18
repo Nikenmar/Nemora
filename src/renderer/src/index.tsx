@@ -19,6 +19,14 @@ if (typeof (globalThis as { Buffer?: unknown }).Buffer === 'undefined') {
 // wherever the app does not open one, which Electron never did.
 suppressNativeContextMenu();
 
+/**
+ * Taken at module scope on purpose: it is the cutoff for cleaning up temporary
+ * artwork, and everything this run writes there happens after this line. Taking
+ * it later would let the cleanup treat a cover this session just produced as
+ * leftover from the last one.
+ */
+const bootedAt = new Date();
+
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);
 
@@ -265,7 +273,22 @@ ${reason.stack ?? ''}`
     const { TrayController, tauriWindowPort, tauriTrayFactory, tauriExitPort } = await import(
       '@platform/shell'
     );
-    const tray = new TrayController(tauriWindowPort, tauriTrayFactory, tauriExitPort);
+    const { persistSessionBeforeQuit, startQuitPersistence } = await import('@platform/api');
+
+    // Every way out of the app has to write the session first. Our own titlebar
+    // already did; the tray's Exit killed the process directly, and Alt+F4 or
+    // the taskbar's Close never reached the renderer at all, so both dropped the
+    // playback position and the repeat/shuffle state on the floor.
+    await startQuitPersistence().catch((error: unknown) =>
+      console.error('Quit persistence could not be installed', error)
+    );
+
+    const tray = new TrayController(
+      tauriWindowPort,
+      tauriTrayFactory,
+      tauriExitPort,
+      persistSessionBeforeQuit
+    );
     await tray.start().catch((error: unknown) => console.error('Tray failed to start', error));
 
     // Seeds the thumbbar and keeps its native light/dark icons following
@@ -290,13 +313,27 @@ ${reason.stack ?? ''}`
       console.error('Window geometry could not be restored', error)
     );
 
-    // Watch the music folders for changes made outside the app. Deliberately
-    // not awaited: installing the watches is filesystem work and nothing about
-    // showing the player should wait on it.
+    // Watch the music folders for changes made outside the app, and reconcile
+    // them once on the way in: the watches only see what happens while the app
+    // is running, so a track dropped into a music folder with the player closed
+    // was invisible until the user found the manual resync button.
+    //
+    // Deliberately not awaited: this is filesystem work, and nothing about
+    // showing the player should wait on it. The reconciliation walks the roots
+    // natively and parses only paths the catalog does not already hold.
     void import('@platform/runtime').then(({ getRuntime }) =>
       getRuntime()
-        .startLibraryWatcher()
+        .startLibraryWatcher({ reconcile: true })
         .catch((error: unknown) => console.error('Library watcher failed to start', error))
+    );
+
+    // Covers left by songs played from outside the library in earlier runs. The
+    // cutoff is the moment this run began, so a cover created by an "Open with"
+    // launch that is still starting up cannot be swept away underneath it.
+    void import('@platform/runtime').then(({ getRuntime }) =>
+      getRuntime()
+        .clearStaleTempArtwork(bootedAt)
+        .catch((error: unknown) => console.error('Stale temp artwork was not cleared', error))
     );
 
     // The update check. The client was written with the port and then never

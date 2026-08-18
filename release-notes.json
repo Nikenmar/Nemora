@@ -1,10 +1,125 @@
 {
   "latestVersion": {
-    "version": "1.1.0-stable",
-    "phase": "stable",
-    "releaseDate": "2026-08-16T18:00:00.000Z"
+    "version": "1.1.5-stable",
+    "releaseDate": "2026-08-18T12:00:00.000Z",
+    "notes": {
+      "new": [
+        {
+          "note": "FLAC tags can now be edited, not only MP3."
+        },
+        {
+          "note": "Music added while Nemora was closed now appears on the next launch."
+        },
+        {
+          "note": "Rediscover refreshes itself the first time you open it in a session."
+        }
+      ],
+      "fixed": [
+        {
+          "note": "The window no longer reopens tiny in a corner of the screen after being minimized."
+        },
+        {
+          "note": "Quitting from the tray, with Alt+F4, or through an update now keeps the playback position and the repeat, shuffle and tier-shuffle state."
+        },
+        {
+          "note": "Show in file explorer now selects the track on the first click."
+        },
+        {
+          "note": "Duel ratings and tierlist placements now come back after the library is rebuilt."
+        },
+        {
+          "note": "Tierlist placements are no longer lost when a source is changed or a music folder is removed."
+        },
+        {
+          "note": "Opening a tierlist no longer stalls the whole machine while covers are prepared."
+        },
+        {
+          "note": "Cover art picked from the internet metadata search is no longer rejected on save."
+        },
+        {
+          "note": "Auditioning a track in a tournament now stops when the match moves on."
+        },
+        {
+          "note": "Temporary cover art no longer piles up in the profile."
+        },
+        {
+          "note": "Lyrics no longer announce a save to the audio file that never happens."
+        },
+        {
+          "note": "The Last.fm section is hidden, since its browser login cannot return to the app."
+        }
+      ],
+      "knownIssues": [
+        {
+          "note": "Tag editing covers MP3 and FLAC; other formats stay read-only."
+        },
+        {
+          "note": "Shutting down or signing out of Windows with Nemora open still loses the playback position."
+        }
+      ]
+    }
   },
   "versions": [
+    {
+      "version": "1.1.5-stable",
+      "releaseDate": "2026-08-18T12:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "FLAC tags can now be edited, not only MP3."
+          },
+          {
+            "note": "Music added while Nemora was closed now appears on the next launch."
+          },
+          {
+            "note": "Rediscover refreshes itself the first time you open it in a session."
+          }
+        ],
+        "fixed": [
+          {
+            "note": "The window no longer reopens tiny in a corner of the screen after being minimized."
+          },
+          {
+            "note": "Quitting from the tray, with Alt+F4, or through an update now keeps the playback position and the repeat, shuffle and tier-shuffle state."
+          },
+          {
+            "note": "Show in file explorer now selects the track on the first click."
+          },
+          {
+            "note": "Duel ratings and tierlist placements now come back after the library is rebuilt."
+          },
+          {
+            "note": "Tierlist placements are no longer lost when a source is changed or a music folder is removed."
+          },
+          {
+            "note": "Opening a tierlist no longer stalls the whole machine while covers are prepared."
+          },
+          {
+            "note": "Cover art picked from the internet metadata search is no longer rejected on save."
+          },
+          {
+            "note": "Auditioning a track in a tournament now stops when the match moves on."
+          },
+          {
+            "note": "Temporary cover art no longer piles up in the profile."
+          },
+          {
+            "note": "Lyrics no longer announce a save to the audio file that never happens."
+          },
+          {
+            "note": "The Last.fm section is hidden, since its browser login cannot return to the app."
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Tag editing covers MP3 and FLAC; other formats stay read-only."
+          },
+          {
+            "note": "Shutting down or signing out of Windows with Nemora open still loses the playback position."
+          }
+        ]
+      }
+    },
     {
       "version": "1.1.1-stable",
       "releaseDate": "2026-08-17T20:00:00.000Z",

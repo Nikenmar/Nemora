@@ -1,6 +1,6 @@
 {
   "name": "nemora",
-  "version": "1.1.1-stable",
+  "version": "1.1.5-stable",
   "type": "module",
   "description": "Nemora - music player by nikenmar (CMR)",
   "contributors": [
@@ -37,6 +37,10 @@
   "appPreferences": {
     "metadataEditingSupportedExtensions": [
       "mp3"
+    ],
+    "tagEditingSupportedExtensions": [
+      "mp3",
+      "flac"
     ],
     "removeReactStrictMode": false,
     "showSongIdInsteadOfSongYear": false,

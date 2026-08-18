@@ -17,6 +17,22 @@ import { store } from '@renderer/store';
 const SensitiveActionConfirmPrompt = lazy(() => import('../SensitiveActionConfirmPrompt'));
 const RefreshRediscoverPrompt = lazy(() => import('./RefreshRediscoverPrompt'));
 
+/**
+ * Rediscover regenerates itself the first time it is OPENED in a session, not
+ * at startup.
+ *
+ * Electron rebuilt it during boot (src/main/main.ts:194), which the port never
+ * carried over, so the playlist went stale across launches. Doing it at startup
+ * again would make every launch pay for a list most sessions never look at;
+ * doing it on open costs nothing until the user is actually standing in front
+ * of it, and gives them the same thing: a list that is fresh when they see it.
+ *
+ * Module scope on purpose - it is per app run, not per mount, so walking away
+ * from the page and coming back does not regenerate the list under the user.
+ * A reload or a restart is a new session and refreshes again.
+ */
+let rediscoverRefreshedThisSession = false;
+
 const PlaylistInfoPage = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
   const queue = useStore(store, (state) => state.localStorage.queue);
@@ -90,6 +106,18 @@ const PlaylistInfoPage = () => {
       document.removeEventListener('app/dataUpdates', managePlaylistUpdatesInPlaylistsInfoPage);
     };
   }, [fetchPlaylistData]);
+
+  useEffect(() => {
+    if (currentlyActivePage.data?.playlistId !== 'Rediscover') return;
+    if (rediscoverRefreshedThisSession) return;
+    rediscoverRefreshedThisSession = true;
+
+    // No re-fetch here: the runtime announces `playlists/rediscover`, and both
+    // effects below already listen for it.
+    window.api.playlistsData
+      .refreshRediscoverPlaylist()
+      .catch((err) => console.error('Rediscover could not be refreshed on open.', err));
+  }, [currentlyActivePage.data?.playlistId]);
 
   useEffect(() => {
     fetchPlaylistSongsData();

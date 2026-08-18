@@ -2,9 +2,9 @@ ready — WebView2 UA:
 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0
 
 === TEST 1: 206 Partial Content + seek ===
-probe: E:\Музонон\disc - ☆NoAki☆.flac
-tauri url:    http://nora.localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac
-electron url: nora://localfiles/E%3A/%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD/disc%20-%20%E2%98%86NoAki%E2%98%86.flac
+probe: E:\Music\sample.flac
+tauri url:    http://nora.localhost/E%3A%5CMusic%5Csample.flac
+electron url: nora://localfiles/E%3A/Music/sample.flac
 --- control: Electron-shaped nora:// URL ---
 --- protocol probe via fetch() ---
   fetch threw: Failed to fetch
@@ -33,14 +33,14 @@ seek → target 69.74s, landed 69.74s (drift 0.000s)
 playback advanced 0.85s after seek
 server saw 9 request(s):
    GET uri=nora://localhost/E%3A%5Ctmp%5Cspike_ascii_probe.flac | decoded=E:\tmp\spike_ascii_probe.flac | Range: bytes=0-1023 | Origin: http://localhost:5183
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=0-1023 | Origin: http://localhost:5183
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=0- | Origin: <none>
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=1015808- | Origin: <none>
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=4194304- | Origin: <none>
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=51085312- | Origin: <none>
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=51052544- | Origin: <none>
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=51019776- | Origin: <none>
-   GET uri=nora://localhost/E%3A%5C%D0%9C%D1%83%D0%B7%D0%BE%D0%BD%D0%BE%D0%BD%5Cdisc%20-%20%E2%98%86NoAki%E2%98%86.flac | decoded=E:\Музонон\disc - ☆NoAki☆.flac | Range: bytes=36864000- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=0-1023 | Origin: http://localhost:5183
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=0- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=1015808- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=4194304- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=51085312- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=51052544- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=51019776- | Origin: <none>
+   GET uri=nora://localhost/E%3A%5CMusic%5Csample.flac | decoded=E:\Music\sample.flac | Range: bytes=36864000- | Origin: <none>
 ranged requests: 9/9
 TEST 1: PASS
 

@@ -58,12 +58,16 @@ const saveLyricsToSong = async (repository: LyricsRepository, songPathWithProtoc
             };
           return undefined;
         });
-        logger.info(`Lyrics for '${songLyrics.title}' will be saved automatically.`, {
+        // Queued, and nothing tells the user it was. The drain
+        // (`savePendingSongLyrics`) has no production caller in this build, so
+        // the promise the old notification made - "will be saved
+        // automatically" - was one the app does not keep: the lyrics stay in
+        // the cache for this session and never reach the audio file. The queue
+        // and the drain are left intact for whoever wires them up; what is gone
+        // is the claim. Lyrics for an unsupported format still go to an LRC
+        // file, and that message is still sent, because that one is true.
+        return logger.info(`Lyrics for '${songLyrics.title}' were kept for this session.`, {
           songPath
-        });
-        return repository.sendMessage({
-          messageCode: 'LYRICS_SAVE_QUEUED',
-          data: { title: songLyrics.title }
         });
       } catch (error) {
         logger.error(`Failed to update the song file with the new updates. `, { error });

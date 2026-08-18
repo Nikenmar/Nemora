@@ -39,7 +39,11 @@ export { NotPortedYetError } from './errors';
 // hydrated. Both exist because the modules behind them were written and then
 // never constructed by anything.
 export { startTaskbarButtons } from './taskbar-buttons';
-export { startWindowGeometry } from './window-controls';
+export {
+  persistSessionBeforeQuit,
+  startQuitPersistence,
+  startWindowGeometry
+} from './window-controls';
 export { startWindowBackgroundSync } from './theme';
 export type { PathBackedAudioPlayerData, PathBackedUpdateSongDataResult } from './binary';
 

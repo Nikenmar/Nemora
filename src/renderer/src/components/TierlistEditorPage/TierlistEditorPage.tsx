@@ -19,6 +19,7 @@ import MainContainer from '../MainContainer';
 import Button from '../Button';
 import TierItemCard from './TierItemCard';
 import { getTierColor, TIER_LABEL_TEXT_COLOR } from './tierColors';
+import { incrementalBoard, sameIds, seedBoard, type Board, type Item } from './tierlistBoard';
 
 const EditTierlistSourcesPrompt = lazy(() => import('./EditTierlistSourcesPrompt'));
 const ConfirmDeleteTierlistPrompt = lazy(
@@ -33,89 +34,6 @@ const POOL_ID = 'pool';
 // Local id generator — only needs to be unique within a single tierlist, and
 // avoids any secure-context dependency that crypto.randomUUID would impose.
 const newTierId = () => `tier_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-
-type Item = { id: string };
-type Board = { pool: Item[]; tiers: Record<string, Item[]> };
-
-const sameIds = (a: Item[], b: Item[]) =>
-  a.length === b.length && a.every((x, i) => x.id === b[i].id);
-
-/**
- * Initial seed of the drag board from the PERSISTED placements (`tier.items`).
- * Run once, only after the song map is ready, so saved placements are never lost
- * to a premature reconcile against an empty song map.
- */
-const seedBoard = (
-  tierlist: SavableTierlist,
-  liveSongIds: string[],
-  songMap: Record<string, SongData>,
-  remap: Record<string, string> = {}
-): Board => {
-  const isVisible = (id: string) => !!songMap[id];
-  const placed = new Set<string>();
-  const tiers: Record<string, Item[]> = {};
-
-  for (const tier of tierlist.tiers) {
-    const seen = new Set<string>();
-    // Map each placed song to its canonical (folder-authoritative) id first, so a
-    // ranking made via a playlist migrates onto the folder's duplicate cleanly.
-    const ids = tier.items
-      .map((id) => remap[id] ?? id)
-      .filter((id) => {
-        if (!isVisible(id) || seen.has(id) || placed.has(id)) return false;
-        seen.add(id);
-        placed.add(id);
-        return true;
-      });
-    tiers[tier.tierId] = ids.map((id) => ({ id }));
-  }
-
-  const pool = liveSongIds.filter((id) => isVisible(id) && !placed.has(id)).map((id) => ({ id }));
-
-  return { pool, tiers };
-};
-
-/**
- * Incremental update once seeded: the BOARD is the source of truth for ordering.
- * We only drop songs that left the live pool, append newly added songs, add new
- * tiers and remove deleted ones — never resetting placements from `tier.items`.
- */
-const incrementalBoard = (
-  prev: Board,
-  tierlist: SavableTierlist,
-  liveSongIds: string[],
-  songMap: Record<string, SongData>,
-  remap: Record<string, string> = {}
-): Board => {
-  const isVisible = (id: string) => !!songMap[id];
-  const liveVisible = new Set(liveSongIds.filter(isVisible));
-  const placed = new Set<string>();
-  const tiers: Record<string, Item[]> = {};
-
-  for (const tier of tierlist.tiers) {
-    const seen = new Set<string>();
-    const prevItems = (prev.tiers[tier.tierId] ?? [])
-      .map((i) => remap[i.id] ?? i.id) // a newly-added folder may dup a placed song
-      .filter((id) => {
-        if (!liveVisible.has(id) || placed.has(id) || seen.has(id)) return false;
-        seen.add(id);
-        placed.add(id);
-        return true;
-      });
-    tiers[tier.tierId] = prevItems.map((id) => ({ id }));
-  }
-
-  const prevPool = prev.pool
-    .map((i) => i.id)
-    .filter((id) => liveVisible.has(id) && !placed.has(id));
-  const prevPoolSet = new Set(prevPool);
-  const appended = liveSongIds.filter(
-    (id) => isVisible(id) && !placed.has(id) && !prevPoolSet.has(id)
-  );
-  const pool = [...prevPool, ...appended].map((id) => ({ id }));
-
-  return { pool, tiers };
-};
 
 const TierlistEditorPage = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
@@ -151,6 +69,9 @@ const TierlistEditorPage = () => {
   const placementTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const tierlistRef = useRef<SavableTierlist | null>(null);
   const boardRef = useRef<Board>(board);
+  // Mirrors thumbMap so the generator effect can skip what it already has
+  // without re-running every time a thumbnail lands.
+  const thumbMapRef = useRef<Record<string, string>>(thumbMap);
   // Whether the board has been seeded from disk for the current tierlist. Until
   // it is, the reconcile pass must NOT touch placements (avoids the empty-songMap
   // race that used to drop saved placements back into the pool).
@@ -210,6 +131,10 @@ const TierlistEditorPage = () => {
   useEffect(() => {
     boardRef.current = board;
   }, [board]);
+
+  useEffect(() => {
+    thumbMapRef.current = thumbMap;
+  }, [thumbMap]);
 
   // Synced ref so the (memo-stable) context-menu handler can read the latest
   // song data without changing identity and re-rendering every card.
@@ -320,11 +245,59 @@ const TierlistEditorPage = () => {
   }, [tierlistId]);
 
   // ? Derive the live image pool from the source playlists AND folders, live.
+  /**
+   * The tierlist id leads, and it is not decoration.
+   *
+   * Without it, a tierlist with NO sources produces exactly the key the page
+   * already had while `tierlist` was still null - so the effect that loads the
+   * pool never re-ran, `poolLoaded` never turned true, the board was never
+   * seeded, and the editor sat empty forever. Restarting did not help, because
+   * the second run began from the same null state and arrived at the same key.
+   *
+   * A source-less tierlist is not exotic: removing a music folder from the
+   * library strips it from every tierlist that used it, and that is precisely
+   * the moment someone opens the editor to check their ranking survived.
+   */
   const sourceKey = [
+    tierlist?.tierlistId ?? '',
     ...(tierlist?.sourcePlaylistIds || []),
     '|F|',
     ...(tierlist?.sourceFolderPaths || [])
   ].join(',');
+  /**
+   * Adds the songs this tierlist has already RANKED to the visible map, even
+   * when the current source does not contain them.
+   *
+   * A placement is only drawn if its song is in `songMap`, and the board
+   * persists what it drew - so a song that fell out of the source used to be
+   * pruned from the board and then written to disk as gone. That is a ranking
+   * the user spent an evening on, erased by changing a source or by removing
+   * and re-adding a music folder, with no undo and no warning. Two real cases
+   * hit it: a source switched to a playlist that happens to be empty, and a
+   * folder removed and added back, which is when the whole library gets new ids.
+   *
+   * Being outside the source is a reason not to offer a song in the POOL. It is
+   * not a reason to forget where the user put it. Only a song that has left the
+   * library entirely disappears here, and that path keeps it as an orphan in the
+   * store, ready to be relinked when the same music is scanned again.
+   */
+  const withRankedSongs = useCallback(
+    async (map: Record<string, SongData>): Promise<Record<string, SongData>> => {
+      const tl = tierlistRef.current;
+      if (!tl) return map;
+      const missing = [...new Set(tl.tiers.flatMap((tier) => tier.items))].filter((id) => !map[id]);
+      if (missing.length === 0) return map;
+
+      const songs = await window.api.audioLibraryControls
+        .getSongInfo(missing, undefined, undefined, undefined, true)
+        .catch(() => [] as SongData[]);
+      const merged = { ...map };
+      for (const song of songs || []) merged[song.songId] = song;
+      return merged;
+    },
+    []
+  );
+
   const fetchPoolSource = useCallback(() => {
     const tl = tierlistRef.current;
     // Critical: do nothing until the tierlist itself has loaded.
@@ -332,10 +305,15 @@ const TierlistEditorPage = () => {
     const playlistIds = tl.sourcePlaylistIds || [];
     const folderPaths = tl.sourceFolderPaths || [];
     if (playlistIds.length === 0 && folderPaths.length === 0) {
-      setLiveSongIds([]);
-      setSongMap({});
-      setRemap({});
-      setPoolLoaded(true);
+      void withRankedSongs({})
+        .then((map) => {
+          setSongMap(map);
+          setLiveSongIds([]);
+          setRemap({});
+          setPoolLoaded(true);
+          return undefined;
+        })
+        .catch((err) => console.error(err));
       return;
     }
 
@@ -401,14 +379,20 @@ const TierlistEditorPage = () => {
           }
         }
 
-        setSongMap(map);
-        setRemap(remapObj);
-        setLiveSongIds(canonicalIds);
-        setPoolLoaded(true);
+        // The pool keeps only what the source offers; the visible map also keeps
+        // what this tierlist has already ranked, so a placement outside the
+        // source is drawn instead of being pruned and written away.
+        return withRankedSongs(map).then((visible) => {
+          setSongMap(visible);
+          setRemap(remapObj);
+          setLiveSongIds(canonicalIds);
+          setPoolLoaded(true);
+          return undefined;
+        });
       })
       .catch((err) => console.error(err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceKey]);
+  }, [sourceKey, withRankedSongs]);
 
   useEffect(() => fetchPoolSource(), [fetchPoolSource]);
 
@@ -416,9 +400,24 @@ const TierlistEditorPage = () => {
   useEffect(() => {
     const ids = Object.keys(songMap);
     if (ids.length === 0) return setThumbMap({});
+
+    // Only what is still missing. The map changes whenever a source is switched
+    // or a ranked song is pulled in, and asking again for hundreds of thumbnails
+    // that are already on disk is a round trip per song for no new pixels.
+    const missing = ids.filter((id) => !thumbMapRef.current[id]);
+    if (missing.length === 0) return undefined;
+
+    // Ranked cards first: they are what the user is looking at, while the pool
+    // is everything else in the source and can arrive as it comes.
+    const ranked = new Set((tierlistRef.current?.tiers ?? []).flatMap((tier) => tier.items));
+    const ordered = [
+      ...missing.filter((id) => ranked.has(id)),
+      ...missing.filter((id) => !ranked.has(id))
+    ];
+
     window.api.tierlistsData
-      .getTierlistArtworks(ids)
-      .then((res) => setThumbMap(res || {}))
+      .getTierlistArtworks(ordered)
+      .then((res) => setThumbMap((prev) => ({ ...prev, ...(res || {}) })))
       .catch((err) => console.error(err));
     return undefined;
   }, [songMap]);

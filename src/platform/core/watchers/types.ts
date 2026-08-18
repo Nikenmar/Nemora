@@ -34,6 +34,12 @@ export interface LibraryWatcherRepository {
   getKnownSongPaths(): readonly string[];
   scanSong(path: string): Promise<void>;
   removeSongs(paths: readonly string[]): Promise<void>;
-  reconcileFolder(path: string): Promise<void>;
+  /**
+   * `initial` marks the pass the manager runs over the roots when it starts,
+   * as opposed to one provoked by a filesystem event. The difference matters:
+   * an event is evidence that the directory changed, and the startup pass has
+   * no such evidence behind it.
+   */
+  reconcileFolder(path: string, options?: { initial?: boolean }): Promise<void>;
   reportWatcherError(error: unknown, path?: string): void;
 }
