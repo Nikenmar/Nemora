@@ -211,14 +211,155 @@ fn write_impl(path: &str, patch: &TagPatch) -> Result<(), String> {
         .map_err(|error| format!("cannot write tags to {path}: {error}"))
 }
 
-/// Rewrites embedded pictures whose MIME type is missing or blank.
+/// What the bytes of an embedded picture actually are, read from the bytes and
+/// not from the string next to them.
 ///
-/// This is the fork's original defect, preserved exactly: a picture with an
-/// empty MIME made Chromium answer `DEMUXER_ERROR_COULD_NOT_OPEN` and stop
-/// playback outright, so a perfectly good FLAC could kill the player. Only
-/// blank values are touched; a picture that declares its type is left alone.
+/// The declared MIME type is the least trustworthy thing about a picture: it is
+/// written by whichever tagger touched the file last, and the failure this
+/// module exists to prevent is caused by that string being wrong, not by the
+/// image being wrong.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PictureFormat {
+    Jpeg,
+    Png,
+    Gif,
+    Bmp,
+    Tiff,
+    /// A real image, but not one an audio demuxer will accept as an attached
+    /// picture. WebP is the common case and it is one this app can produce.
+    Foreign,
+    /// Not an image at all. Files carrying an XMP packet, a stray text file or
+    /// a truncated cover in a picture frame do exist in ordinary libraries.
+    NotAnImage,
+}
+
+impl PictureFormat {
+    /// The MIME type a demuxer recognises for this format, if any.
+    fn accepted_mime(self) -> Option<MimeType> {
+        match self {
+            Self::Jpeg => Some(MimeType::Jpeg),
+            Self::Png => Some(MimeType::Png),
+            Self::Gif => Some(MimeType::Gif),
+            Self::Bmp => Some(MimeType::Bmp),
+            Self::Tiff => Some(MimeType::Tiff),
+            Self::Foreign | Self::NotAnImage => None,
+        }
+    }
+}
+
+/// Identifies a picture by its magic number.
+fn sniff_picture(data: &[u8]) -> PictureFormat {
+    const PNG: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    if data.len() < 12 {
+        return PictureFormat::NotAnImage;
+    }
+    if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        return PictureFormat::Jpeg;
+    }
+    if data.starts_with(&PNG) {
+        return PictureFormat::Png;
+    }
+    if data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a") {
+        return PictureFormat::Gif;
+    }
+    if data.starts_with(b"BM") {
+        return PictureFormat::Bmp;
+    }
+    if data.starts_with(&[0x49, 0x49, 0x2A, 0x00]) || data.starts_with(&[0x4D, 0x4D, 0x00, 0x2A]) {
+        return PictureFormat::Tiff;
+    }
+    if data.starts_with(b"RIFF") && data[8..12] == *b"WEBP" {
+        return PictureFormat::Foreign;
+    }
+    // AVIF / HEIC, both `ftyp`-branded, both refused by audio demuxers.
+    if data[4..8] == *b"ftyp" {
+        return PictureFormat::Foreign;
+    }
+    PictureFormat::NotAnImage
+}
+
+/// Re-encodes a picture a demuxer will not accept into one it will.
 ///
-/// Returns how many pictures were repaired, so a caller can tell "nothing was
+/// Losing the cover is the alternative, and it is a worse one: the file leaves
+/// here still carrying its artwork, just in a format every player can read.
+fn transcode_to_jpeg(data: &[u8]) -> Option<Vec<u8>> {
+    use image::codecs::jpeg::JpegEncoder;
+
+    let decoded = image::load_from_memory(data).ok()?;
+    // JPEG has no alpha channel, and an RGBA buffer handed to the encoder is a
+    // hard error rather than a silent flatten.
+    let rgb = decoded.to_rgb8();
+    let mut out = Vec::with_capacity(data.len());
+    JpegEncoder::new_with_quality(&mut out, 90)
+        .encode_image(&image::DynamicImage::ImageRgb8(rgb))
+        .ok()?;
+    Some(out)
+}
+
+/// What to do with one picture, decided before anything is touched.
+enum PictureAction {
+    Keep,
+    /// Rewrite it with these bytes and this MIME type.
+    Rewrite(Vec<u8>, MimeType),
+    /// It cannot be made acceptable; the file is better off without it.
+    Remove,
+}
+
+fn plan_picture(picture: &Picture) -> PictureAction {
+    let data = picture.data();
+    if data.is_empty() {
+        return PictureAction::Remove;
+    }
+
+    let format = sniff_picture(data);
+    match format.accepted_mime() {
+        Some(canonical) => {
+            let declared = picture.mime_type().map(MimeType::to_string);
+            let is_correct = declared
+                .as_deref()
+                .is_some_and(|value| value.eq_ignore_ascii_case(&canonical.to_string()));
+            if is_correct {
+                PictureAction::Keep
+            } else {
+                // Covers all three ways the string goes wrong: absent, blank,
+                // and confidently naming the wrong format.
+                PictureAction::Rewrite(data.to_vec(), canonical)
+            }
+        }
+        None => match transcode_to_jpeg(data) {
+            Some(jpeg) => PictureAction::Rewrite(jpeg, MimeType::Jpeg),
+            None => PictureAction::Remove,
+        },
+    }
+}
+
+/// Makes every embedded picture in one file something a media pipeline will
+/// open, and reports how many had to be changed.
+///
+/// This is the fork's founding defect, widened to the whole family it belongs
+/// to. The original case was a picture with an EMPTY MIME type: FFmpeg looks
+/// the string up in a table of the picture formats it accepts, finds nothing,
+/// and fails the entire container open with `DEMUXER_ERROR_COULD_NOT_OPEN` - so
+/// a perfectly good FLAC kills playback because of a cover nobody was looking
+/// at. Every other way of missing that table does exactly the same damage, and
+/// the narrow repair silently declined all of them:
+///
+///   * a MIME type that is present but unknown to the table (`image/webp` is
+///     the one this app itself can produce, and AVIF is arriving);
+///   * a MIME type that is present, known, and WRONG - the old repair stamped
+///     `image/jpeg` on every blank picture including the PNGs, which trades an
+///     unopenable file for an undecodable cover;
+///   * bytes that are not an image at all, which is not hypothetical: a real
+///     library here carries an MP3 whose cover frame holds 357 bytes of XML;
+///   * an empty picture frame.
+///
+/// So the bytes decide, never the string. A picture whose bytes are a format
+/// the table accepts gets the canonical MIME type for what it really is; one
+/// whose bytes are a foreign image is re-encoded to JPEG so the artwork
+/// survives; anything that is not an image is removed, because there is nothing
+/// to save and its presence costs the user the whole song.
+///
+/// Returns how many pictures were changed, so a caller can tell "nothing was
 /// wrong" from "something was fixed" instead of guessing.
 fn heal_impl(path: &str) -> Result<u32, String> {
     let file = Path::new(path);
@@ -234,32 +375,39 @@ fn heal_impl(path: &str) -> Result<u32, String> {
             continue;
         };
 
-        // Pictures are replaced by index rather than edited in place: lofty
-        // exposes them read-only, and rebuilding the one that is broken leaves
-        // every other picture in the file untouched.
-        let blank_indexes: Vec<usize> = tag
+        // Planned first, applied second. A removal shifts every later index, so
+        // deciding and mutating in one pass would skip pictures or repair the
+        // wrong one; applying in reverse index order keeps the plan valid.
+        let plan: Vec<(usize, PictureAction)> = tag
             .pictures()
             .iter()
             .enumerate()
-            .filter(|(_, picture)| {
-                picture
-                    .mime_type()
-                    .map(|mime| mime.to_string().trim().is_empty())
-                    .unwrap_or(true)
-            })
-            .map(|(index, _)| index)
+            .map(|(index, picture)| (index, plan_picture(picture)))
+            .filter(|(_, action)| !matches!(action, PictureAction::Keep))
             .collect();
 
-        for index in blank_indexes {
-            let broken = &tag.pictures()[index];
-            let mut builder = Picture::unchecked(broken.data().to_vec())
-                .pic_type(broken.pic_type())
-                .mime_type(MimeType::Jpeg);
-            if let Some(description) = broken.description() {
-                builder = builder.description(description.to_string());
+        for (index, action) in plan.into_iter().rev() {
+            match action {
+                PictureAction::Keep => {}
+                PictureAction::Remove => {
+                    tag.remove_picture(index);
+                    healed += 1;
+                }
+                PictureAction::Rewrite(bytes, mime) => {
+                    // Pictures are replaced rather than edited in place: lofty
+                    // exposes them read-only, and rebuilding the one that is
+                    // broken leaves every other picture in the file untouched.
+                    let broken = &tag.pictures()[index];
+                    let mut builder = Picture::unchecked(bytes)
+                        .pic_type(broken.pic_type())
+                        .mime_type(mime);
+                    if let Some(description) = broken.description() {
+                        builder = builder.description(description.to_string());
+                    }
+                    tag.set_picture(index, builder.build());
+                    healed += 1;
+                }
             }
-            tag.set_picture(index, builder.build());
-            healed += 1;
         }
     }
 
@@ -330,6 +478,181 @@ pub async fn tags_heal_picture_mime(path: String) -> Result<u32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lofty::picture::PictureType;
+
+    fn png_bytes() -> Vec<u8> {
+        let mut out = Vec::new();
+        let image = image::RgbImage::from_pixel(4, 4, image::Rgb([10, 20, 30]));
+        image::DynamicImage::ImageRgb8(image)
+            .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
+            .unwrap();
+        out
+    }
+
+    fn webp_bytes() -> Vec<u8> {
+        let image = image::RgbaImage::from_pixel(8, 8, image::Rgba([200, 30, 40, 255]));
+        let encoder = webp::Encoder::from_rgba(image.as_raw(), image.width(), image.height());
+        let mut config = webp::WebPConfig::new().unwrap();
+        config.quality = 80.0;
+        encoder.encode_advanced(&config).unwrap().to_vec()
+    }
+
+    fn picture_with(data: Vec<u8>, mime: Option<MimeType>) -> Picture {
+        let builder = Picture::unchecked(data).pic_type(PictureType::CoverFront);
+        match mime {
+            Some(mime) => builder.mime_type(mime).build(),
+            None => builder.build(),
+        }
+    }
+
+    #[test]
+    fn every_picture_format_is_identified_by_its_bytes() {
+        assert_eq!(
+            sniff_picture(&[0xFF, 0xD8, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            PictureFormat::Jpeg
+        );
+        assert_eq!(sniff_picture(&png_bytes()), PictureFormat::Png);
+        assert_eq!(sniff_picture(b"GIF89a01234567"), PictureFormat::Gif);
+        assert_eq!(sniff_picture(&webp_bytes()), PictureFormat::Foreign);
+        // The 357 bytes of XML found sitting in a cover frame in a real library.
+        assert_eq!(
+            sniff_picture(br#"<?xml version="1.0" encoding="UTF-8"?><x:xmpmeta/>"#),
+            PictureFormat::NotAnImage
+        );
+        assert_eq!(sniff_picture(&[]), PictureFormat::NotAnImage);
+    }
+
+    #[test]
+    fn a_picture_that_already_says_what_it_is_is_left_alone() {
+        let action = plan_picture(&picture_with(png_bytes(), Some(MimeType::Png)));
+        assert!(matches!(action, PictureAction::Keep));
+    }
+
+    #[test]
+    fn a_blank_mime_type_is_replaced_by_what_the_bytes_really_are() {
+        // The founding defect. Note the expected type: the old repair stamped
+        // `image/jpeg` on every blank picture, so a PNG cover came out of the
+        // repair claiming to be a JPEG.
+        let action = plan_picture(&picture_with(png_bytes(), None));
+        match action {
+            PictureAction::Rewrite(_, mime) => assert_eq!(mime, MimeType::Png),
+            _ => panic!("a picture with no MIME type must be repaired"),
+        }
+    }
+
+    #[test]
+    fn a_mime_type_that_names_the_wrong_format_is_corrected() {
+        let action = plan_picture(&picture_with(png_bytes(), Some(MimeType::Jpeg)));
+        match action {
+            PictureAction::Rewrite(_, mime) => assert_eq!(mime, MimeType::Png),
+            _ => panic!("PNG bytes declared as JPEG must be corrected"),
+        }
+    }
+
+    #[test]
+    fn an_unknown_mime_type_is_treated_as_broken_even_though_it_is_not_blank() {
+        let action = plan_picture(&picture_with(
+            png_bytes(),
+            Some(MimeType::Unknown("image/x-whatever".into())),
+        ));
+        assert!(matches!(action, PictureAction::Rewrite(_, MimeType::Png)));
+    }
+
+    #[test]
+    fn a_webp_cover_is_re_encoded_rather_than_thrown_away() {
+        // WebP is not in the demuxer's table of attached-picture types, and it
+        // is a format this very app produces. Losing the cover would be the
+        // easy fix; keeping it as JPEG is the right one.
+        let action = plan_picture(&picture_with(
+            webp_bytes(),
+            Some(MimeType::Unknown("image/webp".into())),
+        ));
+        match action {
+            PictureAction::Rewrite(bytes, mime) => {
+                assert_eq!(mime, MimeType::Jpeg);
+                assert_eq!(sniff_picture(&bytes), PictureFormat::Jpeg);
+            }
+            _ => panic!("a WebP cover must survive as JPEG"),
+        }
+    }
+
+    #[test]
+    fn bytes_that_are_not_an_image_are_removed() {
+        let action = plan_picture(&picture_with(
+            br#"<?xml version="1.0" encoding="UTF-8"?><x:xmpmeta/>"#.to_vec(),
+            Some(MimeType::Jpeg),
+        ));
+        assert!(matches!(action, PictureAction::Remove));
+    }
+
+    #[test]
+    fn an_empty_picture_frame_is_removed() {
+        let action = plan_picture(&picture_with(Vec::new(), Some(MimeType::Jpeg)));
+        assert!(matches!(action, PictureAction::Remove));
+    }
+
+    /// The repair, run end to end against a real file from a real library.
+    ///
+    /// Opt-in because it needs one: set `NEMORA_HEAL_FIXTURE` to an audio file
+    /// carrying a picture a demuxer would refuse. The file is copied first and
+    /// the copy is what gets rewritten, per the isolation rule - a repair test
+    /// that damages the only copy of someone's music has failed no matter what
+    /// it asserts.
+    #[test]
+    #[ignore]
+    fn repairs_a_real_file_without_breaking_it() {
+        let Some(fixture) = std::env::var_os("NEMORA_HEAL_FIXTURE") else {
+            println!("set NEMORA_HEAL_FIXTURE to an audio file with a broken embedded picture");
+            return;
+        };
+        let source = std::path::PathBuf::from(fixture);
+        let extension = source
+            .extension()
+            .map(|value| value.to_string_lossy().to_string())
+            .unwrap_or_else(|| "mp3".into());
+        let working = std::env::temp_dir().join(format!("nemora-heal-fixture.{extension}"));
+        std::fs::copy(&source, &working).expect("fixture must be copyable");
+        let path = working.to_string_lossy().to_string();
+
+        let before = Probe::open(&working).unwrap().read().unwrap();
+        let broken_before = before
+            .tags()
+            .iter()
+            .flat_map(|tag| tag.pictures())
+            .filter(|picture| !matches!(plan_picture(picture), PictureAction::Keep))
+            .count();
+        let duration_before = before.properties().duration();
+        assert!(
+            broken_before > 0,
+            "the fixture is supposed to carry a picture a demuxer would refuse"
+        );
+
+        let healed = heal_impl(&path).expect("the repair must not fail");
+        assert_eq!(healed as usize, broken_before);
+
+        let after = Probe::open(&working).unwrap().read().unwrap();
+        let broken_after = after
+            .tags()
+            .iter()
+            .flat_map(|tag| tag.pictures())
+            .filter(|picture| !matches!(plan_picture(picture), PictureAction::Keep))
+            .count();
+        assert_eq!(
+            broken_after, 0,
+            "every picture must be acceptable afterwards"
+        );
+        // The point of the whole exercise: the song is still a song.
+        assert_eq!(
+            after.properties().duration(),
+            duration_before,
+            "the audio must come through the repair untouched"
+        );
+
+        // A second run must find nothing left to do, or the repair is not stable.
+        assert_eq!(heal_impl(&path).unwrap(), 0);
+
+        let _ = std::fs::remove_file(&working);
+    }
 
     #[test]
     fn splits_multi_value_fields_the_way_the_library_already_stores_them() {

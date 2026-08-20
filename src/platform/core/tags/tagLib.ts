@@ -5,6 +5,7 @@ import { emitTagFileWritten } from './events';
 import { commitTagFile, readTagFile, type TagFileIo, tauriTagFileIo } from './io';
 import { MemoryFileAbstraction } from './memoryFileAbstraction';
 import { withTagPathLock } from './pathLock';
+import { planPictureRepair } from './pictureFormat';
 import { validateTagLibCandidate, type CandidateValidator } from './validation';
 
 export type TagLibMutation = (file: TagLibFile) => void;
@@ -104,8 +105,19 @@ export function updateTagLibFile(
 }
 
 /**
- * Preserves the fork's Chromium/WebView2 workaround exactly: every FLAC
- * picture with a missing or blank MIME type is rewritten as image/jpeg.
+ * Makes every embedded picture something a media pipeline will open.
+ *
+ * The fork's founding defect was one member of a family, and only that one
+ * member was ever repaired: a picture with a blank MIME type, rewritten as
+ * `image/jpeg`. FFmpeg fails a container open the same way for a MIME type it
+ * simply does not know (`image/webp`, which this app can itself produce), and
+ * the blanket `image/jpeg` was its own small lie whenever the bytes were a PNG.
+ * `planPictureRepair` decides from the bytes instead; see it for the rule.
+ *
+ * This is the route taken only when the native repair is unavailable. It has no
+ * image codec to re-encode a WebP cover with, so where Rust converts, this
+ * drops - the song is worth more than the embedded copy of a cover the app
+ * already holds in its own store.
  */
 export function healBlankFlacPictureMime(
   path: string,
@@ -117,12 +129,21 @@ export function healBlankFlacPictureMime(
     const original = await readTagFile(path, io);
     let healedPictureCount = 0;
     const candidate = buildTagLibCandidate(path, original, (file) => {
+      const kept: unknown[] = [];
       for (const picture of file.tag.pictures) {
-        if (!picture.mimeType || picture.mimeType.trim() === '') {
-          picture.mimeType = 'image/jpeg';
-          healedPictureCount += 1;
+        const repair = planPictureRepair(picture.data.toByteArray(), picture.mimeType);
+        if (repair.action === 'keep') {
+          kept.push(picture);
+          continue;
         }
+        healedPictureCount += 1;
+        if (repair.action === 'set-mime') {
+          picture.mimeType = repair.mimeType;
+          kept.push(picture);
+        }
+        // 'remove': simply not carried over into `kept`.
       }
+      if (healedPictureCount > 0) file.tag.pictures = kept as typeof file.tag.pictures;
     });
 
     if (healedPictureCount === 0) return { healed: false, healedPictureCount: 0 };
@@ -134,11 +155,14 @@ export function healBlankFlacPictureMime(
     let parsed: TagLibFile | undefined;
     try {
       parsed = TagLibFile.createFromAbstraction(check, undefined, ReadStyle.None);
-      if (parsed.tag.pictures.some((picture) => !picture.mimeType?.trim())) {
+      const stillBroken = parsed.tag.pictures.some(
+        (picture) => planPictureRepair(picture.data.toByteArray(), picture.mimeType).action !== 'keep'
+      );
+      if (stillBroken) {
         throw new TagIoError(
           'validation-failed',
           path,
-          'candidate still contains a blank picture MIME; original file was not changed'
+          'candidate still contains a picture a demuxer would refuse; original file was not changed'
         );
       }
     } finally {

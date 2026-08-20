@@ -1230,6 +1230,7 @@
     "songDataUpdateFailed": "Song data update failed.",
     "noSongDataEdits": "You didn't change any song data.",
     "selectASongToPlay": "Select a song to play",
+    "songCouldNotBePlayed": "`{{title}}` could not be played. The rest of your library is unaffected.",
     "alreadyInPage": "You are already in the current page.",
     "playbackRateChanged": "Playback rate changed to {{val}} x",
     "playbackRateReset": "Playback rate has been reset to 1x",

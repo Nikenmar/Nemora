@@ -11,7 +11,7 @@ import {
   useTransition
 } from 'react';
 import { useStore } from '@tanstack/react-store';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import './assets/styles/styles.css';
 import 'material-symbols/rounded.css';
 import { appPreferences } from '../../../package.json';
@@ -59,6 +59,11 @@ import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
 import AudioPlayer from './other/player';
+import {
+  freshMediaUrl,
+  nextRecoveryAction,
+  PlaybackRecoveryLedger
+} from './other/playbackRecovery';
 import { dispatch, store } from './store';
 import { type AppReducer } from './other/appReducer';
 
@@ -68,15 +73,14 @@ const DURATION = 1000;
 
 // ? INITIALIZE PLAYER
 const player = new AudioPlayer();
-let repetitivePlaybackErrorsCount = 0;
 /**
- * Tracks repaired once per session, by song id.
+ * What has already been tried for the track that is failing right now.
  *
- * The repair rewrites the file, so a track that still fails afterwards must not
- * be rewritten again on every retry: whatever is wrong with it is not the blank
- * MIME type.
+ * Cleared whenever a track actually plays, which is the point the previous
+ * counter got wrong: it only ever incremented, so a session long enough to
+ * collect six unrelated hiccups answered every later one with an error dialog.
  */
-const attemptedPlaybackRepairs = new Set<string>();
+const playbackRecovery = new PlaybackRecoveryLedger();
 
 // ? / / / / / / /  PLAYER DEFAULT OPTIONS / / / / / / / / / / / / / /
 // player.addEventListener('player/trackchange', (e) => {
@@ -156,87 +160,6 @@ export default function App() {
     []
   );
 
-  const managePlaybackErrors = useCallback(
-    (appError: unknown) => {
-      const playerErrorData = player.error;
-      console.error(appError, playerErrorData);
-
-      const prompt = (
-        <ErrorPrompt
-          reason="ERROR_IN_PLAYER"
-          message={
-            <Trans
-              i18nKey="player.errorMessage"
-              components={{
-                br: <br />,
-                details: (
-                  <details className="mt-4">
-                    {playerErrorData
-                      ? `CODE ${playerErrorData.code} : ${playerErrorData.message}`
-                      : t('player.noErrorMessage')}
-                  </details>
-                )
-              }}
-            />
-          }
-          showSendFeedbackBtn
-        />
-      );
-
-      // MEDIA_ERR_SRC_NOT_SUPPORTED is what a blank picture MIME type looks
-      // like from here: `DEMUXER_ERROR_COULD_NOT_OPEN` on a file that plays
-      // fine everywhere else. The repair for it has shipped since the fork
-      // began, but only behind a right-click menu item, so the error people
-      // actually met was this dialog. Try it once per track before giving up.
-      const { songId, path: songPath } = store.state.currentSongData;
-      if (playerErrorData?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && songId) {
-        if (!attemptedPlaybackRepairs.has(songId)) {
-          attemptedPlaybackRepairs.add(songId);
-          const positionBeforeRepair = player.currentTime;
-          void window.api.songUpdates
-            .healSongForPlayback(songId)
-            .then((repaired) => {
-              // Nothing was wrong with the file, so the failure is something
-              // else and reloading would only spin. Report it instead.
-              if (!repaired) return changePromptMenuData(true, prompt);
-              log('Repaired a track the player refused to open; retrying it.', { songPath });
-              player.load();
-              player.currentTime = positionBeforeRepair;
-              return undefined;
-            })
-            .catch((error: unknown) => {
-              log('Could not repair a track the player refused to open.', { error }, 'ERROR');
-              changePromptMenuData(true, prompt);
-            });
-          return undefined;
-        }
-      }
-
-      if (repetitivePlaybackErrorsCount > 5) {
-        changePromptMenuData(true, prompt);
-        return log(
-          'Playback errors exceeded the 5 errors limit.',
-          { appError, playerErrorData, songPath },
-          'ERROR'
-        );
-      }
-
-      repetitivePlaybackErrorsCount += 1;
-      const prevSongPosition = player.currentTime;
-      log(`Error occurred in the player.`, { appError, playerErrorData, songPath }, 'ERROR');
-
-      if (player.src && playerErrorData) {
-        player.load();
-        player.currentTime = prevSongPosition;
-      } else {
-        player.pause();
-        changePromptMenuData(true, prompt);
-      }
-      return undefined;
-    },
-    [changePromptMenuData, t]
-  );
-
   const handleBeforeQuitEvent = useCallback(async () => {
     storage.playback.setCurrentSongOptions('stoppedPosition', player.currentTime);
     storage.playback.setPlaybackOptions('isRepeating', store.state.player.isRepeating);
@@ -295,6 +218,9 @@ export default function App() {
   useEffect(() => {
     const handlePlayerErrorEvent = (err: unknown) => managePlaybackErrors(err);
     const handlePlayerPlayEvent = () => {
+      // Sound is coming out: whatever the recovery ladder was in the middle of
+      // is finished, and the next failure deserves the full set of moves again.
+      playbackRecovery.reset();
       dispatch({
         type: 'CURRENT_SONG_PLAYBACK_STATE',
         data: true
@@ -585,6 +511,101 @@ export default function App() {
       dispatch({ type: 'UPDATE_NOTIFICATIONS', data: updatedNotifications });
     },
     []
+  );
+
+  /**
+   * The single answer to "the player refused this track".
+   *
+   * What it replaces: one repair attempt for one cause, and a modal error
+   * dialog for everything else. That dialog is the founding bug's own face -
+   * `DEMUXER_ERROR_COULD_NOT_OPEN`, the error this fork exists because of - and
+   * showing it again for causes that are NOT that bug, several of which clear
+   * themselves within a second, is how a fixed defect came back looking
+   * identical. See `playbackRecovery.ts` for the ladder and why it is ordered
+   * the way it is; the last rung reports without blocking the app, because a
+   * track that will not play is worth a sentence, not a wall.
+   */
+  const managePlaybackErrors = useCallback(
+    (appError: unknown) => {
+      const playerErrorData = player.error;
+      console.error(appError, playerErrorData);
+
+      const { songId, path: songPath, title } = store.state.currentSongData;
+      const key = songId || songPath || 'unknown-source';
+      const attempt = playbackRecovery.record(key);
+      const action = nextRecoveryAction(playbackRecovery.state(key), playerErrorData?.code);
+      const positionBeforeRecovery = player.currentTime;
+
+      const reload = () => {
+        if (!player.src) return;
+        // A fresh stamp, not a bare load(): the webview can answer load() from
+        // its cache with the very response that just failed, which makes every
+        // retry look like proof that the file is broken.
+        player.src = freshMediaUrl(player.src);
+        player.load();
+        player.currentTime = positionBeforeRecovery;
+      };
+
+      const giveUp = (reason: string) => {
+        log(
+          'The player could not open a track and every recovery step was spent.',
+          { appError, playerErrorData, songPath, attempt, reason },
+          'ERROR'
+        );
+        player.pause();
+        addNewNotifications([
+          {
+            id: 'playbackFailed',
+            content: t('notifications.songCouldNotBePlayed', { title: title || songPath || '' }),
+            iconName: 'error',
+            iconClassName: 'material-icons-round-outlined'
+          }
+        ]);
+      };
+
+      if (action.step === 'report') {
+        giveUp(playerErrorData ? `MediaError code ${playerErrorData.code}` : 'no MediaError');
+        return undefined;
+      }
+
+      if (action.step === 'retry') {
+        log('Retrying a track the player refused.', {
+          songPath,
+          attempt,
+          delayMs: action.delayMs,
+          code: playerErrorData?.code
+        });
+        window.setTimeout(reload, action.delayMs);
+        return undefined;
+      }
+
+      playbackRecovery.markRepairAttempted(key);
+      void window.api.songUpdates
+        .healSongForPlayback(songId || songPath)
+        .then((repaired) => {
+          if (repaired) {
+            log('Repaired a track the player refused to open; retrying it.', { songPath });
+            reload();
+            return undefined;
+          }
+          // Nothing in the file needed repairing, so the cause is elsewhere -
+          // and "elsewhere" very often means the file is not finished arriving.
+          // Hand the failure back to the ladder rather than ending here; it has
+          // a longer wait left and a bounded number of them.
+          log('Nothing to repair in a track the player refused; waiting instead.', { songPath });
+          window.setTimeout(reload, 1000);
+          return undefined;
+        })
+        .catch((error: unknown) => {
+          // A repair that cannot even read the file is itself evidence: that is
+          // what a half-copied track looks like from here. Same treatment - let
+          // the ladder spend its remaining wait before anyone is told anything.
+          log('Could not repair a track the player refused to open.', { error, songPath }, 'ERROR');
+          window.setTimeout(reload, 1000);
+        });
+      return undefined;
+    },
+    [addNewNotifications, t]
   );
 
   // ELO duel invites: listens-driven cadence, surfaced by the persistent dock.
@@ -899,7 +920,7 @@ export default function App() {
 
   const playSong = useCallback(
     (songId: string, isStartPlay = true, playAsCurrentSongIndex = false) => {
-      repetitivePlaybackErrorsCount = 0;
+      playbackRecovery.reset();
       if (typeof songId === 'string') {
         if (store.state.currentSongData.songId === songId) return toggleSongPlayback();
         console.time('timeForSongFetch');
