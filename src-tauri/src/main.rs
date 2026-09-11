@@ -9,6 +9,7 @@
 mod artwork;
 mod audio_session;
 mod discord;
+mod dragout;
 mod fsops;
 mod library;
 mod protocol;
@@ -17,6 +18,7 @@ mod shellops;
 mod system;
 mod tags;
 mod taskbar;
+mod widget_server;
 mod window_backdrop;
 mod window_state;
 
@@ -59,6 +61,7 @@ fn main() {
             fsops::disk_capacity,
             shellops::trash_item,
             shellops::reveal_song_in_file_explorer,
+            dragout::start_file_drag,
             shellops::reveal_folder_in_file_explorer,
             shellops::open_log_file,
             shellops::directory_size,
@@ -87,6 +90,8 @@ fn main() {
             tags::tags_read,
             tags::tags_write,
             tags::tags_heal_picture_mime,
+            widget_server::widget_set_state,
+            widget_server::widget_set_enabled,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Serving happens off the main thread: a cold 50 MB read must never

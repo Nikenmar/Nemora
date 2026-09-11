@@ -418,6 +418,16 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         isDisabled: isMultipleSelectionsEnabled
       },
       {
+        label: t('song.dragOutFile'),
+        class: 'drag-out-file',
+        iconName: 'drag_indicator',
+        // Nothing happens on click: this item is a handle, and the gesture is
+        // the whole feature. Closing the menu is all a click should do.
+        handlerFunction: () => undefined,
+        fileDrag: { paths: [path], artwork: artworkPaths?.artworkPath },
+        isDisabled: isMultipleSelectionsEnabled
+      },
+      {
         label: t('common.info'),
         class: 'info',
         iconName: 'info',

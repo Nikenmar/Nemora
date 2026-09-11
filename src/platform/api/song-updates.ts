@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+
 import type { PathBackedUpdateSongDataResult } from './binary';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { getRuntime } from '../runtime';
@@ -56,6 +58,20 @@ export const songUpdates = {
       .catch((error: unknown) => console.error('Failed to reveal song in Explorer.', error));
   },
   saveArtworkToSystem,
+  /**
+   * Starts a native drag of the song's file, so it can be dropped into any
+   * other application - Explorer, a DAW's browser, a chat window.
+   *
+   * Deliberately fire-and-forget: the shell hands the gesture to the OS and
+   * returns at once, because the drag itself outlives the call by as long as
+   * the user keeps the mouse down. `artwork` is the renderer's artwork URL and
+   * becomes the image dragged under the cursor.
+   */
+  startFileDrag: (paths: string[], artwork?: string): void => {
+    void invoke('start_file_drag', { paths, artwork }).catch((error: unknown) =>
+      console.error('Failed to start dragging the song file.', error)
+    );
+  },
   isMetadataUpdatesPending: async (songPath: string): Promise<boolean> =>
     getRuntime().isMetadataUpdatesPending(songPath)
 };

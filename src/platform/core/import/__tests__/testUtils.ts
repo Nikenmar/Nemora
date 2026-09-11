@@ -413,6 +413,7 @@ export const FORK_USER_DATA = {
     sendNowPlayingSongDataToLastFM: false,
     saveLyricsInLrcFilesForSupportedSongs: false,
     enableDiscordRPC: false,
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},
@@ -619,6 +620,7 @@ export const UPSTREAM_USER_DATA = {
     sendNowPlayingSongDataToLastFM: false,
     saveLyricsInLrcFilesForSupportedSongs: false,
     enableDiscordRPC: false,
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},

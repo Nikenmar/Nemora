@@ -129,6 +129,16 @@ const MostRelevantSearchResultsContainer = (props: Props) => {
               window.api.songUpdates.revealSongInFileExplorer(firstResult.songId)
           },
           {
+            label: t('song.dragOutFile'),
+            class: 'drag-out-file',
+            iconName: 'drag_indicator',
+            handlerFunction: () => undefined,
+            fileDrag: {
+              paths: [firstResult.path],
+              artwork: firstResult.artworkPaths?.artworkPath
+            }
+          },
+          {
             label: t('common.info'),
             class: 'info',
             iconName: 'info',

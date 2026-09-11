@@ -48,6 +48,7 @@ const emptyUserData = (): UserData => ({
     sendNowPlayingSongDataToLastFM: false,
     saveLyricsInLrcFilesForSupportedSongs: false,
     enableDiscordRPC: false,
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},

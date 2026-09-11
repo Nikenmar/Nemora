@@ -31,6 +31,7 @@ const makeUserData = (overrides: Partial<UserData> = {}): UserData => ({
     sendNowPlayingSongDataToLastFM: false,
     saveLyricsInLrcFilesForSupportedSongs: false,
     enableDiscordRPC: false,
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},

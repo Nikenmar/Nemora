@@ -47,6 +47,11 @@ const defaultUserData = () => ({
     // a store file is genuinely absent, so anyone who already chose off - or
     // imported that choice from Nora - keeps it.
     enableDiscordRPC: true,
+    // Off by default, unlike Discord: this one opens a listening socket,
+    // and nothing should be listening on a port the user never asked for.
+    // Turning it on is also only half the job - the other half is pasting
+    // the URL into OBS - so there is nothing to gain from a default on.
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},

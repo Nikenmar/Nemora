@@ -7,6 +7,7 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Button from '../Button';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
+import { reportUpNextToObsWidget } from '../../other/obsWidgetFeed';
 
 type Props = {
   onPopupAppears: (isVisible: boolean) => void;
@@ -31,6 +32,9 @@ const UpNextSongPopup = (props: Props) => {
 
   useEffect(() => {
     onPopupAppears(!!upNextSongData);
+    // The OBS widget shows the pill at the same moments this popup does, so it
+    // is told from here rather than running a schedule of its own.
+    reportUpNextToObsWidget(upNextSongData);
   }, [onPopupAppears, upNextSongData]);
 
   const showPopup = useCallback(() => {

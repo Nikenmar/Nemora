@@ -360,6 +360,14 @@ const SongCard = (props: SongCardProp) => {
         isDisabled: isMultipleSelectionsEnabled
       },
       {
+        label: t('song.dragOutFile'),
+        class: 'drag-out-file',
+        iconName: 'drag_indicator',
+        handlerFunction: () => undefined,
+        fileDrag: { paths: [path], artwork: artworkPath },
+        isDisabled: isMultipleSelectionsEnabled
+      },
+      {
         label: t('common.info'),
         class: 'info',
         iconName: 'info',

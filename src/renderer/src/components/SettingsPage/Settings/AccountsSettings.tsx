@@ -47,6 +47,28 @@ const AccountsSettings = () => {
             labelContent={t('settingsPage.enableDiscordRpc')}
           />
         </li>
+        <li className="obs-widget-integration mb-4">
+          <div className="description">{t('settingsPage.enableObsWidgetDescription')}</div>
+          <Checkbox
+            id="enableObsWidget"
+            isChecked={userData?.preferences.enableObsWidget ?? false}
+            checkedStateUpdateFunction={(state) =>
+              window.api.userData
+                .saveUserData('preferences.enableObsWidget', state)
+                .then(() =>
+                  updateUserData((prevData) => ({
+                    ...prevData,
+                    preferences: {
+                      ...prevData.preferences,
+                      enableObsWidget: state
+                    }
+                  }))
+                )
+                .catch((err) => console.error(err))
+            }
+            labelContent={t('settingsPage.enableObsWidget')}
+          />
+        </li>
         {/*
           Last.fm is hidden unless a session already exists (one imported from a
           Nora profile, say). Nothing here is deleted: the API, the scrobbler and

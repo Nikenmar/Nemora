@@ -300,6 +300,12 @@ ${reason.stack ?? ''}`
     );
     startTaskbarButtons();
 
+    // Feeds the OBS now-playing widget served on 127.0.0.1 by the shell. Doing
+    // it from the bootstrap, not from a component, keeps the widget correct
+    // while the player sits on a page that renders no player bar at all.
+    const { startObsWidgetFeed } = await import('./other/obsWidgetFeed');
+    startObsWidgetFeed();
+
     // Paints the window and webview layers in the user's actual theme. The
     // config already paints them dark from the first frame; this is what keeps
     // a light-theme profile from getting a dark edge while resizing.

@@ -204,6 +204,7 @@
   },
   "song": {
     "showInFileExplorer": "Show in File Explorer",
+    "dragOutFile": "Drag the file out",
     "artwork": "Song artwork",
     "selectedSongCount": "{{count}} selected $t(common.song, {\"count\":{{count}}})",
     "likeSong": "Add to favorites",
@@ -370,6 +371,8 @@
     "sendNowPlayingToLastFm": "Send currently playing song data",
     "enableDiscordRpcDescription": "Integrate Discord Rich Presence with Nemora",
     "enableDiscordRpc": "Enable Discord Rich Presence",
+    "enableObsWidgetDescription": "Serve a transparent 'now playing' widget for OBS. In OBS, add a Browser source with the URL http://127.0.0.1:41237/ and give it the size you want: the widget fills the height of the source and stays sharp, so 720 x 96 is the base size and 1800 x 240 suits an ultrawide stream. It is served on this computer only.",
+    "enableObsWidget": "Enable the OBS widget",
     "doNotSaveLyricsAutomatically": "Don't save lyrics automatically",
     "syncedLyricsOnly": "Synced lyrics only",
     "saveEitherLyrics": "Synced or unsynced lyrics",

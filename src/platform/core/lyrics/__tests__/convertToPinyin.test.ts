@@ -28,6 +28,7 @@ const makeRepository = (): LyricsRepository => ({
       sendNowPlayingSongDataToLastFM: false,
       saveLyricsInLrcFilesForSupportedSongs: false,
       enableDiscordRPC: false,
+      enableObsWidget: false,
       saveVerboseLogs: false
     },
     windowPositions: {},

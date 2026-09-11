@@ -421,6 +421,7 @@ declare global {
     | 'preferences.autoTranslateLyrics'
     | 'preferences.autoConvertLyrics'
     | 'preferences.enableDiscordRPC'
+    | 'preferences.enableObsWidget'
     | 'preferences.saveVerboseLogs'
     | 'customMusixmatchUserToken'
     | 'customLrcFilesSaveLocation'
@@ -449,6 +450,7 @@ declare global {
       sendNowPlayingSongDataToLastFM: boolean;
       saveLyricsInLrcFilesForSupportedSongs: boolean;
       enableDiscordRPC: boolean;
+      enableObsWidget: boolean;
       saveVerboseLogs: boolean;
     };
     windowPositions: {
@@ -1391,6 +1393,17 @@ declare global {
     innerContextMenus?: ContextMenuItem[];
     handlerFunction: null | (() => void);
     isDisabled?: boolean;
+    /**
+     * Turns the item into a drag handle: pressing it and pulling starts a
+     * native drag of these files, which can then be dropped into any other
+     * application. Clicking it does nothing but close the menu - there is no
+     * click behaviour to have, the gesture IS the feature.
+     */
+    fileDrag?: {
+      paths: string[];
+      /** The renderer's artwork URL, used as the image under the cursor. */
+      artwork?: string;
+    };
   }
 
   // ? Data sorting related types

@@ -1,7 +1,8 @@
 ﻿import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 jest.mock('../buildEnv', () => ({
-  getBuildEnvVariable: (name: string) => (name === 'MAIN_VITE_LAST_FM_API_KEY' ? 'testApiKey' : undefined)
+  getBuildEnvVariable: (name: string) =>
+    name === 'MAIN_VITE_LAST_FM_API_KEY' ? 'testApiKey' : undefined
 }));
 // jest's node environment stubs navigator.onLine to undefined; assume online
 // and let the mocked fetch decide the request outcomes.
@@ -12,7 +13,11 @@ import type { NetworkRepository } from '../repository';
 
 const mockFetch = jest.fn<typeof fetch>();
 
-const artist = (artistId: string, name: string, extras: Partial<SavableArtist> = {}): SavableArtist => ({
+const artist = (
+  artistId: string,
+  name: string,
+  extras: Partial<SavableArtist> = {}
+): SavableArtist => ({
   artistId,
   songs: [],
   name,
@@ -59,6 +64,7 @@ const makeRepository = (state: FakeState): NetworkRepository => ({
       sendNowPlayingSongDataToLastFM: false,
       saveLyricsInLrcFilesForSupportedSongs: false,
       enableDiscordRPC: false,
+      enableObsWidget: false,
       saveVerboseLogs: false
     },
     windowPositions: {},
@@ -69,8 +75,16 @@ const makeRepository = (state: FakeState): NetworkRepository => ({
   getSongsOutsideLibrary: () => [],
   getBlacklist: () => ({ songBlacklist: [], folderBlacklist: [] }),
   getSongArtworkPath: () => ({ isDefaultArtwork: true, artworkPath: '', optimizedArtworkPath: '' }),
-  getArtistArtworkPath: () => ({ isDefaultArtwork: true, artworkPath: '', optimizedArtworkPath: '' }),
-  getAlbumArtworkPath: () => ({ isDefaultArtwork: true, artworkPath: '', optimizedArtworkPath: '' }),
+  getArtistArtworkPath: () => ({
+    isDefaultArtwork: true,
+    artworkPath: '',
+    optimizedArtworkPath: ''
+  }),
+  getAlbumArtworkPath: () => ({
+    isDefaultArtwork: true,
+    artworkPath: '',
+    optimizedArtworkPath: ''
+  }),
   getSelectedPaletteData: () => undefined,
   generatePalette: (imageUrl) => {
     state.generatedPalettes.push(imageUrl);
@@ -86,7 +100,8 @@ const DEEZER_HIT = {
   id: 123,
   name: 'Halo Band',
   picture_xl: 'https://e-cdns-images.dzcdn.net/images/artist/7bb8b74c/500x500-000000-80-0-0.jpg',
-  picture_medium: 'https://e-cdns-images.dzcdn.net/images/artist/7bb8b74c/250x250-000000-80-0-0.jpg',
+  picture_medium:
+    'https://e-cdns-images.dzcdn.net/images/artist/7bb8b74c/250x250-000000-80-0-0.jpg',
   picture_small: 'https://e-cdns-images.dzcdn.net/images/artist/7bb8b74c/50x50-000000-80-0-0.jpg'
 };
 
@@ -123,10 +138,7 @@ describe('getArtistInfoFromNet', () => {
 
   test('assembles artwork, bio, palette, similar artists and tags', async () => {
     const state = makeState({
-      artists: [
-        artist('ar-1', 'Halo Band'),
-        artist('ar-2', 'Local Twin')
-      ]
+      artists: [artist('ar-1', 'Halo Band'), artist('ar-2', 'Local Twin')]
     });
     const repository = makeRepository(state);
 

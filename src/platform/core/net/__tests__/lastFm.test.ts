@@ -45,6 +45,7 @@ const makeUserData = (): UserData => ({
     sendNowPlayingSongDataToLastFM: true,
     saveLyricsInLrcFilesForSupportedSongs: false,
     enableDiscordRPC: false,
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},
@@ -63,8 +64,16 @@ const makeRepository = (): NetworkRepository => ({
   getSongsOutsideLibrary: () => [],
   getBlacklist: () => ({ songBlacklist: [], folderBlacklist: [] }),
   getSongArtworkPath: () => ({ isDefaultArtwork: true, artworkPath: '', optimizedArtworkPath: '' }),
-  getArtistArtworkPath: () => ({ isDefaultArtwork: true, artworkPath: '', optimizedArtworkPath: '' }),
-  getAlbumArtworkPath: () => ({ isDefaultArtwork: true, artworkPath: '', optimizedArtworkPath: '' }),
+  getArtistArtworkPath: () => ({
+    isDefaultArtwork: true,
+    artworkPath: '',
+    optimizedArtworkPath: ''
+  }),
+  getAlbumArtworkPath: () => ({
+    isDefaultArtwork: true,
+    artworkPath: '',
+    optimizedArtworkPath: ''
+  }),
   getSelectedPaletteData: () => undefined,
   generatePalette: () => Promise.resolve({ paletteId: '' }),
   decrypt: (encrypted) => Promise.resolve(`decrypted:${encrypted}`),
@@ -145,6 +154,8 @@ describe('Last.fm request signing', () => {
   test('getLastFmAuthData throws when the session key is missing', async () => {
     const repository = makeRepository();
     repository.getUserData = () => ({ ...makeUserData(), lastFmSessionData: undefined });
-    await expect(getLastFmAuthData(repository)).rejects.toThrow('Encrypted LastFM Session Key not found');
+    await expect(getLastFmAuthData(repository)).rejects.toThrow(
+      'Encrypted LastFM Session Key not found'
+    );
   });
 });

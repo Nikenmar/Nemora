@@ -33,6 +33,7 @@ const makeUserData = (overrides: Partial<UserData> = {}): UserData => ({
     sendNowPlayingSongDataToLastFM: false,
     saveLyricsInLrcFilesForSupportedSongs: false,
     enableDiscordRPC: false,
+    enableObsWidget: false,
     saveVerboseLogs: false
   },
   windowPositions: {},
@@ -191,9 +192,9 @@ describe('getSongLyrics', () => {
       'ANY',
       'ANY'
     );
-    expect(state.sentMessages?.some(({ messageCode }) => messageCode === 'LYRICS_FIND_FAILED')).toBe(
-      true
-    );
+    expect(
+      state.sentMessages?.some(({ messageCode }) => messageCode === 'LYRICS_FIND_FAILED')
+    ).toBe(true);
   });
 
   test('serves the cached lyrics for the same title', async () => {

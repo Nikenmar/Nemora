@@ -41,6 +41,16 @@ image = { version = "0.25.10", default-features = false, features = ["png", "jpe
 webp = "0.3.1"
 lofty = "0.25.0"
 
+# Serves the OBS now-playing widget on 127.0.0.1 (see `widget_server.rs`). A
+# webview cannot listen on a socket, and everything heavier here would drag in
+# an async runtime for what is a handful of in-memory GETs per second.
+tiny_http = "0.12"
+
+# Native drag-out of a song file (see `dragout.rs`). A webview can only
+# drag within itself; dropping a real file into Explorer or a DAW needs an
+# OLE drag carrying CF_HDROP, which is what this crate performs.
+drag = "2.1.1"
+
 # Windows-only: taskbar thumbbar buttons (ITaskbarList3) and AUMID handling.
 [target.'cfg(windows)'.dependencies]
 # MUST track the version tao/tauri-runtime-wry use (windows 0.61.x). A different

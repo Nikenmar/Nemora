@@ -13,6 +13,7 @@ import { lyrics } from './lyrics';
 import { messages } from './messages';
 import { miniPlayer } from './mini-player';
 import { noraImport } from './nora-import';
+import { obsWidget } from './obs-widget';
 import { playerControls } from './player-controls';
 import { playlistsData } from './playlists-data';
 import { properties } from './properties';
@@ -46,6 +47,7 @@ export {
 } from './window-controls';
 export { startWindowBackgroundSync } from './theme';
 export type { PathBackedAudioPlayerData, PathBackedUpdateSongDataResult } from './binary';
+export type { ObsWidgetState, ObsWidgetUpNext } from './obs-widget';
 
 export const api = {
   properties,
@@ -78,6 +80,7 @@ export const api = {
   log,
   miniPlayer,
   noraImport,
+  obsWidget,
   settingsHelpers,
   appControls,
   utils

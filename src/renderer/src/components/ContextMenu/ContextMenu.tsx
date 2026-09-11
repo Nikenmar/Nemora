@@ -73,6 +73,7 @@ const ContextMenu = memo(() => {
               iconName={menuItem.iconName}
               iconClassName={menuItem.iconClassName}
               handlerFunction={menuItem.handlerFunction}
+              fileDrag={menuItem.fileDrag}
             />
           );
         }),

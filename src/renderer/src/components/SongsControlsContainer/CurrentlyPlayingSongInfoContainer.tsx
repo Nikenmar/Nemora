@@ -151,6 +151,13 @@ const CurrentlyPlayingSongInfoContainer = () => {
         handlerFunction: () => window.api.songUpdates.revealSongInFileExplorer(songId)
       },
       {
+        label: t('song.dragOutFile'),
+        class: 'drag-out-file',
+        iconName: 'drag_indicator',
+        handlerFunction: () => undefined,
+        fileDrag: { paths: [path], artwork: artworkPath }
+      },
+      {
         label: t('common.info'),
         iconName: 'info',
         handlerFunction: () => showSongInfoPage(songId),

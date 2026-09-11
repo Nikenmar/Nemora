@@ -250,6 +250,34 @@ fn temporarily_unavailable(detail: &str) -> Response<Vec<u8>> {
 }
 
 /// Serves one request. Runs on a worker thread, never on the main thread.
+/// The file path behind an asset URL the renderer is holding.
+///
+/// The renderer never keeps a plain path for artwork: `convertFileSrc(path,
+/// "nemora")` turns it into `http://nemora.localhost/<percent-encoded path>`,
+/// and that URL is what comes back to any command that needs the file itself.
+/// Anything else - an online cover, a bundled asset - has no local file behind
+/// it and yields `None` rather than a path that cannot be opened.
+pub fn local_path_from_asset_url(url: &str) -> Option<String> {
+    let url = url.trim();
+
+    for prefix in ["http://nemora.localhost/", "https://nemora.localhost/"] {
+        let Some(encoded) = url.strip_prefix(prefix) else {
+            continue;
+        };
+        // Drop a cache-busting query or fragment before decoding: neither is
+        // part of the path, and both would corrupt it.
+        let encoded = encoded.split(['?', '#']).next().unwrap_or_default();
+        let decoded = percent_encoding::percent_decode_str(encoded)
+            .decode_utf8()
+            .ok()?;
+        // Tolerate the legacy `localfiles/` namespace, exactly as `serve` does.
+        let path = decoded.strip_prefix("localfiles/").unwrap_or(&decoded);
+        return (!path.is_empty()).then(|| path.to_string());
+    }
+
+    None
+}
+
 pub fn serve(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     // Set NEMORA_PROTOCOL_TRACE=1 to print every request. How often a media
     // element comes back, and for which ranges, is invisible from the renderer
