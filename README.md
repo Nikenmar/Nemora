@@ -2,7 +2,7 @@
 
 <img src="resources/banner.png" alt="Nemora Player" width="720">
 
-### A feature-rich music player _(that installs in 30~ MB)_
+### A feature-rich music player
 
 Built with Rust, Tauri and React / Based on [Nora](https://github.com/Sandakan/Nora)
 
