@@ -249,7 +249,16 @@ export class NoraRuntime {
     this.storePort = port;
     this.cache = new CachedStores(
       port,
-      options.defaults ?? createDefaultStoreFiles(options.version)
+      options.defaults ?? createDefaultStoreFiles(options.version),
+      {
+        onWriteError: (store, error, attempt) =>
+          logger.error(`Could not write the ${store} store; retrying.`, {
+            attempt,
+            error: error instanceof Error ? error.message : String(error)
+          }),
+        onWriteRecovered: (store, attempts) =>
+          logger.info(`The ${store} store is written again.`, { failedAttempts: attempts })
+      }
     );
     this.artwork = options.artwork;
     this.events = options.events;

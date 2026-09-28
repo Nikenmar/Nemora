@@ -123,6 +123,38 @@ export class StoreNotHydratedError extends Error {
   }
 }
 
+const describeCause = (cause: unknown): string => {
+  if (cause instanceof Error) return cause.message;
+  if (typeof cause === 'string') return cause;
+  try {
+    return JSON.stringify(cause) ?? String(cause);
+  } catch {
+    return String(cause);
+  }
+};
+
+/**
+ * Waits before writing a store again after a failed write, the last one
+ * repeated for as long as the failure lasts.
+ *
+ * On Windows another process - an antivirus or indexer scanning the file that
+ * was just written, a backup tool - can hold a store file for a moment, and the
+ * atomic replace is refused. A store used to stop writing for the rest of the
+ * session after one such moment: every later listen and playlist change stayed
+ * in memory and was gone on the next launch. Retrying is safe because every
+ * write is the whole current file, and writes to one store never interleave.
+ */
+export const STORE_WRITE_RETRY_DELAYS_MS: readonly number[] = [250, 1_000, 3_000, 10_000, 30_000];
+
+export interface CachedStoresOptions {
+  /** Runs `task` after `delayMs`; tests pass a hand-driven clock. */
+  schedule?: (task: () => void, delayMs: number) => void;
+  /** Told about every failed write, with its attempt number, so the failure is logged. */
+  onWriteError?: (store: StoreName, error: unknown, attempt: number) => void;
+  /** Told when a store that failed is written again. */
+  onWriteRecovered?: (store: StoreName, attempts: number) => void;
+}
+
 export class StoreWriteError extends Error {
   // Plain fields: the repo compiles with `erasableSyntaxOnly`, which forbids
   // constructor parameter properties.
@@ -130,7 +162,9 @@ export class StoreWriteError extends Error {
   override readonly cause: unknown;
 
   constructor(store: StoreName, cause: unknown) {
-    super(`store "${store}" could not be flushed`);
+    // The cause is part of the message: logs keep the message, and "could not
+    // be flushed" alone never said which process held the file or why.
+    super(`store "${store}" could not be flushed: ${describeCause(cause)}`);
     this.name = 'StoreWriteError';
     this.store = store;
     this.cause = cause;
@@ -146,16 +180,20 @@ export class CachedStores {
   private readonly pending = new Set<StoreName>();
   private readonly drains = new Map<StoreName, Promise<void>>();
   private readonly writeErrors = new Map<StoreName, unknown>();
+  private readonly writeAttempts = new Map<StoreName, number>();
+  private readonly retryScheduled = new Set<StoreName>();
   private hydrationPromise: Promise<void> | undefined;
   private hydrated = false;
   private sealed = false;
 
   private readonly port: StorePort;
   private readonly defaults: StoreDefaults;
+  private readonly options: CachedStoresOptions;
 
-  constructor(port: StorePort, defaults: StoreDefaults) {
+  constructor(port: StorePort, defaults: StoreDefaults, options: CachedStoresOptions = {}) {
     this.port = port;
     this.defaults = defaults;
+    this.options = options;
   }
 
   hydrate(): Promise<void> {
@@ -229,12 +267,40 @@ export class CachedStores {
       try {
         const snapshot = jsonClone(this.requireFile(store));
         await this.port.write(store, snapshot);
+        const attempts = this.writeAttempts.get(store);
+        if (attempts !== undefined) {
+          this.writeAttempts.delete(store);
+          this.options.onWriteRecovered?.(store, attempts);
+        }
       } catch (error) {
         this.pending.add(store);
         this.writeErrors.set(store, error);
+        const attempt = (this.writeAttempts.get(store) ?? 0) + 1;
+        this.writeAttempts.set(store, attempt);
+        this.options.onWriteError?.(store, error, attempt);
+        this.scheduleRetry(store, attempt);
         return;
       }
     }
+  }
+
+  /**
+   * Writes a failed store again later. The error stays recorded until a write
+   * succeeds, so `flush()` keeps reporting the failure meanwhile; every change
+   * made in between is coalesced into that next write.
+   */
+  private scheduleRetry(store: StoreName, attempt: number): void {
+    if (this.retryScheduled.has(store) || this.sealed) return;
+    const delays = STORE_WRITE_RETRY_DELAYS_MS;
+    const delayMs = delays[Math.min(attempt - 1, delays.length - 1)];
+    const schedule = this.options.schedule ?? ((task, ms) => void setTimeout(task, ms));
+    this.retryScheduled.add(store);
+    schedule(() => {
+      this.retryScheduled.delete(store);
+      if (this.sealed || !this.writeErrors.has(store)) return;
+      this.writeErrors.delete(store);
+      if (this.pending.has(store)) this.startDrain(store);
+    }, delayMs);
   }
 
   async flush(store?: StoreName): Promise<void> {
@@ -270,6 +336,9 @@ export class CachedStores {
 
   unseal(): void {
     this.sealed = false;
+    // A write that failed while sealed was not retried; pick those up now.
+    for (const store of this.writeErrors.keys())
+      this.scheduleRetry(store, this.writeAttempts.get(store) ?? 1);
   }
 
   get isSealed(): boolean {

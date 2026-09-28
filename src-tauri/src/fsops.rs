@@ -303,6 +303,30 @@ fn atomic_destination(path: &Path) -> Result<(PathBuf, PathBuf), FsOpsError> {
     Ok((directory.join(file_name), directory))
 }
 
+/// Waits between attempts at a replace Windows refused for a moment, about
+/// 2.6 s in all.
+///
+/// An antivirus or indexer scanning a store that was just written, or a backup
+/// tool, can hold the file without delete sharing; ReplaceFileW is then refused
+/// with a sharing or lock violation, "access denied" or "unable to remove the
+/// replaced file". Such a hold lasts milliseconds. Giving up at once used to
+/// stop the store from being saved for the rest of the session.
+#[cfg(windows)]
+const REPLACE_RETRY_DELAYS_MS: [u64; 8] = [10, 25, 50, 100, 200, 400, 800, 1_000];
+
+/// The Win32 errors a short-lived handle in another process produces.
+#[cfg(windows)]
+fn is_transient_replace_error(error: &windows::core::Error) -> bool {
+    const FACILITY_WIN32: u32 = 0x8007_0000;
+    let hresult = error.code().0 as u32;
+    if hresult & 0xFFFF_0000 != FACILITY_WIN32 {
+        return false;
+    }
+    // ACCESS_DENIED, SHARING_VIOLATION, LOCK_VIOLATION,
+    // UNABLE_TO_REMOVE_REPLACED, UNABLE_TO_MOVE_REPLACEMENT.
+    matches!(hresult & 0xFFFF, 5 | 32 | 33 | 1175 | 1176)
+}
+
 #[cfg(windows)]
 fn atomic_replace(temp: &Path, destination: &Path) -> Result<(), FsOpsError> {
     use windows::{
@@ -318,6 +342,15 @@ fn atomic_replace(temp: &Path, destination: &Path) -> Result<(), FsOpsError> {
     let destination_pcwstr = PCWSTR::from_raw(destination_wide.as_ptr());
 
     let destination_exists = match fs::symlink_metadata(destination) {
+        // A directory in the way is not a moment's lock; retrying it would
+        // only delay the same refusal.
+        Ok(metadata) if metadata.is_dir() => {
+            return Err(FsOpsError::new(
+                FsOpsErrorCode::AtomicReplace,
+                destination,
+                "destination is a directory",
+            ));
+        }
         Ok(_) => true,
         Err(error) if error.kind() == io::ErrorKind::NotFound => false,
         Err(error) => {
@@ -329,34 +362,55 @@ fn atomic_replace(temp: &Path, destination: &Path) -> Result<(), FsOpsError> {
         }
     };
 
-    let result = if destination_exists {
-        // SAFETY: all PCWSTR values point to live, NUL-terminated buffers for
-        // the duration of the call. The temp handle has already been closed.
-        unsafe {
-            ReplaceFileW(
-                destination_pcwstr,
-                temp_pcwstr,
-                PCWSTR::null(),
-                REPLACE_FILE_FLAGS(0),
-                None,
-                None,
-            )
+    let mut attempt = 0;
+    loop {
+        match replace_once(destination_exists, temp_pcwstr, destination_pcwstr) {
+            Ok(()) => return Ok(()),
+            Err(error)
+                if is_transient_replace_error(&error)
+                    && attempt < REPLACE_RETRY_DELAYS_MS.len() =>
+            {
+                std::thread::sleep(std::time::Duration::from_millis(
+                    REPLACE_RETRY_DELAYS_MS[attempt],
+                ));
+                attempt += 1;
+            }
+            Err(error) => {
+                return Err(FsOpsError::new(
+                    FsOpsErrorCode::AtomicReplace,
+                    destination,
+                    error.to_string(),
+                ));
+            }
         }
-    } else {
-        // No replacement metadata exists to preserve. Omitting
-        // MOVEFILE_REPLACE_EXISTING also makes a concurrent creator fail
-        // closed instead of being overwritten.
-        // SAFETY: both PCWSTR values are valid as described above.
-        unsafe { MoveFileExW(temp_pcwstr, destination_pcwstr, MOVEFILE_WRITE_THROUGH) }
-    };
+    }
 
-    result.map_err(|error| {
-        FsOpsError::new(
-            FsOpsErrorCode::AtomicReplace,
-            destination,
-            error.to_string(),
-        )
-    })
+    fn replace_once(
+        destination_exists: bool,
+        temp_pcwstr: PCWSTR,
+        destination_pcwstr: PCWSTR,
+    ) -> windows::core::Result<()> {
+        if destination_exists {
+            // SAFETY: all PCWSTR values point to live, NUL-terminated buffers for
+            // the duration of the call. The temp handle has already been closed.
+            unsafe {
+                ReplaceFileW(
+                    destination_pcwstr,
+                    temp_pcwstr,
+                    PCWSTR::null(),
+                    REPLACE_FILE_FLAGS(0),
+                    None,
+                    None,
+                )
+            }
+        } else {
+            // No replacement metadata exists to preserve. Omitting
+            // MOVEFILE_REPLACE_EXISTING also makes a concurrent creator fail
+            // closed instead of being overwritten.
+            // SAFETY: both PCWSTR values are valid as described above.
+            unsafe { MoveFileExW(temp_pcwstr, destination_pcwstr, MOVEFILE_WRITE_THROUGH) }
+        }
+    }
 }
 
 #[cfg(windows)]
@@ -741,6 +795,38 @@ mod tests {
             br#"{"userData":{}}"#
         );
         assert!(temp_artifacts(destination.parent().unwrap()).is_empty());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn atomic_write_waits_out_another_process_holding_the_store() {
+        // An antivirus or indexer scanning the file that was just written holds
+        // it without delete sharing; the replace must wait it out, not give up.
+        use std::os::windows::fs::OpenOptionsExt;
+
+        let directory = TestDirectory::create();
+        let destination = directory.path().join("playlists.json");
+        fs::write(&destination, br#"{"old":true}"#).expect("fixture should be writable");
+
+        let holder = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0x1) // FILE_SHARE_READ only: no delete sharing, like a scanner.
+            .open(&destination)
+            .expect("the fixture should open");
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            drop(holder);
+        });
+
+        write_file_atomic_impl(&destination, br#"{"new":true}"#)
+            .expect("the write should succeed once the other handle is gone");
+        release.join().expect("the holder thread should finish");
+
+        assert_eq!(
+            fs::read(&destination).expect("readable"),
+            br#"{"new":true}"#
+        );
+        assert!(temp_artifacts(directory.path()).is_empty());
     }
 
     #[test]
