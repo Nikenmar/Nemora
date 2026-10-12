@@ -73,8 +73,6 @@ Against [Nora 3.1.0](https://github.com/Sandakan/Nora/releases/tag/v3.1.0-stable
 
 Same machine, same 300-track library, a separate profile copy for each player, median of 5 launches, every process counted. Memory is the private working set, the figure Windows shows in Task Manager. Playback only counts when Windows confirms the app is producing sound, so a silent run is discarded rather than averaged in. Building the library is timed by [its own harness](scripts/bench-scan.mjs). [Raw numbers](docs/tauri-port/benchmark-raw.json), [harness](scripts/benchmark.mjs).
 
-One honest asterisk on the size: Electron ships its own copy of Chromium, Nemora uses the WebView2 runtime already in Windows. That is the whole 382 MB against 33 MB.
-
 ---
 
 <div align="center">
