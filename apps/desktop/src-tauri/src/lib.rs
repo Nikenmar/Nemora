@@ -7,6 +7,7 @@ mod audio_session;
 mod commands;
 mod discord;
 mod dragout;
+mod duels;
 mod folders;
 mod protocol;
 mod secrets;
@@ -115,6 +116,21 @@ pub fn run() {
             commands::library_listening,
             commands::favorites_toggle,
             commands::play_record,
+            duels::duel_pair,
+            duels::duel_pair_by_ids,
+            duels::duel_select_anchor,
+            duels::duel_submit,
+            duels::duel_skip,
+            duels::tournament_start,
+            duels::tournament_resume,
+            duels::tournament_overview,
+            duels::tournament_submit,
+            duels::tierlists_list,
+            duels::tierlist_add,
+            duels::tierlist_save,
+            duels::tierlists_remove,
+            duels::tierlist_artworks,
+            duels::shuffle_data,
             shellops::trash_item,
             shellops::reveal_song_in_file_explorer,
             shellops::reveal_folder_in_file_explorer,

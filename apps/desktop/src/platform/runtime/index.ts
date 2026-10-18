@@ -513,37 +513,37 @@ export class NemoraRuntime {
 
   // ----- tierlists and shuffle -------------------------------------------------------------------
 
-  getTierlists(_ids?: string[], _sortType?: TierlistSortTypes): Promise<SavableTierlist[]> {
-    return later('getTierlists');
+  getTierlists(ids?: string[], sortType?: TierlistSortTypes): Promise<SavableTierlist[]> {
+    return call('tierlists_list', { ids, sortType });
   }
 
   addTierlist(
-    _name: string,
-    _sourcePlaylistIds?: string[],
-    _labelMode?: TierlistLabelMode,
-    _sourceFolderPaths?: string[]
+    name: string,
+    sourcePlaylistIds?: string[],
+    labelMode?: TierlistLabelMode,
+    sourceFolderPaths?: string[]
   ): Promise<{ success: boolean; message?: string; tierlist?: SavableTierlist }> {
-    return later('addTierlist');
+    return call('tierlist_add', { name, sourcePlaylistIds, labelMode, sourceFolderPaths });
   }
 
-  saveTierlist(_value: SavableTierlist): Promise<Result> {
-    return later('saveTierlist');
+  saveTierlist(value: SavableTierlist): Promise<Result> {
+    return call('tierlist_save', { tierlist: value });
   }
 
-  removeTierlists(_ids: string[]): Promise<Result> {
-    return later('removeTierlists');
+  removeTierlists(ids: string[]): Promise<Result> {
+    return call('tierlists_remove', { ids });
   }
 
-  createTierlistArtworks(_songIds: string[]): Promise<Record<string, string>> {
-    return later('createTierlistArtworks');
+  createTierlistArtworks(songIds: string[]): Promise<Record<string, string>> {
+    return call('tierlist_artworks', { songIds });
   }
 
-  getMegaShuffleWeights(_ids: string[], _intensity?: number): Promise<Record<string, number>> {
-    return later('getMegaShuffleWeights');
+  async getMegaShuffleWeights(ids: string[], intensity?: number): Promise<Record<string, number>> {
+    return (await this.getMegaShuffleData(ids, intensity)).weights;
   }
 
-  getMegaShuffleData(_ids: string[], _intensity?: number): Promise<MegaShuffleData> {
-    return later('getMegaShuffleData');
+  getMegaShuffleData(ids: string[], intensity?: number): Promise<MegaShuffleData> {
+    return call('shuffle_data', { songIds: ids, intensity });
   }
 
   // ----- statistics, ELO, Song Guessr ------------------------------------------------------------
@@ -564,40 +564,40 @@ export class NemoraRuntime {
     return later('importStats');
   }
 
-  getDuelPair(_pinnedSongId?: string): Promise<DuelPair | null> {
-    return later('getDuelPair');
+  getDuelPair(pinnedSongId?: string): Promise<DuelPair | null> {
+    return call('duel_pair', { pinnedSongId });
   }
 
-  selectDuelAnchor(_candidates: DuelAnchorCandidate[], _excluded?: string[]): Promise<string | null> {
-    return later('selectDuelAnchor');
+  selectDuelAnchor(candidates: DuelAnchorCandidate[], excluded?: string[]): Promise<string | null> {
+    return call('duel_select_anchor', { candidates, excluded });
   }
 
-  getDuelPairByIds(_songAId: string, _songBId: string): Promise<DuelPair | null> {
-    return later('getDuelPairByIds');
+  getDuelPairByIds(songAId: string, songBId: string): Promise<DuelPair | null> {
+    return call('duel_pair_by_ids', { songAId, songBId });
   }
 
-  recordDuelSkip(_songAId: string, _songBId: string, _reason?: DuelSkipReason): Promise<void> {
-    return later('recordDuelSkip');
+  recordDuelSkip(songAId: string, songBId: string, reason?: DuelSkipReason): Promise<void> {
+    return call('duel_skip', { songAId, songBId, reason });
   }
 
-  submitDuelResult(_songAId: string, _songBId: string, _winnerId: string): Promise<DuelResult> {
-    return later('submitDuelResult');
+  submitDuelResult(songAId: string, songBId: string, winnerId: string): Promise<DuelResult> {
+    return call('duel_submit', { songAId, songBId, winnerId });
   }
 
-  startTournament(_size: TournamentSize): Promise<TournamentState> {
-    return later('startTournament');
+  startTournament(size: TournamentSize): Promise<TournamentState> {
+    return call('tournament_start', { size });
   }
 
-  resumeTournament(): Promise<PreparedTournament | undefined> {
-    return later('resumeTournament');
+  async resumeTournament(): Promise<PreparedTournament | undefined> {
+    return (await call<PreparedTournament | null>('tournament_resume')) ?? undefined;
   }
 
   getTournamentOverview(): Promise<TournamentOverview> {
-    return later('getTournamentOverview');
+    return call('tournament_overview');
   }
 
-  submitTournamentDuel(_matchId: string, _winnerSongId: string): Promise<TournamentDuelSubmission> {
-    return later('submitTournamentDuel');
+  submitTournamentDuel(matchId: string, winnerSongId: string): Promise<TournamentDuelSubmission> {
+    return call('tournament_submit', { matchId, winnerSongId });
   }
 
   getSongGuessrRound(_options: SongGuessrRoundOptions): Promise<SongGuessrRound | null> {

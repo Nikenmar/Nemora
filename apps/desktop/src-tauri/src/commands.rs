@@ -13,9 +13,9 @@ use crate::app::{App, DefaultArtwork};
 use crate::user_data;
 use crate::view::{View, parse_view_id, view_id};
 
-type Res<T> = Result<T, String>;
+pub(crate) type Res<T> = Result<T, String>;
 
-fn fail(e: impl std::fmt::Display) -> String {
+pub(crate) fn fail(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
 
@@ -24,7 +24,7 @@ pub fn notify(app: &AppHandle, types: &[&str]) {
     let _ = app.emit("nemora://data-updated", types);
 }
 
-fn view(app: &App) -> View<'_> {
+pub(crate) fn view(app: &App) -> View<'_> {
     View { covers: &app.covers, defaults: app.defaults() }
 }
 
@@ -117,7 +117,7 @@ pub fn library_songs(
 }
 
 /// Rows for view ids, in the given order; ids whose song has no file present are left out.
-fn rows_for(db: &Db, ids: &[String]) -> nemora_core::Result<Vec<SongRow>> {
+pub(crate) fn rows_for(db: &Db, ids: &[String]) -> nemora_core::Result<Vec<SongRow>> {
     let bare: Vec<String> = ids.iter().filter(|&id| matches!(parse_view_id(id), (_, None))).cloned().collect();
     let primary = library::primary_variants(db, &bare)?;
     let variants: Vec<i64> = ids

@@ -281,7 +281,7 @@ pub fn record_winner(
 const KEY: &str = "elo.tournament";
 
 /// Tracks a bracket can use: present and not blacklisted.
-fn eligible(db: &crate::db::Db) -> crate::Result<Vec<String>> {
+pub fn eligible(db: &crate::db::Db) -> crate::Result<Vec<String>> {
     let mut stmt = db.conn().prepare(
         "SELECT DISTINCT song_id FROM track_variants WHERE present = 1
            AND song_id NOT IN (SELECT song_id FROM blacklist_songs WHERE value = 1) ORDER BY song_id",
