@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/nemora-core", "apps/desktop/src-tauri"]
+members = ["crates/nemora-core", "crates/nemora-audio", "apps/desktop/src-tauri"]
 # The Android app is a private nested repository. A member that is missing from
 # a public clone breaks every build, so it is never part of this workspace; its
 # crate depends on nemora-core by path instead.

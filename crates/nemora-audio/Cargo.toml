@@ -1,0 +1,15 @@
+[package]
+name = "nemora-audio"
+description = "Nemora's desktop playback engine: decode, DSP, WASAPI shared output"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+cpal = "0.18.2"
+rubato = "5.0.1"
+symphonia = { workspace = true, features = ["opt-simd", "flac", "mp1", "mp2", "mp3", "aac", "alac", "isomp4", "ogg", "vorbis", "wav", "aiff", "pcm", "mkv"] }
+thiserror.workspace = true
