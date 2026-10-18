@@ -752,6 +752,74 @@ pub fn stats_dashboard(app: State<'_, App>, time_range: String, today: String) -
     }))
 }
 
+// ----- stats files and recap -------------------------------------------------------------------
+
+/// Writes this profile as a stats export (`nora-cmr-stats-export`), readable by 1.x and Android.
+#[tauri::command]
+pub fn stats_export(app: State<'_, App>, path: String, tier_shuffle_intensity: Option<f64>, now: i64) -> Res<Value> {
+    use nemora_core::transfer::{ExportOptions, export_stats};
+    let export_id = nemora_core::ids::random();
+    let text = export_stats(
+        &app.read(),
+        &ExportOptions {
+            app_version: env!("CARGO_PKG_VERSION"),
+            export_id: &export_id,
+            exported_at: &nemora_core::time::iso_ms(now),
+            tier_shuffle_intensity,
+        },
+    )
+    .map_err(fail)?;
+    std::fs::write(&path, text).map_err(fail)?;
+    Ok(json!({ "success": true }))
+}
+
+/// Merges a stats export into this profile. Counters merge by maximum per source and day, so the
+/// 1.x choice between "separate devices" and "same origin" has nothing left to decide.
+#[tauri::command]
+pub fn stats_import(handle: AppHandle, app: State<'_, App>, path: String) -> Res<Value> {
+    let text = std::fs::read_to_string(&path).map_err(fail)?;
+    let preferences =
+        serde_json::from_str::<Value>(&text).ok().map(|v| v["preferences"].clone()).filter(|p| p.is_object());
+    let report = match app.write(|db| nemora_core::transfer::import_stats_export(db, &text)) {
+        Ok(report) => report,
+        Err(error) => {
+            return Ok(json!({ "success": false, "message": error.to_string(), "matchedSongs": 0,
+            "unmatchedSongs": 0, "mergedListens": 0, "eloMerged": false }));
+        }
+    };
+    notify(&handle, &["songs", "playlists", "songs/listeningData"]);
+    Ok(json!({
+        "success": true,
+        "matchedSongs": report.matched,
+        "unmatchedSongs": report.pending,
+        "mergedListens": report.listening_days,
+        "eloMerged": report.elo_merged,
+        "alreadyImported": report.already_imported,
+        "playlistsImported": report.playlists,
+        "tierlistsImported": report.tierlists,
+        "importedPreferences": preferences,
+        "notes": if report.from_this_device {
+            vec!["This export was made on this device: only history it did not hold yet was merged."]
+        } else {
+            Vec::new()
+        },
+    }))
+}
+
+/// Recap slides of a month or a year.
+#[tauri::command]
+pub fn stats_recap(app: State<'_, App>, period: Value, utc_offset_min: i64) -> Res<Value> {
+    use nemora_core::recap::{Period, recap};
+    let year = period["year"].as_i64().ok_or("no year")?;
+    let period = match period["kind"].as_str() {
+        Some("month") => {
+            Period::Month { year, month: period["month"].as_i64().filter(|m| (1..=12).contains(m)).ok_or("bad month")? }
+        }
+        _ => Period::Year { year },
+    };
+    serde_json::to_value(recap(&app.read(), period, utc_offset_min).map_err(fail)?).map_err(fail)
+}
+
 // ----- playback facts -------------------------------------------------------------------------
 
 /// One thing the player saw, as the view reports it.

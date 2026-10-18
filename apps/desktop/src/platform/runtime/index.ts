@@ -560,16 +560,36 @@ export class NemoraRuntime {
     return call('stats_dashboard', { timeRange, today: today() });
   }
 
-  getRecap(_period: RecapPeriod): Promise<RecapSlide[]> {
-    return later('getRecap');
+  getRecap(period: RecapPeriod): Promise<RecapSlide[]> {
+    return call('stats_recap', { period, utcOffsetMin: -new Date().getTimezoneOffset() });
   }
 
-  exportStats(_options?: { tierShuffleIntensity?: number }): Promise<Result> {
-    return later('exportStats');
+  async exportStats(options?: { tierShuffleIntensity?: number }): Promise<Result> {
+    const path = await saveDialog({
+      title: 'Export Stats',
+      defaultPath: `Nemora Stats Export - ${today()}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (typeof path !== 'string') return { success: false };
+    return call('stats_export', {
+      path,
+      tierShuffleIntensity: options?.tierShuffleIntensity,
+      now: Date.now()
+    });
   }
 
-  importStats(_mergeMode: StatsMergeMode, _source: StatsImportSource): Promise<StatsImportReport> {
-    return later('importStats');
+  /** Exports merge by maximum per device and day, so the merge mode has nothing left to choose. */
+  async importStats(_mergeMode: StatsMergeMode, source: StatsImportSource): Promise<StatsImportReport> {
+    const empty = { matchedSongs: 0, unmatchedSongs: 0, mergedListens: 0, eloMerged: false };
+    if (source === 'folder') {
+      return { ...empty, success: false, message: 'Nora export folders are not imported by Nemora 2.0.' };
+    }
+    const path = await openDialog({
+      title: 'Import Stats',
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (typeof path !== 'string') return { ...empty, success: false };
+    return call('stats_import', { path });
   }
 
   getDuelPair(pinnedSongId?: string): Promise<DuelPair | null> {

@@ -104,3 +104,105 @@ fn an_export_from_another_device_merges_once() {
 fn db_exec(path: &std::path::Path, sql: &str) {
     rusqlite::Connection::open(path).unwrap().execute(sql, []).unwrap();
 }
+
+#[test]
+fn an_export_imports_back_into_another_profile_without_loss() {
+    use nemora_core::plays::{EndReason, Fact, Session, record};
+    use nemora_core::transfer::{ExportOptions, export_stats};
+    if !common::ffmpeg_available() {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let root = common::temp_dir("export");
+    let music = root.join("music");
+    std::fs::create_dir_all(&music).unwrap();
+    for (i, name) in ["a.flac", "b.flac"].iter().enumerate() {
+        let path = music.join(name);
+        common::flac(&path, 700 + i as u32, 40);
+        common::set_tags(&path, &format!("Song {i}"), "Artist", None, None);
+    }
+    let song_ids = |db_path: &std::path::Path| -> Vec<String> {
+        let conn = rusqlite::Connection::open(db_path).unwrap();
+        let mut stmt = conn.prepare("SELECT song_id FROM track_variants ORDER BY title").unwrap();
+        stmt.query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
+    };
+
+    // Profile A: one play, a playlist, a duel.
+    let a_path = root.join("a.db");
+    let mut a = Db::open(&a_path).unwrap();
+    scan_folders(&mut a, &CoverStore::new(root.join("covers-a")), std::slice::from_ref(&music)).unwrap();
+    let ids = song_ids(&a_path);
+    let t = 1_790_000_000_000;
+    record(
+        &mut a,
+        &Session {
+            song_id: ids[0].clone(),
+            started_at: t,
+            utc_offset_min: 180,
+            duration_ms: 40_000,
+            source_kind: None,
+            source_id: None,
+            facts: vec![
+                Fact::Play { at_ms: t, position_ms: 0 },
+                Fact::End { at_ms: t + 40_000, position_ms: 40_000, reason: EndReason::Finished },
+            ],
+        },
+    )
+    .unwrap();
+    let playlist = nemora_core::playlists::create(&a, "Mix").unwrap();
+    nemora_core::playlists::add(&mut a, &playlist, &[(ids[1].clone(), None), (ids[0].clone(), None)], None).unwrap();
+    nemora_core::elo::submit(&mut a, &ids[0], &ids[1], nemora_core::elo::Winner::A).unwrap();
+    let text = export_stats(
+        &a,
+        &ExportOptions {
+            app_version: "2.0.0",
+            export_id: "E1",
+            exported_at: "2026-10-18T00:00:00.000Z",
+            tier_shuffle_intensity: Some(0.6),
+        },
+    )
+    .unwrap();
+
+    // Profile B: the same music, then the export.
+    let b_path = root.join("b.db");
+    let mut b = Db::open(&b_path).unwrap();
+    scan_folders(&mut b, &CoverStore::new(root.join("covers-b")), std::slice::from_ref(&music)).unwrap();
+    let r = import_stats_export(&mut b, &text).unwrap();
+    assert_eq!((r.songs, r.matched, r.pending), (2, 2, 0), "{r:?}");
+    assert!(r.elo_merged);
+    assert_eq!(one(&b_path, "SELECT sum(plays) FROM song_totals"), "Integer(1)");
+    assert_eq!(one(&b_path, "SELECT count(*) FROM playlist_items"), "Integer(2)");
+    assert_eq!(one(&b_path, "SELECT name FROM playlists"), "Text(\"Mix\")");
+    assert_eq!(one(&b_path, "SELECT sum(games) FROM elo_baseline"), "Integer(2)");
+    assert_eq!(one(&b_path, "SELECT value FROM settings_shared WHERE key = 'shuffle.intensity'"), "Text(\"0.6\")");
+
+    // Twice: nothing doubles.
+    let again = import_stats_export(&mut b, &text).unwrap();
+    assert!(again.already_imported);
+    assert_eq!(one(&b_path, "SELECT sum(plays) FROM song_totals"), "Integer(1)");
+    assert_eq!(one(&b_path, "SELECT sum(games) FROM elo_baseline"), "Integer(2)");
+
+    // B's export back into A: A's own play comes home and must not count twice.
+    let back = export_stats(
+        &b,
+        &ExportOptions {
+            app_version: "2.0.0",
+            export_id: "E2",
+            exported_at: "2026-10-18T00:00:00.000Z",
+            tier_shuffle_intensity: None,
+        },
+    )
+    .unwrap();
+    import_stats_export(&mut a, &back).unwrap();
+    assert_eq!(one(&a_path, "SELECT sum(plays) FROM song_totals"), "Integer(1)");
+
+    // B's own export into B: nothing of it may count twice.
+    let own = import_stats_export(&mut b, &back).unwrap();
+    assert!(own.from_this_device && !own.elo_merged);
+    assert_eq!(one(&b_path, "SELECT sum(plays) FROM song_totals"), "Integer(1)");
+    assert_eq!(one(&b_path, "SELECT sum(games) FROM elo_baseline"), "Integer(2)");
+    assert_eq!(one(&b_path, "SELECT count(*) FROM playlist_items"), "Integer(2)");
+
+    drop((a, b));
+    let _ = std::fs::remove_dir_all(&root);
+}

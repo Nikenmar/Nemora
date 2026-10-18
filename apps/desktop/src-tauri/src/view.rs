@@ -197,16 +197,7 @@ fn songs(members: &[Member]) -> Vec<Value> {
 
 /// Milliseconds since the epoch as the ISO string `JSON.stringify(new Date(ms))` gives.
 pub fn iso(ms: i64) -> String {
-    let days = ms.div_euclid(86_400_000);
-    let rest = ms.rem_euclid(86_400_000);
-    let (y, m, d) = nemora_core::time::civil_from_days(days);
-    format!(
-        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}.{:03}Z",
-        rest / 3_600_000,
-        rest / 60_000 % 60,
-        rest / 1000 % 60,
-        rest % 1000
-    )
+    nemora_core::time::iso_ms(ms)
 }
 
 #[cfg(test)]

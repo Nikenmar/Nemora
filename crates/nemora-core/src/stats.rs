@@ -92,7 +92,7 @@ const TOP_NAMES: usize = 10;
 const CALENDAR_DAYS: i64 = 371;
 
 /// Day rows of every source: (song_id, day, plays, full, skips, heard_ms or NULL for imported).
-const DAY_ROWS: &str = "SELECT song_id, day, plays, full, skips, heard_ms FROM play_daily
+pub(crate) const DAY_ROWS: &str = "SELECT song_id, day, plays, full, skips, heard_ms FROM play_daily
      UNION ALL SELECT song_id, day, plays, f, s, NULL FROM legacy_daily WHERE song_id IS NOT NULL";
 
 fn day_string(days: i64) -> String {

@@ -34,6 +34,8 @@ pub struct TransferReport {
     pub tierlists: usize,
     /// This export was imported before: counters and collections merged harmlessly, ELO skipped.
     pub already_imported: bool,
+    /// This device made the export: only what it does not hold already (imported days) is merged.
+    pub from_this_device: bool,
 }
 
 fn round1(v: f64) -> f64 {
@@ -55,7 +57,11 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
     let device_id = db.device_id()?;
     let now = now_ms();
     let library = library_index(db)?;
-    let mut report = TransferReport { already_imported: already, ..Default::default() };
+    // A device's own export brings back its own ratings and tierlists: merging those would count
+    // every game twice and duplicate every tierlist.
+    let own = data["events"]["installId"].as_str() == Some(device_id.as_str());
+    let mut report = TransferReport { already_imported: already, from_this_device: own, ..Default::default() };
+    let once_only = !already && !own;
 
     let tx = db.conn_mut().transaction()?;
     let mut resolver = Resolver { tx: &tx, library: &library, cache: HashMap::new(), source: SOURCE };
@@ -72,14 +78,23 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
     report.pending = scratch.pending;
 
     // Day counters: the counter file of 1.1.0+, else the older per-song listening rows.
-    let events = if data["events"].is_object() {
+    let mut events = if data["events"].is_object() {
         data["events"].clone()
     } else {
         counters_from_rows(&data["listeningData"], &export_id)
     };
+    // This device's own days are already here as play events: an export of an export that came
+    // from here must not bring them back as imported days.
+    if let Some(counters) = events["counters"].as_object_mut() {
+        for by_source in counters.values_mut() {
+            if let Some(by_source) = by_source.as_object_mut() {
+                by_source.remove(&device_id);
+            }
+        }
+    }
     report.listening_days = write_counters(&tx, &events, &targets)?.0;
 
-    if !already && data["elo"].is_object() {
+    if once_only && data["elo"].is_object() {
         for (old_id, r) in data["elo"]["ratings"].as_object().into_iter().flatten() {
             let Some(Target::Song(song)) = targets.get(old_id) else { continue };
             let current: Option<(f64, i64, i64, i64, i64)> = tx
@@ -214,7 +229,7 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
     }
 
     // Tierlists are created (once per export), song ids and source playlists remapped.
-    if !already {
+    if once_only {
         for tierlist in data["tierlists"].as_array().into_iter().flatten() {
             let mut doc = remap_song_ids(tierlist, &targets);
             if let Some(sources) = doc["sourcePlaylistIds"].as_array_mut() {
@@ -279,4 +294,237 @@ fn counters_from_rows(rows: &Value, export_id: &str) -> Value {
         counters.insert(key, json!({ source.clone(): Value::Object(days) }));
     }
     json!({ "version": 1, "tracks": tracks, "counters": counters })
+}
+
+// ----- export -----------------------------------------------------------------------------------
+
+/// What an export carries besides the library itself.
+pub struct ExportOptions<'a> {
+    pub app_version: &'a str,
+    pub export_id: &'a str,
+    /// ISO timestamp of the export.
+    pub exported_at: &'a str,
+    pub tier_shuffle_intensity: Option<f64>,
+}
+
+/// This profile as a `nora-cmr-stats-export` file (format 1), readable by 1.x, the Android app and
+/// [`import_stats_export`].
+///
+/// Day counters keep their sources: this device's own plays under its device id, imported 1.x days
+/// under the id they came with, so an import elsewhere merges them by maximum and never doubles. Own
+/// days are written so that 1.x's `l - s` gives back the plays. History still waiting for its file
+/// travels too, under its fingerprint.
+pub fn export_stats(db: &Db, options: &ExportOptions<'_>) -> Result<String> {
+    let conn = db.conn();
+    let device_id = db.device_id()?;
+
+    // Fingerprints of every song and pending record the export mentions.
+    let mut fingerprints: std::collections::BTreeMap<String, Value> = std::collections::BTreeMap::new();
+    let mut stmt = conn.prepare(
+        "SELECT v.song_id, v.title, t.duration_ms,
+                (SELECT group_concat(name, char(31)) FROM (SELECT name FROM variant_artists a
+                   WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position)),
+                (SELECT uri FROM locations l WHERE l.variant_id = v.variant_id ORDER BY l.missing_since IS NOT NULL, l.uri LIMIT 1)
+         FROM track_variants v JOIN tracks t USING (song_id)
+         WHERE v.variant_id = (SELECT w.variant_id FROM track_variants w WHERE w.song_id = v.song_id
+                               ORDER BY w.present DESC, w.last_seen_at DESC, w.variant_id LIMIT 1)",
+    )?;
+    let library: HashMap<String, Value> = stmt
+        .query_map([], |r| {
+            let artists: Option<String> = r.get(3)?;
+            let uri: Option<String> = r.get(4)?;
+            let file_name = uri.as_deref().map(|u| u.rsplit(['\\', '/']).next().unwrap_or(u).to_owned());
+            Ok((
+                r.get::<_, String>(0)?,
+                json!({
+                    "title": r.get::<_, String>(1)?,
+                    "artists": artists.map(|a| a.split('\u{1f}').map(str::to_owned).collect::<Vec<_>>()).unwrap_or_default(),
+                    "duration": r.get::<_, i64>(2)? as f64 / 1000.0,
+                    "fileName": file_name,
+                }),
+            ))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let mention = |key: &str, fingerprints: &mut std::collections::BTreeMap<String, Value>| {
+        if fingerprints.contains_key(key) {
+            return;
+        }
+        let fp = if let Some(pending) = key.strip_prefix("pending:") {
+            conn.query_row(
+                "SELECT title, artists, duration_ms, file_name FROM pending_tracks WHERE pending_id = ?1",
+                [pending],
+                |r| {
+                    let artists: Option<String> = r.get(1)?;
+                    Ok(json!({
+                        "title": r.get::<_, Option<String>>(0)?.unwrap_or_default(),
+                        "artists": artists.and_then(|a| serde_json::from_str::<Vec<String>>(&a).ok()).unwrap_or_default(),
+                        "duration": r.get::<_, Option<i64>>(2)?.unwrap_or(0) as f64 / 1000.0,
+                        "fileName": r.get::<_, Option<String>>(3)?,
+                    }))
+                },
+            )
+            .optional()
+            .ok()
+            .flatten()
+        } else {
+            library.get(key).cloned()
+        };
+        if let Some(mut fp) = fp {
+            fp["songId"] = json!(key);
+            fingerprints.insert(key.to_owned(), fp);
+        }
+    };
+
+    // Day counters by track key, then source, then day.
+    let mut counters: std::collections::BTreeMap<
+        String,
+        std::collections::BTreeMap<String, serde_json::Map<String, Value>>,
+    > = std::collections::BTreeMap::new();
+    let mut hours: HashMap<(String, String), serde_json::Map<String, Value>> = HashMap::new();
+    let mut stmt = conn.prepare("SELECT song_id, day, hour, plays FROM play_hourly")?;
+    for row in stmt.query_map([], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, i64>(3)?))
+    })? {
+        let (song, day, hour, plays) = row?;
+        hours.entry((song, day)).or_default().insert(hour.to_string(), json!(plays));
+    }
+    let mut stmt = conn.prepare("SELECT song_id, day, plays, full, skips FROM play_daily")?;
+    for row in stmt.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, i64>(2)?,
+            r.get::<_, i64>(3)?,
+            r.get::<_, i64>(4)?,
+        ))
+    })? {
+        let (song, day, plays, full, skips) = row?;
+        let mut c = json!({ "l": plays + skips, "f": full, "s": skips });
+        if let Some(h) = hours.remove(&(song.clone(), day.clone())) {
+            c["h"] = Value::Object(h);
+        }
+        counters.entry(song).or_default().entry(device_id.clone()).or_default().insert(day, c);
+    }
+    let mut stmt = conn.prepare("SELECT source_id, song_id, pending_id, day, l, f, s, hours FROM legacy_daily")?;
+    for row in stmt.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, Option<String>>(1)?,
+            r.get::<_, Option<i64>>(2)?,
+            r.get::<_, String>(3)?,
+            r.get::<_, i64>(4)?,
+            r.get::<_, i64>(5)?,
+            r.get::<_, i64>(6)?,
+            r.get::<_, Option<String>>(7)?,
+        ))
+    })? {
+        let (source, song, pending, day, l, f, s, h) = row?;
+        let key = match (song, pending) {
+            (Some(song), _) => song,
+            (None, Some(p)) => format!("pending:{p}"),
+            (None, None) => continue,
+        };
+        let mut c = json!({ "l": l, "f": f, "s": s });
+        if let Some(h) = h.and_then(|h| serde_json::from_str::<Value>(&h).ok()) {
+            c["h"] = h;
+        }
+        counters.entry(key).or_default().entry(source).or_default().insert(day, c);
+    }
+    for key in counters.keys() {
+        mention(key, &mut fingerprints);
+    }
+
+    // User playlists and tierlists; placements still pending stay home.
+    let mut playlists = Vec::new();
+    for p in crate::playlists::list(db)? {
+        let songs: Vec<String> =
+            crate::playlists::items(db, &p.id, true)?.into_iter().filter_map(|i| i.song_id).collect();
+        for song in &songs {
+            mention(song, &mut fingerprints);
+        }
+        playlists.push(json!({
+            "playlistId": p.id, "name": p.name, "songs": songs, "createdDate": crate::time::iso_ms(p.created_at),
+        }));
+    }
+    let mut tierlists = Vec::new();
+    for (id, mut doc) in crate::playlists::tierlists(db)? {
+        doc["tierlistId"] = json!(id);
+        if let Some(tiers) = doc["tiers"].as_array_mut() {
+            for tier in tiers {
+                if let Some(items) = tier["items"].as_array_mut() {
+                    items.retain(|i| i.as_str().is_some_and(|s| !s.starts_with("pending:")));
+                    for song in items.iter().filter_map(|i| i.as_str()) {
+                        mention(song, &mut fingerprints);
+                    }
+                }
+            }
+        }
+        tierlists.push(doc);
+    }
+
+    // ELO: current ratings and every decided duel.
+    let total_duels = crate::elo::total_duels(db)?;
+    let mut ratings = serde_json::Map::new();
+    for (song, r) in crate::elo::ratings(db)? {
+        if r.games > 0 {
+            mention(&song, &mut fingerprints);
+            ratings.insert(
+                song,
+                json!({ "rating": r.rating, "games": r.games, "wins": r.wins, "losses": r.losses, "draws": r.draws }),
+            );
+        }
+    }
+    let mut history = Vec::new();
+    let mut stmt = conn.prepare(
+        "SELECT at, song_a, song_b, outcome, coalesce(delta_a, 0), coalesce(delta_b, 0) FROM duels WHERE outcome <> 'skip' ORDER BY at, duel_id",
+    )?;
+    for row in stmt.query_map([], |r| {
+        Ok((
+            r.get::<_, i64>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, String>(2)?,
+            r.get::<_, String>(3)?,
+            r.get::<_, f64>(4)?,
+            r.get::<_, f64>(5)?,
+        ))
+    })? {
+        let (at, a, b, outcome, da, db_) = row?;
+        let winner = match outcome.as_str() {
+            "a" => "A",
+            "b" => "B",
+            _ => "draw",
+        };
+        history.push(json!({ "at": at, "songAId": a, "songBId": b, "winner": winner, "deltaA": da, "deltaB": db_ }));
+    }
+
+    let tracks: serde_json::Map<String, Value> =
+        counters.keys().filter_map(|k| fingerprints.get(k).map(|fp| (k.clone(), fp.clone()))).collect();
+    let counters: serde_json::Map<String, Value> = counters
+        .into_iter()
+        .filter(|(k, _)| tracks.contains_key(k))
+        .map(|(k, by_source)| (k, serde_json::to_value(by_source).unwrap_or_default()))
+        .collect();
+    let mut file = json!({
+        "format": FORMAT,
+        "formatVersion": 1,
+        "exportId": options.export_id,
+        "exportedAt": options.exported_at,
+        "appVersion": options.app_version,
+        "songs": fingerprints.into_values().collect::<Vec<_>>(),
+        "listeningData": [],
+        "events": { "version": 1, "installId": device_id, "tracks": tracks, "counters": counters },
+    });
+    if total_duels > 0 {
+        file["elo"] = json!({ "ratings": ratings, "history": history, "totalDuels": total_duels });
+    }
+    if !playlists.is_empty() {
+        file["playlists"] = json!(playlists);
+    }
+    if !tierlists.is_empty() {
+        file["tierlists"] = json!(tierlists);
+    }
+    if let Some(intensity) = options.tier_shuffle_intensity.filter(|i| i.is_finite()) {
+        file["preferences"] = json!({ "tierShuffleIntensity": intensity.clamp(0.0, 1.0) });
+    }
+    Ok(serde_json::to_string_pretty(&file)?)
 }

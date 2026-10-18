@@ -19,6 +19,7 @@ pub mod lyrics;
 pub mod m3u;
 pub mod playlists;
 pub mod plays;
+pub mod recap;
 pub mod rediscover;
 pub mod scan;
 pub mod search;

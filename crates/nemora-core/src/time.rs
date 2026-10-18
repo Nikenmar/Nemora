@@ -49,6 +49,19 @@ pub fn parse_day(day: &str) -> Option<i64> {
 }
 
 /// `2026-05-19T09:54:47.054Z` -> milliseconds since the epoch (UTC only, as 1.x wrote it).
+/// Milliseconds since the epoch as the ISO string `JSON.stringify(new Date(ms))` gives.
+pub fn iso_ms(ms: i64) -> String {
+    let (y, m, d) = civil_from_days(ms.div_euclid(86_400_000));
+    let rest = ms.rem_euclid(86_400_000);
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}.{:03}Z",
+        rest / 3_600_000,
+        rest / 60_000 % 60,
+        rest / 1000 % 60,
+        rest % 1000
+    )
+}
+
 pub fn parse_iso_ms(s: &str) -> Option<i64> {
     let b = s.as_bytes();
     if b.len() < 20 || b[4] != b'-' || b[7] != b'-' || b[10] != b'T' || !s.ends_with('Z') {
