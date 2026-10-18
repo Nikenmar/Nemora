@@ -235,7 +235,79 @@ pub(crate) fn artists_of(
         rows.truncate(limit);
     }
     let members = library::members(db, Group::Artist)?;
-    Ok(rows.iter().map(|r| v.artist(r, members.get(&r.name).map_or(&[], Vec::as_slice))).collect())
+    let liked = liked_artists(db)?;
+    let online = nemora_core::settings::device(db, ONLINE_ARTWORKS)?.unwrap_or_default();
+    Ok(rows
+        .iter()
+        .map(|r| {
+            let mut artist = v.artist(r, members.get(&r.name).map_or(&[], Vec::as_slice));
+            artist["isAFavorite"] = json!(liked.contains(&r.name));
+            if let Some(artworks) = online.get(&r.name).filter(|a| a.is_object()) {
+                artist["onlineArtworkPaths"] = artworks.clone();
+            }
+            artist
+        })
+        .collect())
+}
+
+/// Hearted artists: a shared document, so it syncs like song hearts.
+const LIKED_ARTISTS: &str = "artists.liked";
+/// Artist pictures found online, by artist name: this device's cache, not synced.
+const ONLINE_ARTWORKS: &str = "artists.online";
+
+fn liked_artists(db: &Db) -> nemora_core::Result<std::collections::HashSet<String>> {
+    Ok(playlists::shared_setting(db, LIKED_ARTISTS)?
+        .and_then(|v| serde_json::from_value::<Vec<String>>(v).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .collect())
+}
+
+#[tauri::command]
+pub fn artists_toggle_like(
+    handle: AppHandle,
+    app: State<'_, App>,
+    artist_ids: Vec<String>,
+    like: Option<bool>,
+) -> Res<Value> {
+    let (mut likes, mut dislikes) = (Vec::new(), Vec::new());
+    app.write(|db| {
+        let mut liked: Vec<String> = playlists::shared_setting(db, LIKED_ARTISTS)?
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+        for id in &artist_ids {
+            let value = like.unwrap_or(!liked.contains(id));
+            liked.retain(|a| a != id);
+            if value {
+                liked.push(id.clone());
+                likes.push(id.clone());
+            } else {
+                dislikes.push(id.clone());
+            }
+        }
+        playlists::set_shared_setting(db, LIKED_ARTISTS, &json!(liked))
+    })
+    .map_err(fail)?;
+    notify(&handle, &["artists/likes"]);
+    Ok(json!({ "likes": likes, "dislikes": dislikes }))
+}
+
+/// Keeps the pictures the network found for an artist.
+#[tauri::command]
+pub fn artist_set_online_artworks(
+    handle: AppHandle,
+    app: State<'_, App>,
+    artist_id: String,
+    artworks: Value,
+) -> Res<()> {
+    app.write(|db| {
+        let mut online = nemora_core::settings::device(db, ONLINE_ARTWORKS)?.unwrap_or_else(|| json!({}));
+        online[&artist_id] = artworks;
+        nemora_core::settings::set_device(db, ONLINE_ARTWORKS, &online)
+    })
+    .map_err(fail)?;
+    notify(&handle, &["artists/artworks"]);
+    Ok(())
 }
 
 fn albums_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
@@ -255,10 +327,35 @@ pub fn library_artists(
     app: State<'_, App>,
     ids_or_names: Option<Vec<String>>,
     sort_type: Option<String>,
+    filter_type: Option<String>,
     limit: Option<usize>,
 ) -> Res<Vec<Value>> {
-    artists_of(&app.read(), &view(&app), &ids_or_names.unwrap_or_default(), sort_type.as_deref(), limit.unwrap_or(0))
-        .map_err(fail)
+    let db = app.read();
+    let mut artists =
+        artists_of(&db, &view(&app), &ids_or_names.unwrap_or_default(), sort_type.as_deref(), 0).map_err(fail)?;
+    if filter_type.as_deref() == Some("favorites") {
+        artists.retain(|a| a["isAFavorite"] == true);
+    }
+    // "Most loved" orders by hearted songs, as 1.x did.
+    if matches!(sort_type.as_deref(), Some("mostLovedAscending" | "mostLovedDescending")) {
+        let hearts: std::collections::HashSet<String> = playlists::favorites(&db).map_err(fail)?.into_iter().collect();
+        let loved = |a: &Value| {
+            a["songs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|s| s["songId"].as_str().is_some_and(|id| hearts.contains(parse_view_id(id).0)))
+                .count()
+        };
+        artists.sort_by_cached_key(|a| loved(a));
+        if sort_type.as_deref() == Some("mostLovedDescending") {
+            artists.reverse();
+        }
+    }
+    if let Some(limit) = limit.filter(|&l| l > 0) {
+        artists.truncate(limit);
+    }
+    Ok(artists)
 }
 
 #[tauri::command]

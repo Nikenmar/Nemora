@@ -71,6 +71,12 @@ impl Db {
         Ok(self.conn.query_row("SELECT value FROM meta WHERE key = ?1", [key], |row| row.get(0)).optional()?)
     }
 
+    /// A consistent copy of the database at `path` (which must not exist), taken while it is in use.
+    pub fn backup_to(&self, path: &Path) -> Result<()> {
+        self.conn.execute("VACUUM INTO ?1", [path.to_string_lossy().as_ref()])?;
+        Ok(())
+    }
+
     pub fn set_meta(&self, key: &str, value: &str) -> Result<()> {
         self.conn.execute(
             "INSERT INTO meta (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

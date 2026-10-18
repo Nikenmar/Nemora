@@ -16,6 +16,10 @@
   "urls": {
     "website_url": "https://github.com/Nikenmar/Nemora"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nikenmar/Nemora"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -38,6 +42,7 @@
     "@tauri-apps/plugin-shell": "^2",
     "@tauri-apps/plugin-updater": "^2.14.0",
     "buffer": "^5.7.1",
+    "didyoumean2": "^7.0.4",
     "html-to-image": "^1.11.13",
     "i18next": "^24.2.0",
     "node-id3": "^0.2.6",

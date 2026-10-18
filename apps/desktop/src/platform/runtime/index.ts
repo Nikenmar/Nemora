@@ -5,12 +5,21 @@
  * `getRuntime().method(...)`. In 2.0 every method is a Tauri command answering in the 1.x shape
  * (`src-tauri/src/commands.rs`), so this class only forwards. The user data is the one thing kept
  * here: several wrappers read it synchronously.
- *
- * Methods whose command does not exist yet reject with `NotPortedYetError`, naming the method.
  */
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { relaunch } from '@tauri-apps/plugin-process';
+
+import { appPreferences } from '../../../package.json';
+import {
+  SECOND_INSTANCE_EVENT,
+  SingleInstanceController,
+  tauriEventPort,
+  tauriFileArgumentPort,
+  tauriWindowPort,
+  type ShellEventPort
+} from '../shell';
 
 import albumCover from '../../renderer/src/assets/images/webp/album_cover_default.webp';
 import artistCover from '../../renderer/src/assets/images/webp/artist_cover_default.webp';
@@ -24,6 +33,8 @@ import { NotPortedYetError } from '../api/errors';
 import { emitLocal } from '../api/events';
 import type { PathBackedAudioPlayerData, PathBackedUpdateSongDataResult } from '../api/binary';
 import { getBuildEnvVariable } from '../core/net/buildEnv';
+import type { NetworkRepository } from '../core/net/repository';
+import { decrypt as decryptCredential } from '../core/secrets/safeStorage';
 import type { RecapPeriod, RecapSlide } from '../core/stats/recap';
 import type {
   PreparedTournament,
@@ -68,7 +79,6 @@ export interface PlayEvaluation {
   scrobble: boolean;
 }
 
-const later = (method: string): Promise<never> => Promise.reject(new NotPortedYetError(method));
 
 /** A command call. Commands reject with a string; the view reads `error.message`, as 1.x threw. */
 const call = <T>(command: string, args?: Record<string, unknown>): Promise<T> =>
@@ -161,6 +171,9 @@ export class NemoraRuntime {
 
   async hydrate(): Promise<void> {
     await migrateLegacyLocalStorage();
+    await this.startSingleInstance().catch((error: unknown) =>
+      console.error('Opening files from outside was not set up.', error)
+    );
     this.userData = await call<UserData>('app_hydrate', {
       defaults: {
         song: songCover,
@@ -307,12 +320,75 @@ export class NemoraRuntime {
     return call('songs_delete_files', { paths, permanent });
   }
 
-  getSongFromUnknownSource(_songPath: string): Promise<PathBackedAudioPlayerData> {
-    return later('getSongFromUnknownSource');
+  getSongFromUnknownSource(songPath: string): Promise<PathBackedAudioPlayerData> {
+    return call('song_from_path', { path: songPath });
+  }
+
+  private singleInstance: SingleInstanceController | undefined;
+  private startupSong: PathBackedAudioPlayerData | undefined;
+  private capturingStartupSong = false;
+
+  /**
+   * Files handed to Nemora ("Open with", a second launch) and the Last.fm sign-in callback. The
+   * view asks for a startup song once it is ready; anything later plays at once.
+   */
+  private async startSingleInstance(): Promise<void> {
+    const initialArgv = await call<string[]>('startup_args').catch(() => [] as string[]);
+    const liveDeliveries = new Map<string, number>();
+    let draining = true;
+    const events: ShellEventPort = {
+      listen: async <Payload>(event: string, handler: (payload: Payload) => void) => {
+        if (event !== SECOND_INSTANCE_EVENT) return tauriEventPort.listen(event, handler);
+        const deliver = handler as unknown as (argv: string[]) => void;
+        const unlisten = await tauriEventPort.listen<string[]>(event, (argv) => {
+          if (draining) {
+            const key = JSON.stringify(argv);
+            liveDeliveries.set(key, (liveDeliveries.get(key) ?? 0) + 1);
+          }
+          deliver(argv);
+        });
+        // A launch that came before this listener existed was queued by the shell.
+        for (const argv of await call<string[][]>('drain_pending_second_instance_args')) {
+          const key = JSON.stringify(argv);
+          const live = liveDeliveries.get(key) ?? 0;
+          if (live > 0) liveDeliveries.set(key, live - 1);
+          else deliver(argv);
+        }
+        draining = false;
+        return unlisten;
+      }
+    };
+    this.singleInstance = new SingleInstanceController(
+      tauriWindowPort,
+      events,
+      tauriFileArgumentPort,
+      {
+        openAuthUri: (uri) => emitLocal('nemora://auth', uri),
+        openAudioFile: async (path) => {
+          try {
+            const song = await this.getSongFromUnknownSource(path);
+            if (this.capturingStartupSong && !this.startupSong) this.startupSong = song;
+            else emitLocal('app/playSongFromUnknownSource', song);
+          } catch (error) {
+            console.error(`The file ${path} could not be opened.`, error);
+          }
+        }
+      },
+      { supportedMusicExtensions: appPreferences.supportedMusicExtensions, initialArgv }
+    );
+    await this.singleInstance.start();
   }
 
   async checkForStartUpSongs(): Promise<PathBackedAudioPlayerData | undefined> {
-    return undefined;
+    if (!this.singleInstance) return undefined;
+    this.startupSong = undefined;
+    this.capturingStartupSong = true;
+    try {
+      await this.singleInstance.markRendererReady();
+      return this.startupSong;
+    } finally {
+      this.capturingStartupSong = false;
+    }
   }
 
   // ----- library groups --------------------------------------------------------------------------
@@ -320,10 +396,10 @@ export class NemoraRuntime {
   getArtists(
     idsOrNames: string[] = [],
     sortType?: ArtistSortTypes,
-    _filterType?: ArtistFilterTypes,
+    filterType?: ArtistFilterTypes,
     limit = 0
   ): Promise<Artist[]> {
-    return call('library_artists', { idsOrNames, sortType, limit });
+    return call('library_artists', { idsOrNames, sortType, filterType, limit });
   }
 
   getAlbums(idsOrTitles: string[] = [], sortType?: AlbumSortTypes): Promise<Album[]> {
@@ -378,8 +454,8 @@ export class NemoraRuntime {
     return call('blacklist_folders', { folderPaths: paths, value });
   }
 
-  toggleLikeArtists(_artistIds: string[], _like?: boolean): Promise<ToggleLikeSongReturnValue> {
-    return later('toggleLikeArtists');
+  toggleLikeArtists(artistIds: string[], like?: boolean): Promise<ToggleLikeSongReturnValue> {
+    return call('artists_toggle_like', { artistIds, like });
   }
 
   getArtistDuplicates(artistName: string): Promise<Artist[]> {
@@ -746,32 +822,113 @@ export class NemoraRuntime {
 
   // ----- network ---------------------------------------------------------------------------------
 
-  getAlbumInfoFromLastFM(_albumId: string): Promise<LastFMAlbumInfo | undefined> {
-    return later('getAlbumInfoFromLastFM');
+  /**
+   * The 1.x network modules (Last.fm, Deezer, Genius, iTunes) read a synchronous catalog. They get a
+   * snapshot of what one call needs, taken from the core just before it.
+   */
+  private async networkRepository(
+    need: { songIds?: string[]; allSongs?: boolean; albumIds?: string[]; allArtists?: boolean } = {}
+  ): Promise<NetworkRepository> {
+    const songs: SongData[] = need.allSongs
+      ? await this.getSongInfo(
+          (await this.getAllSongs('aToZ')).data.map((song) => song.songId),
+          undefined,
+          undefined,
+          0,
+          true
+        )
+      : need.songIds?.length
+        ? await this.getSongInfo(need.songIds, undefined, undefined, 0, true)
+        : [];
+    const albums = need.albumIds?.length ? await this.getAlbums(need.albumIds) : [];
+    const artists = need.allArtists ? await this.getArtists() : [];
+    const blacklist = await this.getBlacklist();
+    const artworkBySong = new Map(songs.map((song) => [song.songId, song.artworkPaths]));
+    const defaultPaths = (path: string): ArtworkPaths => ({
+      isDefaultArtwork: true,
+      artworkPath: path,
+      optimizedArtworkPath: path
+    });
+    const onlineBefore = new Map(artists.map((artist) => [artist.artistId, artist.onlineArtworkPaths]));
+    return {
+      getSongs: () => songs,
+      getAlbums: () => albums,
+      getArtists: () => artists,
+      setArtists: (changed) => {
+        for (const artist of changed) {
+          if (artist.onlineArtworkPaths && !onlineBefore.get(artist.artistId)) {
+            void call('artist_set_online_artworks', {
+              artistId: artist.artistId,
+              artworks: artist.onlineArtworkPaths
+            }).catch((error: unknown) => console.error('Artist pictures were not kept.', error));
+          }
+        }
+      },
+      getUserData: () => this.getUserData(),
+      getSongsOutsideLibrary: () => [],
+      getBlacklist: () => blacklist,
+      getSongArtworkPath: (songId) => artworkBySong.get(songId) ?? defaultPaths(songCover),
+      getArtistArtworkPath: () => defaultPaths(artistCover),
+      getAlbumArtworkPath: () => defaultPaths(albumCover),
+      getSelectedPaletteData: () => undefined,
+      generatePalette: async () => undefined as unknown as PaletteData,
+      decrypt: (encrypted) => decryptCredential(encrypted),
+      emitDataUpdate: (dataType) => emitLocal('app/dataUpdateEvent', [{ dataType, eventData: [] }])
+    };
   }
 
-  getSimilarTracks(_songId: string): Promise<SimilarTracksOutput> {
-    return later('getSimilarTracks');
+  async getAlbumInfoFromLastFM(albumId: string): Promise<LastFMAlbumInfo | undefined> {
+    const [album] = await this.getAlbums([albumId]);
+    if (!album) return undefined;
+    const { default: getAlbumInfo } = await import('../core/net/lastFm/getAlbumInfoFromLastFM');
+    const repository = await this.networkRepository({
+      albumIds: [albumId],
+      songIds: album.songs.map((song) => song.songId)
+    });
+    return getAlbumInfo(repository, albumId);
   }
 
-  async scrobbleSong(_songId: string, _startTimeInSecs: number): Promise<void> {}
-
-  async sendNowPlayingSong(_songId: string): Promise<void> {}
-
-  getArtistArtwork(_artistId: string): Promise<ArtistInfoFromNet | undefined> {
-    return later('getArtistArtwork');
+  async getSimilarTracks(songId: string): Promise<SimilarTracksOutput> {
+    const { default: getSimilar } = await import('../core/net/lastFm/getSimilarTracks');
+    return getSimilar(await this.networkRepository({ allSongs: true }), songId);
   }
 
-  searchSongMetadata(_title: string, _artists: string[]): Promise<SongMetadataResultFromInternet[]> {
-    return later('searchSongMetadata');
+  async scrobbleSong(songId: string, startTimeInSecs: number): Promise<void> {
+    if (!this.getUserData().preferences.sendSongScrobblingDataToLastFM) return;
+    const { default: scrobble } = await import('../core/net/lastFm/scrobbleSong');
+    await scrobble(await this.networkRepository({ songIds: [songId] }), songId, startTimeInSecs);
   }
 
-  fetchSongMetadata(_title: string, _artists: string[]): Promise<SongMetadataResultFromInternet[]> {
-    return later('fetchSongMetadata');
+  async sendNowPlayingSong(songId: string): Promise<void> {
+    if (!this.getUserData().preferences.sendNowPlayingSongDataToLastFM) return;
+    const { default: nowPlaying } = await import('../core/net/lastFm/sendNowPlayingSongDataToLastFM');
+    await nowPlaying(await this.networkRepository({ songIds: [songId] }), songId);
   }
 
-  fetchSongInfo(_title: string, _artists: string[]): Promise<LastFMTrackInfoApi | undefined> {
-    return later('fetchSongInfo');
+  async getArtistArtwork(artistId: string): Promise<ArtistInfoFromNet | undefined> {
+    const { default: getArtistInfo } = await import('../core/net/getArtistInfoFromNet');
+    return getArtistInfo(await this.networkRepository({ allArtists: true }), artistId);
+  }
+
+  async searchSongMetadata(title: string, artists: string[]): Promise<SongMetadataResultFromInternet[]> {
+    const { searchSongMetadataResultsInInternet } = await import('../core/net/fetchSongMetadataFromInternet');
+    return searchSongMetadataResultsInInternet(title, artists) as unknown as Promise<
+      SongMetadataResultFromInternet[]
+    >;
+  }
+
+  /** The view passes (source, source id) through 1.x's misnamed (title, artists) parameters. */
+  async fetchSongMetadata(source: string, sourceId: string[]): Promise<SongMetadataResultFromInternet[]> {
+    const { fetchSongMetadataFromInternet } = await import('../core/net/fetchSongMetadataFromInternet');
+    return fetchSongMetadataFromInternet(
+      source as SongMetadataSource,
+      sourceId as unknown as string
+    ) as unknown as Promise<SongMetadataResultFromInternet[]>;
+  }
+
+  async fetchSongInfo(title: string, artists: string[]): Promise<LastFMTrackInfoApi | undefined> {
+    const { default: fetchSongInfo } = await import('../core/net/fetchSongInfoFromLastFM');
+    return fetchSongInfo(title, artists);
   }
 
   // ----- app and system --------------------------------------------------------------------------
@@ -793,8 +950,11 @@ export class NemoraRuntime {
     return call('open_log_file');
   }
 
-  getStorageUsage(_forceRefresh = false): Promise<StorageMetrics | undefined> {
-    return later('getStorageUsage');
+  async getStorageUsage(forceRefresh = false): Promise<StorageMetrics | undefined> {
+    if (!forceRefresh) return this.getUserData().storageMetrics;
+    const metrics = await call<StorageMetrics>('storage_usage');
+    if (this.userData) this.userData = { ...this.userData, storageMetrics: metrics };
+    return metrics;
   }
 
   async toggleAutoLaunch(enabled: boolean): Promise<void> {
@@ -829,16 +989,27 @@ export class NemoraRuntime {
     return call('discord_disconnect');
   }
 
-  exportAppData(_localStorageData: string): Promise<void> {
-    return later('exportAppData');
+  /** A backup: a consistent copy of the library database and this window's local storage. */
+  async exportAppData(localStorageData: string): Promise<void> {
+    const folder = await openDialog({ title: 'Select a Destination to Export App Data', directory: true });
+    if (typeof folder !== 'string') throw new Error('PROMPT_CLOSED_BEFORE_INPUT');
+    await call('appdata_export', { folder, localStorage: localStorageData });
   }
 
-  importAppData(): Promise<void | LocalStorage> {
-    return later('importAppData');
+  /** Restores a backup at the next start; the local storage it carries comes back now. */
+  async importAppData(): Promise<void | LocalStorage> {
+    const folder = await openDialog({ title: 'Select the folder of a Nemora backup', directory: true });
+    if (typeof folder !== 'string') throw new Error('PROMPT_CLOSED_BEFORE_INPUT');
+    const localStorage = await call<string | null>('appdata_import', { folder });
+    emitLocal('app/sendMessageToRendererEvent', 'APPDATA_IMPORT_SUCCESS_WITH_PENDING_RESTART');
+    return localStorage ? (JSON.parse(localStorage) as LocalStorage) : undefined;
   }
 
-  resetApplicationData(): Promise<void> {
-    return later('resetApplicationData');
+  /** The next start opens an empty library; the current one is kept aside, not deleted. */
+  async resetApplicationData(): Promise<void> {
+    await call('appdata_reset');
+    window.localStorage.clear();
+    await relaunch();
   }
 }
 

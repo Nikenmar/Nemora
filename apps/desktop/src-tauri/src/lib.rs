@@ -3,6 +3,7 @@
 //! ranged media protocol, the tray, taskbar buttons, Discord, the OBS widget and window geometry.
 
 mod app;
+mod appdata;
 mod audio_session;
 mod commands;
 mod discord;
@@ -91,6 +92,8 @@ pub fn run() {
             commands::library_song_info,
             commands::library_song_for_playback,
             commands::library_artists,
+            commands::artists_toggle_like,
+            commands::artist_set_online_artworks,
             commands::library_albums,
             commands::library_genres,
             commands::library_playlists,
@@ -115,6 +118,11 @@ pub fn run() {
             tags_cmd::tags_update,
             tags_cmd::song_reparse,
             tags_cmd::artwork_save,
+            appdata::storage_usage,
+            appdata::appdata_export,
+            appdata::appdata_import,
+            appdata::appdata_reset,
+            appdata::song_from_path,
             guessr::guessr_pools,
             guessr::guessr_round,
             guessr::guessr_search,
@@ -184,6 +192,7 @@ pub fn run() {
             let roaming = tauri_app.path().data_dir()?;
             let profile =
                 profile_dir(&roaming, std::env::var_os(PROFILE_DIR_ENV).map(PathBuf::from), cfg!(debug_assertions));
+            appdata::apply_staged(&profile)?;
             tauri_app.manage(app::App::open(&profile)?);
 
             // First start of a profile that 1.x used: scan its folders and import, without holding
