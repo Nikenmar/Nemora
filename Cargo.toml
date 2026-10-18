@@ -16,6 +16,7 @@ repository = "https://github.com/Nikenmar/Nemora"
 
 [workspace.dependencies]
 nemora-core = { path = "crates/nemora-core" }
+nemora-audio = { path = "crates/nemora-audio" }
 any_ascii = "0.3.3"
 blake3 = "1.8"
 fancy-regex = "0.19"

@@ -55,6 +55,7 @@ import log from './utils/log';
 import throttle from './utils/throttle';
 import parseNotificationFromMain from './other/parseNotificationFromMain';
 import ListeningDataSession, { type EndReason } from './other/listeningDataSession';
+import { updateSystemMedia } from './other/systemMedia';
 import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
@@ -1126,10 +1127,16 @@ export default function App() {
       navigator.mediaSession.playbackState = store.state.player.isCurrentSongPlaying
         ? 'playing'
         : 'paused';
+      updateSystemMedia(
+        store.state.currentSongData,
+        { duration: player.duration, position: player.currentTime, playing: !player.paused },
+        { artist: t('common.unknownArtist'), album: t('common.unknownAlbum') }
+      );
     };
 
     player.addEventListener('play', updateMediaSessionMetaData);
     player.addEventListener('pause', updateMediaSessionMetaData);
+    player.addEventListener('seeked', updateMediaSessionMetaData);
 
     return () => {
       if (artworkPath) URL.revokeObjectURL(artworkPath);
@@ -1148,6 +1155,7 @@ export default function App() {
 
       player.removeEventListener('play', updateMediaSessionMetaData);
       player.removeEventListener('pause', updateMediaSessionMetaData);
+      player.removeEventListener('seeked', updateMediaSessionMetaData);
     };
   }, [handleSkipBackwardClick, handleSkipForwardClick, t, toggleSongPlayback]);
 

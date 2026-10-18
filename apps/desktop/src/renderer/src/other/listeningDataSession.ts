@@ -32,6 +32,9 @@ export type PlaySession = {
   facts: Fact[];
 };
 
+/** What the session reads from the player: the engine's player or an audio element. */
+export type MediaLike = EventTarget & { readonly paused: boolean; readonly seeking: boolean; currentTime: number };
+
 const ms = (seconds: number) => Math.round(seconds * 1000);
 
 class ListeningDataSession {
@@ -39,7 +42,7 @@ class ListeningDataSession {
   readonly duration: number;
   readonly isKnownSource: boolean;
   readonly abortController = new AbortController();
-  private readonly player: HTMLAudioElement;
+  private readonly player: MediaLike;
   private readonly startedAt = Date.now();
   private readonly facts: Fact[] = [];
   private lastPosition = 0;
@@ -49,7 +52,7 @@ class ListeningDataSession {
   private intervalId?: ReturnType<typeof setInterval>;
   private nowPlayingId?: ReturnType<typeof setTimeout>;
 
-  constructor(player: HTMLAudioElement, songId: string, duration: number, isKnownSource = true) {
+  constructor(player: MediaLike, songId: string, duration: number, isKnownSource = true) {
     this.player = player;
     this.songId = songId;
     this.duration = duration;

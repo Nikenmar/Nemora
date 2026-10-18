@@ -9,6 +9,7 @@ mod commands;
 mod discord;
 mod dragout;
 mod duels;
+mod engine;
 mod folders;
 mod guessr;
 mod protocol;
@@ -16,6 +17,7 @@ mod secrets;
 // Win32 code carried over from 1.1.9 (edition 2021), where an unsafe fn body was one unsafe block.
 #[allow(unsafe_op_in_unsafe_fn)]
 mod shellops;
+mod smtc;
 mod system;
 mod tags_cmd;
 #[allow(unsafe_op_in_unsafe_fn)]
@@ -144,6 +146,14 @@ pub fn run() {
             commands::library_listening,
             commands::favorites_toggle,
             commands::play_record,
+            engine::engine_load,
+            engine::engine_play,
+            engine::engine_pause,
+            engine::engine_seek,
+            engine::engine_stop,
+            engine::engine_volume,
+            engine::engine_equalizer,
+            smtc::smtc_update,
             duels::duel_pair,
             duels::duel_pair_by_ids,
             duels::duel_select_anchor,
@@ -191,6 +201,7 @@ pub fn run() {
         .manage(system::PendingSecondInstanceArgs::default())
         .manage(shellops::ScreenSleepState::default())
         .manage(watch::FolderWatch::default())
+        .manage(engine::Engine::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;
             let profile =
