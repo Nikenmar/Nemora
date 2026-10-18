@@ -18,22 +18,99 @@
         "height": 800,
         "minWidth": 700,
         "minHeight": 500,
+        "decorations": false,
         "center": true,
-        "backgroundColor": "#212226"
+        "backgroundColor": "#212226",
+        "transparent": false,
+        "visible": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,AudioServiceOutOfProcess"
       }
     ],
     "security": {
       "csp": {
         "default-src": "'self'",
-        "script-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
         "style-src": "'self' 'unsafe-inline'",
-        "connect-src": "'self' ipc: http://ipc.localhost"
+        "connect-src": "'self' ipc: http://ipc.localhost http://nemora.localhost nemora: https:",
+        "media-src": "'self' http://nemora.localhost nemora: blob: data:",
+        "img-src": "'self' http://nemora.localhost nemora: blob: data: https:",
+        "font-src": "'self' data:"
       }
     }
   },
   "bundle": {
     "active": false,
-    "icon": ["icons/icon.ico"],
-    "licenseFile": "../../../LICENSE"
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "licenseFile": "../../../LICENSE",
+    "fileAssociations": [
+      {
+        "ext": [
+          "mp3"
+        ],
+        "description": "MP3 Audio File",
+        "mimeType": "audio/mpeg"
+      },
+      {
+        "ext": [
+          "flac"
+        ],
+        "description": "FLAC Audio File",
+        "mimeType": "audio/flac"
+      },
+      {
+        "ext": [
+          "wav"
+        ],
+        "description": "WAV Audio File",
+        "mimeType": "audio/wav"
+      },
+      {
+        "ext": [
+          "ogg"
+        ],
+        "description": "OGG Audio File",
+        "mimeType": "audio/ogg"
+      },
+      {
+        "ext": [
+          "opus"
+        ],
+        "description": "Opus Audio File",
+        "mimeType": "audio/ogg"
+      },
+      {
+        "ext": [
+          "aac"
+        ],
+        "description": "AAC Audio File",
+        "mimeType": "audio/aac"
+      },
+      {
+        "ext": [
+          "m4a"
+        ],
+        "description": "M4A Audio File",
+        "mimeType": "audio/mp4"
+      },
+      {
+        "ext": [
+          "m4r"
+        ],
+        "description": "M4R Ringtone File",
+        "mimeType": "audio/x-m4r"
+      }
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "endpoints": [
+        "https://github.com/Nikenmar/Nemora/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFCMDIzNzZGMDQ4QjI5NzkKUldSNUtZc0ViemNDRzF5MVZobFFsSUR2TmRldE5KYnFydE1mY0R1Qkd3NU5qQ2lpNVNUZTlwZ1AK"
+    }
   }
 }

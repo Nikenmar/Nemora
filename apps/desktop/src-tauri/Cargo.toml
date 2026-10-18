@@ -17,4 +17,41 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 nemora-core.workspace = true
 serde.workspace = true
-tauri = { version = "2", features = [] }
+serde_json.workspace = true
+image.workspace = true
+tauri = { version = "2", features = ["tray-icon", "image-ico", "devtools"] }
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-process = "2"
+tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+# The view's network calls (lyrics, Last.fm, artist info) still run in the webview until they move
+# into the core; Rust fetching keeps them clear of browser CORS.
+tauri-plugin-http = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-autostart = "2"
+percent-encoding = "2"
+# scrypt key derivation with the parameters 1.x used for stored Last.fm and Musixmatch credentials.
+scrypt = { version = "0.11", default-features = false }
+# The OBS now-playing widget on 127.0.0.1 (widget_server.rs).
+tiny_http = "0.12"
+# Native drag-out of a song file (dragout.rs): an OLE drag carrying CF_HDROP.
+drag = "2.1.1"
+
+[target.'cfg(windows)'.dependencies]
+# Must track the windows version tao and tauri-runtime-wry use, or HWND types differ.
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Com",
+  "Win32_Graphics_Gdi",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Power",
+  "Win32_Media_Audio",
+  "Win32_System_Diagnostics_ToolHelp",
+] }
+# Discord Rich Presence speaks over a named pipe.
+discord-rich-presence = "0.2"

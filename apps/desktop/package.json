@@ -9,23 +9,81 @@
     "url": "https://github.com/Nikenmar"
   },
   "license": "MIT",
+  "homepage": "https://github.com/Nikenmar/Nemora",
+  "bugs": {
+    "url": "https://github.com/Nikenmar/Nemora/issues"
+  },
+  "urls": {
+    "website_url": "https://github.com/Nikenmar/Nemora"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
     "check-types": "tsc --noEmit",
     "tauri": "tauri"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
+    "@neos21/detect-chinese": "^0.0.2",
+    "@sglkc/kuroshiro": "^1.0.1",
+    "@sglkc/kuroshiro-analyzer-kuromoji": "^1.0.1",
+    "@tanstack/react-store": "^0.7.0",
+    "@tanstack/store": "^0.7.0",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-fs": "^2",
+    "@tauri-apps/plugin-http": "^2.5.9",
+    "@tauri-apps/plugin-log": "^2",
+    "@tauri-apps/plugin-process": "^2",
+    "@tauri-apps/plugin-shell": "^2",
+    "@tauri-apps/plugin-updater": "^2.14.0",
+    "buffer": "^5.7.1",
+    "html-to-image": "^1.11.13",
+    "i18next": "^24.2.0",
+    "node-id3": "^0.2.6",
+    "pinyin-pro": "^3.26.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.0.2",
+    "react-sortablejs": "^6.1.4",
+    "react-virtuoso": "^4.10.4",
+    "romaja": "^0.2.9",
+    "sortablejs": "^1.15.7",
+    "tailwind-merge": "^2.2.2"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/sortablejs": "^1.15.9",
     "@vitejs/plugin-react-swc": "^3.8.0",
+    "autoprefixer": "^10.4.18",
+    "material-symbols": "^0.29.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.3.2",
     "typescript": "^5.8.0",
     "vite": "^6.1.1"
+  },
+  "appPreferences": {
+    "metadataEditingSupportedExtensions": [
+      "mp3"
+    ],
+    "tagEditingSupportedExtensions": [
+      "mp3",
+      "flac"
+    ],
+    "removeReactStrictMode": false,
+    "showSongIdInsteadOfSongYear": false,
+    "supportedMusicExtensions": [
+      "mp3",
+      "wav",
+      "ogg",
+      "aac",
+      "m4r",
+      "m4a",
+      "opus",
+      "flac"
+    ]
   }
 }

@@ -22,6 +22,7 @@ pub mod plays;
 pub mod rediscover;
 pub mod scan;
 pub mod search;
+pub mod settings;
 pub mod shuffle;
 pub mod stats;
 pub mod tags;

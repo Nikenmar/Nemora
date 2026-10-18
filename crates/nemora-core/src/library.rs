@@ -64,6 +64,11 @@ pub struct SongRow {
     pub is_blacklisted: bool,
     pub plays: i64,
     pub added_at: i64,
+    /// The file to open: the first location whose file is there.
+    pub path: Option<String>,
+    /// The song's first present variant. A song whose audio sits in several files with different
+    /// tags has one row per variant; every other row is a duplicate sharing its statistics.
+    pub is_primary: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -172,8 +177,8 @@ fn ordered_ids(
     Ok(ids)
 }
 
-/// Full rows for the given ids, in the given order.
-fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
+/// Full rows for the given variant ids, in the given order; unknown ids are skipped.
+pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
     if ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -183,7 +188,10 @@ fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
                 EXISTS (SELECT 1 FROM blacklist_songs b WHERE b.song_id = v.song_id AND b.value = 1),
                 coalesce((SELECT plays FROM song_totals st WHERE st.song_id = v.song_id), 0), t.first_seen_at,
                 (SELECT group_concat(name, char(31)) FROM (SELECT name FROM variant_artists a
-                   WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position))
+                   WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position)),
+                (SELECT uri FROM locations l WHERE l.variant_id = v.variant_id AND l.missing_since IS NULL
+                   ORDER BY l.location_id LIMIT 1),
+                v.variant_id = (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = v.song_id AND w.present = 1)
          FROM track_variants v JOIN tracks t ON t.song_id = v.song_id WHERE v.variant_id IN ({})",
         join_ids(ids)
     );
@@ -206,11 +214,27 @@ fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
                 is_blacklisted: r.get(10)?,
                 plays: r.get(11)?,
                 added_at: r.get(12)?,
+                path: r.get(14)?,
+                is_primary: r.get::<_, Option<bool>>(15)?.unwrap_or(false),
             })
         })?
         .map(|row| row.map(|r| (r.variant_id, r)))
         .collect::<rusqlite::Result<_>>()?;
     Ok(ids.iter().filter_map(|id| by_id.remove(id)).collect())
+}
+
+/// The first present variant of each song; songs with no file present are left out.
+pub fn primary_variants(db: &Db, song_ids: &[String]) -> Result<HashMap<String, i64>> {
+    let mut out = HashMap::with_capacity(song_ids.len());
+    let mut stmt = db
+        .conn()
+        .prepare_cached(&format!("SELECT min(variant_id) FROM track_variants v WHERE v.song_id = ?1 AND {PRESENT}"))?;
+    for id in song_ids {
+        if let Some(variant) = stmt.query_row([id], |r| r.get::<_, Option<i64>>(0))? {
+            out.insert(id.clone(), variant);
+        }
+    }
+    Ok(out)
 }
 
 fn join_ids(ids: &[i64]) -> String {
@@ -430,6 +454,92 @@ fn apply_order<T>(rows: &mut [T], order: &[usize]) {
             position.swap(i, target);
         }
     }
+}
+
+/// A present library row as a member of an artist, a genre or an album.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Member {
+    pub variant_id: i64,
+    pub song_id: String,
+    pub title: String,
+    pub is_primary: bool,
+}
+
+/// Which grouping [`members`] reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Group {
+    /// Track artists and album artists, as [`artists`] counts them.
+    Artist,
+    Genre,
+    /// Album keys from [`albums`].
+    Album,
+}
+
+/// The present rows of every artist, genre or album in one pass, each list in title order.
+pub fn members(db: &Db, group: Group) -> Result<HashMap<String, Vec<Member>>> {
+    let conn = db.conn();
+    let primary =
+        "v.variant_id = (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = v.song_id AND w.present = 1)";
+    let mut out: HashMap<String, Vec<Member>> = HashMap::new();
+    let read = |sql: &str, out: &mut HashMap<String, Vec<Member>>| -> Result<()> {
+        let mut stmt = conn.prepare(sql)?;
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                Member { variant_id: r.get(1)?, song_id: r.get(2)?, title: r.get(3)?, is_primary: r.get(4)? },
+            ))
+        })?;
+        for row in rows {
+            let (key, member) = row?;
+            let list = out.entry(key).or_default();
+            if list.last().is_none_or(|m: &Member| m.variant_id != member.variant_id) {
+                list.push(member);
+            }
+        }
+        Ok(())
+    };
+    match group {
+        Group::Artist => read(
+            &format!(
+                "SELECT a.name, v.variant_id, v.song_id, v.title, {primary} FROM variant_artists a
+                 JOIN track_variants v USING (variant_id) WHERE {PRESENT}
+                 GROUP BY a.name, v.variant_id ORDER BY a.name, v.title_sort, v.variant_id"
+            ),
+            &mut out,
+        )?,
+        Group::Genre => read(
+            &format!(
+                "SELECT g.name, v.variant_id, v.song_id, v.title, {primary} FROM variant_genres g
+                 JOIN track_variants v USING (variant_id) WHERE {PRESENT}
+                 GROUP BY g.name, v.variant_id ORDER BY g.name, v.title_sort, v.variant_id"
+            ),
+            &mut out,
+        )?,
+        Group::Album => {
+            for (key, group) in group_albums(db)? {
+                let ids: Vec<i64> = group.iter().map(|m| m.variant_id).collect();
+                let rows = rows_by_id(db, &ids)?;
+                let mut list: Vec<(Option<i64>, Option<i64>, Member)> = rows
+                    .into_iter()
+                    .map(|r| {
+                        (
+                            r.disc_no,
+                            r.track_no,
+                            Member {
+                                variant_id: r.variant_id,
+                                song_id: r.song_id,
+                                title: r.title,
+                                is_primary: r.is_primary,
+                            },
+                        )
+                    })
+                    .collect();
+                list.sort_by_key(|(d, t, m)| (d.unwrap_or(i64::MAX), t.unwrap_or(i64::MAX), m.variant_id));
+                out.insert(key, list.into_iter().map(|(_, _, m)| m).collect());
+            }
+        }
+    }
+    Ok(out)
 }
 
 /// The search corpus of the present library: one entry per library row, ids are variant ids.

@@ -327,6 +327,24 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
         }
     }
 
+    // Old id -> new id (null while the song is pending), for what 1.x kept outside its stores: the
+    // desktop renderer's local storage holds the queue and the current song by old id.
+    let ids: serde_json::Map<String, Value> = targets
+        .iter()
+        .map(|(old, t)| {
+            let new = match t {
+                Target::Song(id) => json!(id),
+                Target::Pending(_) => Value::Null,
+            };
+            (old.clone(), new)
+        })
+        .collect();
+    tx.execute(
+        "INSERT INTO settings_device (key, value) VALUES ('import.songIds', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [serde_json::to_string(&ids)?],
+    )?;
+
     // 1.x knew when each song entered the library; the scan only knows when 2.0 first saw it.
     for song in songs.as_array().into_iter().flatten() {
         let (Some(id), Some(added)) = (song["songId"].as_str(), song["addedDate"].as_i64()) else { continue };

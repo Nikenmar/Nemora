@@ -21,3 +21,6 @@ apps/desktop/src-tauri/gen/
 *.log
 Thumbs.db
 .DS_Store
+
+# Build-time API keys (apps/desktop/.env.example lists them)
+.env

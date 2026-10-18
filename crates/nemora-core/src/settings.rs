@@ -1,0 +1,66 @@
+//! Device settings and music folders. Shared settings (which may sync later) live in
+//! [`crate::playlists::shared_setting`] beside the other documents.
+
+use std::path::{Path, PathBuf};
+
+use rusqlite::{OptionalExtension, params};
+
+use crate::db::Db;
+use crate::error::Result;
+
+/// A device setting as JSON; `None` when unset or unreadable.
+pub fn device(db: &Db, key: &str) -> Result<Option<serde_json::Value>> {
+    let value: Option<String> =
+        db.conn().query_row("SELECT value FROM settings_device WHERE key = ?1", [key], |r| r.get(0)).optional()?;
+    Ok(value.and_then(|v| serde_json::from_str(&v).ok()))
+}
+
+/// Every device setting, in key order.
+pub fn all_device(db: &Db) -> Result<Vec<(String, serde_json::Value)>> {
+    let mut stmt = db.conn().prepare("SELECT key, value FROM settings_device ORDER BY key")?;
+    let rows = stmt
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(rows.into_iter().filter_map(|(k, v)| serde_json::from_str(&v).ok().map(|v| (k, v))).collect())
+}
+
+pub fn set_device(db: &Db, key: &str, value: &serde_json::Value) -> Result<()> {
+    db.conn().execute(
+        "INSERT INTO settings_device (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![key, serde_json::to_string(value)?],
+    )?;
+    Ok(())
+}
+
+/// A music folder and how many files of it are in the library.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MusicFolder {
+    pub folder_id: i64,
+    pub path: PathBuf,
+    pub files: i64,
+}
+
+/// The music folders the scan walks.
+pub fn music_folders(db: &Db) -> Result<Vec<MusicFolder>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT f.folder_id, f.uri,
+                (SELECT count(*) FROM locations l WHERE l.folder_id = f.folder_id AND l.missing_since IS NULL)
+         FROM folders f WHERE f.excluded = 0 AND f.parent_id IS NULL ORDER BY f.uri",
+    )?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(MusicFolder { folder_id: r.get(0)?, path: PathBuf::from(r.get::<_, String>(1)?), files: r.get(2)? })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
+/// Adds a music folder; scanning it is the caller's next step. Spelled as the scan spells it.
+pub fn add_music_folder(db: &Db, path: &Path) -> Result<()> {
+    let path: PathBuf = path.components().collect();
+    db.conn().execute(
+        "INSERT INTO folders (uri) VALUES (?1) ON CONFLICT(uri) DO UPDATE SET excluded = 0",
+        [path.to_string_lossy().as_ref()],
+    )?;
+    Ok(())
+}

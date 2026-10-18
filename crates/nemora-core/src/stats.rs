@@ -115,6 +115,34 @@ fn bounds(range: Range, today: i64) -> (String, String) {
     }
 }
 
+/// One song's counts over all time, imported days and own events together.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SongTotals {
+    pub plays: i64,
+    pub full: i64,
+    pub skips: i64,
+    pub heard_ms: i64,
+}
+
+pub fn song_totals(db: &Db, song_id: &str) -> Result<SongTotals> {
+    let mut stmt =
+        db.conn().prepare_cached("SELECT plays, full, skips, heard_ms FROM song_totals WHERE song_id = ?1")?;
+    let mut rows = stmt.query([song_id])?;
+    Ok(match rows.next()? {
+        Some(r) => SongTotals { plays: r.get(0)?, full: r.get(1)?, skips: r.get(2)?, heard_ms: r.get(3)? },
+        None => SongTotals::default(),
+    })
+}
+
+/// One song's plays per local day, oldest first, days without plays left out.
+pub fn song_days(db: &Db, song_id: &str) -> Result<Vec<(String, i64)>> {
+    let mut stmt = db.conn().prepare_cached(&format!(
+        "SELECT day, sum(plays) FROM ({DAY_ROWS}) WHERE song_id = ?1 GROUP BY day HAVING sum(plays) > 0 ORDER BY day"
+    ))?;
+    let rows = stmt.query_map([song_id], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
 /// The dashboard for `range`, with `today` the device's local date (`YYYY-MM-DD`).
 pub fn dashboard(db: &Db, range: Range, today: &str) -> Result<Dashboard> {
     let today_days = parse_day(today).unwrap_or(0);

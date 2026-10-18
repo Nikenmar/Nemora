@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Nemora - Now Playing</title>
+    <!--
+      Served from `src-tauri/src/widget_server.rs` at http://127.0.0.1:41237/.
+
+      This page is a copy of the player bar's left block (cover, title, artist
+      line, "UP NEXT" pill) rebuilt in plain CSS. It deliberately does NOT
+      import the app's Tailwind build: the widget must stay a single file the
+      Rust server can embed with `include_str!`, and the app's stylesheet drags
+      in the whole theme system for four elements' worth of styling.
+
+      Anything that renders over video is written for legibility first: the
+      text carries its own drop shadow, because a stream background can be any
+      colour at all.
+    -->
+    <style>
+      @font-face {
+        font-family: 'Poppins';
+        src: url('/font/poppins-regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: 'Poppins';
+        src: url('/font/poppins-medium.woff2') format('woff2');
+        font-weight: 500;
+        font-display: block;
+      }
+
+      :root {
+        /* Straight from the app's dark theme (`styles.css`). */
+        --highlight: hsl(213 80% 88%);
+        --pill-bg: hsl(225 8% 20% / 0.92);
+        --text: hsl(0 0% 100% / 0.9);
+        /* Everything below is sized in rem, so one root font-size is the only
+           knob the `scale` option has to turn. That makes a bigger widget a
+           real re-render at the larger size - crisp text, crisp edges - rather
+           than a bitmap stretched after the fact, which is what scaling the
+           source inside OBS does. */
+        --cover-size: 4rem;
+        --gap: 1rem;
+        /* Drawn in CSS rather than swapped in by script, so the cover slot is
+           never empty: an <img> waiting for its first src is a broken-image
+           box on stream, and a cover file that has been moved or deleted would
+           be one too. Real artwork is layered on top of this. */
+        --cover-placeholder: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect width="64" height="64" fill="%23212226"/%3E%3Cpath d="M25 41.5a4.5 4.5 0 1 0 4.5-4.5V22l14-3v14.5a4.5 4.5 0 1 0 3 4.24V16l-20 4.3V37a4.5 4.5 0 0 0-1.5 4.5z" fill="%23c5d9f2" opacity=".7"/%3E%3C/svg%3E');
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      body {
+        font-family: 'Poppins', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #bar {
+        display: flex;
+        align-items: center;
+        /* 1rem all round, and the cover's shadow is cut to fit inside it. On
+           the player's own bar a shadow may spill past the edge - there is an
+           opaque background behind it - but here the edge of the source IS the
+           edge of the picture, so anything that spills is sliced off mid-blur. */
+        padding: 1rem;
+        opacity: 0;
+        transition: opacity 200ms ease;
+      }
+
+      #bar.is-visible {
+        opacity: 1;
+      }
+
+      #cover {
+        flex: 0 0 auto;
+        width: var(--cover-size);
+        height: var(--cover-size);
+        border-radius: 0.5rem;
+        background-image: var(--cover-placeholder);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        /* The app uses Tailwind's shadow-xl here, which reaches 40px below the
+           cover - four times the room this layout has. Same intent, kept
+           inside the padding: 0.25 + 0.75 - 0.125 = 0.875rem of reach against
+           1rem of space. */
+        box-shadow: 0 0.25rem 0.75rem -0.125rem rgb(0 0 0 / 0.5);
+      }
+
+      #info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        margin-left: var(--gap);
+        min-width: 0;
+        /* The app uses drop-shadow-lg here; over video it needs to be heavier. */
+        filter: drop-shadow(0 0.125rem 0.3125rem rgb(0 0 0 / 0.75));
+      }
+
+      #title {
+        max-width: 100%;
+        font-size: 1.5rem;
+        font-weight: 500;
+        line-height: 1.35;
+        color: var(--highlight);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* The second line is either the artists or the UP NEXT pill, never both,
+         exactly as `CurrentlyPlayingSongInfoContainer` swaps them. */
+      #line2 {
+        max-width: 100%;
+        min-height: 1.375rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .artists {
+        max-width: 100%;
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .next-song {
+        max-width: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0.1875rem 0.75rem;
+        border-radius: 9999px;
+        background: var(--pill-bg);
+        font-size: 0.75rem;
+        color: #fff;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* `pre`, not `nowrap`: the line is built from separate spans, and the
+           single spaces that separate them sit at element boundaries, where
+           normal white-space collapsing eats them ("UP NEXT:ketaminabyYaego"). */
+        white-space: pre;
+      }
+
+      .next-song .label {
+        font-weight: 500;
+        color: var(--highlight);
+      }
+
+      .next-song .extra {
+        opacity: 0.8;
+      }
+
+      /* The app's `.appear-from-bottom`, same 250ms ease. */
+      @keyframes appearFromBottom {
+        from {
+          opacity: 0;
+          transform: translateY(2rem);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .anim-up {
+        animation: appearFromBottom 250ms ease forwards;
+      }
+
+      .anim-fade {
+        animation: fadeIn 250ms ease forwards;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <div id="cover" role="img" aria-label="Song artwork"></div>
+      <div id="info">
+        <div id="title"></div>
+        <div id="line2"></div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const params = new URLSearchParams(location.search);
+
+        // The bar hides itself rather than showing a stale song when playback
+        // is paused - useful when the same scene is up between tracks.
+        const hideWhenPaused = params.get('hideWhenPaused') === '1';
+        // The strip is 5rem tall at the default root size, so the height of the
+        // Browser Source IS the scale: make the source taller and the widget
+        // lays out and rasterises again at that size, text drawn at its real
+        // pixel size. That is the opposite of dragging the source's corners in
+        // the scene, which stretches pixels OBS has already drawn.
+        //
+        // Following the source height rather than only a query parameter is
+        // deliberate: resizing the source and seeing nothing change is exactly
+        // the trap this page was falling into. `?scale=` still wins for anyone
+        // who wants the strip to be smaller than its box.
+        // The strip is 6rem tall at the default root size: a 4rem cover plus
+        // 1rem of padding on each side. It is also exactly the height of the
+        // player's own bar.
+        const BASE_HEIGHT = 96;
+        const explicitScale = Number(params.get('scale'));
+        const hasExplicitScale = Number.isFinite(explicitScale) && explicitScale > 0;
+
+        const applyScale = () => {
+          const scale = hasExplicitScale ? explicitScale : window.innerHeight / BASE_HEIGHT;
+          const clamped = Math.min(Math.max(scale, 0.5), 8);
+          document.documentElement.style.fontSize = `${16 * clamped}px`;
+        };
+
+        applyScale();
+        // OBS resizes the page itself when the source's width/height change, so
+        // this is what makes the new size take effect without a refresh.
+        window.addEventListener('resize', applyScale);
+
+        const bar = document.getElementById('bar');
+        const cover = document.getElementById('cover');
+        const title = document.getElementById('title');
+        const line2 = document.getElementById('line2');
+
+        /** Restarts a CSS animation that is already on the element. */
+        const replay = (node, className) => {
+          node.classList.remove(className);
+          // Reading offsetWidth is what forces the restart; without it the
+          // browser coalesces the remove/add and nothing animates.
+          void node.offsetWidth;
+          node.classList.add(className);
+        };
+
+        const renderArtists = (artists) => {
+          const span = document.createElement('span');
+          span.className = 'artists';
+          span.textContent = artists || '';
+          return span;
+        };
+
+        const renderUpNext = (upNext) => {
+          const pill = document.createElement('div');
+          pill.className = 'next-song';
+
+          const label = document.createElement('span');
+          label.className = 'label';
+          label.textContent = 'UP NEXT: ';
+          pill.appendChild(label);
+
+          const name = document.createElement('span');
+          name.textContent = upNext.title;
+          pill.appendChild(name);
+
+          if (upNext.artist) {
+            const by = document.createElement('span');
+            by.className = 'label';
+            by.textContent = ' by ';
+            pill.appendChild(by);
+
+            const artist = document.createElement('span');
+            artist.textContent = upNext.artist;
+            pill.appendChild(artist);
+
+            if (upNext.extra > 0) {
+              const extra = document.createElement('span');
+              extra.className = 'extra';
+              extra.textContent = ` +${upNext.extra}`;
+              pill.appendChild(extra);
+            }
+          }
+          return pill;
+        };
+
+        let lastVersion = -1;
+        let lastTitle = null;
+        let lastArt = null;
+        let lastSecondLine = null;
+        let failures = 0;
+
+        const apply = (state) => {
+          const visible = Boolean(state.title) && !(hideWhenPaused && !state.playing);
+          bar.classList.toggle('is-visible', visible);
+          if (!visible) return;
+
+          if (state.title !== lastTitle) {
+            lastTitle = state.title;
+            title.textContent = state.title;
+            replay(title, 'anim-fade');
+          }
+
+          const art = state.art || '';
+          if (art !== lastArt) {
+            lastArt = art;
+            // The placeholder stays as the bottom layer: a cover whose file
+            // has been moved or deleted simply fails to paint over it, with no
+            // broken-image glyph and no empty hole in the bar.
+            cover.style.backgroundImage = art
+              ? `url("${encodeURI(art)}"), var(--cover-placeholder)`
+              : '';
+            replay(cover, 'anim-fade');
+          }
+
+          // One key for "what the second line should be", so the entrance
+          // animation replays on a real change and not on every poll.
+          const key = state.upNext
+            ? `next:${state.upNext.title}|${state.upNext.artist || ''}|${state.upNext.extra || 0}`
+            : `artists:${state.artists || ''}`;
+
+          if (key !== lastSecondLine) {
+            lastSecondLine = key;
+            const node = state.upNext ? renderUpNext(state.upNext) : renderArtists(state.artists);
+            line2.replaceChildren(node);
+            replay(node, 'anim-up');
+          }
+        };
+
+        const tick = async () => {
+          try {
+            const response = await fetch('/state', { cache: 'no-store' });
+            if (!response.ok) throw new Error(String(response.status));
+            const state = await response.json();
+            failures = 0;
+            if (state.version === lastVersion) return;
+            lastVersion = state.version;
+            apply(state);
+          } catch {
+            // Nemora closed, or the server went away. Fade out instead of
+            // freezing the last song on screen forever.
+            failures += 1;
+            if (failures >= 3) {
+              bar.classList.remove('is-visible');
+              lastVersion = -1;
+              lastTitle = null;
+              lastArt = null;
+              lastSecondLine = null;
+            }
+          }
+        };
+
+        void tick();
+        setInterval(() => void tick(), 250);
+      })();
+    </script>
+  </body>
+</html>

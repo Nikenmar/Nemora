@@ -349,6 +349,23 @@ pub fn set_blacklisted(db: &Db, song: &str, value: bool) -> Result<()> {
     set_mark(db, "blacklist_songs", song, value)
 }
 
+/// Hearted songs, most recently hearted first.
+pub fn favorites(db: &Db) -> Result<Vec<String>> {
+    marked(db, "favorites")
+}
+
+/// Blacklisted songs, most recently blacklisted first.
+pub fn blacklisted(db: &Db) -> Result<Vec<String>> {
+    marked(db, "blacklist_songs")
+}
+
+fn marked(db: &Db, table: &str) -> Result<Vec<String>> {
+    let mut stmt =
+        db.conn().prepare(&format!("SELECT song_id FROM {table} WHERE value = 1 ORDER BY updated_at DESC, song_id"))?;
+    let ids = stmt.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
+    Ok(ids)
+}
+
 // ----- tierlists --------------------------------------------------------------------------------
 
 /// Live tierlists as (id, document).

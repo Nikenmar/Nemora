@@ -268,6 +268,15 @@ fn add_to_rollups(tx: &Connection, song_id: &str, started_at: i64, offset: i64, 
     Ok(())
 }
 
+/// Songs by their latest session, newest first, each once: the listening history.
+pub fn recent_songs(db: &Db, limit: usize) -> Result<Vec<String>> {
+    let mut stmt = db
+        .conn()
+        .prepare("SELECT song_id FROM play_events GROUP BY song_id ORDER BY max(started_at) DESC, song_id LIMIT ?1")?;
+    let ids = stmt.query_map([limit as i64], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
+    Ok(ids)
+}
+
 /// Recomputes the roll-ups from the stored facts: after a definition change, or to check the cache.
 pub fn rebuild_rollups(db: &mut Db) -> Result<()> {
     let tx = db.conn_mut().transaction()?;

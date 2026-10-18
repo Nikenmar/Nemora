@@ -80,7 +80,7 @@ impl Db {
     }
 
     /// Marks cached list orders stale. Called by every write that changes the library or plays.
-    pub(crate) fn touch(&self) {
+    pub fn touch(&self) {
         self.generation.fetch_add(1, Ordering::Relaxed);
     }
 
