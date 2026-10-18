@@ -225,6 +225,20 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
     Ok(ids.iter().filter_map(|id| by_id.remove(id)).collect())
 }
 
+/// The song whose file is at `path` (any spelling of the separators).
+pub fn song_at(db: &Db, path: &str) -> Result<Option<String>> {
+    use rusqlite::OptionalExtension;
+    let path: std::path::PathBuf = std::path::Path::new(path).components().collect();
+    Ok(db
+        .conn()
+        .query_row(
+            "SELECT v.song_id FROM locations l JOIN track_variants v USING (variant_id) WHERE l.uri = ?1",
+            [path.to_string_lossy().as_ref()],
+            |r| r.get(0),
+        )
+        .optional()?)
+}
+
 /// The tag signature of a variant: what a playlist item keeps to show the same tags again.
 pub fn variant_signature(db: &Db, variant_id: i64) -> Result<Option<String>> {
     use rusqlite::OptionalExtension;

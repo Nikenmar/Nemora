@@ -104,6 +104,8 @@ pub fn run() {
             commands::history_clear,
             commands::rediscover_refresh,
             commands::stats_dashboard,
+            commands::lyrics_get,
+            commands::lyrics_save,
             commands::library_blacklist,
             commands::blacklist_songs,
             commands::blacklist_folders,

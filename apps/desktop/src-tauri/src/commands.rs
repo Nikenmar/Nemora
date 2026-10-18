@@ -618,6 +618,37 @@ fn stored_rediscover(db: &Db) -> Vec<String> {
         .unwrap_or_default()
 }
 
+// ----- lyrics ---------------------------------------------------------------------------------
+
+/// The song a view path names: a file path, or the `nemora` URL of one.
+fn song_for_path(db: &Db, path: &str) -> nemora_core::Result<Option<String>> {
+    let path = crate::protocol::local_path_from_asset_url(path).unwrap_or_else(|| path.to_owned());
+    library::song_at(db, &path)
+}
+
+/// The lyrics of the song at `path` as stored text: what the library has, else what the core
+/// finds (the `.lrc` file, the tags, LRCLIB when `network`), which it then keeps.
+#[tauri::command]
+pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res<Value> {
+    let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(Value::Null) };
+    if app.write(|db| nemora_core::lyrics::get(db, &song, network)).map_err(fail)?.is_none() {
+        return Ok(Value::Null);
+    }
+    let Some((text, source)) = nemora_core::lyrics::stored(&app.read(), &song).map_err(fail)? else {
+        return Ok(Value::Null);
+    };
+    Ok(json!({ "synced": nemora_core::lyrics::is_synced(&text), "text": text, "source": source }))
+}
+
+/// Keeps the user's lyrics for the song at `path`; a found text never replaces them.
+#[tauri::command]
+pub fn lyrics_save(handle: AppHandle, app: State<'_, App>, path: String, text: String) -> Res<bool> {
+    let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(false) };
+    app.write(|db| nemora_core::lyrics::save(db, &song, &text, "user")).map_err(fail)?;
+    notify(&handle, &["songs/lyrics"]);
+    Ok(true)
+}
+
 // ----- statistics -----------------------------------------------------------------------------
 
 /// The statistics page (1.x `StatsData`) over the 2.0 roll-ups. Every figure follows the range;

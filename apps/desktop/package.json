@@ -49,7 +49,8 @@
     "react-virtuoso": "^4.10.4",
     "romaja": "^0.2.9",
     "sortablejs": "^1.15.7",
-    "tailwind-merge": "^2.2.2"
+    "tailwind-merge": "^2.2.2",
+    "wanakana": "^5.3.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

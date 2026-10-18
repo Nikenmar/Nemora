@@ -32,6 +32,7 @@ import type {
   TournamentSize,
   TournamentState
 } from '../core/stats/tournaments';
+import type { LyricsRepository } from '../core/lyrics/repository';
 import type { PlaySession } from '../../renderer/src/other/listeningDataSession';
 import type { LastFMAlbumInfo } from '../../types/last_fm_album_info_api';
 import type { LastFMTrackInfoApi } from '../../types/last_fm_api';
@@ -618,37 +619,67 @@ export class NemoraRuntime {
 
   // ----- lyrics ----------------------------------------------------------------------------------
 
-  getSongLyrics(
-    _songInfo: LyricsRequestTrackInfo,
-    _lyricsType?: LyricsTypes,
-    _lyricsRequestType?: LyricsRequestTypes,
+  /**
+   * Found lyrics are always kept in the library by the core, so 1.x's "save automatically"
+   * choice has nothing left to decide.
+   */
+  async getSongLyrics(
+    songInfo: LyricsRequestTrackInfo,
+    lyricsType?: LyricsTypes,
+    lyricsRequestType?: LyricsRequestTypes,
     _saveLyricsAutomatically?: AutomaticallySaveLyricsTypes
   ): Promise<SongLyrics | undefined> {
-    return later('getSongLyrics');
+    const { default: getSongLyrics } = await import('../core/lyrics/getSongLyrics');
+    return getSongLyrics(songInfo, lyricsType, lyricsRequestType);
   }
 
-  getTranslatedLyrics(_languageCode: LanguageCodes): Promise<SongLyrics | undefined> {
-    return later('getTranslatedLyrics');
+  /** What the 1.x lyrics helpers (translation, romanisation) need from the app. */
+  private lyricsRepository(): LyricsRepository {
+    const unused = (name: string) => () => Promise.reject(new NotPortedYetError(name));
+    return {
+      getUserData: () => this.getUserData(),
+      sendMessage: ({ messageCode, data }) =>
+        emitLocal('app/sendMessageToRendererEvent', messageCode, data),
+      emitDataUpdate: (dataType) =>
+        emitLocal('app/dataUpdateEvent', [{ dataType, eventData: [] }]),
+      readEmbeddedLyrics: unused('readEmbeddedLyrics'),
+      writeEmbeddedLyrics: unused('writeEmbeddedLyrics'),
+      decrypt: unused('decrypt'),
+      searchUnsyncedLyrics: unused('searchUnsyncedLyrics')
+    };
   }
 
-  romanizeLyrics(): Promise<SongLyrics | undefined> {
-    return later('romanizeLyrics');
+  async getTranslatedLyrics(languageCode: LanguageCodes): Promise<SongLyrics | undefined> {
+    const { default: translate } = await import('../core/lyrics/getTranslatedLyrics');
+    return translate(this.lyricsRepository(), String(languageCode));
   }
 
-  convertLyricsToPinyin(): Promise<SongLyrics | undefined> {
-    return later('convertLyricsToPinyin');
+  async romanizeLyrics(): Promise<SongLyrics | undefined> {
+    const { default: romanize } = await import('../core/lyrics/romanizeLyrics');
+    return romanize(this.lyricsRepository());
   }
 
-  convertLyricsToRomaja(): Promise<SongLyrics | undefined> {
-    return later('convertLyricsToRomaja');
+  async convertLyricsToPinyin(): Promise<SongLyrics | undefined> {
+    const { default: toPinyin } = await import('../core/lyrics/convertToPinyin');
+    return toPinyin(this.lyricsRepository());
   }
 
-  resetLyrics(): Promise<SongLyrics | undefined> {
-    return later('resetLyrics');
+  async convertLyricsToRomaja(): Promise<SongLyrics | undefined> {
+    const { default: toRomaja } = await import('../core/lyrics/convertToRomaja');
+    return toRomaja(this.lyricsRepository());
   }
 
-  saveLyrics(_songPath: string, _text: SongLyrics): Promise<unknown> {
-    return later('saveLyrics');
+  async resetLyrics(): Promise<SongLyrics | undefined> {
+    const { default: reset } = await import('../core/lyrics/resetLyrics');
+    return reset(this.lyricsRepository());
+  }
+
+  /** The user's lyrics go into the library, not into the file, and sync from there. */
+  async saveLyrics(songPath: string, text: SongLyrics): Promise<unknown> {
+    const { toLrc, updateCachedLyrics } = await import('../core/lyrics/getSongLyrics');
+    const saved = await call<boolean>('lyrics_save', { path: songPath, text: toLrc(text) });
+    if (saved) await updateCachedLyrics(() => text);
+    return saved;
   }
 
   // ----- tags and artwork ------------------------------------------------------------------------
