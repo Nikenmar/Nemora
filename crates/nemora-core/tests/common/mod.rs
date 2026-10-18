@@ -43,6 +43,46 @@ pub fn png(seed: u8) -> Vec<u8> {
     out.into_inner()
 }
 
+/// Full tags for library tests. `None` leaves a field out.
+#[derive(Default)]
+pub struct Tags<'a> {
+    pub title: &'a str,
+    pub artist: &'a str,
+    pub album: Option<&'a str>,
+    pub album_artist: Option<&'a str>,
+    pub genre: Option<&'a str>,
+    pub year: Option<&'a str>,
+    pub track: Option<u32>,
+}
+
+pub fn set_full_tags(path: &Path, tags: Tags<'_>) {
+    use lofty::tag::ItemKey;
+    let mut file = lofty::read_from_path(path).unwrap();
+    if file.primary_tag_mut().is_none() {
+        let tag_type = file.primary_tag_type();
+        file.insert_tag(Tag::new(tag_type));
+    }
+    let tag = file.primary_tag_mut().unwrap();
+    tag.set_title(tags.title.to_owned());
+    tag.set_artist(tags.artist.to_owned());
+    if let Some(v) = tags.album {
+        tag.set_album(v.to_owned());
+    }
+    if let Some(v) = tags.album_artist {
+        tag.insert_text(ItemKey::AlbumArtist, v.to_owned());
+    }
+    if let Some(v) = tags.genre {
+        tag.set_genre(v.to_owned());
+    }
+    if let Some(v) = tags.year {
+        tag.insert_text(ItemKey::RecordingDate, v.to_owned());
+    }
+    if let Some(v) = tags.track {
+        tag.set_track(v);
+    }
+    file.save_to_path(path, WriteOptions::default()).unwrap();
+}
+
 pub fn set_tags(path: &Path, title: &str, artist: &str, album: Option<&str>, cover: Option<Vec<u8>>) {
     let mut file = lofty::read_from_path(path).unwrap();
     if file.primary_tag_mut().is_none() {

@@ -16,6 +16,7 @@ use crate::covers::{CoverStore, PictureSize, cover_hash};
 use crate::db::{Db, now_ms};
 use crate::error::Result;
 use crate::identity::{Identity, identify_path};
+use crate::search::fold::normalize;
 use crate::tags::{TrackTags, read_tags};
 
 /// The extensions 1.1.9 accepted.
@@ -32,6 +33,8 @@ pub struct ScanReport {
     /// Locations whose file is gone since the last scan.
     pub missing: usize,
     pub covers_written: usize,
+    /// Imported history re-attached to songs whose files appeared.
+    pub reattached: usize,
     pub failed: Vec<(String, String)>,
 }
 
@@ -136,7 +139,21 @@ pub fn scan_folders(db: &mut Db, covers: &CoverStore, roots: &[PathBuf]) -> Resu
     report.restored = to_restore.len();
     report.missing = mark_missing(&tx, roots, &seen, now)?;
     drop_superseded_variants(&tx)?;
+    let changed = report.added + report.updated + report.restored + report.missing > 0;
+    if changed {
+        tx.execute(
+            "UPDATE track_variants SET present = EXISTS (SELECT 1 FROM locations l
+               WHERE l.variant_id = track_variants.variant_id AND l.missing_since IS NULL)",
+            [],
+        )?;
+    }
     tx.commit()?;
+    if changed {
+        db.touch();
+    }
+    if report.added + report.updated + report.restored > 0 {
+        report.reattached = crate::import::reattach_pending(db)?;
+    }
     Ok(report)
 }
 
@@ -277,9 +294,23 @@ fn insert_variant(
     now: i64,
 ) -> Result<i64> {
     tx.execute(
-        "INSERT INTO track_variants (song_id, tag_signature, title, album, year, track_no, disc_no, cover_hash, last_seen_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![song_id, signature, tags.title, tags.album, tags.year, tags.track_no, tags.disc_no, cover_hash, now],
+        "INSERT INTO track_variants (song_id, tag_signature, title, title_sort, artist_sort, album, album_sort, year,
+           track_no, disc_no, cover_hash, last_seen_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![
+            song_id,
+            signature,
+            tags.title,
+            normalize(&tags.title),
+            normalize(&tags.artists.join(", ")),
+            tags.album,
+            tags.album.as_deref().map(normalize),
+            tags.year,
+            tags.track_no,
+            tags.disc_no,
+            cover_hash,
+            now
+        ],
     )?;
     let variant_id = tx.last_insert_rowid();
     let mut artist = tx.prepare_cached(

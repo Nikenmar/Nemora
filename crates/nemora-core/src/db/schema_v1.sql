@@ -27,12 +27,16 @@ CREATE TABLE track_variants (                -- a library row: one song_id with 
   song_id       TEXT NOT NULL REFERENCES tracks(song_id),
   tag_signature TEXT NOT NULL,               -- BLAKE3 of the normalised display tags (below)
   title         TEXT NOT NULL,
+  title_sort    TEXT NOT NULL,               -- search::fold::normalize(title): one collation for every script
+  artist_sort   TEXT NOT NULL,               -- normalised artists, joined with ', '
   album         TEXT,
+  album_sort    TEXT,
   year          INTEGER,
   track_no      INTEGER,
   disc_no       INTEGER,
   cover_hash    TEXT REFERENCES covers(cover_hash),
   last_seen_at  INTEGER NOT NULL,
+  present       INTEGER NOT NULL DEFAULT 1,  -- cache: at least one location with the file there
   UNIQUE (song_id, tag_signature)
 ) STRICT;
 
@@ -111,6 +115,7 @@ CREATE TABLE legacy_daily (                  -- 1.x day counters, imported once
   day        TEXT NOT NULL,                  -- 'YYYY-MM-DD' as 1.x recorded it
   l INTEGER NOT NULL DEFAULT 0, f INTEGER NOT NULL DEFAULT 0, s INTEGER NOT NULL DEFAULT 0,
   hours      TEXT,                           -- JSON {hour: listens}, present from 1.1.0
+  plays      INTEGER NOT NULL DEFAULT 0,     -- derived, see "Imported days" below
   CHECK ((song_id IS NULL) <> (pending_id IS NULL))
 ) STRICT;
 -- Not a PRIMARY KEY: in a STRICT table key columns are NOT NULL, and one of the two subjects is
@@ -215,6 +220,11 @@ CREATE TABLE play_hourly (
   PRIMARY KEY (song_id, day, hour)
 ) STRICT, WITHOUT ROWID;
 
+CREATE TABLE song_totals (                 -- per song, imported days and own events together
+  song_id TEXT PRIMARY KEY, starts INTEGER NOT NULL, plays INTEGER NOT NULL, full INTEGER NOT NULL,
+  skips INTEGER NOT NULL, heard_ms INTEGER NOT NULL, last_day TEXT
+) STRICT;
+
 CREATE TABLE elo_ratings (
   song_id TEXT PRIMARY KEY, rating REAL NOT NULL, games INTEGER NOT NULL, wins INTEGER NOT NULL,
   losses INTEGER NOT NULL, draws INTEGER NOT NULL, last_duel_at INTEGER
@@ -227,6 +237,9 @@ CREATE VIRTUAL TABLE search_fts USING fts5(
 
 CREATE INDEX play_events_song ON play_events(song_id, started_at);
 CREATE INDEX variants_song ON track_variants(song_id);
+CREATE INDEX variants_title_sort ON track_variants(title_sort);
+CREATE INDEX variants_artist_sort ON track_variants(artist_sort);
+CREATE INDEX variants_album_sort ON track_variants(album_sort);
 CREATE INDEX locations_variant ON locations(variant_id);
 CREATE INDEX playlist_items_song ON playlist_items(song_id);
 CREATE INDEX duels_at ON duels(at);

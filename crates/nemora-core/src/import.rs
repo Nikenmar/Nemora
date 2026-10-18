@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 
 use crate::db::{Db, now_ms};
 use crate::error::{Error, Result};
+use crate::time::parse_iso_ms;
 
 const SOURCE: &str = "nemora-1.x";
 
@@ -265,9 +266,29 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
         )?;
         report.duels += 1;
     }
+    // Skipped pairs become facts like 2.0's own skips; a "too close" draw is already in the history.
+    for (n, skip) in cmr["duelMatchmaking"]["skippedPairs"].as_array().into_iter().flatten().enumerate() {
+        let a = skip["songAId"].as_str().and_then(target_of);
+        let b = skip["songBId"].as_str().and_then(target_of);
+        let (Some(Target::Song(a)), Some(Target::Song(b))) = (a, b) else { continue };
+        tx.execute(
+            "INSERT INTO duels (duel_id, device_id, at, song_a, song_b, outcome, skip_reason, imported)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'skip', ?6, 1) ON CONFLICT(duel_id) DO NOTHING",
+            params![
+                format!("import:{SOURCE}:skip:{n}"),
+                device_id,
+                skip["at"].as_i64().unwrap_or(0),
+                a,
+                b,
+                skip["reason"].as_str().unwrap_or("cantDecide")
+            ],
+        )?;
+    }
+    if let Some(total) = cmr["elo"]["totalDuels"].as_i64() {
+        put_shared(&tx, "elo.imported_total_duels", &json!(total.to_string()), now, &device_id)?;
+    }
     let remap = |value: &Value| remap_song_ids(value, &targets);
     put_shared(&tx, "elo.tournament", &remap(&cmr["tournament"]), now, &device_id)?;
-    put_shared(&tx, "elo.skipped_pairs", &remap(&cmr["duelMatchmaking"]["skippedPairs"]), now, &device_id)?;
     if !unmapped_ratings.is_empty() {
         tx.execute(
             "INSERT INTO meta (key, value) VALUES ('import:nemora-1.x:unmapped_ratings', ?1)
@@ -340,13 +361,116 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
         }
     }
 
+    // 1.x knew when each song entered the library; the scan only knows when 2.0 first saw it.
+    for song in songs.as_array().into_iter().flatten() {
+        let (Some(id), Some(added)) = (song["songId"].as_str(), song["addedDate"].as_i64()) else { continue };
+        if let Some(Target::Song(song_id)) = target_of(id) {
+            tx.execute("UPDATE tracks SET first_seen_at = min(first_seen_at, ?2) WHERE song_id = ?1", params![song_id, added])?;
+        }
+    }
+    crate::plays::recompute_legacy_plays(&tx)?;
+    crate::plays::rebuild_song_totals(&tx)?;
+
     tx.execute(
         "INSERT INTO meta (key, value) VALUES ('import:nemora-1.x', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         [now.to_string()],
     )?;
     drop(resolver);
     tx.commit()?;
+    db.touch();
     Ok(report)
+}
+
+/// Re-attaches pending history once its file appears: every pending record whose fingerprint now
+/// matches exactly one library song is resolved to it, and its day counters, playlist items, tier
+/// placements and ELO documents move to the song. Returns how many records were resolved.
+pub fn reattach_pending(db: &mut Db) -> Result<usize> {
+    let pending: Vec<(i64, Fingerprint)> = {
+        let mut stmt = db.conn().prepare(
+            "SELECT pending_id, file_name, title, artists, duration_ms FROM pending_tracks WHERE resolved_to IS NULL",
+        )?;
+        stmt.query_map([], |r| {
+            let artists: Option<String> = r.get(3)?;
+            Ok((
+                r.get(0)?,
+                Fingerprint {
+                    file_name: r.get(1)?,
+                    title: r.get(2)?,
+                    artists: artists.and_then(|a| serde_json::from_str(&a).ok()).unwrap_or_default(),
+                    duration_ms: r.get(4)?,
+                },
+            ))
+        })?
+        .collect::<rusqlite::Result<_>>()?
+    };
+    if pending.is_empty() {
+        return Ok(0);
+    }
+    let library = library_index(db)?;
+    let matches: Vec<(i64, String)> =
+        pending.iter().filter_map(|(id, fp)| match_fingerprint(&library, fp).map(|song| (*id, song))).collect();
+    if matches.is_empty() {
+        return Ok(0);
+    }
+    let tx = db.conn_mut().transaction()?;
+    for (pending_id, song_id) in &matches {
+        tx.execute("UPDATE pending_tracks SET resolved_to = ?2 WHERE pending_id = ?1", params![pending_id, song_id])?;
+        // Day counters: sum into an existing row of the same source and day, else move the row.
+        let rows: Vec<(String, String, i64, i64, i64, Option<String>)> = tx
+            .prepare("SELECT source_id, day, l, f, s, hours FROM legacy_daily WHERE pending_id = ?1")?
+            .query_map([pending_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        tx.execute("DELETE FROM legacy_daily WHERE pending_id = ?1", [pending_id])?;
+        for (source, day, l, f, s, hours) in rows {
+            tx.execute(
+                "INSERT INTO legacy_daily (source_id, song_id, pending_id, day, l, f, s, hours) VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7)
+                 ON CONFLICT(source_id, day, ifnull(song_id, ''), ifnull(pending_id, 0)) DO UPDATE SET
+                   l = l + excluded.l, f = f + excluded.f, s = s + excluded.s, hours = coalesce(hours, excluded.hours)",
+                params![source, song_id, day, l, f, s, hours],
+            )?;
+        }
+        tx.execute(
+            "UPDATE playlist_items SET song_id = ?2, pending_id = NULL WHERE pending_id = ?1",
+            params![pending_id, song_id],
+        )?;
+    }
+    // Documents that name pending records by text.
+    let replacements: HashMap<String, String> =
+        matches.iter().map(|(p, s)| (format!("pending:{p}"), s.clone())).collect();
+    let docs: Vec<(String, String)> =
+        tx.prepare("SELECT tierlist_id, doc FROM tierlists")?.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+    for (id, doc) in docs {
+        let value: Value = serde_json::from_str(&doc).unwrap_or_default();
+        let replaced = replace_strings(&value, &replacements);
+        if replaced != value {
+            tx.execute("UPDATE tierlists SET doc = ?2 WHERE tierlist_id = ?1", params![id, serde_json::to_string(&replaced)?])?;
+        }
+    }
+    let settings: Vec<(String, String)> = tx
+        .prepare("SELECT key, value FROM settings_shared WHERE key LIKE 'elo.%'")?
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    for (key, value) in settings {
+        let parsed: Value = serde_json::from_str(&value).unwrap_or_default();
+        let replaced = replace_strings(&parsed, &replacements);
+        if replaced != parsed {
+            tx.execute("UPDATE settings_shared SET value = ?2 WHERE key = ?1", params![key, serde_json::to_string(&replaced)?])?;
+        }
+    }
+    crate::plays::recompute_legacy_plays(&tx)?;
+    crate::plays::rebuild_song_totals(&tx)?;
+    tx.commit()?;
+    db.touch();
+    Ok(matches.len())
+}
+
+fn replace_strings(value: &Value, map: &HashMap<String, String>) -> Value {
+    match value {
+        Value::String(s) => map.get(s).map_or_else(|| value.clone(), |r| json!(r)),
+        Value::Array(items) => Value::Array(items.iter().map(|v| replace_strings(v, map)).collect()),
+        Value::Object(o) => Value::Object(o.iter().map(|(k, v)| (k.clone(), replace_strings(v, map))).collect()),
+        _ => value.clone(),
+    }
 }
 
 struct Resolver<'t, 'c> {
@@ -561,36 +685,9 @@ fn read_optional_store(profile: &Path, file: &str, key: &str) -> Result<Value> {
     if profile.join(file).exists() { read_store(profile, file, key) } else { Ok(Value::Null) }
 }
 
-/// `2026-05-19T09:54:47.054Z` -> milliseconds since the epoch (UTC only, as 1.x wrote it).
-fn parse_iso_ms(s: &str) -> Option<i64> {
-    let b = s.as_bytes();
-    if b.len() < 20 || b[4] != b'-' || b[7] != b'-' || b[10] != b'T' || !s.ends_with('Z') {
-        return None;
-    }
-    let num = |r: std::ops::Range<usize>| s.get(r)?.parse::<i64>().ok();
-    let (y, mo, d, h, mi, sec) = (num(0..4)?, num(5..7)?, num(8..10)?, num(11..13)?, num(14..16)?, num(17..19)?);
-    let millis = if b[19] == b'.' { s[20..s.len() - 1].get(..3).and_then(|m| m.parse::<i64>().ok()).unwrap_or(0) } else { 0 };
-    // Days from civil (Howard Hinnant's algorithm).
-    let y = if mo <= 2 { y - 1 } else { y };
-    let era = y.div_euclid(400);
-    let yoe = y - era * 400;
-    let doy = (153 * (mo + if mo > 2 { -3 } else { 9 }) + 2) / 5 + d - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    let days = era * 146_097 + doe - 719_468;
-    Some(((days * 24 + h) * 60 + mi) * 60_000 + sec * 1000 + millis)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn iso_dates_parse_to_epoch_millis() {
-        assert_eq!(parse_iso_ms("1970-01-01T00:00:00.000Z"), Some(0));
-        assert_eq!(parse_iso_ms("2026-05-19T09:54:47.054Z"), Some(1_779_184_487_054));
-        assert_eq!(parse_iso_ms("2000-02-29T12:00:00Z"), Some(951_825_600_000));
-        assert_eq!(parse_iso_ms("not a date"), None);
-    }
 
     #[test]
     fn remap_replaces_only_known_ids() {

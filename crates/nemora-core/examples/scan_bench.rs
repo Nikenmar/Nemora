@@ -83,11 +83,46 @@ fn run(dir: &Path, profile: &Path) {
     println!("nemora.db: {:.1} MB", size as f64 / 1e6);
 }
 
+/// Reading the scanned library: pages per sort, grouped lists, the search corpus and queries.
+fn query(profile: &Path) {
+    use nemora_core::library::{self, NameSort, SongScope, SongSort};
+    use nemora_core::search::{Filter, search};
+    let db = Db::open(&profile.join("nemora.db")).unwrap();
+    let time = |label: &str, f: &mut dyn FnMut() -> usize| {
+        let started = Instant::now();
+        let n = f();
+        println!("{label}: {:.2?} ({n})", started.elapsed());
+    };
+    for (label, sort) in [
+        ("page 1, title", SongSort::TitleAsc),
+        ("page 1, artist", SongSort::ArtistAsc),
+        ("page 1, year", SongSort::YearDesc),
+        ("page 1, added", SongSort::AddedDesc),
+        ("page 1, plays", SongSort::PlaysDesc),
+        ("page 1, plays this month", SongSort::PlaysSinceDesc("2026-10-01".into())),
+    ] {
+        time(label, &mut || library::songs(&db, &SongScope::All, &sort, 0, 50).unwrap().rows.len());
+    }
+    time("page 1000, title", &mut || library::songs(&db, &SongScope::All, &SongSort::TitleAsc, 50_000, 50).unwrap().rows.len());
+    time("albums", &mut || library::albums(&db, NameSort::NameAsc).unwrap().len());
+    time("artists", &mut || library::artists(&db, NameSort::NameAsc).unwrap().len());
+    let mut corpus = None;
+    time("search corpus build", &mut || {
+        corpus = Some(library::search_corpus(&db).unwrap());
+        0
+    });
+    let corpus = corpus.unwrap();
+    for q in ["track 012345", "folder 042", "trak 01234", "zzzz"] {
+        time(&format!("search {q:?}"), &mut || search(&corpus, Filter::All, q).songs.len());
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("generate") => generate(&PathBuf::from(&args[1]), args[2].parse().unwrap()),
         Some("run") => run(&PathBuf::from(&args[1]), &PathBuf::from(&args[2])),
-        _ => eprintln!("usage: scan_bench generate <dir> <count> | run <dir> <profile dir>"),
+        Some("query") => query(&PathBuf::from(&args[1])),
+        _ => eprintln!("usage: scan_bench generate <dir> <count> | run <dir> <profile dir> | query <profile dir>"),
     }
 }

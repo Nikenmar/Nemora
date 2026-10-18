@@ -51,12 +51,16 @@ CREATE TABLE track_variants (                -- a library row: one song_id with 
   song_id       TEXT NOT NULL REFERENCES tracks(song_id),
   tag_signature TEXT NOT NULL,               -- BLAKE3 of the normalised display tags (below)
   title         TEXT NOT NULL,
+  title_sort    TEXT NOT NULL,               -- search::fold::normalize(title): one collation for every script
+  artist_sort   TEXT NOT NULL,               -- normalised artists, joined with ', '
   album         TEXT,
+  album_sort    TEXT,
   year          INTEGER,
   track_no      INTEGER,
   disc_no       INTEGER,
   cover_hash    TEXT REFERENCES covers(cover_hash),
   last_seen_at  INTEGER NOT NULL,
+  present       INTEGER NOT NULL DEFAULT 1,  -- cache: at least one location with the file there
   UNIQUE (song_id, tag_signature)
 ) STRICT;
 
@@ -135,6 +139,7 @@ CREATE TABLE legacy_daily (                  -- 1.x day counters, imported once
   day        TEXT NOT NULL,                  -- 'YYYY-MM-DD' as 1.x recorded it
   l INTEGER NOT NULL DEFAULT 0, f INTEGER NOT NULL DEFAULT 0, s INTEGER NOT NULL DEFAULT 0,
   hours      TEXT,                           -- JSON {hour: listens}, present from 1.1.0
+  plays      INTEGER NOT NULL DEFAULT 0,     -- derived, see "Imported days" below
   CHECK ((song_id IS NULL) <> (pending_id IS NULL))
 ) STRICT;
 -- Not a PRIMARY KEY: in a STRICT table key columns are NOT NULL, and one of the two subjects is
@@ -239,6 +244,11 @@ CREATE TABLE play_hourly (
   PRIMARY KEY (song_id, day, hour)
 ) STRICT, WITHOUT ROWID;
 
+CREATE TABLE song_totals (                 -- per song, imported days and own events together
+  song_id TEXT PRIMARY KEY, starts INTEGER NOT NULL, plays INTEGER NOT NULL, full INTEGER NOT NULL,
+  skips INTEGER NOT NULL, heard_ms INTEGER NOT NULL, last_day TEXT
+) STRICT;
+
 CREATE TABLE elo_ratings (
   song_id TEXT PRIMARY KEY, rating REAL NOT NULL, games INTEGER NOT NULL, wins INTEGER NOT NULL,
   losses INTEGER NOT NULL, draws INTEGER NOT NULL, last_duel_at INTEGER
@@ -251,6 +261,9 @@ CREATE VIRTUAL TABLE search_fts USING fts5(
 
 CREATE INDEX play_events_song ON play_events(song_id, started_at);
 CREATE INDEX variants_song ON track_variants(song_id);
+CREATE INDEX variants_title_sort ON track_variants(title_sort);
+CREATE INDEX variants_artist_sort ON track_variants(artist_sort);
+CREATE INDEX variants_album_sort ON track_variants(album_sort);
 CREATE INDEX locations_variant ON locations(variant_id);
 CREATE INDEX playlist_items_song ON playlist_items(song_id);
 CREATE INDEX duels_at ON duels(at);
@@ -261,9 +274,17 @@ CREATE INDEX duels_at ON duels(at);
 - **Listening definitions 2.0** (from `play_events`): play = `heard_ms >= min(30000, duration_ms / 2)`;
   skip = `end_reason IN ('user_next', 'user_previous', 'user_selected')` and not a play; full =
   `heard_ms >= 0.9 * duration_ms` or `end_reason = 'finished'`; start = every event.
-- **Imported days** (from `legacy_daily`): plays = `l - s`, full = `f`, skips = `s`, starts = `l`.
+- **Imported days** (from `legacy_daily`): full = `f`, skips = `s`, starts = `l`. Plays per source and
+  song are `max(sum(l) - sum(s), 0)`, placed on days as `l - s`; skips without a start of their own
+  that day (1.x before 1.1 kept skips as one undated total, which the 1.1 migration put on a single
+  day) are taken from the oldest days first. Stored in `legacy_daily.plays`, recomputed after every
+  import and re-attachment.
 - `play_daily.day` for events is the local date of `started_at + utc_offset_min`.
 - **ELO rating** = `elo_baseline` + replay of non-imported `duels` in `at` order.
+- **Albums** are grouped at read time: variants with the same album title whose album artists
+  overlap form one album; variants without an album artist group by title alone (the 1.1.9 rule,
+  which grouped by title only and merged same-titled albums of different artists).
+- **Song totals** = `play_daily` + `legacy_daily` (with the imported-day rule) per song.
 - **Tag signature** = BLAKE3 over title, artists, album artists, album, genres, year, track and disc
   number, each trimmed and joined with NUL in that order.
 

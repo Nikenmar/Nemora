@@ -9,15 +9,21 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+any_ascii.workspace = true
 blake3.workspace = true
+fancy-regex.workspace = true
 getrandom.workspace = true
 image.workspace = true
 lofty.workspace = true
+pinyin.workspace = true
 rayon.workspace = true
+regex.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+unicode-normalization.workspace = true
+wana_kana.workspace = true
 webp.workspace = true
 # `all-meta` is not optional: without the ID3v2/APE readers the probe treats a tag as unknown bytes
 # and gives up after 1 MB, so an MP3 with a large embedded cover is "not a supported audio file".

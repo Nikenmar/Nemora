@@ -4,14 +4,28 @@
 //! play, a skip or a duel result is. The desktop app links it directly; the Android app reaches it
 //! through UniFFI. Format contracts live in `spec/`.
 
+// SQL rows are read as tuples; naming every one of them would not make the queries clearer.
+#![allow(clippy::type_complexity)]
+
 pub mod covers;
 pub mod db;
+pub mod elo;
 pub mod error;
 pub mod identity;
 pub mod import;
+pub mod library;
+pub mod m3u;
+pub mod plays;
+pub mod playlists;
+pub mod rediscover;
 pub mod ids;
 pub mod scan;
+pub mod search;
+pub mod shuffle;
+pub mod stats;
 pub mod tags;
+pub mod time;
+pub mod tournament;
 
 pub use error::{Error, Result};
 

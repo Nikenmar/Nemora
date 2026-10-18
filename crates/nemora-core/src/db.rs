@@ -1,6 +1,9 @@
 //! The library database: one SQLite file per device. Schema contract: `spec/schema-v1.md`.
 
+use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{Connection, OptionalExtension, params};
@@ -15,6 +18,11 @@ const SCHEMA_V1: &str = include_str!("db/schema_v1.sql");
 
 pub struct Db {
     conn: Connection,
+    /// Bumped by every write that can change what a list shows; cached orders older than it are
+    /// recomputed.
+    generation: AtomicU64,
+    /// Ordered variant ids per list (scope + sort), computed once per generation.
+    orders: Mutex<HashMap<String, (u64, Arc<Vec<i64>>)>>,
 }
 
 impl Db {
@@ -33,7 +41,7 @@ impl Db {
     fn init(conn: Connection) -> Result<Self> {
         conn.pragma_update(None, "foreign_keys", "ON")?;
         conn.pragma_update(None, "synchronous", "NORMAL")?;
-        let mut db = Self { conn };
+        let mut db = Self { conn, generation: AtomicU64::new(0), orders: Mutex::new(HashMap::new()) };
         db.migrate()?;
         Ok(db)
     }
@@ -69,6 +77,27 @@ impl Db {
             params![key, value],
         )?;
         Ok(())
+    }
+
+    /// Marks cached list orders stale. Called by every write that changes the library or plays.
+    pub(crate) fn touch(&self) {
+        self.generation.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// The cached order for `key`, or `compute`'s result, cached for the current generation.
+    pub(crate) fn cached_order(
+        &self,
+        key: &str,
+        compute: impl FnOnce(&Connection) -> Result<Vec<i64>>,
+    ) -> Result<Arc<Vec<i64>>> {
+        let generation = self.generation.load(Ordering::Relaxed);
+        if let Some((g, ids)) = self.orders.lock().unwrap().get(key)
+            && *g == generation {
+                return Ok(Arc::clone(ids));
+            }
+        let ids = Arc::new(compute(&self.conn)?);
+        self.orders.lock().unwrap().insert(key.to_owned(), (generation, Arc::clone(&ids)));
+        Ok(ids)
     }
 
     pub(crate) fn conn(&self) -> &Connection {

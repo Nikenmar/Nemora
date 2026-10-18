@@ -137,6 +137,9 @@ fn a_1x_profile_lands_on_the_right_songs_and_imports_once() {
         .query_row("SELECT doc FROM tierlists", [], |r| r.get(0))
         .unwrap();
     assert!(!tier_doc.contains("OLDA") && tier_doc.contains("pending:"), "{tier_doc}");
+    // Skipped pairs are facts now, the duel counter survives.
+    assert_eq!(one(&db_path, "SELECT count(*) FROM duels WHERE outcome = 'skip' AND imported = 1"), 1);
+    assert_eq!(nemora_core::elo::total_duels(&db).unwrap(), 1);
     let tournament: String = rusqlite::Connection::open(&db_path)
         .unwrap()
         .query_row("SELECT value FROM settings_shared WHERE key = 'elo.tournament'", [], |r| r.get(0))
@@ -148,6 +151,21 @@ fn a_1x_profile_lands_on_the_right_songs_and_imports_once() {
     let again = import_nemora_1x(&mut db, &profile).unwrap();
     assert_eq!(again.pending, 1);
     assert_eq!(dump(&db_path), before);
+
+    // The deleted song's file comes back (any name, any folder): its history, its playlist slot and
+    // its tier placement re-attach on the next scan.
+    let c = music.join("Gone.flac");
+    common::flac(&c, 13, 200);
+    common::set_tags(&c, "Gone", "Artist", None, None);
+    let report = scan_folders(&mut db, &CoverStore::new(root.join("covers")), std::slice::from_ref(&music)).unwrap();
+    assert_eq!(report.reattached, 1, "{report:?}");
+    assert_eq!(one(&db_path, "SELECT count(*) FROM legacy_daily WHERE pending_id IS NOT NULL"), 0);
+    assert_eq!(one(&db_path, "SELECT l FROM legacy_daily WHERE day = '2026-01-02'"), 7);
+    assert_eq!(one(&db_path, "SELECT count(*) FROM playlist_items WHERE pending_id IS NOT NULL"), 1, "only the unknown id stays pending");
+    let tier_doc: String = rusqlite::Connection::open(&db_path).unwrap().query_row("SELECT doc FROM tierlists", [], |r| r.get(0)).unwrap();
+    assert!(!tier_doc.contains("pending:"), "{tier_doc}");
+    // plays = l - s per imported day: A (5 - 2) + B (4 - 0) + the re-attached song (7 - 0).
+    assert_eq!(one(&db_path, "SELECT sum(plays) FROM song_totals"), 3 + 4 + 7);
 
     drop(db);
     let _ = std::fs::remove_dir_all(&root);
