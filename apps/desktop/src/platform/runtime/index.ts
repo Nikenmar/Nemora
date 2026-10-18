@@ -382,30 +382,37 @@ export class NemoraRuntime {
     return later('toggleLikeArtists');
   }
 
-  getArtistDuplicates(_artistName: string): Promise<Artist[]> {
-    return later('getArtistDuplicates');
+  getArtistDuplicates(artistName: string): Promise<Artist[]> {
+    return call('artist_duplicates', { artistName });
   }
 
   resolveArtistDuplicates(
-    _selectedArtistId: string,
-    _duplicateIds: string[]
+    selectedArtistId: string,
+    duplicateIds: string[]
   ): Promise<PathBackedUpdateSongDataResult | undefined> {
-    return later('resolveArtistDuplicates');
+    return call('artist_resolve_duplicates', { selectedArtistId, duplicateIds });
   }
 
   resolveSeparateArtists(
-    _separateArtistId: string,
-    _names: string[]
+    separateArtistId: string,
+    names: string[]
   ): Promise<PathBackedUpdateSongDataResult | undefined> {
-    return later('resolveSeparateArtists');
+    return call('artist_resolve_separate', {
+      separateArtistId,
+      separateArtistNames: names
+    });
   }
 
   resolveFeaturingArtists(
-    _songId: string,
-    _names: string[],
-    _removeFeatInfoInTitle?: boolean
+    songId: string,
+    names: string[],
+    removeFeatInfoInTitle?: boolean
   ): Promise<PathBackedUpdateSongDataResult | undefined> {
-    return later('resolveFeaturingArtists');
+    return call('artist_resolve_featuring', {
+      songId,
+      featArtistNames: names,
+      removeFeatInfoInTitle
+    });
   }
 
   // ----- search ----------------------------------------------------------------------------------
@@ -601,20 +608,20 @@ export class NemoraRuntime {
     return call('tournament_submit', { matchId, winnerSongId });
   }
 
-  getSongGuessrRound(_options: SongGuessrRoundOptions): Promise<SongGuessrRound | null> {
-    return later('getSongGuessrRound');
+  getSongGuessrRound(options: SongGuessrRoundOptions): Promise<SongGuessrRound | null> {
+    return call('guessr_round', { options });
   }
 
   searchSongGuessrCandidates(
-    _query: string,
-    _limit?: number,
-    _offset?: number
+    query: string,
+    limit?: number,
+    offset?: number
   ): Promise<SongGuessrSearchResult> {
-    return later('searchSongGuessrCandidates');
+    return call('guessr_search', { query, limit, offset });
   }
 
   getSongGuessrPools(): Promise<SongGuessrPoolOption[]> {
-    return later('getSongGuessrPools');
+    return call('guessr_pools');
   }
 
   // ----- lyrics ----------------------------------------------------------------------------------
@@ -684,21 +691,22 @@ export class NemoraRuntime {
 
   // ----- tags and artwork ------------------------------------------------------------------------
 
-  getSongTags(_songIdOrPath: string, _isKnownSource: boolean): Promise<SongTags> {
-    return later('getSongTags');
+  getSongTags(songIdOrPath: string, isKnownSource: boolean): Promise<SongTags> {
+    return call('tags_get', { songIdOrPath, isKnownSource });
   }
 
+  /** The audio is never rewritten, so the song keeps its id and statistics. */
   updateSongId3Tags(
-    _songIdOrPath: string,
-    _tags: SongTags,
+    songIdOrPath: string,
+    tags: SongTags,
     _sendUpdatedData: boolean,
-    _isKnownSource: boolean
+    isKnownSource: boolean
   ): Promise<PathBackedUpdateSongDataResult> {
-    return later('updateSongId3Tags');
+    return call('tags_update', { songIdOrPath, tags, isKnownSource });
   }
 
-  reParseSong(_songPath: string): Promise<SavableSongData | undefined> {
-    return later('reParseSong');
+  async reParseSong(songPath: string): Promise<SavableSongData | undefined> {
+    return (await call<SavableSongData | null>('song_reparse', { path: songPath })) ?? undefined;
   }
 
   async healSongForPlayback(_songId: string): Promise<boolean> {
@@ -709,8 +717,8 @@ export class NemoraRuntime {
     return false;
   }
 
-  saveArtwork(_source: string, _destination: string): Promise<void> {
-    return later('saveArtwork');
+  saveArtwork(source: string, destination: string): Promise<void> {
+    return call('artwork_save', { source, destination });
   }
 
   /** Covers are thumbnailed and coloured by the scan. */

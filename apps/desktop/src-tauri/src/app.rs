@@ -1,5 +1,7 @@
 //! The profile the app runs on: the database, the cover store, and first-start import of 1.x.
 
+use std::any::Any;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
@@ -38,8 +40,9 @@ pub struct App {
     pub defaults: OnceLock<DefaultArtwork>,
     /// A first-start import of 1.x is running.
     importing: AtomicBool,
-    /// The search corpus, built on the first search after a write.
-    corpus: Mutex<Option<Arc<Corpus>>>,
+    /// Things derived from the whole library (the search corpus, the Song Guessr index), built on
+    /// first use after a write and dropped by the next one.
+    derived: Mutex<HashMap<&'static str, Arc<dyn Any + Send + Sync>>>,
 }
 
 impl App {
@@ -55,7 +58,7 @@ impl App {
             write: Mutex::new(write),
             defaults: OnceLock::new(),
             importing: AtomicBool::new(false),
-            corpus: Mutex::new(None),
+            derived: Mutex::new(HashMap::new()),
         })
     }
 
@@ -70,17 +73,28 @@ impl App {
             f(&mut db)
         };
         self.read().touch();
-        *self.corpus.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        self.derived.lock().unwrap_or_else(|e| e.into_inner()).clear();
         result
     }
 
-    pub fn corpus(&self) -> nemora_core::Result<Arc<Corpus>> {
-        if let Some(corpus) = self.corpus.lock().unwrap_or_else(|e| e.into_inner()).clone() {
-            return Ok(corpus);
+    /// `build`'s result, kept until the next write.
+    pub fn derived<T: Any + Send + Sync>(
+        &self,
+        key: &'static str,
+        build: impl FnOnce(&Db) -> nemora_core::Result<T>,
+    ) -> nemora_core::Result<Arc<T>> {
+        if let Some(found) = self.derived.lock().unwrap_or_else(|e| e.into_inner()).get(key).cloned()
+            && let Ok(found) = found.downcast::<T>()
+        {
+            return Ok(found);
         }
-        let corpus = Arc::new(nemora_core::library::search_corpus(&self.read())?);
-        *self.corpus.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::clone(&corpus));
-        Ok(corpus)
+        let built = Arc::new(build(&self.read())?);
+        self.derived.lock().unwrap_or_else(|e| e.into_inner()).insert(key, built.clone());
+        Ok(built)
+    }
+
+    pub fn corpus(&self) -> nemora_core::Result<Arc<Corpus>> {
+        self.derived("search", nemora_core::library::search_corpus)
     }
 
     pub fn defaults(&self) -> DefaultArtwork {

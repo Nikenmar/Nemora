@@ -38,6 +38,8 @@ pub struct TrackTags {
     pub bitrate_kbps: Option<u32>,
     /// The front cover if the file names one, else the first non-empty picture.
     pub cover: Option<EmbeddedPicture>,
+    /// Shown in the tag editor; not part of the library row.
+    pub composer: Option<String>,
 }
 
 impl TrackTags {
@@ -86,7 +88,77 @@ pub fn read_tags(path: &Path) -> Result<TrackTags> {
         channels: properties.channels(),
         bitrate_kbps: properties.audio_bitrate(),
         cover: tag.and_then(cover),
+        composer: tag
+            .and_then(|t| t.get_string(ItemKey::Composer))
+            .map(|c| c.trim().to_owned())
+            .filter(|c| !c.is_empty()),
     })
+}
+
+/// A tag edit from the tag editor. Lists are written joined with ", ", as 1.x wrote them; `None`
+/// and empty values remove the field.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TagEdit {
+    pub title: String,
+    pub artists: Vec<String>,
+    pub album_artists: Vec<String>,
+    pub album: Option<String>,
+    pub genres: Vec<String>,
+    pub year: Option<i64>,
+    pub track_no: Option<u32>,
+    pub composer: Option<String>,
+    /// A new front cover; `None` keeps the current pictures.
+    pub cover: Option<Vec<u8>>,
+}
+
+/// Writes a tag edit into the file. The audio is untouched, so the song keeps its id; the next scan
+/// sees the new tags as a new row of the same song.
+pub fn write_tags(path: &Path, edit: &TagEdit) -> Result<()> {
+    use lofty::config::WriteOptions;
+    use lofty::picture::{MimeType, Picture};
+
+    let fail = |e: &dyn std::fmt::Display| Error::Tags(format!("{}: {e}", path.display()));
+    let mut file = Probe::open(path)
+        .and_then(|p| p.options(ParseOptions::new().parsing_mode(ParsingMode::Relaxed)).read())
+        .map_err(|e| fail(&e))?;
+    if file.primary_tag_mut().is_none() {
+        let tag_type = file.primary_tag_type();
+        file.insert_tag(Tag::new(tag_type));
+    }
+    let tag = file.primary_tag_mut().expect("a primary tag was just ensured");
+    let mut text = |key: ItemKey, value: Option<String>| match value.filter(|v| !v.trim().is_empty()) {
+        Some(v) => {
+            tag.insert_text(key, v.trim().to_owned());
+        }
+        None => tag.remove_key(key),
+    };
+    let joined =
+        |list: &[String]| Some(list.iter().map(|v| v.trim()).filter(|v| !v.is_empty()).collect::<Vec<_>>().join(", "));
+    text(ItemKey::TrackTitle, Some(edit.title.clone()));
+    text(ItemKey::TrackArtist, joined(&edit.artists));
+    text(ItemKey::AlbumArtist, joined(&edit.album_artists));
+    text(ItemKey::AlbumTitle, edit.album.clone());
+    text(ItemKey::Genre, joined(&edit.genres));
+    text(ItemKey::Composer, edit.composer.clone());
+    text(ItemKey::Year, edit.year.map(|y| y.to_string()));
+    text(ItemKey::RecordingDate, edit.year.map(|y| y.to_string()));
+    match edit.track_no {
+        Some(n) if n > 0 => tag.set_track(n),
+        _ => tag.remove_track(),
+    }
+    if let Some(data) = &edit.cover {
+        let mime = match data.as_slice() {
+            [0x89, b'P', b'N', b'G', ..] => MimeType::Png,
+            [0xff, 0xd8, ..] => MimeType::Jpeg,
+            [b'G', b'I', b'F', ..] => MimeType::Gif,
+            [b'B', b'M', ..] => MimeType::Bmp,
+            _ => MimeType::Unknown("image/webp".to_owned()),
+        };
+        tag.remove_picture_type(PictureType::CoverFront);
+        tag.push_picture(Picture::unchecked(data.clone()).pic_type(PictureType::CoverFront).mime_type(mime).build());
+    }
+    file.save_to_path(path, WriteOptions::default()).map_err(|e| fail(&e))?;
+    Ok(())
 }
 
 fn title(tag: Option<&Tag>, file_name: &str) -> String {

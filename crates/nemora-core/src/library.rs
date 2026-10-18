@@ -225,6 +225,21 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
     Ok(ids.iter().filter_map(|id| by_id.remove(id)).collect())
 }
 
+/// A present file that carries the picture `cover_hash`: where the full-size picture can be read
+/// again, since the cover store keeps thumbnails only.
+pub fn file_with_cover(db: &Db, cover_hash: &str) -> Result<Option<String>> {
+    use rusqlite::OptionalExtension;
+    Ok(db
+        .conn()
+        .query_row(
+            "SELECT l.uri FROM locations l JOIN track_variants v USING (variant_id)
+             WHERE v.cover_hash = ?1 AND l.missing_since IS NULL ORDER BY l.uri LIMIT 1",
+            [cover_hash],
+            |r| r.get(0),
+        )
+        .optional()?)
+}
+
 /// The song whose file is at `path` (any spelling of the separators).
 pub fn song_at(db: &Db, path: &str) -> Result<Option<String>> {
     use rusqlite::OptionalExtension;

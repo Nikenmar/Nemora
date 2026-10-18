@@ -223,7 +223,7 @@ fn pick<T: Clone>(rows: Vec<T>, wanted: &[String], key: impl Fn(&T) -> Vec<&str>
         .collect()
 }
 
-fn artists_of(
+pub(crate) fn artists_of(
     db: &Db,
     v: &View,
     wanted: &[String],
@@ -927,7 +927,12 @@ pub fn library_folders(
 /// Adds music folders and scans them; answers with the songs found in them.
 #[tauri::command]
 pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<String>) -> Res<Vec<Value>> {
-    app.write(|db| paths.iter().try_for_each(|p| nemora_core::settings::add_music_folder(db, std::path::Path::new(p))))
+    // Spelled as the scan stores paths, so `E:/Music` finds the files of `E:\Music`.
+    let roots: Vec<String> = paths
+        .iter()
+        .map(|p| std::path::Path::new(p).components().collect::<std::path::PathBuf>().to_string_lossy().into_owned())
+        .collect();
+    app.write(|db| roots.iter().try_for_each(|p| nemora_core::settings::add_music_folder(db, std::path::Path::new(p))))
         .map_err(fail)?;
     app.scan().map_err(fail)?;
     notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
@@ -935,7 +940,7 @@ pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<Stri
     let ids: Vec<i64> = library::files(&db)
         .map_err(fail)?
         .into_iter()
-        .filter(|f| paths.iter().any(|p| f.path.starts_with(p.as_str())))
+        .filter(|f| roots.iter().any(|p| f.path.starts_with(p.as_str())))
         .map(|f| f.variant_id)
         .collect();
     let v = view(&app);

@@ -9,12 +9,14 @@ mod discord;
 mod dragout;
 mod duels;
 mod folders;
+mod guessr;
 mod protocol;
 mod secrets;
 // Win32 code carried over from 1.1.9 (edition 2021), where an unsafe fn body was one unsafe block.
 #[allow(unsafe_op_in_unsafe_fn)]
 mod shellops;
 mod system;
+mod tags_cmd;
 #[allow(unsafe_op_in_unsafe_fn)]
 mod taskbar;
 mod user_data;
@@ -106,6 +108,17 @@ pub fn run() {
             commands::stats_dashboard,
             commands::lyrics_get,
             commands::lyrics_save,
+            tags_cmd::tags_get,
+            tags_cmd::tags_update,
+            tags_cmd::song_reparse,
+            tags_cmd::artwork_save,
+            guessr::guessr_pools,
+            guessr::guessr_round,
+            guessr::guessr_search,
+            tags_cmd::artist_duplicates,
+            tags_cmd::artist_resolve_duplicates,
+            tags_cmd::artist_resolve_separate,
+            tags_cmd::artist_resolve_featuring,
             commands::library_blacklist,
             commands::blacklist_songs,
             commands::blacklist_folders,

@@ -2755,6 +2755,7 @@ dependencies = [
  "image",
  "nemora-core",
  "percent-encoding",
+ "regex",
  "scrypt",
  "serde",
  "serde_json",
