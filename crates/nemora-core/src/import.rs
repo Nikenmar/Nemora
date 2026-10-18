@@ -1,0 +1,604 @@
+//! One-way import of a Nemora 1.x profile (vault plan PLAN/05-import.md).
+//!
+//! Read-only on the source: the JSON stores are never written, so 1.1.9 keeps working and a manual
+//! rollback stays possible. Idempotent: importing the same profile again changes nothing, because
+//! day counters merge by maximum and documents are replaced by the same content.
+//!
+//! The library must be scanned first: an old song is found again by its file path, then by its
+//! fingerprint. History whose file is not in the library becomes a pending record that is
+//! re-attached when the file appears.
+
+use std::collections::{BTreeMap, HashMap};
+use std::path::Path;
+
+use rusqlite::{OptionalExtension, Transaction, params};
+use serde_json::{Value, json};
+
+use crate::db::{Db, now_ms};
+use crate::error::{Error, Result};
+
+const SOURCE: &str = "nemora-1.x";
+
+/// Playlists 1.x kept for itself: favourites are hearts, history is the play log, Rediscover is
+/// computed. None of them is a user playlist.
+const SYSTEM_PLAYLISTS: &[&str] = &["Favorites", "History", "Rediscover"];
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct ImportReport {
+    pub old_songs: usize,
+    pub songs_by_path: usize,
+    pub songs_by_fingerprint: usize,
+    pub pending: usize,
+    pub favorites: usize,
+    pub playlists: usize,
+    pub playlist_items: usize,
+    pub playlist_items_pending: usize,
+    pub listening_days: usize,
+    pub listens_l: i64,
+    pub listens_f: i64,
+    pub listens_s: i64,
+    pub ratings: usize,
+    pub ratings_unmapped: usize,
+    pub duels: usize,
+    pub duels_unmapped: usize,
+    pub tierlists: usize,
+    pub tier_items_pending: usize,
+    pub blacklisted_songs: usize,
+}
+
+/// (source id, day, song, pending record) of an imported day counter.
+type DayKey = (String, String, Option<String>, Option<i64>);
+/// l, f, s and the hour histogram of one imported day.
+type DayCounts = (i64, i64, i64, BTreeMap<String, i64>);
+
+/// What an old song id resolves to.
+#[derive(Debug, Clone)]
+enum Target {
+    Song(String),
+    Pending(i64),
+}
+
+struct Fingerprint {
+    title: Option<String>,
+    artists: Vec<String>,
+    duration_ms: Option<i64>,
+    file_name: Option<String>,
+}
+
+struct LibraryIndex {
+    by_uri: HashMap<String, String>,
+    by_uri_folded: HashMap<String, String>,
+    /// file name (lower case) -> [(song_id, duration_ms)]
+    by_file_name: HashMap<String, Vec<(String, i64)>>,
+    /// title (lower case) -> [(song_id, sorted lower-case artists, duration_ms)]
+    by_title: HashMap<String, Vec<(String, Vec<String>, i64)>>,
+}
+
+pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
+    let songs = read_store(profile, "songs.json", "songs")?;
+    let playlists = read_store(profile, "playlists.json", "playlists")?;
+    let events = read_store(profile, "listening_events.json", "listeningEvents")?;
+    let cmr = read_optional_store(profile, "cmr_stats.json", "cmrStats")?;
+    let tierlists = read_optional_store(profile, "tierlists.json", "tierlists")?;
+    let blacklist = read_optional_store(profile, "blacklist.json", "blacklist")?;
+    let user_data = read_optional_store(profile, "userData.json", "userData")?;
+
+    let device_id = db.device_id()?;
+    let now = now_ms();
+    let library = library_index(db)?;
+    let mut report = ImportReport::default();
+
+    let tx = db.conn_mut().transaction()?;
+    let mut resolver = Resolver { tx: &tx, library: &library, cache: HashMap::new() };
+
+    // Old songs: id -> fingerprint and path.
+    let mut old_songs: HashMap<String, (Fingerprint, Option<String>)> = HashMap::new();
+    for song in songs.as_array().into_iter().flatten() {
+        let Some(id) = song["songId"].as_str() else { continue };
+        let path = song["path"].as_str().map(str::to_owned);
+        old_songs.insert(id.to_owned(), (fingerprint_of_song(song), path));
+    }
+    // Fingerprints of deleted songs survive in the counter store.
+    let event_tracks = events["tracks"].as_object().cloned().unwrap_or_default();
+    for fp in event_tracks.values() {
+        if let Some(id) = fp["songId"].as_str() {
+            old_songs.entry(id.to_owned()).or_insert_with(|| (fingerprint_of_event(fp), None));
+        }
+    }
+    report.old_songs = old_songs.len();
+
+    let mut targets: HashMap<String, Target> = HashMap::new();
+    for (id, (fp, path)) in &old_songs {
+        let target = resolver.resolve(id, fp, path.as_deref(), &mut report)?;
+        targets.insert(id.clone(), target);
+    }
+    let target_of = |id: &str| targets.get(id).cloned();
+
+    // Hearts.
+    let mut hearts: Vec<String> = songs
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|s| s["isAFavorite"].as_bool() == Some(true))
+        .filter_map(|s| s["songId"].as_str().map(str::to_owned))
+        .collect();
+    if let Some(fav) = playlists.as_array().into_iter().flatten().find(|p| p["playlistId"] == "Favorites") {
+        hearts.extend(fav["songs"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_owned)));
+    }
+    for id in hearts {
+        if let Some(Target::Song(song_id)) = target_of(&id) {
+            report.favorites += tx.execute(
+                "INSERT INTO favorites (song_id, value, updated_at, updated_by) VALUES (?1, 1, ?2, ?3)
+                 ON CONFLICT(song_id) DO NOTHING",
+                params![song_id, now, device_id],
+            )?;
+        }
+    }
+
+    // User playlists keep their 1.x ids, so tierlists that name them as sources still point right.
+    for playlist in playlists.as_array().into_iter().flatten() {
+        let Some(id) = playlist["playlistId"].as_str() else { continue };
+        if SYSTEM_PLAYLISTS.contains(&id) {
+            continue;
+        }
+        let created = playlist["createdDate"].as_str().and_then(parse_iso_ms).unwrap_or(now);
+        tx.execute(
+            "INSERT INTO playlists (playlist_id, name, created_at, updated_at, updated_by)
+             VALUES (?1, ?2, ?3, ?3, ?4)
+             ON CONFLICT(playlist_id) DO UPDATE SET name = excluded.name",
+            params![id, playlist["name"].as_str().unwrap_or(id), created, device_id],
+        )?;
+        tx.execute("DELETE FROM playlist_items WHERE playlist_id = ?1", [id])?;
+        for (position, song) in playlist["songs"].as_array().into_iter().flatten().filter_map(Value::as_str).enumerate() {
+            let target = match target_of(song) {
+                Some(t) => t,
+                None => Target::Pending(resolver.pending_for_unknown(song)?),
+            };
+            let (song_id, pending_id) = match &target {
+                Target::Song(s) => (Some(s.as_str()), None),
+                Target::Pending(p) => (None, Some(*p)),
+            };
+            tx.execute(
+                "INSERT INTO playlist_items (playlist_id, position, song_id, pending_id) VALUES (?1, ?2, ?3, ?4)",
+                params![id, position as i64, song_id, pending_id],
+            )?;
+            report.playlist_items += 1;
+            report.playlist_items_pending += usize::from(pending_id.is_some());
+        }
+        report.playlists += 1;
+    }
+
+    // Listening history: counters[trackKey][sourceId][day] = {l, f, s, h}. Different track keys
+    // that now name one song are summed; the result merges by maximum with what is already there.
+    // BTreeMap for the hour histogram: its JSON must come out the same on every import.
+    let mut days: HashMap<DayKey, DayCounts> = HashMap::new();
+    for (track_key, by_source) in events["counters"].as_object().into_iter().flatten() {
+        let Some(old_id) = event_tracks.get(track_key).and_then(|fp| fp["songId"].as_str()) else { continue };
+        let Some(target) = target_of(old_id) else { continue };
+        let (song_id, pending_id) = match target {
+            Target::Song(s) => (Some(s), None),
+            Target::Pending(p) => (None, Some(p)),
+        };
+        for (source_id, by_day) in by_source.as_object().into_iter().flatten() {
+            for (day, c) in by_day.as_object().into_iter().flatten() {
+                let entry = days
+                    .entry((source_id.clone(), day.clone(), song_id.clone(), pending_id))
+                    .or_insert_with(|| (0, 0, 0, BTreeMap::new()));
+                entry.0 += c["l"].as_i64().unwrap_or(0);
+                entry.1 += c["f"].as_i64().unwrap_or(0);
+                entry.2 += c["s"].as_i64().unwrap_or(0);
+                for (hour, n) in c["h"].as_object().into_iter().flatten() {
+                    *entry.3.entry(hour.clone()).or_default() += n.as_i64().unwrap_or(0);
+                }
+            }
+        }
+    }
+    for ((source_id, day, song_id, pending_id), (l, f, s, hours)) in days {
+        let hours = (!hours.is_empty()).then(|| serde_json::to_string(&hours)).transpose()?;
+        tx.execute(
+            "INSERT INTO legacy_daily (source_id, song_id, pending_id, day, l, f, s, hours)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(source_id, day, ifnull(song_id, ''), ifnull(pending_id, 0)) DO UPDATE SET
+               l = max(l, excluded.l), f = max(f, excluded.f), s = max(s, excluded.s),
+               hours = coalesce(excluded.hours, hours)",
+            params![source_id, song_id, pending_id, day, l, f, s, hours],
+        )?;
+        report.listening_days += 1;
+        report.listens_l += l;
+        report.listens_f += f;
+        report.listens_s += s;
+    }
+
+    // ELO: ratings become the baseline; the duel history is kept for display, not replayed.
+    let mut unmapped_ratings = serde_json::Map::new();
+    for (old_id, r) in cmr["elo"]["ratings"].as_object().into_iter().flatten() {
+        match target_of(old_id) {
+            Some(Target::Song(song_id)) => {
+                tx.execute(
+                    "INSERT INTO elo_baseline (song_id, rating, games, wins, losses, draws, imported_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                     ON CONFLICT(song_id) DO UPDATE SET rating = excluded.rating, games = excluded.games,
+                       wins = excluded.wins, losses = excluded.losses, draws = excluded.draws",
+                    params![
+                        song_id,
+                        r["rating"].as_f64().unwrap_or(1200.0),
+                        r["games"].as_i64().unwrap_or(0),
+                        r["wins"].as_i64().unwrap_or(0),
+                        r["losses"].as_i64().unwrap_or(0),
+                        r["draws"].as_i64().unwrap_or(0),
+                        now
+                    ],
+                )?;
+                report.ratings += 1;
+            }
+            _ => {
+                unmapped_ratings.insert(old_id.clone(), r.clone());
+                report.ratings_unmapped += 1;
+            }
+        }
+    }
+    for (n, duel) in cmr["elo"]["history"].as_array().into_iter().flatten().enumerate() {
+        let a = duel["songAId"].as_str().and_then(target_of);
+        let b = duel["songBId"].as_str().and_then(target_of);
+        let (Some(Target::Song(a)), Some(Target::Song(b))) = (a, b) else {
+            report.duels_unmapped += 1;
+            continue;
+        };
+        let outcome = match duel["winner"].as_str() {
+            Some("A") => "a",
+            Some("B") => "b",
+            _ => "draw",
+        };
+        tx.execute(
+            "INSERT INTO duels (duel_id, device_id, at, song_a, song_b, outcome, imported, delta_a, delta_b)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8) ON CONFLICT(duel_id) DO NOTHING",
+            params![
+                format!("import:{SOURCE}:{n}"),
+                device_id,
+                duel["at"].as_i64().unwrap_or(0),
+                a,
+                b,
+                outcome,
+                duel["deltaA"].as_f64(),
+                duel["deltaB"].as_f64()
+            ],
+        )?;
+        report.duels += 1;
+    }
+    let remap = |value: &Value| remap_song_ids(value, &targets);
+    put_shared(&tx, "elo.tournament", &remap(&cmr["tournament"]), now, &device_id)?;
+    put_shared(&tx, "elo.skipped_pairs", &remap(&cmr["duelMatchmaking"]["skippedPairs"]), now, &device_id)?;
+    if !unmapped_ratings.is_empty() {
+        tx.execute(
+            "INSERT INTO meta (key, value) VALUES ('import:nemora-1.x:unmapped_ratings', ?1)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [serde_json::to_string(&unmapped_ratings)?],
+        )?;
+    }
+
+    // Tierlists: song ids inside the document are replaced; a pending one is written "pending:<id>".
+    for tierlist in tierlists.as_array().into_iter().flatten() {
+        let Some(id) = tierlist["tierlistId"].as_str() else { continue };
+        let mut doc = tierlist.clone();
+        for tier in doc["tiers"].as_array_mut().into_iter().flatten() {
+            if let Some(items) = tier["items"].as_array_mut() {
+                for item in items.iter_mut() {
+                    let Some(old) = item.as_str().map(str::to_owned) else { continue };
+                    let target = match target_of(&old) {
+                        Some(t) => t,
+                        None => Target::Pending(resolver.pending_for_unknown(&old)?),
+                    };
+                    *item = match target {
+                        Target::Song(s) => json!(s),
+                        Target::Pending(p) => {
+                            report.tier_items_pending += 1;
+                            json!(format!("pending:{p}"))
+                        }
+                    };
+                }
+            }
+        }
+        let created = tierlist["createdDate"].as_str().and_then(parse_iso_ms).unwrap_or(now);
+        tx.execute(
+            "INSERT INTO tierlists (tierlist_id, doc, created_at, updated_at, updated_by) VALUES (?1, ?2, ?3, ?3, ?4)
+             ON CONFLICT(tierlist_id) DO UPDATE SET doc = excluded.doc",
+            params![id, serde_json::to_string(&doc)?, created, device_id],
+        )?;
+        report.tierlists += 1;
+    }
+
+    // Blacklist.
+    for old in blacklist["songBlacklist"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+        if let Some(Target::Song(song_id)) = target_of(old) {
+            report.blacklisted_songs += tx.execute(
+                "INSERT INTO blacklist_songs (song_id, value, updated_at, updated_by) VALUES (?1, 1, ?2, ?3)
+                 ON CONFLICT(song_id) DO NOTHING",
+                params![song_id, now, device_id],
+            )?;
+        }
+    }
+    for folder in blacklist["folderBlacklist"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+        tx.execute(
+            "INSERT INTO folders (uri, excluded) VALUES (?1, 1) ON CONFLICT(uri) DO UPDATE SET excluded = 1",
+            [folder],
+        )?;
+    }
+
+    // Settings: shared ones may sync later, device ones never leave this installation.
+    for key in ["language", "theme", "preferences"] {
+        if !user_data[key].is_null() {
+            put_shared(&tx, key, &user_data[key], now, &device_id)?;
+        }
+    }
+    for key in ["windowPositions", "windowDiamensions", "windowState", "recentSearches", "musicFolders"] {
+        if !user_data[key].is_null() {
+            tx.execute(
+                "INSERT INTO settings_device (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                params![key, serde_json::to_string(&user_data[key])?],
+            )?;
+        }
+    }
+
+    tx.execute(
+        "INSERT INTO meta (key, value) VALUES ('import:nemora-1.x', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [now.to_string()],
+    )?;
+    drop(resolver);
+    tx.commit()?;
+    Ok(report)
+}
+
+struct Resolver<'t, 'c> {
+    tx: &'t Transaction<'c>,
+    library: &'t LibraryIndex,
+    cache: HashMap<String, i64>,
+}
+
+impl Resolver<'_, '_> {
+    fn resolve(&mut self, old_id: &str, fp: &Fingerprint, path: Option<&str>, report: &mut ImportReport) -> Result<Target> {
+        if let Some(path) = path {
+            let found = self
+                .library
+                .by_uri
+                .get(&path_key(path))
+                .or_else(|| self.library.by_uri_folded.get(&path_key(path).to_lowercase()));
+            if let Some(song_id) = found {
+                report.songs_by_path += 1;
+                return Ok(Target::Song(song_id.clone()));
+            }
+        }
+        if let Some(song_id) = match_fingerprint(self.library, fp) {
+            report.songs_by_fingerprint += 1;
+            return Ok(Target::Song(song_id));
+        }
+        report.pending += 1;
+        Ok(Target::Pending(self.pending(old_id, fp)?))
+    }
+
+    /// A song id that neither the song store nor the counters describe: pending with no fingerprint.
+    fn pending_for_unknown(&mut self, old_id: &str) -> Result<i64> {
+        self.pending(old_id, &Fingerprint { title: None, artists: Vec::new(), duration_ms: None, file_name: None })
+    }
+
+    fn pending(&mut self, old_id: &str, fp: &Fingerprint) -> Result<i64> {
+        if let Some(id) = self.cache.get(old_id) {
+            return Ok(*id);
+        }
+        let existing: Option<i64> = self
+            .tx
+            .query_row(
+                "SELECT pending_id FROM pending_tracks WHERE source = ?1 AND old_song_id = ?2",
+                params![SOURCE, old_id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let id = match existing {
+            Some(id) => id,
+            None => {
+                self.tx.execute(
+                    "INSERT INTO pending_tracks (source, old_song_id, file_name, title, artists, duration_ms)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![SOURCE, old_id, fp.file_name, fp.title, serde_json::to_string(&fp.artists)?, fp.duration_ms],
+                )?;
+                self.tx.last_insert_rowid()
+            }
+        };
+        self.cache.insert(old_id.to_owned(), id);
+        Ok(id)
+    }
+}
+
+/// The tiers of 1.x, in order, and a tier with several candidates is skipped: a wrong
+/// re-attachment is worse than a pending record.
+fn match_fingerprint(library: &LibraryIndex, fp: &Fingerprint) -> Option<String> {
+    let duration = fp.duration_ms?;
+    let close = |d: i64| (d - duration).abs() <= 1000;
+    if let Some(name) = &fp.file_name {
+        let candidates: Vec<&String> = library
+            .by_file_name
+            .get(&name.to_lowercase())
+            .into_iter()
+            .flatten()
+            .filter(|(_, d)| close(*d))
+            .map(|(s, _)| s)
+            .collect();
+        if let [one] = dedup(candidates).as_slice() {
+            return Some((*one).clone());
+        }
+    }
+    let title = fp.title.as_ref()?.to_lowercase();
+    let mut artists: Vec<String> = fp.artists.iter().map(|a| a.to_lowercase()).collect();
+    artists.sort();
+    let candidates: Vec<&String> = library
+        .by_title
+        .get(&title)
+        .into_iter()
+        .flatten()
+        .filter(|(_, a, d)| *a == artists && close(*d))
+        .map(|(s, _, _)| s)
+        .collect();
+    match dedup(candidates).as_slice() {
+        [one] => Some((*one).clone()),
+        _ => None,
+    }
+}
+
+fn dedup(mut v: Vec<&String>) -> Vec<&String> {
+    v.sort();
+    v.dedup();
+    v
+}
+
+fn library_index(db: &Db) -> Result<LibraryIndex> {
+    let mut index = LibraryIndex {
+        by_uri: HashMap::new(),
+        by_uri_folded: HashMap::new(),
+        by_file_name: HashMap::new(),
+        by_title: HashMap::new(),
+    };
+    let conn = db.conn();
+    let mut stmt = conn.prepare(
+        "SELECT l.uri, v.song_id, t.duration_ms FROM locations l
+         JOIN track_variants v USING (variant_id) JOIN tracks t ON t.song_id = v.song_id",
+    )?;
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?)))? {
+        let (uri, song_id, duration) = row?;
+        let file_name = uri.rsplit(['\\', '/']).next().unwrap_or(&uri).to_lowercase();
+        index.by_file_name.entry(file_name).or_default().push((song_id.clone(), duration));
+        index.by_uri_folded.insert(path_key(&uri).to_lowercase(), song_id.clone());
+        index.by_uri.insert(path_key(&uri), song_id);
+    }
+    let mut stmt = conn.prepare(
+        "SELECT v.variant_id, v.song_id, v.title, t.duration_ms FROM track_variants v JOIN tracks t USING (song_id)",
+    )?;
+    let variants: Vec<(i64, String, String, i64)> =
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?.collect::<rusqlite::Result<_>>()?;
+    let mut artists_of = conn.prepare(
+        "SELECT name FROM variant_artists WHERE variant_id = ?1 AND role = 'artist' ORDER BY position",
+    )?;
+    for (variant_id, song_id, title, duration) in variants {
+        let mut artists: Vec<String> = artists_of
+            .query_map([variant_id], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+            .into_iter()
+            .map(|a| a.to_lowercase())
+            .collect();
+        artists.sort();
+        index.by_title.entry(title.to_lowercase()).or_default().push((song_id, artists, duration));
+    }
+    Ok(index)
+}
+
+/// Paths compared with one separator: 1.x wrote `E:\Music\a.flac`, a folder may have been
+/// given as `E:/Music`.
+fn path_key(path: &str) -> String {
+    path.replace('/', "\\")
+}
+
+fn fingerprint_of_song(song: &Value) -> Fingerprint {
+    Fingerprint {
+        title: song["title"].as_str().map(str::to_owned),
+        artists: song["artists"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|a| a["name"].as_str().map(str::to_owned))
+            .collect(),
+        duration_ms: song["duration"].as_f64().map(|s| (s * 1000.0).round() as i64),
+        file_name: song["path"].as_str().map(|p| p.rsplit(['\\', '/']).next().unwrap_or(p).to_owned()),
+    }
+}
+
+fn fingerprint_of_event(fp: &Value) -> Fingerprint {
+    Fingerprint {
+        title: fp["title"].as_str().map(str::to_owned),
+        artists: fp["artists"].as_array().into_iter().flatten().filter_map(|a| a.as_str().map(str::to_owned)).collect(),
+        duration_ms: fp["duration"].as_f64().map(|s| (s * 1000.0).round() as i64),
+        file_name: fp["fileName"].as_str().map(str::to_owned),
+    }
+}
+
+/// Replaces every string that is a known old song id inside `value` with the new id (or
+/// `pending:<id>`). Used for documents whose shape this importer does not need to understand.
+fn remap_song_ids(value: &Value, targets: &HashMap<String, Target>) -> Value {
+    match value {
+        Value::String(s) => match targets.get(s) {
+            Some(Target::Song(id)) => json!(id),
+            Some(Target::Pending(p)) => json!(format!("pending:{p}")),
+            None => value.clone(),
+        },
+        Value::Array(items) => Value::Array(items.iter().map(|v| remap_song_ids(v, targets)).collect()),
+        Value::Object(map) => Value::Object(map.iter().map(|(k, v)| (k.clone(), remap_song_ids(v, targets))).collect()),
+        _ => value.clone(),
+    }
+}
+
+fn put_shared(tx: &Transaction<'_>, key: &str, value: &Value, now: i64, device_id: &str) -> Result<()> {
+    if value.is_null() {
+        return Ok(());
+    }
+    tx.execute(
+        "INSERT INTO settings_shared (key, value, updated_at, updated_by) VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![key, serde_json::to_string(value)?, now, device_id],
+    )?;
+    Ok(())
+}
+
+/// Reads a 1.x store. A file that exists but does not parse stops the import: substituting an empty
+/// store would silently drop the user's data.
+fn read_store(profile: &Path, file: &str, key: &str) -> Result<Value> {
+    let path = profile.join(file);
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| Error::LegacyStore { store: file.to_owned(), reason: e.to_string() })?;
+    let mut root: Value = serde_json::from_str(&text)
+        .map_err(|e| Error::LegacyStore { store: file.to_owned(), reason: e.to_string() })?;
+    Ok(root.get_mut(key).map(Value::take).unwrap_or(Value::Null))
+}
+
+fn read_optional_store(profile: &Path, file: &str, key: &str) -> Result<Value> {
+    if profile.join(file).exists() { read_store(profile, file, key) } else { Ok(Value::Null) }
+}
+
+/// `2026-05-19T09:54:47.054Z` -> milliseconds since the epoch (UTC only, as 1.x wrote it).
+fn parse_iso_ms(s: &str) -> Option<i64> {
+    let b = s.as_bytes();
+    if b.len() < 20 || b[4] != b'-' || b[7] != b'-' || b[10] != b'T' || !s.ends_with('Z') {
+        return None;
+    }
+    let num = |r: std::ops::Range<usize>| s.get(r)?.parse::<i64>().ok();
+    let (y, mo, d, h, mi, sec) = (num(0..4)?, num(5..7)?, num(8..10)?, num(11..13)?, num(14..16)?, num(17..19)?);
+    let millis = if b[19] == b'.' { s[20..s.len() - 1].get(..3).and_then(|m| m.parse::<i64>().ok()).unwrap_or(0) } else { 0 };
+    // Days from civil (Howard Hinnant's algorithm).
+    let y = if mo <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * (mo + if mo > 2 { -3 } else { 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    Some(((days * 24 + h) * 60 + mi) * 60_000 + sec * 1000 + millis)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn iso_dates_parse_to_epoch_millis() {
+        assert_eq!(parse_iso_ms("1970-01-01T00:00:00.000Z"), Some(0));
+        assert_eq!(parse_iso_ms("2026-05-19T09:54:47.054Z"), Some(1_779_184_487_054));
+        assert_eq!(parse_iso_ms("2000-02-29T12:00:00Z"), Some(951_825_600_000));
+        assert_eq!(parse_iso_ms("not a date"), None);
+    }
+
+    #[test]
+    fn remap_replaces_only_known_ids() {
+        let targets = HashMap::from([("old".to_owned(), Target::Song("new".to_owned())), ("gone".to_owned(), Target::Pending(4))]);
+        let doc = json!({"a": ["old", "gone", "other"], "b": {"songAId": "old"}});
+        assert_eq!(
+            remap_song_ids(&doc, &targets),
+            json!({"a": ["new", "pending:4", "other"], "b": {"songAId": "new"}})
+        );
+    }
+}

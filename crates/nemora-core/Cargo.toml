@@ -1,0 +1,24 @@
+[package]
+name = "nemora-core"
+description = "The shared core of Nemora: track identity, library storage, statistics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+blake3.workspace = true
+getrandom.workspace = true
+image.workspace = true
+lofty.workspace = true
+rayon.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+webp.workspace = true
+# `all-meta` is not optional: without the ID3v2/APE readers the probe treats a tag as unknown bytes
+# and gives up after 1 MB, so an MP3 with a large embedded cover is "not a supported audio file".
+symphonia = { workspace = true, features = ["all-meta", "opt-simd", "flac", "mp1", "mp2", "mp3", "aac", "alac", "isomp4", "ogg", "vorbis", "wav", "aiff", "pcm", "mkv"] }

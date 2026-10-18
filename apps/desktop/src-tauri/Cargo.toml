@@ -1,0 +1,20 @@
+[package]
+name = "nemora-desktop"
+description = "Nemora - music player by nikenmar (CMR)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "nemora_desktop"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+nemora-core.workspace = true
+serde.workspace = true
+tauri = { version = "2", features = [] }

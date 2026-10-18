@@ -1,0 +1,23 @@
+# Rust
+target/
+
+# Node / Vite
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Tauri generated schemas
+apps/desktop/src-tauri/gen/
+
+# Private Android app: its own nested git repository, never part of this one.
+/apps/android/
+
+# Real user profiles and real audio used by tests; they carry titles and paths.
+/fixtures/private/
+
+# Editors and OS
+.idea/
+.vscode/
+*.log
+Thumbs.db
+.DS_Store

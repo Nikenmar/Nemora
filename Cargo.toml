@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+members = ["crates/nemora-core", "apps/desktop/src-tauri"]
+# The Android app is a private nested repository. A member that is missing from
+# a public clone breaks every build, so it is never part of this workspace; its
+# crate depends on nemora-core by path instead.
+exclude = ["apps/android"]
+
+[workspace.package]
+version = "2.0.0-dev.0"
+edition = "2024"
+rust-version = "1.96"
+license = "MIT"
+authors = ["nikenmar (CMR)"]
+repository = "https://github.com/Nikenmar/Nemora"
+
+[workspace.dependencies]
+nemora-core = { path = "crates/nemora-core" }
+blake3 = "1.8"
+getrandom = "0.4"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
+lofty = "0.25.4"
+rayon = "1.12"
+rusqlite = { version = "0.40", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+symphonia = { version = "0.6.1", default-features = false }
+thiserror = "2"
+webp = "0.3.1"
