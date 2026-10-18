@@ -54,7 +54,7 @@ import { isDataChanged } from './utils/hasDataChanged';
 import log from './utils/log';
 import throttle from './utils/throttle';
 import parseNotificationFromMain from './other/parseNotificationFromMain';
-import ListeningDataSession from './other/listeningDataSession';
+import ListeningDataSession, { type EndReason } from './other/listeningDataSession';
 import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
@@ -723,39 +723,22 @@ export default function App() {
   }, []);
 
   const recordRef = useRef<ListeningDataSession>(undefined);
+  /** Why the current song is about to stop, set by whatever moves the queue. */
+  const endReasonRef = useRef<EndReason>('user_selected');
 
   const recordListeningData = useCallback(
     (songId: string, duration: number, isRepeating = false, isKnownSource = true) => {
       if (recordRef?.current?.songId !== songId || isRepeating) {
-        if (isRepeating)
-          console.warn(`Added another song record instance for the repetition of ${songId}`);
-        if (recordRef.current) recordRef.current.stopRecording();
+        recordRef.current?.stopRecording(endReasonRef.current);
+        endReasonRef.current = 'user_selected';
 
-        const listeningDataSession = new ListeningDataSession(songId, duration, isKnownSource);
+        const listeningDataSession = new ListeningDataSession(
+          player,
+          songId,
+          duration,
+          isKnownSource
+        );
         listeningDataSession.recordListeningData();
-
-        player.addEventListener(
-          'pause',
-          () => {
-            listeningDataSession.isPaused = true;
-          },
-          { signal: listeningDataSession.abortController.signal }
-        );
-        player.addEventListener(
-          'play',
-          () => {
-            listeningDataSession.isPaused = false;
-          },
-          { signal: listeningDataSession.abortController.signal }
-        );
-        player.addEventListener(
-          'seeked',
-          () => {
-            listeningDataSession.addSeekPosition = player.currentTime;
-          },
-          { signal: listeningDataSession.abortController.signal }
-        );
-
         recordRef.current = listeningDataSession;
       }
     },
@@ -1054,7 +1037,10 @@ export default function App() {
     const { currentSongIndex } = queue;
     if (player.currentTime > 5) {
       player.currentTime = 0;
-    } else if (typeof currentSongIndex === 'number') {
+      return;
+    }
+    endReasonRef.current = 'user_previous';
+    if (typeof currentSongIndex === 'number') {
       if (currentSongIndex === 0) {
         if (queue.queue.length > 0) changeQueueCurrentSongIndex(queue.queue.length - 1);
       } else changeQueueCurrentSongIndex(currentSongIndex - 1);
@@ -1066,6 +1052,8 @@ export default function App() {
       const queue = store.state.localStorage.queue;
 
       const { currentSongIndex } = queue;
+      // A song that played to its end has already closed its session as finished.
+      if (reason === 'USER_SKIP') endReasonRef.current = 'user_next';
       if (store.state.player.isRepeating === 'repeat-1' && reason !== 'USER_SKIP') {
         player.currentTime = 0;
         toggleSongPlayback(true);
@@ -1073,12 +1061,6 @@ export default function App() {
           store.state.currentSongData.songId,
           store.state.currentSongData.duration,
           true
-        );
-
-        window.api.audioLibraryControls.updateSongListeningData(
-          store.state.currentSongData.songId,
-          'listens',
-          1
         );
       } else if (typeof currentSongIndex === 'number') {
         if (queue.queue.length > 0) {

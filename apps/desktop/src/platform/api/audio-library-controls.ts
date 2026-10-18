@@ -1,5 +1,6 @@
 import type { SimilarTracksOutput } from '../../types/last_fm_similar_tracks_api';
-import { getRuntime } from '../runtime';
+import type { PlaySession } from '../../renderer/src/other/listeningDataSession';
+import { getRuntime, type PlayEvaluation } from '../runtime';
 import type { PathBackedAudioPlayerData } from './binary';
 
 export const audioLibraryControls = {
@@ -29,17 +30,8 @@ export const audioLibraryControls = {
     getRuntime().getSongInfo(songIds, sortType, filterType, limit, preserveIdOrder),
   getSongListeningData: async (songIds: string[]): Promise<SongListeningData[]> =>
     getRuntime().getListeningData(songIds),
-  updateSongListeningData: <
-    DataType extends keyof ListeningDataTypes,
-    Value extends ListeningDataTypes[DataType]
-  >(
-    songId: string,
-    dataType: DataType,
-    dataUpdateType: Value
-  ): Promise<void> => {
-    getRuntime().updateSongListeningData(songId, dataType, dataUpdateType);
-    return Promise.resolve();
-  },
+  recordPlaySession: (session: PlaySession): Promise<PlayEvaluation> =>
+    getRuntime().recordPlaySession(session),
   resyncSongsLibrary: (): Promise<true> => getRuntime().resyncSongsLibrary(),
   getBlacklistData: async (): Promise<Blacklist> => getRuntime().getBlacklist(),
   blacklistSongs: async (songIds: string[]): Promise<void> => getRuntime().blacklistSongs(songIds),

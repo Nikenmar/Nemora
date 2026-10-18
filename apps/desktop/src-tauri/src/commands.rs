@@ -340,6 +340,68 @@ fn stored_rediscover(db: &Db) -> Vec<String> {
         .unwrap_or_default()
 }
 
+// ----- playback facts -------------------------------------------------------------------------
+
+/// One thing the player saw, as the view reports it.
+#[derive(serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum FactInput {
+    #[serde(rename_all = "camelCase")]
+    Play { at_ms: i64, position_ms: i64 },
+    #[serde(rename_all = "camelCase")]
+    Pause { at_ms: i64, position_ms: i64 },
+    #[serde(rename_all = "camelCase")]
+    Seek { at_ms: i64, from_ms: i64, to_ms: i64 },
+    #[serde(rename_all = "camelCase")]
+    End { at_ms: i64, position_ms: i64, reason: String },
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionInput {
+    song_id: String,
+    started_at: i64,
+    utc_offset_min: i64,
+    duration_ms: i64,
+    source_kind: Option<String>,
+    source_id: Option<String>,
+    facts: Vec<FactInput>,
+}
+
+/// Stores one finished session of one song; the core decides whether it was a play, a skip or a
+/// full listen (listening definitions 2.0).
+#[tauri::command]
+pub fn play_record(handle: AppHandle, app: State<'_, App>, session: SessionInput) -> Res<Value> {
+    use nemora_core::plays::{EndReason, Fact, Session, record};
+    let facts = session
+        .facts
+        .into_iter()
+        .map(|f| match f {
+            FactInput::Play { at_ms, position_ms } => Fact::Play { at_ms, position_ms },
+            FactInput::Pause { at_ms, position_ms } => Fact::Pause { at_ms, position_ms },
+            FactInput::Seek { at_ms, from_ms, to_ms } => Fact::Seek { at_ms, from_ms, to_ms },
+            FactInput::End { at_ms, position_ms, reason } => {
+                Fact::End { at_ms, position_ms, reason: EndReason::parse(&reason).unwrap_or(EndReason::Stopped) }
+            }
+        })
+        .collect();
+    let session = Session {
+        song_id: parse_view_id(&session.song_id).0.to_owned(),
+        started_at: session.started_at,
+        utc_offset_min: session.utc_offset_min,
+        duration_ms: session.duration_ms,
+        source_kind: session.source_kind,
+        source_id: session.source_id,
+        facts,
+    };
+    let recorded = app.write(|db| record(db, &session)).map_err(fail)?;
+    let e = &recorded.evaluation;
+    notify(&handle, &["songs/listeningData", "playlists/history", "userData/recentlyPlayedSongs"]);
+    Ok(json!({
+        "isPlay": e.is_play, "isFull": e.is_full, "isSkip": e.is_skip, "heardMs": e.heard_ms, "scrobble": e.scrobble,
+    }))
+}
+
 // ----- hearts and blacklist -------------------------------------------------------------------
 
 #[tauri::command]

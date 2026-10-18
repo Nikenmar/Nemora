@@ -31,6 +31,7 @@ import type {
   TournamentSize,
   TournamentState
 } from '../core/stats/tournaments';
+import type { PlaySession } from '../../renderer/src/other/listeningDataSession';
 import type { LastFMAlbumInfo } from '../../types/last_fm_album_info_api';
 import type { LastFMTrackInfoApi } from '../../types/last_fm_api';
 import type { SimilarTracksOutput } from '../../types/last_fm_similar_tracks_api';
@@ -55,6 +56,15 @@ export interface RuntimeDiscordActivity {
 }
 
 type Result = { success: boolean; message?: string };
+
+/** What the core made of a play session. */
+export interface PlayEvaluation {
+  isPlay: boolean;
+  isFull: boolean;
+  isSkip: boolean;
+  heardMs: number;
+  scrobble: boolean;
+}
 
 const later = (method: string): Promise<never> => Promise.reject(new NotPortedYetError(method));
 
@@ -265,15 +275,10 @@ export class NemoraRuntime {
     return call('library_listening', { songIds });
   }
 
-  /**
-   * 1.x counted listens, skips and seeks in the renderer. 2.0 judges a play from the player's facts
-   * in the core; until the player reports them, these counters are ignored.
-   */
-  updateSongListeningData<DataType extends keyof ListeningDataTypes>(
-    _songId: string,
-    _dataType: DataType,
-    _value: ListeningDataTypes[DataType]
-  ): void {}
+  /** One finished session of the player; the core decides what it counts as. */
+  recordPlaySession(session: PlaySession): Promise<PlayEvaluation> {
+    return call('play_record', { session });
+  }
 
   toggleLikeSongs(songIds: string[], like?: boolean): Promise<ToggleLikeSongReturnValue> {
     return call('favorites_toggle', { songIds, like });

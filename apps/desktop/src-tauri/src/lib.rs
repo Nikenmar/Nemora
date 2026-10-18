@@ -95,6 +95,7 @@ pub fn run() {
             commands::library_rescan,
             commands::library_listening,
             commands::favorites_toggle,
+            commands::play_record,
             shellops::trash_item,
             shellops::reveal_song_in_file_explorer,
             shellops::reveal_folder_in_file_explorer,
