@@ -402,12 +402,28 @@ export class NemoraRuntime {
 
   // ----- search ----------------------------------------------------------------------------------
 
-  search(_filter: SearchFilters, _value: string, _updateHistory = true): Promise<SearchResult> {
-    return later('search');
+  private historyTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async search(filter: SearchFilters, value: string, updateHistory = true): Promise<SearchResult> {
+    const result = await call<SearchResult>('library_search', { filter, value });
+    // As 1.x: a query that stays put for two seconds goes to the top of the recent searches.
+    if (updateHistory) {
+      clearTimeout(this.historyTimer);
+      this.historyTimer = setTimeout(() => {
+        const recent = this.getUserData().recentSearches.filter((entry) => entry !== value);
+        this.saveUserData('recentSearches', [value, ...recent].slice(0, 11));
+      }, 2000);
+    }
+    return result;
   }
 
-  clearSearchHistory(_searchText?: string[]): Promise<boolean> {
-    return later('clearSearchHistory');
+  async clearSearchHistory(searchText: string[] = []): Promise<boolean> {
+    const recent = this.getUserData().recentSearches;
+    this.saveUserData(
+      'recentSearches',
+      searchText.length === 0 ? [] : recent.filter((entry) => !searchText.includes(entry))
+    );
+    return true;
   }
 
   // ----- playlists -------------------------------------------------------------------------------
@@ -501,8 +517,8 @@ export class NemoraRuntime {
 
   // ----- statistics, ELO, Song Guessr ------------------------------------------------------------
 
-  getStats(_timeRange: StatsTimeRange): Promise<StatsData> {
-    return later('getStats');
+  getStats(timeRange: StatsTimeRange): Promise<StatsData> {
+    return call('stats_dashboard', { timeRange, today: today() });
   }
 
   getRecap(_period: RecapPeriod): Promise<RecapSlide[]> {

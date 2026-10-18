@@ -90,6 +90,8 @@ pub fn run() {
             commands::library_albums,
             commands::library_genres,
             commands::library_playlists,
+            commands::library_search,
+            commands::stats_dashboard,
             commands::library_blacklist,
             commands::library_folder_structures,
             commands::library_rescan,

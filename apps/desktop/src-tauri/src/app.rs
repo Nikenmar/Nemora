@@ -2,10 +2,11 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use nemora_core::covers::CoverStore;
 use nemora_core::db::Db;
+use nemora_core::search::Corpus;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -37,6 +38,8 @@ pub struct App {
     pub defaults: OnceLock<DefaultArtwork>,
     /// A first-start import of 1.x is running.
     importing: AtomicBool,
+    /// The search corpus, built on the first search after a write.
+    corpus: Mutex<Option<Arc<Corpus>>>,
 }
 
 impl App {
@@ -52,6 +55,7 @@ impl App {
             write: Mutex::new(write),
             defaults: OnceLock::new(),
             importing: AtomicBool::new(false),
+            corpus: Mutex::new(None),
         })
     }
 
@@ -66,7 +70,17 @@ impl App {
             f(&mut db)
         };
         self.read().touch();
+        *self.corpus.lock().unwrap_or_else(|e| e.into_inner()) = None;
         result
+    }
+
+    pub fn corpus(&self) -> nemora_core::Result<Arc<Corpus>> {
+        if let Some(corpus) = self.corpus.lock().unwrap_or_else(|e| e.into_inner()).clone() {
+            return Ok(corpus);
+        }
+        let corpus = Arc::new(nemora_core::library::search_corpus(&self.read())?);
+        *self.corpus.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::clone(&corpus));
+        Ok(corpus)
     }
 
     pub fn defaults(&self) -> DefaultArtwork {

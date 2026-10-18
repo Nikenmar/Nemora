@@ -453,6 +453,44 @@ pub fn history(db: &Db) -> Result<Vec<DuelRecord>> {
     Ok(rows)
 }
 
+/// A decided duel with the rating change it caused, as the dashboard lists it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecentDuel {
+    pub at: i64,
+    pub a: String,
+    pub b: String,
+    pub winner: Winner,
+    pub delta_a: f64,
+    pub delta_b: f64,
+}
+
+/// The latest decided duels whose songs are both known, newest first.
+pub fn recent_duels(db: &Db, limit: usize) -> Result<Vec<RecentDuel>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT d.at, d.song_a, d.song_b, d.outcome, coalesce(d.delta_a, 0), coalesce(d.delta_b, 0) FROM duels d
+         WHERE d.outcome <> 'skip' AND d.song_a IN (SELECT song_id FROM tracks) AND d.song_b IN (SELECT song_id FROM tracks)
+         ORDER BY d.at DESC, d.duel_id DESC LIMIT ?1",
+    )?;
+    let rows = stmt
+        .query_map([limit as i64], |r| {
+            let outcome: String = r.get(3)?;
+            Ok(RecentDuel {
+                at: r.get(0)?,
+                a: r.get(1)?,
+                b: r.get(2)?,
+                winner: match outcome.as_str() {
+                    "a" => Winner::A,
+                    "b" => Winner::B,
+                    _ => Winner::Draw,
+                },
+                delta_a: r.get(4)?,
+                delta_b: r.get(5)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
 /// Skipped pairs, newest first. A "too close" answer is a draw and a skip at once.
 pub fn skipped_pairs(db: &Db) -> Result<Vec<SkipRecord>> {
     let mut stmt = db.conn().prepare(

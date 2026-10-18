@@ -223,6 +223,33 @@ fn pick<T: Clone>(rows: Vec<T>, wanted: &[String], key: impl Fn(&T) -> Vec<&str>
         .collect()
 }
 
+fn artists_of(
+    db: &Db,
+    v: &View,
+    wanted: &[String],
+    sort: Option<&str>,
+    limit: usize,
+) -> nemora_core::Result<Vec<Value>> {
+    let mut rows = pick(library::artists(db, name_sort(sort))?, wanted, |r| vec![r.name.as_str()]);
+    if limit > 0 {
+        rows.truncate(limit);
+    }
+    let members = library::members(db, Group::Artist)?;
+    Ok(rows.iter().map(|r| v.artist(r, members.get(&r.name).map_or(&[], Vec::as_slice))).collect())
+}
+
+fn albums_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
+    let rows = pick(library::albums(db, name_sort(sort))?, wanted, |r| vec![r.key.as_str(), r.title.as_str()]);
+    let members = library::members(db, Group::Album)?;
+    Ok(rows.iter().map(|r| v.album(r, members.get(&r.key).map_or(&[], Vec::as_slice))).collect())
+}
+
+fn genres_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
+    let rows = pick(library::genres(db, name_sort(sort))?, wanted, |r| vec![r.name.as_str()]);
+    let members = library::members(db, Group::Genre)?;
+    Ok(rows.iter().map(|r| v.genre(r, members.get(&r.name).map_or(&[], Vec::as_slice))).collect())
+}
+
 #[tauri::command]
 pub fn library_artists(
     app: State<'_, App>,
@@ -230,15 +257,8 @@ pub fn library_artists(
     sort_type: Option<String>,
     limit: Option<usize>,
 ) -> Res<Vec<Value>> {
-    let db = app.read();
-    let rows = library::artists(&db, name_sort(sort_type.as_deref())).map_err(fail)?;
-    let mut rows = pick(rows, &ids_or_names.unwrap_or_default(), |r| vec![r.name.as_str()]);
-    if let Some(limit) = limit.filter(|&l| l > 0) {
-        rows.truncate(limit);
-    }
-    let members = library::members(&db, Group::Artist).map_err(fail)?;
-    let v = view(&app);
-    Ok(rows.iter().map(|r| v.artist(r, members.get(&r.name).map_or(&[], Vec::as_slice))).collect())
+    artists_of(&app.read(), &view(&app), &ids_or_names.unwrap_or_default(), sort_type.as_deref(), limit.unwrap_or(0))
+        .map_err(fail)
 }
 
 #[tauri::command]
@@ -247,12 +267,7 @@ pub fn library_albums(
     ids_or_titles: Option<Vec<String>>,
     sort_type: Option<String>,
 ) -> Res<Vec<Value>> {
-    let db = app.read();
-    let rows = library::albums(&db, name_sort(sort_type.as_deref())).map_err(fail)?;
-    let rows = pick(rows, &ids_or_titles.unwrap_or_default(), |r| vec![r.key.as_str(), r.title.as_str()]);
-    let members = library::members(&db, Group::Album).map_err(fail)?;
-    let v = view(&app);
-    Ok(rows.iter().map(|r| v.album(r, members.get(&r.key).map_or(&[], Vec::as_slice))).collect())
+    albums_of(&app.read(), &view(&app), &ids_or_titles.unwrap_or_default(), sort_type.as_deref()).map_err(fail)
 }
 
 #[tauri::command]
@@ -261,12 +276,7 @@ pub fn library_genres(
     ids_or_names: Option<Vec<String>>,
     sort_type: Option<String>,
 ) -> Res<Vec<Value>> {
-    let db = app.read();
-    let rows = library::genres(&db, name_sort(sort_type.as_deref())).map_err(fail)?;
-    let rows = pick(rows, &ids_or_names.unwrap_or_default(), |r| vec![r.name.as_str()]);
-    let members = library::members(&db, Group::Genre).map_err(fail)?;
-    let v = view(&app);
-    Ok(rows.iter().map(|r| v.genre(r, members.get(&r.name).map_or(&[], Vec::as_slice))).collect())
+    genres_of(&app.read(), &view(&app), &ids_or_names.unwrap_or_default(), sort_type.as_deref()).map_err(fail)
 }
 
 // ----- playlists ------------------------------------------------------------------------------
@@ -277,43 +287,37 @@ fn present_ids(db: &Db, songs: Vec<String>) -> nemora_core::Result<Vec<String>> 
     Ok(songs.into_iter().filter(|s| primary.contains_key(s)).collect())
 }
 
-#[tauri::command]
-pub fn library_playlists(
-    app: State<'_, App>,
-    ids: Option<Vec<String>>,
-    sort_type: Option<String>,
-    mutable_only: Option<bool>,
-) -> Res<Vec<Value>> {
-    let db = app.read();
-    let v = view(&app);
+fn playlists_of(
+    db: &Db,
+    v: &View,
+    wanted: &[String],
+    sort: Option<&str>,
+    mutable_only: bool,
+) -> nemora_core::Result<Vec<Value>> {
     let mut out: Vec<(String, i64, Value)> = Vec::new();
-    if !mutable_only.unwrap_or(false) {
-        let system: [(&str, &str, Vec<String>); 3] = [
-            ("Favorites", "Favorites", playlists::favorites(&db).map_err(fail)?),
-            ("History", "History", nemora_core::plays::recent_songs(&db, 500).map_err(fail)?),
-            ("Rediscover", "Rediscover", stored_rediscover(&db)),
+    if !mutable_only {
+        let system: [(&str, Vec<String>); 3] = [
+            ("Favorites", playlists::favorites(db)?),
+            ("History", nemora_core::plays::recent_songs(db, 500)?),
+            ("Rediscover", stored_rediscover(db)),
         ];
-        for (id, name, songs) in system {
-            let songs = present_ids(&db, songs).map_err(fail)?;
-            out.push((name.to_owned(), songs.len() as i64, v.playlist(id, name, songs, 0, None)));
+        for (id, songs) in system {
+            let songs = present_ids(db, songs)?;
+            out.push((id.to_owned(), songs.len() as i64, v.playlist(id, id, songs, 0, None)));
         }
     }
-    let show_missing = playlists::show_missing_in_playlists(&db).map_err(fail)?;
-    for row in playlists::list(&db).map_err(fail)? {
-        let songs: Vec<String> = playlists::items(&db, &row.id, show_missing)
-            .map_err(fail)?
+    let show_missing = playlists::show_missing_in_playlists(db)?;
+    for row in playlists::list(db)? {
+        let songs: Vec<String> = playlists::items(db, &row.id, show_missing)?
             .into_iter()
             .filter_map(|i| Some(view_id(i.song_id.as_deref()?, i.variant_id?, true)))
             .collect();
         let count = songs.len() as i64;
-        out.push((
-            row.name.clone(),
-            count,
-            v.playlist(&row.id, &row.name, songs, row.created_at, row.covers.first().map(String::as_str)),
-        ));
+        let cover = row.covers.first().map(String::as_str);
+        out.push((row.name.clone(), count, v.playlist(&row.id, &row.name, songs, row.created_at, cover)));
     }
     use nemora_core::search::fold::normalize;
-    match sort_type.as_deref() {
+    match sort {
         Some("aToZ") => out.sort_by_cached_key(|(n, _, _)| normalize(n)),
         Some("zToA") => {
             out.sort_by_cached_key(|(n, _, _)| normalize(n));
@@ -323,12 +327,70 @@ pub fn library_playlists(
         Some("noOfSongsDescending") => out.sort_by_key(|(_, c, _)| std::cmp::Reverse(*c)),
         _ => {}
     }
-    let wanted = ids.unwrap_or_default();
-    Ok(out
-        .into_iter()
-        .map(|(_, _, p)| p)
-        .filter(|p| wanted.is_empty() || p["playlistId"].as_str().is_some_and(|id| wanted.iter().any(|w| w == id)))
-        .collect())
+    // In the asked order when ids are given, as 1.x returned them.
+    let all: Vec<Value> = out.into_iter().map(|(_, _, p)| p).collect();
+    if wanted.is_empty() {
+        return Ok(all);
+    }
+    Ok(wanted.iter().filter_map(|w| all.iter().find(|p| p["playlistId"] == w.as_str()).cloned()).collect())
+}
+
+#[tauri::command]
+pub fn library_playlists(
+    app: State<'_, App>,
+    ids: Option<Vec<String>>,
+    sort_type: Option<String>,
+    mutable_only: Option<bool>,
+) -> Res<Vec<Value>> {
+    playlists_of(
+        &app.read(),
+        &view(&app),
+        &ids.unwrap_or_default(),
+        sort_type.as_deref(),
+        mutable_only.unwrap_or(false),
+    )
+    .map_err(fail)
+}
+
+// ----- search ---------------------------------------------------------------------------------
+
+/// Ranked search over the present library, as 1.1.9's search page reads it. The search history is
+/// the view's (it lives in the user data).
+#[tauri::command]
+pub fn library_search(app: State<'_, App>, filter: String, value: String) -> Res<Value> {
+    use nemora_core::search::{Filter, search};
+    let filter = match filter.as_str() {
+        "Songs" => Filter::Songs,
+        "Artists" => Filter::Artists,
+        "Albums" => Filter::Albums,
+        "Playlists" => Filter::Playlists,
+        "Genres" => Filter::Genres,
+        _ => Filter::All,
+    };
+    let corpus = app.corpus().map_err(fail)?;
+    let found = search(&corpus, filter, &value);
+    let db = app.read();
+    let v = view(&app);
+    let variants: Vec<i64> = found.songs.iter().filter_map(|id| id.parse().ok()).collect();
+    let songs: Vec<Value> = library::rows_by_id(&db, &variants).map_err(fail)?.iter().map(|r| v.song_data(r)).collect();
+    let artists = if found.artists.is_empty() {
+        Vec::new()
+    } else {
+        artists_of(&db, &v, &found.artists, None, 0).map_err(fail)?
+    };
+    let albums =
+        if found.albums.is_empty() { Vec::new() } else { albums_of(&db, &v, &found.albums, None).map_err(fail)? };
+    let genres =
+        if found.genres.is_empty() { Vec::new() } else { genres_of(&db, &v, &found.genres, None).map_err(fail)? };
+    let playlists = if found.playlists.is_empty() {
+        Vec::new()
+    } else {
+        playlists_of(&db, &v, &found.playlists, None, true).map_err(fail)?
+    };
+    Ok(json!({
+        "songs": songs, "artists": artists, "albums": albums, "playlists": playlists, "genres": genres,
+        "availableResults": found.suggestions,
+    }))
 }
 
 /// The Rediscover list as last refreshed.
@@ -338,6 +400,109 @@ fn stored_rediscover(db: &Db) -> Vec<String> {
         .flatten()
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or_default()
+}
+
+// ----- statistics -----------------------------------------------------------------------------
+
+/// The statistics page (1.x `StatsData`) over the 2.0 roll-ups. Every figure follows the range;
+/// only the calendar is the trailing 53 weeks by definition.
+#[tauri::command]
+pub fn stats_dashboard(app: State<'_, App>, time_range: String, today: String) -> Res<Value> {
+    use nemora_core::elo::Winner;
+    use nemora_core::stats::{Range, dashboard};
+    let range = match time_range.as_str() {
+        "last12Months" => Range::Last12Months,
+        "last30Days" => Range::Last30Days,
+        other => other.strip_prefix("year:").and_then(|y| y.parse().ok()).map_or(Range::AllTime, Range::Year),
+    };
+    let db = app.read();
+    let v = view(&app);
+    let d = dashboard(&db, range, &today).map_err(fail)?;
+    let cover = |hash: &Option<String>| v.artwork(hash.as_deref(), &v.defaults.song)["artworkPath"].clone();
+    let song_entry = |e: &nemora_core::stats::SongEntry| {
+        json!({
+            "songId": e.song_id, "title": e.title, "artists": e.artists, "artworkPath": cover(&e.cover_hash),
+            "listensInRange": e.plays, "skips": e.skips,
+        })
+    };
+    let names = |list: &[nemora_core::stats::NameEntry], artist: bool| -> Vec<Value> {
+        list.iter()
+            .map(|n| {
+                let mut entry = json!({ "name": n.name, "listens": n.plays });
+                if artist {
+                    entry["artistId"] = json!(n.name);
+                }
+                entry
+            })
+            .collect()
+    };
+    let day = |b: &nemora_core::stats::Bucket| json!({ "date": b.label, "listens": b.plays });
+
+    // The ELO block: best rated songs and the latest duels, with titles from the library.
+    let (standings, _) = nemora_core::elo::standings(&db, 10, 0).map_err(fail)?;
+    let recent = nemora_core::elo::recent_duels(&db, 10).map_err(fail)?;
+    let mut wanted: Vec<String> = standings.iter().map(|s| s.song_id.clone()).collect();
+    wanted.extend(recent.iter().flat_map(|d| [d.a.clone(), d.b.clone()]));
+    let rows: HashMap<String, SongRow> =
+        rows_for(&db, &wanted).map_err(fail)?.into_iter().map(|r| (r.song_id.clone(), r)).collect();
+    let title = |id: &str| rows.get(id).map_or_else(String::new, |r| r.title.clone());
+    let top_rated: Vec<Value> = standings
+        .iter()
+        .filter_map(|s| {
+            let r = rows.get(&s.song_id)?;
+            Some(json!({
+                "songId": s.song_id, "title": r.title, "artists": r.artists,
+                "artworkPath": cover(&r.cover_hash), "listensInRange": 0,
+                "rating": s.rating.rating, "effectiveRating": s.effective, "isProvisional": s.provisional,
+                "games": s.rating.games, "wins": s.rating.wins, "losses": s.rating.losses, "draws": s.rating.draws,
+            }))
+        })
+        .collect();
+    let recent_duels: Vec<Value> = recent
+        .iter()
+        .map(|d| {
+            json!({
+                "at": d.at, "titleA": title(&d.a), "titleB": title(&d.b), "winner": match d.winner { Winner::A => "A", Winner::B => "B", Winner::Draw => "draw" },
+                "deltaA": d.delta_a, "deltaB": d.delta_b,
+            })
+        })
+        .collect();
+    let range_scope = "range";
+    Ok(json!({
+        "timeRange": time_range,
+        "scopes": {
+            "totalListens": range_scope, "fullListens": range_scope, "skips": range_scope,
+            "distinctSongsPlayed": range_scope, "approxListeningTimeSec": range_scope, "favorites": "allTime",
+            "activity": range_scope, "calendar": "allTime", "topSongs": range_scope, "topArtists": range_scope,
+            "topAlbums": range_scope, "topGenres": range_scope, "mostSkipped": range_scope, "elo": "allTime",
+        },
+        "availableYears": d.available_years,
+        "hourHistogram": d.hours,
+        "weekdayHistogram": d.weekdays,
+        "hourDataSince": d.hours_since.as_deref().and_then(nemora_core::time::parse_day).map(|days| days * 86_400_000),
+        "totals": {
+            "distinctSongsPlayed": d.totals.distinct_songs, "totalListens": d.totals.plays,
+            "fullListens": d.totals.full, "skips": d.totals.skips,
+            "approxListeningTimeSec": d.totals.listening_ms / 1000, "favorites": d.totals.favorites,
+        },
+        "activity": d.activity.iter().map(|b| json!({ "label": b.label, "listens": b.plays })).collect::<Vec<_>>(),
+        "calendar": {
+            "days": d.calendar.days.iter().map(day).collect::<Vec<_>>(),
+            "currentStreak": d.calendar.current_streak,
+            "longestStreak": d.calendar.longest_streak,
+            "mostActiveDay": d.calendar.most_active_day.as_ref().map(day),
+        },
+        "topSongs": d.top_songs.iter().map(song_entry).collect::<Vec<_>>(),
+        "topArtists": names(&d.top_artists, true),
+        "topAlbums": names(&d.top_albums, false),
+        "topGenres": names(&d.top_genres, false),
+        "mostSkipped": d.most_skipped.iter().map(song_entry).collect::<Vec<_>>(),
+        "elo": {
+            "totalDuels": nemora_core::elo::total_duels(&db).map_err(fail)?,
+            "topRated": top_rated,
+            "recentDuels": recent_duels,
+        },
+    }))
 }
 
 // ----- playback facts -------------------------------------------------------------------------
