@@ -62,7 +62,14 @@ pub fn list(db: &Db) -> Result<Vec<PlaylistRow>> {
     )?;
     let mut rows: Vec<PlaylistRow> = stmt
         .query_map([], |r| {
-            Ok(PlaylistRow { id: r.get(0)?, name: r.get(1)?, pinned_position: r.get(2)?, created_at: r.get(3)?, song_count: r.get(4)?, covers: Vec::new() })
+            Ok(PlaylistRow {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                pinned_position: r.get(2)?,
+                created_at: r.get(3)?,
+                song_count: r.get(4)?,
+                covers: Vec::new(),
+            })
         })?
         .collect::<rusqlite::Result<_>>()?;
     let mut covers = conn.prepare(
@@ -154,16 +161,31 @@ fn display_row(db: &Db, position: i64, song: &str, hint: Option<&str>) -> Result
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
         )
         .optional()?;
-    let duration: i64 = conn.query_row("SELECT duration_ms FROM tracks WHERE song_id = ?1", [song], |r| r.get(0)).optional()?.unwrap_or(0);
-    let (variant_id, title, cover, present) = variant.map_or((None, String::new(), None, false), |(v, t, c, p)| (Some(v), t, c, p));
+    let duration: i64 = conn
+        .query_row("SELECT duration_ms FROM tracks WHERE song_id = ?1", [song], |r| r.get(0))
+        .optional()?
+        .unwrap_or(0);
+    let (variant_id, title, cover, present) =
+        variant.map_or((None, String::new(), None, false), |(v, t, c, p)| (Some(v), t, c, p));
     let artists = match variant_id {
         Some(v) => conn
-            .prepare_cached("SELECT name FROM variant_artists WHERE variant_id = ?1 AND role = 'artist' ORDER BY position")?
+            .prepare_cached(
+                "SELECT name FROM variant_artists WHERE variant_id = ?1 AND role = 'artist' ORDER BY position",
+            )?
             .query_map([v], |r| r.get(0))?
             .collect::<rusqlite::Result<_>>()?,
         None => Vec::new(),
     };
-    Ok(ItemRow { position, song_id: Some(song.to_owned()), variant_id, title, artists, duration_ms: duration, cover_hash: cover, missing: !present })
+    Ok(ItemRow {
+        position,
+        song_id: Some(song.to_owned()),
+        variant_id,
+        title,
+        artists,
+        duration_ms: duration,
+        cover_hash: cover,
+        missing: !present,
+    })
 }
 
 /// Rewrites a playlist's items in the given order (positions 0..n).
@@ -181,7 +203,9 @@ fn write_items(db: &mut Db, id: &str, items: &[(Option<String>, Option<i64>, Opt
 }
 
 fn read_items(db: &Db, id: &str) -> Result<Vec<(Option<String>, Option<i64>, Option<String>)>> {
-    let mut stmt = db.conn().prepare("SELECT song_id, pending_id, variant_hint FROM playlist_items WHERE playlist_id = ?1 ORDER BY position")?;
+    let mut stmt = db.conn().prepare(
+        "SELECT song_id, pending_id, variant_hint FROM playlist_items WHERE playlist_id = ?1 ORDER BY position",
+    )?;
     let items = stmt.query_map([id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
     Ok(items)
 }
@@ -197,8 +221,12 @@ pub fn add(db: &mut Db, id: &str, songs: &[(String, Option<String>)], at: Option
 
 /// Removes the items at the given positions (positions as stored, including hidden items).
 pub fn remove(db: &mut Db, id: &str, positions: &[i64]) -> Result<()> {
-    let items: Vec<_> =
-        read_items(db, id)?.into_iter().enumerate().filter(|(i, _)| !positions.contains(&(*i as i64))).map(|(_, item)| item).collect();
+    let items: Vec<_> = read_items(db, id)?
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| !positions.contains(&(*i as i64)))
+        .map(|(_, item)| item)
+        .collect();
     write_items(db, id, &items)
 }
 
@@ -286,7 +314,11 @@ pub fn export_m3u(db: &Db, id: &str) -> Result<String> {
         let Some(variant) = item.variant_id else { continue };
         let path: Option<String> = db
             .conn()
-            .query_row("SELECT uri FROM locations WHERE variant_id = ?1 AND missing_since IS NULL ORDER BY uri LIMIT 1", [variant], |r| r.get(0))
+            .query_row(
+                "SELECT uri FROM locations WHERE variant_id = ?1 AND missing_since IS NULL ORDER BY uri LIMIT 1",
+                [variant],
+                |r| r.get(0),
+            )
             .optional()?;
         if let Some(path) = path {
             tracks.push((item.title, item.artists, item.duration_ms, path));
@@ -321,8 +353,11 @@ pub fn set_blacklisted(db: &Db, song: &str, value: bool) -> Result<()> {
 
 /// Live tierlists as (id, document).
 pub fn tierlists(db: &Db) -> Result<Vec<(String, serde_json::Value)>> {
-    let mut stmt = db.conn().prepare("SELECT tierlist_id, doc FROM tierlists WHERE deleted_at IS NULL ORDER BY created_at, tierlist_id")?;
-    let rows: Vec<(String, String)> = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+    let mut stmt = db
+        .conn()
+        .prepare("SELECT tierlist_id, doc FROM tierlists WHERE deleted_at IS NULL ORDER BY created_at, tierlist_id")?;
+    let rows: Vec<(String, String)> =
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
     Ok(rows.into_iter().map(|(id, doc)| (id, serde_json::from_str(&doc).unwrap_or_default())).collect())
 }
 
@@ -341,7 +376,10 @@ pub fn save_tierlist(db: &Db, id: Option<&str>, doc: &serde_json::Value) -> Resu
 }
 
 pub fn delete_tierlist(db: &Db, id: &str) -> Result<()> {
-    db.conn().execute("UPDATE tierlists SET deleted_at = ?2, updated_at = ?2 WHERE tierlist_id = ?1", params![id, now_ms()])?;
+    db.conn().execute(
+        "UPDATE tierlists SET deleted_at = ?2, updated_at = ?2 WHERE tierlist_id = ?1",
+        params![id, now_ms()],
+    )?;
     db.touch();
     Ok(())
 }

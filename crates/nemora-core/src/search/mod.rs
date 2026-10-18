@@ -110,7 +110,13 @@ impl Corpus {
                 }
             })
             .collect();
-        Self { songs, artists: named(artists), albums: named(albums), playlists: named(playlists), genres: named(genres) }
+        Self {
+            songs,
+            artists: named(artists),
+            albums: named(albums),
+            playlists: named(playlists),
+            genres: named(genres),
+        }
     }
 }
 

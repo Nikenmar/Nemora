@@ -48,14 +48,31 @@ fn weights_rediscover_and_queue_order_match_1x() {
             .as_object()
             .unwrap()
             .iter()
-            .map(|(k, v)| (k.clone(), Rating { rating: v["rating"].as_f64().unwrap(), games: v["games"].as_i64().unwrap(), ..Default::default() }))
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    Rating {
+                        rating: v["rating"].as_f64().unwrap(),
+                        games: v["games"].as_i64().unwrap(),
+                        ..Default::default()
+                    },
+                )
+            })
             .collect();
         let recent = strings(&c["history"]);
         let total_duels = c["totalDuels"].as_i64().unwrap();
-        let inputs = Inputs { songs: &songs, tierlists: &tierlists, full_listens: &full, recent: &recent, ratings: &ratings, total_duels };
+        let inputs = Inputs {
+            songs: &songs,
+            tierlists: &tierlists,
+            full_listens: &full,
+            recent: &recent,
+            ratings: &ratings,
+            total_duels,
+        };
 
         let got = weights(&inputs, &strings(&c["targets"]), c["intensity"].as_f64().unwrap());
-        let want: HashMap<String, f64> = c["weights"].as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.as_f64().unwrap())).collect();
+        let want: HashMap<String, f64> =
+            c["weights"].as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.as_f64().unwrap())).collect();
         if got.len() != want.len() || want.iter().any(|(k, w)| got.get(k).is_none_or(|g| (g - w).abs() > 1e-12)) {
             failures.push(format!("#{n} weights differ"));
         }

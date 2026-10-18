@@ -12,13 +12,14 @@ pub mod db;
 pub mod elo;
 pub mod error;
 pub mod identity;
+pub mod ids;
 pub mod import;
 pub mod library;
+pub mod lyrics;
 pub mod m3u;
-pub mod plays;
 pub mod playlists;
+pub mod plays;
 pub mod rediscover;
-pub mod ids;
 pub mod scan;
 pub mod search;
 pub mod shuffle;
@@ -26,6 +27,7 @@ pub mod stats;
 pub mod tags;
 pub mod time;
 pub mod tournament;
+pub mod transfer;
 
 pub use error::{Error, Result};
 

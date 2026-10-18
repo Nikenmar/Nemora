@@ -92,9 +92,10 @@ impl Db {
     ) -> Result<Arc<Vec<i64>>> {
         let generation = self.generation.load(Ordering::Relaxed);
         if let Some((g, ids)) = self.orders.lock().unwrap().get(key)
-            && *g == generation {
-                return Ok(Arc::clone(ids));
-            }
+            && *g == generation
+        {
+            return Ok(Arc::clone(ids));
+        }
         let ids = Arc::new(compute(&self.conn)?);
         self.orders.lock().unwrap().insert(key.to_owned(), (generation, Arc::clone(&ids)));
         Ok(ids)

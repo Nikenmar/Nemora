@@ -16,7 +16,8 @@ use nemora_core::{elo, import, rediscover, scan, search, shuffle};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let (music, old, profile, today) = (PathBuf::from(&args[0]), PathBuf::from(&args[1]), PathBuf::from(&args[2]), args[3].clone());
+    let (music, old, profile, today) =
+        (PathBuf::from(&args[0]), PathBuf::from(&args[1]), PathBuf::from(&args[2]), args[3].clone());
     std::fs::create_dir_all(&profile).unwrap();
     let mut db = Db::open(&profile.join("nemora.db")).unwrap();
     let started = Instant::now();
@@ -24,14 +25,37 @@ fn main() {
     println!("scan: {} files, {} failed, {:.2?}", s.files, s.failed.len(), started.elapsed());
     let started = Instant::now();
     let r = import::import_nemora_1x(&mut db, &old).unwrap();
-    println!("import: by path {}, pending {}, ratings {}, {:.2?}", r.songs_by_path, r.pending, r.ratings, started.elapsed());
+    println!(
+        "import: by path {}, pending {}, ratings {}, {:.2?}",
+        r.songs_by_path,
+        r.pending,
+        r.ratings,
+        started.elapsed()
+    );
 
     let started = Instant::now();
     let d = dashboard(&db, Range::AllTime, &today).unwrap();
     println!("\ndashboard (all time, {:.2?}):", started.elapsed());
-    println!("  plays {} | full {} | skips {} | distinct songs {} | listening {:.1} h", d.totals.plays, d.totals.full, d.totals.skips, d.totals.distinct_songs, d.totals.listening_ms as f64 / 3.6e6);
-    println!("  years {:?} | streak now {} / longest {} | most active {:?}", d.available_years, d.calendar.current_streak, d.calendar.longest_streak, d.calendar.most_active_day.as_ref().map(|b| (&b.label, b.plays)));
-    println!("  hours since {:?}, peak hour {:?}", d.hours_since, d.hours.iter().enumerate().max_by_key(|(_, n)| **n).map(|(h, _)| h));
+    println!(
+        "  plays {} | full {} | skips {} | distinct songs {} | listening {:.1} h",
+        d.totals.plays,
+        d.totals.full,
+        d.totals.skips,
+        d.totals.distinct_songs,
+        d.totals.listening_ms as f64 / 3.6e6
+    );
+    println!(
+        "  years {:?} | streak now {} / longest {} | most active {:?}",
+        d.available_years,
+        d.calendar.current_streak,
+        d.calendar.longest_streak,
+        d.calendar.most_active_day.as_ref().map(|b| (&b.label, b.plays))
+    );
+    println!(
+        "  hours since {:?}, peak hour {:?}",
+        d.hours_since,
+        d.hours.iter().enumerate().max_by_key(|(_, n)| **n).map(|(h, _)| h)
+    );
     for s in d.top_songs.iter().take(5) {
         println!("  top song: {} - {} ({})", s.artists.join(", "), s.title, s.plays);
     }
@@ -62,7 +86,14 @@ fn main() {
     let weights = shuffle::stored_weights(&db, &[], 0.6).unwrap();
     let mut w: Vec<f64> = weights.values().copied().collect();
     w.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    println!("shuffle weights: {} songs, min {:.3} median {:.3} max {:.3} ({:.2?})", w.len(), w[0], w[w.len() / 2], w[w.len() - 1], started.elapsed());
+    println!(
+        "shuffle weights: {} songs, min {:.3} median {:.3} max {:.3} ({:.2?})",
+        w.len(),
+        w[0],
+        w[w.len() / 2],
+        w[w.len() - 1],
+        started.elapsed()
+    );
 
     let albums = library::albums(&db, NameSort::NameAsc).unwrap();
     let artists = library::artists(&db, NameSort::NameAsc).unwrap();
@@ -73,6 +104,12 @@ fn main() {
     for q in ["oneheart", "iwakura melancholy", "spurme", "nujabes", "uicideboy", "zvezda"] {
         let started = Instant::now();
         let r = search::search(&corpus, search::Filter::All, q);
-        println!("  {q:?}: {} songs, {} artists, {} albums ({:.2?})", r.songs.len(), r.artists.len(), r.albums.len(), started.elapsed());
+        println!(
+            "  {q:?}: {} songs, {} artists, {} albums ({:.2?})",
+            r.songs.len(),
+            r.artists.len(),
+            r.albums.len(),
+            started.elapsed()
+        );
     }
 }

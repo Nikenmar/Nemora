@@ -22,11 +22,60 @@ fn lists_sort_scope_and_group_the_present_library() {
     let music = root.join("music");
     std::fs::create_dir_all(&music).unwrap();
     let files = [
-        ("a", Tags { title: "Crystals", artist: "Isolate.exe", album: Some("Crystals"), album_artist: Some("Isolate.exe"), genre: Some("Phonk"), year: Some("2021"), track: Some(1) }),
-        ("b", Tags { title: "Crystals (slowed)", artist: "Iwakura", album: Some("Crystals"), album_artist: Some("Iwakura"), genre: Some("Phonk"), year: Some("2023"), track: Some(1) }),
-        ("c", Tags { title: "Keygen 1", artist: "Soulariuz", album: Some("R2R"), album_artist: Some("Soulariuz, Team R2R"), year: Some("2010"), track: Some(2), ..Default::default() }),
-        ("d", Tags { title: "Keygen 2", artist: "Veniek", album: Some("R2R"), album_artist: Some("Veniek, Team R2R"), year: Some("2011"), track: Some(1), ..Default::default() }),
-        ("e", Tags { title: "Звезда", artist: "Кино", album: Some("Single"), genre: Some("Rock"), ..Default::default() }),
+        (
+            "a",
+            Tags {
+                title: "Crystals",
+                artist: "Isolate.exe",
+                album: Some("Crystals"),
+                album_artist: Some("Isolate.exe"),
+                genre: Some("Phonk"),
+                year: Some("2021"),
+                track: Some(1),
+            },
+        ),
+        (
+            "b",
+            Tags {
+                title: "Crystals (slowed)",
+                artist: "Iwakura",
+                album: Some("Crystals"),
+                album_artist: Some("Iwakura"),
+                genre: Some("Phonk"),
+                year: Some("2023"),
+                track: Some(1),
+            },
+        ),
+        (
+            "c",
+            Tags {
+                title: "Keygen 1",
+                artist: "Soulariuz",
+                album: Some("R2R"),
+                album_artist: Some("Soulariuz, Team R2R"),
+                year: Some("2010"),
+                track: Some(2),
+                ..Default::default()
+            },
+        ),
+        (
+            "d",
+            Tags {
+                title: "Keygen 2",
+                artist: "Veniek",
+                album: Some("R2R"),
+                album_artist: Some("Veniek, Team R2R"),
+                year: Some("2011"),
+                track: Some(1),
+                ..Default::default()
+            },
+        ),
+        (
+            "e",
+            Tags {
+                title: "Звезда", artist: "Кино", album: Some("Single"), genre: Some("Rock"), ..Default::default()
+            },
+        ),
         ("f", Tags { title: "Ёлки", artist: "Ёлка", album: Some("Single"), ..Default::default() }),
         ("g", Tags { title: "apple", artist: "Zed", ..Default::default() }),
     ];
@@ -44,16 +93,25 @@ fn lists_sort_scope_and_group_the_present_library() {
         titles(&db, &SongScope::All, &SongSort::TitleAsc),
         ["apple", "Crystals", "Crystals (slowed)", "Keygen 1", "Keygen 2", "Ёлки", "Звезда"]
     );
-    assert_eq!(titles(&db, &SongScope::All, &SongSort::YearAsc)[..4], ["Keygen 1", "Keygen 2", "Crystals", "Crystals (slowed)"]);
+    assert_eq!(
+        titles(&db, &SongScope::All, &SongSort::YearAsc)[..4],
+        ["Keygen 1", "Keygen 2", "Crystals", "Crystals (slowed)"]
+    );
     let page = library::songs(&db, &SongScope::All, &SongSort::TitleAsc, 2, 3).unwrap();
     assert_eq!(page.total, 7);
-    assert_eq!(page.rows.iter().map(|r| r.title.as_str()).collect::<Vec<_>>(), ["Crystals (slowed)", "Keygen 1", "Keygen 2"]);
+    assert_eq!(
+        page.rows.iter().map(|r| r.title.as_str()).collect::<Vec<_>>(),
+        ["Crystals (slowed)", "Keygen 1", "Keygen 2"]
+    );
 
     // Albums: the same title with different album artists is two albums; overlapping album artists
     // (Team R2R) are one; no album artist groups by title alone, as in 1.1.9.
     let albums = library::albums(&db, NameSort::NameAsc).unwrap();
     let summary: Vec<(String, i64)> = albums.iter().map(|a| (a.title.clone(), a.song_count)).collect();
-    assert_eq!(summary, [("Crystals".to_owned(), 1), ("Crystals".to_owned(), 1), ("R2R".to_owned(), 2), ("Single".to_owned(), 2)]);
+    assert_eq!(
+        summary,
+        [("Crystals".to_owned(), 1), ("Crystals".to_owned(), 1), ("R2R".to_owned(), 2), ("Single".to_owned(), 2)]
+    );
     let r2r = albums.iter().find(|a| a.title == "R2R").unwrap();
     assert_eq!(titles(&db, &SongScope::Album(r2r.key.clone()), &SongSort::TrackAsc), ["Keygen 2", "Keygen 1"]);
     assert_eq!(r2r.year, Some(2010));
@@ -70,18 +128,21 @@ fn lists_sort_scope_and_group_the_present_library() {
     // Plays order the list once facts exist.
     let apple = library::songs(&db, &SongScope::All, &SongSort::TitleAsc, 0, 1).unwrap().rows.remove(0);
     for _ in 0..2 {
-        record(&mut db, &Session {
-            song_id: apple.song_id.clone(),
-            started_at: 1_700_000_000_000,
-            utc_offset_min: 0,
-            duration_ms: apple.duration_ms,
-            source_kind: None,
-            source_id: None,
-            facts: vec![
-                Fact::Play { at_ms: 1_700_000_000_000, position_ms: 0 },
-                Fact::End { at_ms: 1_700_000_002_000, position_ms: 2000, reason: EndReason::Finished },
-            ],
-        })
+        record(
+            &mut db,
+            &Session {
+                song_id: apple.song_id.clone(),
+                started_at: 1_700_000_000_000,
+                utc_offset_min: 0,
+                duration_ms: apple.duration_ms,
+                source_kind: None,
+                source_id: None,
+                facts: vec![
+                    Fact::Play { at_ms: 1_700_000_000_000, position_ms: 0 },
+                    Fact::End { at_ms: 1_700_000_002_000, position_ms: 2000, reason: EndReason::Finished },
+                ],
+            },
+        )
         .unwrap();
     }
     assert_eq!(titles(&db, &SongScope::All, &SongSort::PlaysDesc)[0], "apple");

@@ -107,7 +107,10 @@ pub fn parse(text: &str) -> Vec<Entry> {
             pending = Some(match EXTINF.captures(trimmed).ok().flatten() {
                 Some(c) => {
                     let title = js_trim(c.get(2).map_or("", |m| m.as_str()));
-                    (Some(title.to_owned()).filter(|t| !t.is_empty()), Some(js_parse_float(c.get(1).map_or("", |m| m.as_str()))))
+                    (
+                        Some(title.to_owned()).filter(|t| !t.is_empty()),
+                        Some(js_parse_float(c.get(1).map_or("", |m| m.as_str()))),
+                    )
                 }
                 None => (None, None),
             });
@@ -311,7 +314,13 @@ fn path_key(path: &str) -> String {
 
 impl Resolver {
     pub fn new(tracks: Vec<LibraryTrack>) -> Self {
-        let mut r = Resolver { items: Vec::new(), by_path: HashMap::new(), by_file: HashMap::new(), by_title: HashMap::new(), by_composite: HashMap::new() };
+        let mut r = Resolver {
+            items: Vec::new(),
+            by_path: HashMap::new(),
+            by_file: HashMap::new(),
+            by_title: HashMap::new(),
+            by_composite: HashMap::new(),
+        };
         for track in tracks {
             let derived = if track.file_name.is_some() {
                 Some((track.file_name.clone().unwrap(), track.folder_name.clone()))
@@ -328,7 +337,8 @@ impl Resolver {
                 None => Vec::new(),
             };
             let title_key = compact_key(&track.title);
-            let artist_keys: Vec<String> = track.artists.iter().map(|a| compact_key(a)).filter(|k| k.chars().count() > 1).collect();
+            let artist_keys: Vec<String> =
+                track.artists.iter().map(|a| compact_key(a)).filter(|k| k.chars().count() > 1).collect();
             let all_artists = compact_key(&track.artists.concat());
             let mut composite = vec![format!("{all_artists}{title_key}"), format!("{title_key}{all_artists}")];
             for a in &artist_keys {
@@ -366,9 +376,12 @@ impl Resolver {
         if credit_key.chars().count() < 2 {
             return false;
         }
-        let names: Vec<String> = artist_names_of(credit).iter().map(|n| compact_key(n)).filter(|k| k.chars().count() > 1).collect();
+        let names: Vec<String> =
+            artist_names_of(credit).iter().map(|n| compact_key(n)).filter(|k| k.chars().count() > 1).collect();
         item.artist_keys.iter().any(|artist| {
-            names.contains(artist) || (artist.encode_utf16().count() >= 4 && credit_key.contains(artist.as_str())) || credit_key == *artist
+            names.contains(artist)
+                || (artist.encode_utf16().count() >= 4 && credit_key.contains(artist.as_str()))
+                || credit_key == *artist
         })
     }
 
@@ -391,8 +404,11 @@ impl Resolver {
         if unique_c.is_empty() {
             return None;
         }
-        let plausible: Vec<usize> =
-            unique_c.iter().copied().filter(|&i| Self::length_diff(&self.items[i], entry).is_none_or(|d| d <= 20.0)).collect();
+        let plausible: Vec<usize> = unique_c
+            .iter()
+            .copied()
+            .filter(|&i| Self::length_diff(&self.items[i], entry).is_none_or(|d| d <= 20.0))
+            .collect();
         let pool = if plausible.is_empty() { unique_c } else { plausible };
         if pool.len() == 1 {
             return Some(pool[0]);
@@ -411,17 +427,23 @@ impl Resolver {
         let best = &self.items[ranked[0]];
         let same_recording = ranked.iter().all(|&i| {
             let item = &self.items[i];
-            item.title_key == best.title_key && (item.track.duration_sec - best.track.duration_sec).abs() <= SAME_LENGTH_SEC
+            item.title_key == best.title_key
+                && (item.track.duration_sec - best.track.duration_sec).abs() <= SAME_LENGTH_SEC
         });
         if same_recording {
             return Some(ranked[0]);
         }
         let second = &self.items[ranked[1]];
         if let (Some(bd), Some(sd)) = (Self::length_diff(best, entry), Self::length_diff(second, entry))
-            && bd <= SAME_LENGTH_SEC && sd > SAME_LENGTH_SEC {
-                return Some(ranked[0]);
-            }
-        if folder_key.is_some() && best.folder_key.as_deref() == folder_key && second.folder_key.as_deref() != folder_key {
+            && bd <= SAME_LENGTH_SEC
+            && sd > SAME_LENGTH_SEC
+        {
+            return Some(ranked[0]);
+        }
+        if folder_key.is_some()
+            && best.folder_key.as_deref() == folder_key
+            && second.folder_key.as_deref() != folder_key
+        {
             return Some(ranked[0]);
         }
         None
@@ -435,20 +457,27 @@ impl Resolver {
         let folder = folder_key.as_deref();
 
         if let Some(hits) = self.by_path.get(&path_key(&entry.location))
-            && let Some(found) = done(self.pick(hits, entry, folder), Method::Path) {
-                return Some(found);
-            }
-        let stem_keys: Vec<String> = unique(vec![compact_key(&strip_extension(&file_name)), compact_key(&clean_file_stem(&file_name))])
-            .into_iter()
-            .filter(|k| !k.is_empty())
-            .collect();
+            && let Some(found) = done(self.pick(hits, entry, folder), Method::Path)
+        {
+            return Some(found);
+        }
+        let stem_keys: Vec<String> =
+            unique(vec![compact_key(&strip_extension(&file_name)), compact_key(&clean_file_stem(&file_name))])
+                .into_iter()
+                .filter(|k| !k.is_empty())
+                .collect();
         for key in &stem_keys {
-            if let Some(found) = done(self.pick(self.by_file.get(key).map_or(&[][..], Vec::as_slice), entry, folder), Method::FileName) {
+            if let Some(found) =
+                done(self.pick(self.by_file.get(key).map_or(&[][..], Vec::as_slice), entry, folder), Method::FileName)
+            {
                 return Some(found);
             }
         }
         let sources: Vec<String> =
-            unique(vec![entry.extinf_title.clone().unwrap_or_default(), clean_file_stem(&file_name)]).into_iter().filter(|s| !s.is_empty()).collect();
+            unique(vec![entry.extinf_title.clone().unwrap_or_default(), clean_file_stem(&file_name)])
+                .into_iter()
+                .filter(|s| !s.is_empty())
+                .collect();
         for source in &sources {
             let segments = segments_of(source);
             if segments.is_empty() {
@@ -463,13 +492,23 @@ impl Resolver {
                 if candidates.is_empty() {
                     continue;
                 }
-                let credit = segments.iter().enumerate().filter(|(i, _)| *i != index).map(|(_, s)| s.as_str()).collect::<Vec<_>>().join(" - ");
-                let credited: Vec<usize> = candidates.iter().copied().filter(|&i| self.artists_overlap(&self.items[i], &credit)).collect();
+                let credit = segments
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| *i != index)
+                    .map(|(_, s)| s.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" - ");
+                let credited: Vec<usize> =
+                    candidates.iter().copied().filter(|&i| self.artists_overlap(&self.items[i], &credit)).collect();
                 if let Some(found) = done(self.pick(&credited, entry, folder), Method::Tags) {
                     return Some(found);
                 }
             }
-            if let Some(found) = done(self.pick(self.by_composite.get(&compact_key(source)).map_or(&[][..], Vec::as_slice), entry, folder), Method::ArtistTitle) {
+            if let Some(found) = done(
+                self.pick(self.by_composite.get(&compact_key(source)).map_or(&[][..], Vec::as_slice), entry, folder),
+                Method::ArtistTitle,
+            ) {
                 return Some(found);
             }
         }
@@ -490,7 +529,9 @@ impl Resolver {
                         .into_iter()
                         .flatten()
                         .copied()
-                        .filter(|&i| Self::length_diff(&self.items[i], entry).unwrap_or(f64::INFINITY) <= SAME_LENGTH_SEC)
+                        .filter(|&i| {
+                            Self::length_diff(&self.items[i], entry).unwrap_or(f64::INFINITY) <= SAME_LENGTH_SEC
+                        })
                         .collect();
                     if let Some(found) = done(self.pick(&timed, entry, folder), Method::TitleLength) {
                         return Some(found);
@@ -507,7 +548,10 @@ impl Resolver {
                 .filter(|&i| {
                     let item = &self.items[i];
                     item.file_keys.iter().any(|f| f.encode_utf16().count() > key_len && f.starts_with(key.as_str()))
-                        || item.composite_keys.iter().any(|c| c.encode_utf16().count() > key_len && c.starts_with(key.as_str()))
+                        || item
+                            .composite_keys
+                            .iter()
+                            .any(|c| c.encode_utf16().count() > key_len && c.starts_with(key.as_str()))
                 })
                 .collect();
             if let Some(found) = done(self.pick(&starts, entry, folder), Method::FileNameStart) {

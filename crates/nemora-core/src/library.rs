@@ -320,9 +320,10 @@ fn group_albums(db: &Db) -> Result<BTreeMap<String, Vec<AlbumMember>>> {
         let mut names: Vec<&str> = group.iter().flat_map(|m| m.album_artists.iter().map(String::as_str)).collect();
         names.sort();
         // A key stable across devices and scans: the title and the smallest album artist.
-        let key = blake3::hash(format!("album\0{}\0{}", group[0].title, names.first().copied().unwrap_or("")).as_bytes())
-            .to_hex()[..16]
-            .to_owned();
+        let key =
+            blake3::hash(format!("album\0{}\0{}", group[0].title, names.first().copied().unwrap_or("")).as_bytes())
+                .to_hex()[..16]
+                .to_owned();
         out.insert(key, group);
     }
     Ok(out)
@@ -366,11 +367,21 @@ pub struct NamedRow {
 
 /// Artists credited on present songs (track artists and album artists).
 pub fn artists(db: &Db, sort: NameSort) -> Result<Vec<NamedRow>> {
-    named_rows(db, "SELECT a.name, count(DISTINCT v.song_id), max(v.cover_hash) FROM variant_artists a JOIN track_variants v USING (variant_id)", "a.name", sort)
+    named_rows(
+        db,
+        "SELECT a.name, count(DISTINCT v.song_id), max(v.cover_hash) FROM variant_artists a JOIN track_variants v USING (variant_id)",
+        "a.name",
+        sort,
+    )
 }
 
 pub fn genres(db: &Db, sort: NameSort) -> Result<Vec<NamedRow>> {
-    named_rows(db, "SELECT g.name, count(DISTINCT v.song_id), max(v.cover_hash) FROM variant_genres g JOIN track_variants v USING (variant_id)", "g.name", sort)
+    named_rows(
+        db,
+        "SELECT g.name, count(DISTINCT v.song_id), max(v.cover_hash) FROM variant_genres g JOIN track_variants v USING (variant_id)",
+        "g.name",
+        sort,
+    )
 }
 
 fn named_rows(db: &Db, select: &str, group: &str, sort: NameSort) -> Result<Vec<NamedRow>> {
@@ -384,16 +395,23 @@ fn named_rows(db: &Db, select: &str, group: &str, sort: NameSort) -> Result<Vec<
 
 fn sort_named<T>(rows: &mut [T], sort: NameSort, key: impl Fn(&T) -> (&String, i64, &String)) {
     use crate::search::fold::normalize;
-    let mut keyed: Vec<(String, i64, String, usize)> =
-        rows.iter().enumerate().map(|(i, r)| {
+    let mut keyed: Vec<(String, i64, String, usize)> = rows
+        .iter()
+        .enumerate()
+        .map(|(i, r)| {
             let (name, count, tie) = key(r);
             (normalize(name), count, tie.clone(), i)
-        }).collect();
+        })
+        .collect();
     match sort {
         NameSort::NameAsc => keyed.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.2.cmp(&b.2))),
         NameSort::NameDesc => keyed.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.2.cmp(&b.2))),
-        NameSort::SongsDesc => keyed.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)).then_with(|| a.2.cmp(&b.2))),
-        NameSort::SongsAsc => keyed.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)).then_with(|| a.2.cmp(&b.2))),
+        NameSort::SongsDesc => {
+            keyed.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)).then_with(|| a.2.cmp(&b.2)))
+        }
+        NameSort::SongsAsc => {
+            keyed.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)).then_with(|| a.2.cmp(&b.2)))
+        }
     }
     let order: Vec<usize> = keyed.into_iter().map(|k| k.3).collect();
     apply_order(rows, &order);
@@ -436,12 +454,12 @@ pub fn search_corpus(db: &Db) -> Result<Corpus> {
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
-    let named = |rows: Vec<NamedRow>| rows.into_iter().map(|r| NamedInput { id: r.name.clone(), name: r.name }).collect();
+    let named =
+        |rows: Vec<NamedRow>| rows.into_iter().map(|r| NamedInput { id: r.name.clone(), name: r.name }).collect();
     let albums = albums(db, NameSort::NameAsc)?.into_iter().map(|a| NamedInput { id: a.key, name: a.title }).collect();
     let mut stmt = conn.prepare("SELECT playlist_id, name FROM playlists WHERE deleted_at IS NULL ORDER BY name")?;
-    let playlists = stmt
-        .query_map([], |r| Ok(NamedInput { id: r.get(0)?, name: r.get(1)? }))?
-        .collect::<rusqlite::Result<_>>()?;
+    let playlists =
+        stmt.query_map([], |r| Ok(NamedInput { id: r.get(0)?, name: r.get(1)? }))?.collect::<rusqlite::Result<_>>()?;
     Ok(Corpus::build(
         songs,
         named(artists(db, NameSort::NameAsc)?),

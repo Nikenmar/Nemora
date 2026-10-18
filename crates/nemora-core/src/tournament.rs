@@ -95,7 +95,12 @@ fn ordering(v: f64) -> std::cmp::Ordering {
 
 /// A deterministic, conventionally seeded bracket. Entry goes to the least-dueled tracks (a
 /// tournament exists to rate unrated tracks); seeding among them is by rating.
-pub fn create(song_ids: &[String], ratings: &HashMap<String, Rating>, size: u32, created_at: i64) -> Result<State, TournamentError> {
+pub fn create(
+    song_ids: &[String],
+    ratings: &HashMap<String, Rating>,
+    size: u32,
+    created_at: i64,
+) -> Result<State, TournamentError> {
     if !SIZES.contains(&size) {
         return Err(TournamentError::Size(size));
     }
@@ -137,7 +142,15 @@ pub fn create(song_ids: &[String], ratings: &HashMap<String, Rating>, size: u32,
             } else {
                 (None, None)
             };
-            matches.push(Match { id: match_id(round, position), round, position, song_a, song_b, winner: None, resolution: None });
+            matches.push(Match {
+                id: match_id(round, position),
+                round,
+                position,
+                song_a,
+                song_b,
+                winner: None,
+                resolution: None,
+            });
         }
     }
     Ok(State { version: 1, size, created_at, status: "active".into(), participants, matches, champion: None })
@@ -246,7 +259,12 @@ pub fn current_match(state: &State) -> Option<&Match> {
 
 /// The bracket after the current match was played. ELO is updated by the caller (a tournament
 /// match is an ordinary duel).
-pub fn record_winner(state: &State, match_id: &str, winner: &str, available: &HashSet<String>) -> Result<State, TournamentError> {
+pub fn record_winner(
+    state: &State,
+    match_id: &str,
+    winner: &str,
+    available: &HashSet<String>,
+) -> Result<State, TournamentError> {
     let prepared = reconcile(state, available);
     let current = current_match(&prepared).cloned().ok_or(TournamentError::NotCurrent)?;
     if current.id != match_id {

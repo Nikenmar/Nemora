@@ -84,7 +84,10 @@ pub enum Fact {
 impl Fact {
     fn at(&self) -> i64 {
         match *self {
-            Fact::Play { at_ms, .. } | Fact::Pause { at_ms, .. } | Fact::Seek { at_ms, .. } | Fact::End { at_ms, .. } => at_ms,
+            Fact::Play { at_ms, .. }
+            | Fact::Pause { at_ms, .. }
+            | Fact::Seek { at_ms, .. }
+            | Fact::End { at_ms, .. } => at_ms,
         }
     }
 }
@@ -207,11 +210,10 @@ pub fn record(db: &mut Db, session: &Session) -> Result<Recorded> {
     let device_id = db.device_id()?;
     let evaluation = evaluate(session);
     let tx = db.conn_mut().transaction()?;
-    let seq: i64 = tx.query_row(
-        "SELECT coalesce(max(seq), 0) + 1 FROM play_events WHERE device_id = ?1",
-        [&device_id],
-        |r| r.get(0),
-    )?;
+    let seq: i64 =
+        tx.query_row("SELECT coalesce(max(seq), 0) + 1 FROM play_events WHERE device_id = ?1", [&device_id], |r| {
+            r.get(0)
+        })?;
     let event_id = format!("{device_id}:{seq}");
     let seeks = (!evaluation.seeks.is_empty()).then(|| serde_json::to_string(&evaluation.seeks)).transpose()?;
     tx.execute(
@@ -284,7 +286,9 @@ fn rebuild_in(tx: &Transaction<'_>) -> Result<()> {
          FROM play_events",
     )?;
     let rows: Vec<(String, i64, i64, i64, i64, i64, i64, String)> = stmt
-        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)))?
+        .query_map([], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?))
+        })?
         .collect::<rusqlite::Result<_>>()?;
     drop(stmt);
     for (song_id, started_at, ended_at, offset, heard, duration, max_position, reason) in rows {
@@ -362,10 +366,7 @@ fn judge(heard: i64, duration: i64, reason: EndReason, ended_at: i64, max_positi
         duration_ms: duration,
         source_kind: None,
         source_id: None,
-        facts: vec![
-            Fact::Play { at_ms: 0, position_ms: 0 },
-            Fact::End { at_ms: ended_at, position_ms: heard, reason },
-        ],
+        facts: vec![Fact::Play { at_ms: 0, position_ms: 0 }, Fact::End { at_ms: ended_at, position_ms: heard, reason }],
     };
     Evaluation { max_position_ms: max_position, ..evaluate(&session) }
 }
@@ -408,7 +409,9 @@ mod tests {
     fn only_the_user_leaving_early_is_a_skip() {
         assert!(played(200_000, 5_000, EndReason::UserNext).is_skip);
         assert!(played(200_000, 5_000, EndReason::UserSelected).is_skip);
-        for reason in [EndReason::Stopped, EndReason::AppClosed, EndReason::SleepTimer, EndReason::QueueCleared, EndReason::Error] {
+        for reason in
+            [EndReason::Stopped, EndReason::AppClosed, EndReason::SleepTimer, EndReason::QueueCleared, EndReason::Error]
+        {
             assert!(!played(200_000, 5_000, reason).is_skip, "{reason:?}");
         }
         // Leaving after the play threshold is a play, not a skip.
@@ -444,7 +447,10 @@ mod tests {
 
     #[test]
     fn a_session_without_an_end_closed_with_the_app() {
-        let e = evaluate(&session(200_000, vec![Fact::Play { at_ms: 0, position_ms: 0 }, Fact::Pause { at_ms: 40_000, position_ms: 40_000 }]));
+        let e = evaluate(&session(
+            200_000,
+            vec![Fact::Play { at_ms: 0, position_ms: 0 }, Fact::Pause { at_ms: 40_000, position_ms: 40_000 }],
+        ));
         assert_eq!(e.end_reason, EndReason::AppClosed);
         assert_eq!(e.ended_at, 40_000);
         assert!(e.is_play && !e.is_skip);
@@ -472,7 +478,9 @@ mod tests {
         c.execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, 200000, NULL, 0, 0)", [&a]).unwrap();
         // One source: 3 starts, then 2 starts with 1 skip, then the migration day holding 3 skips
         // that have no starts of their own. Another source is untouched by the first one's skips.
-        for (source, day, l, s) in [("m", "2026-01-01", 3, 0), ("m", "2026-01-02", 2, 1), ("m", "2026-08-14", 0, 3), ("d", "2026-01-01", 2, 0)] {
+        for (source, day, l, s) in
+            [("m", "2026-01-01", 3, 0), ("m", "2026-01-02", 2, 1), ("m", "2026-08-14", 0, 3), ("d", "2026-01-01", 2, 0)]
+        {
             c.execute(
                 "INSERT INTO legacy_daily (source_id, song_id, day, l, f, s) VALUES (?1, ?2, ?3, ?4, 0, ?5)",
                 params![source, a, day, l, s],
@@ -491,7 +499,12 @@ mod tests {
         // January 2nd keeps its 2 - 1.
         assert_eq!(
             plays,
-            [("m".into(), "2026-01-01".into(), 0), ("m".into(), "2026-01-02".into(), 1), ("m".into(), "2026-08-14".into(), 0), ("d".into(), "2026-01-01".into(), 2)]
+            [
+                ("m".into(), "2026-01-01".into(), 0),
+                ("m".into(), "2026-01-02".into(), 1),
+                ("m".into(), "2026-08-14".into(), 0),
+                ("d".into(), "2026-01-01".into(), 2)
+            ]
         );
     }
 
@@ -499,16 +512,16 @@ mod tests {
     fn recorded_rollups_equal_a_rebuild() {
         let mut db = Db::open_in_memory().unwrap();
         let song = "a".repeat(26);
-        db.conn()
-            .execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, 200000, NULL, 0, 0)", [&song])
-            .unwrap();
+        db.conn().execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, 200000, NULL, 0, 0)", [&song]).unwrap();
         // 23:50 UTC on Jan 1st: Jan 2nd at 02:50 for a device at +3.
         let base = crate::time::parse_iso_ms("2026-01-01T23:50:00.000Z").unwrap();
         let mut s = session(200_000, vec![]);
         s.song_id = song.clone();
         s.utc_offset_min = 180;
         for (i, (heard, reason)) in
-            [(60_000, EndReason::Finished), (5_000, EndReason::UserNext), (31_000, EndReason::Stopped)].into_iter().enumerate()
+            [(60_000, EndReason::Finished), (5_000, EndReason::UserNext), (31_000, EndReason::Stopped)]
+                .into_iter()
+                .enumerate()
         {
             s.started_at = base + i as i64 * 1000;
             s.facts = vec![

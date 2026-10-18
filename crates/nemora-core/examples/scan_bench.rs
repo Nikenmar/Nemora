@@ -73,7 +73,8 @@ fn run(dir: &Path, profile: &Path) {
     pass("first scan", &mut db);
     pass("unchanged rescan", &mut db);
     // Rewrite 1% of the files with other audio: they must be found and re-identified.
-    let count = std::fs::read_dir(dir).unwrap().flatten().map(|f| std::fs::read_dir(f.path()).unwrap().count()).sum::<usize>();
+    let count =
+        std::fs::read_dir(dir).unwrap().flatten().map(|f| std::fs::read_dir(f.path()).unwrap().count()).sum::<usize>();
     for i in (0..count as u64).step_by(100) {
         let path = dir.join(format!("folder {:03}", i % 100)).join(format!("track {i:06}.wav"));
         std::fs::write(&path, wav(i + 1_000_000_000)).unwrap();
@@ -103,7 +104,9 @@ fn query(profile: &Path) {
     ] {
         time(label, &mut || library::songs(&db, &SongScope::All, &sort, 0, 50).unwrap().rows.len());
     }
-    time("page 1000, title", &mut || library::songs(&db, &SongScope::All, &SongSort::TitleAsc, 50_000, 50).unwrap().rows.len());
+    time("page 1000, title", &mut || {
+        library::songs(&db, &SongScope::All, &SongSort::TitleAsc, 50_000, 50).unwrap().rows.len()
+    });
     time("albums", &mut || library::albums(&db, NameSort::NameAsc).unwrap().len());
     time("artists", &mut || library::artists(&db, NameSort::NameAsc).unwrap().len());
     let mut corpus = None;

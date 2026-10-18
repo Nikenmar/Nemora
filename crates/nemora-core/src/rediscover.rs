@@ -54,8 +54,10 @@ pub fn stored(db: &crate::db::Db, threshold_days: i64, today: &str) -> crate::Re
         .prepare("SELECT DISTINCT song_id FROM track_variants WHERE present = 1 ORDER BY song_id")?
         .query_map([], |r| r.get(0))?
         .collect::<rusqlite::Result<_>>()?;
-    let full: HashMap<String, i64> =
-        conn.prepare("SELECT song_id, full FROM song_totals")?.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+    let full: HashMap<String, i64> = conn
+        .prepare("SELECT song_id, full FROM song_totals")?
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
     // Last heard, as days since the epoch: the last day with a play of either source.
     let mut last_heard: HashMap<String, i64> = HashMap::new();
     let mut stmt = conn.prepare(
@@ -68,8 +70,10 @@ pub fn stored(db: &crate::db::Db, threshold_days: i64, today: &str) -> crate::Re
             last_heard.insert(id, d);
         }
     }
-    let blacklisted: HashSet<String> =
-        conn.prepare("SELECT song_id FROM blacklist_songs WHERE value = 1")?.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
+    let blacklisted: HashSet<String> = conn
+        .prepare("SELECT song_id FROM blacklist_songs WHERE value = 1")?
+        .query_map([], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
     let tierlists = crate::shuffle::stored_tierlists(db)?;
     let ratings = crate::elo::ratings(db)?;
     let cutoff = crate::time::parse_day(today).unwrap_or(0) - threshold_days.max(1);

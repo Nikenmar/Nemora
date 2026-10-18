@@ -43,11 +43,18 @@ fn scan_follows_the_folder_through_edits_copies_and_missing_files() {
     assert_eq!(count(&db_path, "SELECT count(*) FROM tracks"), 3);
     assert_eq!(count(&db_path, "SELECT count(*) FROM covers"), 1);
     assert_eq!(
-        count(&db_path, "SELECT count(*) FROM variant_artists v JOIN track_variants t USING (variant_id) WHERE t.title = 'Shiniest Sky'"),
+        count(
+            &db_path,
+            "SELECT count(*) FROM variant_artists v JOIN track_variants t USING (variant_id) WHERE t.title = 'Shiniest Sky'"
+        ),
         2,
         "artists are split on commas"
     );
-    assert_eq!(count(&db_path, "SELECT count(*) FROM track_variants WHERE title = 'c'"), 1, "untagged title is the file name");
+    assert_eq!(
+        count(&db_path, "SELECT count(*) FROM track_variants WHERE title = 'c'"),
+        1,
+        "untagged title is the file name"
+    );
     assert_eq!(count(&db_path, "SELECT count(*) FROM search_fts WHERE search_fts MATCH 'iniest'"), 1);
 
     // Nothing changed: nothing is opened again.

@@ -61,7 +61,10 @@ fn main() {
         ("locations", "SELECT count(*) FROM locations"),
         ("distinct covers", "SELECT count(*) FROM covers"),
         ("rows without cover", "SELECT count(*) FROM track_variants WHERE cover_hash IS NULL"),
-        ("albums (title + first album artist or artist)", "SELECT count(DISTINCT coalesce(album,'') || char(0) || coalesce((SELECT name FROM variant_artists a WHERE a.variant_id = v.variant_id ORDER BY role = 'artist', position LIMIT 1),'')) FROM track_variants v WHERE album IS NOT NULL"),
+        (
+            "albums (title + first album artist or artist)",
+            "SELECT count(DISTINCT coalesce(album,'') || char(0) || coalesce((SELECT name FROM variant_artists a WHERE a.variant_id = v.variant_id ORDER BY role = 'artist', position LIMIT 1),'')) FROM track_variants v WHERE album IS NOT NULL",
+        ),
         ("artists", "SELECT count(DISTINCT name) FROM variant_artists WHERE role = 'artist'"),
     ] {
         let n: i64 = conn.query_row(sql, [], |r| r.get(0)).unwrap();

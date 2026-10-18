@@ -23,7 +23,11 @@ fn variants_json(v: Vec<nemora_core::search::fold::Variant>) -> Vec<(String, f64
 }
 
 fn expected_variants(v: &Value) -> Vec<(String, f64)> {
-    v.as_array().unwrap().iter().map(|k| (k["text"].as_str().unwrap().to_owned(), k["penalty"].as_f64().unwrap())).collect()
+    v.as_array()
+        .unwrap()
+        .iter()
+        .map(|k| (k["text"].as_str().unwrap().to_owned(), k["penalty"].as_f64().unwrap()))
+        .collect()
 }
 
 fn strings(v: &Value) -> Vec<String> {
@@ -86,7 +90,13 @@ fn scores_match_1x() {
         }
     }
     assert!(pairs.len() > 1000, "the oracle should have produced many pairs");
-    assert!(failures.is_empty(), "{} of {} score mismatches:\n{}", failures.len(), pairs.len(), failures.iter().take(30).cloned().collect::<Vec<_>>().join("\n"));
+    assert!(
+        failures.is_empty(),
+        "{} of {} score mismatches:\n{}",
+        failures.len(),
+        pairs.len(),
+        failures.iter().take(30).cloned().collect::<Vec<_>>().join("\n")
+    );
 }
 
 #[test]
@@ -98,7 +108,10 @@ fn ranked_results_match_1x() {
             .as_array()
             .unwrap()
             .iter()
-            .map(|n| NamedInput { id: n["id"].as_str().unwrap().to_owned(), name: n["name"].as_str().unwrap().to_owned() })
+            .map(|n| NamedInput {
+                id: n["id"].as_str().unwrap().to_owned(),
+                name: n["name"].as_str().unwrap().to_owned(),
+            })
             .collect()
     };
     let songs = corpus_json["songs"]

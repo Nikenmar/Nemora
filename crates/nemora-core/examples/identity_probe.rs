@@ -102,7 +102,9 @@ fn check(file: &Path) {
     let tag = tagged.primary_tag_mut().unwrap();
     tag.set_title("Retagged by identity_probe".to_owned());
     tag.set_artist("Nobody".to_owned());
-    tag.push_picture(Picture::unchecked(vec![0x5a; 300_000]).pic_type(PictureType::CoverFront).mime_type(MimeType::Jpeg).build());
+    tag.push_picture(
+        Picture::unchecked(vec![0x5a; 300_000]).pic_type(PictureType::CoverFront).mime_type(MimeType::Jpeg).build(),
+    );
     tagged.save_to_path(&copy, WriteOptions::default()).unwrap();
 
     let after = identify_path(&copy).expect("identify copy");

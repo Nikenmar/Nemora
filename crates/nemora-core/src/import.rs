@@ -54,19 +54,19 @@ type DayCounts = (i64, i64, i64, BTreeMap<String, i64>);
 
 /// What an old song id resolves to.
 #[derive(Debug, Clone)]
-enum Target {
+pub(crate) enum Target {
     Song(String),
     Pending(i64),
 }
 
-struct Fingerprint {
-    title: Option<String>,
-    artists: Vec<String>,
-    duration_ms: Option<i64>,
-    file_name: Option<String>,
+pub(crate) struct Fingerprint {
+    pub(crate) title: Option<String>,
+    pub(crate) artists: Vec<String>,
+    pub(crate) duration_ms: Option<i64>,
+    pub(crate) file_name: Option<String>,
 }
 
-struct LibraryIndex {
+pub(crate) struct LibraryIndex {
     by_uri: HashMap<String, String>,
     by_uri_folded: HashMap<String, String>,
     /// file name (lower case) -> [(song_id, duration_ms)]
@@ -90,7 +90,7 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
     let mut report = ImportReport::default();
 
     let tx = db.conn_mut().transaction()?;
-    let mut resolver = Resolver { tx: &tx, library: &library, cache: HashMap::new() };
+    let mut resolver = Resolver { tx: &tx, library: &library, cache: HashMap::new(), source: SOURCE };
 
     // Old songs: id -> fingerprint and path.
     let mut old_songs: HashMap<String, (Fingerprint, Option<String>)> = HashMap::new();
@@ -150,7 +150,8 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
             params![id, playlist["name"].as_str().unwrap_or(id), created, device_id],
         )?;
         tx.execute("DELETE FROM playlist_items WHERE playlist_id = ?1", [id])?;
-        for (position, song) in playlist["songs"].as_array().into_iter().flatten().filter_map(Value::as_str).enumerate() {
+        for (position, song) in playlist["songs"].as_array().into_iter().flatten().filter_map(Value::as_str).enumerate()
+        {
             let target = match target_of(song) {
                 Some(t) => t,
                 None => Target::Pending(resolver.pending_for_unknown(song)?),
@@ -169,46 +170,11 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
         report.playlists += 1;
     }
 
-    // Listening history: counters[trackKey][sourceId][day] = {l, f, s, h}. Different track keys
-    // that now name one song are summed; the result merges by maximum with what is already there.
-    // BTreeMap for the hour histogram: its JSON must come out the same on every import.
-    let mut days: HashMap<DayKey, DayCounts> = HashMap::new();
-    for (track_key, by_source) in events["counters"].as_object().into_iter().flatten() {
-        let Some(old_id) = event_tracks.get(track_key).and_then(|fp| fp["songId"].as_str()) else { continue };
-        let Some(target) = target_of(old_id) else { continue };
-        let (song_id, pending_id) = match target {
-            Target::Song(s) => (Some(s), None),
-            Target::Pending(p) => (None, Some(p)),
-        };
-        for (source_id, by_day) in by_source.as_object().into_iter().flatten() {
-            for (day, c) in by_day.as_object().into_iter().flatten() {
-                let entry = days
-                    .entry((source_id.clone(), day.clone(), song_id.clone(), pending_id))
-                    .or_insert_with(|| (0, 0, 0, BTreeMap::new()));
-                entry.0 += c["l"].as_i64().unwrap_or(0);
-                entry.1 += c["f"].as_i64().unwrap_or(0);
-                entry.2 += c["s"].as_i64().unwrap_or(0);
-                for (hour, n) in c["h"].as_object().into_iter().flatten() {
-                    *entry.3.entry(hour.clone()).or_default() += n.as_i64().unwrap_or(0);
-                }
-            }
-        }
-    }
-    for ((source_id, day, song_id, pending_id), (l, f, s, hours)) in days {
-        let hours = (!hours.is_empty()).then(|| serde_json::to_string(&hours)).transpose()?;
-        tx.execute(
-            "INSERT INTO legacy_daily (source_id, song_id, pending_id, day, l, f, s, hours)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-             ON CONFLICT(source_id, day, ifnull(song_id, ''), ifnull(pending_id, 0)) DO UPDATE SET
-               l = max(l, excluded.l), f = max(f, excluded.f), s = max(s, excluded.s),
-               hours = coalesce(excluded.hours, hours)",
-            params![source_id, song_id, pending_id, day, l, f, s, hours],
-        )?;
-        report.listening_days += 1;
-        report.listens_l += l;
-        report.listens_f += f;
-        report.listens_s += s;
-    }
+    let (days, l, f, sk) = write_counters(&tx, &events, &targets)?;
+    report.listening_days = days;
+    report.listens_l = l;
+    report.listens_f = f;
+    report.listens_s = sk;
 
     // ELO: ratings become the baseline; the duel history is kept for display, not replayed.
     let mut unmapped_ratings = serde_json::Map::new();
@@ -365,7 +331,10 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
     for song in songs.as_array().into_iter().flatten() {
         let (Some(id), Some(added)) = (song["songId"].as_str(), song["addedDate"].as_i64()) else { continue };
         if let Some(Target::Song(song_id)) = target_of(id) {
-            tx.execute("UPDATE tracks SET first_seen_at = min(first_seen_at, ?2) WHERE song_id = ?1", params![song_id, added])?;
+            tx.execute(
+                "UPDATE tracks SET first_seen_at = min(first_seen_at, ?2) WHERE song_id = ?1",
+                params![song_id, added],
+            )?;
         }
     }
     crate::plays::recompute_legacy_plays(&tx)?;
@@ -437,13 +406,18 @@ pub fn reattach_pending(db: &mut Db) -> Result<usize> {
     // Documents that name pending records by text.
     let replacements: HashMap<String, String> =
         matches.iter().map(|(p, s)| (format!("pending:{p}"), s.clone())).collect();
-    let docs: Vec<(String, String)> =
-        tx.prepare("SELECT tierlist_id, doc FROM tierlists")?.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+    let docs: Vec<(String, String)> = tx
+        .prepare("SELECT tierlist_id, doc FROM tierlists")?
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
     for (id, doc) in docs {
         let value: Value = serde_json::from_str(&doc).unwrap_or_default();
         let replaced = replace_strings(&value, &replacements);
         if replaced != value {
-            tx.execute("UPDATE tierlists SET doc = ?2 WHERE tierlist_id = ?1", params![id, serde_json::to_string(&replaced)?])?;
+            tx.execute(
+                "UPDATE tierlists SET doc = ?2 WHERE tierlist_id = ?1",
+                params![id, serde_json::to_string(&replaced)?],
+            )?;
         }
     }
     let settings: Vec<(String, String)> = tx
@@ -454,7 +428,10 @@ pub fn reattach_pending(db: &mut Db) -> Result<usize> {
         let parsed: Value = serde_json::from_str(&value).unwrap_or_default();
         let replaced = replace_strings(&parsed, &replacements);
         if replaced != parsed {
-            tx.execute("UPDATE settings_shared SET value = ?2 WHERE key = ?1", params![key, serde_json::to_string(&replaced)?])?;
+            tx.execute(
+                "UPDATE settings_shared SET value = ?2 WHERE key = ?1",
+                params![key, serde_json::to_string(&replaced)?],
+            )?;
         }
     }
     crate::plays::recompute_legacy_plays(&tx)?;
@@ -473,14 +450,74 @@ fn replace_strings(value: &Value, map: &HashMap<String, String>) -> Value {
     }
 }
 
-struct Resolver<'t, 'c> {
-    tx: &'t Transaction<'c>,
-    library: &'t LibraryIndex,
-    cache: HashMap<String, i64>,
+/// Writes a 1.x counter file (`counters[trackKey][sourceId][day] = {l, f, s, h}`) into
+/// `legacy_daily`. Track keys that now name one song are summed; the result merges by maximum with
+/// what is already there, so the same counters imported twice, or from a profile and from its own
+/// export, never double. Returns (rows, l, f, s).
+pub(crate) fn write_counters(
+    tx: &Transaction<'_>,
+    events: &Value,
+    targets: &HashMap<String, Target>,
+) -> Result<(usize, i64, i64, i64)> {
+    let tracks = events["tracks"].as_object().cloned().unwrap_or_default();
+    // BTreeMap for the hour histogram: its JSON must come out the same on every import.
+    let mut days: HashMap<DayKey, DayCounts> = HashMap::new();
+    for (track_key, by_source) in events["counters"].as_object().into_iter().flatten() {
+        let Some(old_id) = tracks.get(track_key).and_then(|fp| fp["songId"].as_str()) else { continue };
+        let Some(target) = targets.get(old_id).cloned() else { continue };
+        let (song_id, pending_id) = match target {
+            Target::Song(s) => (Some(s), None),
+            Target::Pending(p) => (None, Some(p)),
+        };
+        for (source_id, by_day) in by_source.as_object().into_iter().flatten() {
+            for (day, c) in by_day.as_object().into_iter().flatten() {
+                let entry = days
+                    .entry((source_id.clone(), day.clone(), song_id.clone(), pending_id))
+                    .or_insert_with(|| (0, 0, 0, BTreeMap::new()));
+                entry.0 += c["l"].as_i64().unwrap_or(0);
+                entry.1 += c["f"].as_i64().unwrap_or(0);
+                entry.2 += c["s"].as_i64().unwrap_or(0);
+                for (hour, n) in c["h"].as_object().into_iter().flatten() {
+                    *entry.3.entry(hour.clone()).or_default() += n.as_i64().unwrap_or(0);
+                }
+            }
+        }
+    }
+    let (mut rows, mut total_l, mut total_f, mut total_s) = (0, 0, 0, 0);
+    for ((source_id, day, song_id, pending_id), (l, f, s, hours)) in days {
+        let hours = (!hours.is_empty()).then(|| serde_json::to_string(&hours)).transpose()?;
+        tx.execute(
+            "INSERT INTO legacy_daily (source_id, song_id, pending_id, day, l, f, s, hours)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(source_id, day, ifnull(song_id, ''), ifnull(pending_id, 0)) DO UPDATE SET
+               l = max(l, excluded.l), f = max(f, excluded.f), s = max(s, excluded.s),
+               hours = coalesce(excluded.hours, hours)",
+            params![source_id, song_id, pending_id, day, l, f, s, hours],
+        )?;
+        rows += 1;
+        total_l += l;
+        total_f += f;
+        total_s += s;
+    }
+    Ok((rows, total_l, total_f, total_s))
+}
+
+pub(crate) struct Resolver<'t, 'c> {
+    pub(crate) tx: &'t Transaction<'c>,
+    pub(crate) library: &'t LibraryIndex,
+    pub(crate) cache: HashMap<String, i64>,
+    /// The `pending_tracks.source` of records this resolver creates.
+    pub(crate) source: &'static str,
 }
 
 impl Resolver<'_, '_> {
-    fn resolve(&mut self, old_id: &str, fp: &Fingerprint, path: Option<&str>, report: &mut ImportReport) -> Result<Target> {
+    pub(crate) fn resolve(
+        &mut self,
+        old_id: &str,
+        fp: &Fingerprint,
+        path: Option<&str>,
+        report: &mut ImportReport,
+    ) -> Result<Target> {
         if let Some(path) = path {
             let found = self
                 .library
@@ -501,7 +538,7 @@ impl Resolver<'_, '_> {
     }
 
     /// A song id that neither the song store nor the counters describe: pending with no fingerprint.
-    fn pending_for_unknown(&mut self, old_id: &str) -> Result<i64> {
+    pub(crate) fn pending_for_unknown(&mut self, old_id: &str) -> Result<i64> {
         self.pending(old_id, &Fingerprint { title: None, artists: Vec::new(), duration_ms: None, file_name: None })
     }
 
@@ -513,7 +550,7 @@ impl Resolver<'_, '_> {
             .tx
             .query_row(
                 "SELECT pending_id FROM pending_tracks WHERE source = ?1 AND old_song_id = ?2",
-                params![SOURCE, old_id],
+                params![self.source, old_id],
                 |r| r.get(0),
             )
             .optional()?;
@@ -523,7 +560,14 @@ impl Resolver<'_, '_> {
                 self.tx.execute(
                     "INSERT INTO pending_tracks (source, old_song_id, file_name, title, artists, duration_ms)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                    params![SOURCE, old_id, fp.file_name, fp.title, serde_json::to_string(&fp.artists)?, fp.duration_ms],
+                    params![
+                        self.source,
+                        old_id,
+                        fp.file_name,
+                        fp.title,
+                        serde_json::to_string(&fp.artists)?,
+                        fp.duration_ms
+                    ],
                 )?;
                 self.tx.last_insert_rowid()
             }
@@ -535,7 +579,7 @@ impl Resolver<'_, '_> {
 
 /// The tiers of 1.x, in order, and a tier with several candidates is skipped: a wrong
 /// re-attachment is worse than a pending record.
-fn match_fingerprint(library: &LibraryIndex, fp: &Fingerprint) -> Option<String> {
+pub(crate) fn match_fingerprint(library: &LibraryIndex, fp: &Fingerprint) -> Option<String> {
     let duration = fp.duration_ms?;
     let close = |d: i64| (d - duration).abs() <= 1000;
     if let Some(name) = &fp.file_name {
@@ -574,7 +618,7 @@ fn dedup(mut v: Vec<&String>) -> Vec<&String> {
     v
 }
 
-fn library_index(db: &Db) -> Result<LibraryIndex> {
+pub(crate) fn library_index(db: &Db) -> Result<LibraryIndex> {
     let mut index = LibraryIndex {
         by_uri: HashMap::new(),
         by_uri_folded: HashMap::new(),
@@ -598,9 +642,8 @@ fn library_index(db: &Db) -> Result<LibraryIndex> {
     )?;
     let variants: Vec<(i64, String, String, i64)> =
         stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?.collect::<rusqlite::Result<_>>()?;
-    let mut artists_of = conn.prepare(
-        "SELECT name FROM variant_artists WHERE variant_id = ?1 AND role = 'artist' ORDER BY position",
-    )?;
+    let mut artists_of =
+        conn.prepare("SELECT name FROM variant_artists WHERE variant_id = ?1 AND role = 'artist' ORDER BY position")?;
     for (variant_id, song_id, title, duration) in variants {
         let mut artists: Vec<String> = artists_of
             .query_map([variant_id], |r| r.get::<_, String>(0))?
@@ -634,7 +677,7 @@ fn fingerprint_of_song(song: &Value) -> Fingerprint {
     }
 }
 
-fn fingerprint_of_event(fp: &Value) -> Fingerprint {
+pub(crate) fn fingerprint_of_event(fp: &Value) -> Fingerprint {
     Fingerprint {
         title: fp["title"].as_str().map(str::to_owned),
         artists: fp["artists"].as_array().into_iter().flatten().filter_map(|a| a.as_str().map(str::to_owned)).collect(),
@@ -645,7 +688,7 @@ fn fingerprint_of_event(fp: &Value) -> Fingerprint {
 
 /// Replaces every string that is a known old song id inside `value` with the new id (or
 /// `pending:<id>`). Used for documents whose shape this importer does not need to understand.
-fn remap_song_ids(value: &Value, targets: &HashMap<String, Target>) -> Value {
+pub(crate) fn remap_song_ids(value: &Value, targets: &HashMap<String, Target>) -> Value {
     match value {
         Value::String(s) => match targets.get(s) {
             Some(Target::Song(id)) => json!(id),
@@ -658,7 +701,7 @@ fn remap_song_ids(value: &Value, targets: &HashMap<String, Target>) -> Value {
     }
 }
 
-fn put_shared(tx: &Transaction<'_>, key: &str, value: &Value, now: i64, device_id: &str) -> Result<()> {
+pub(crate) fn put_shared(tx: &Transaction<'_>, key: &str, value: &Value, now: i64, device_id: &str) -> Result<()> {
     if value.is_null() {
         return Ok(());
     }
@@ -691,7 +734,10 @@ mod tests {
 
     #[test]
     fn remap_replaces_only_known_ids() {
-        let targets = HashMap::from([("old".to_owned(), Target::Song("new".to_owned())), ("gone".to_owned(), Target::Pending(4))]);
+        let targets = HashMap::from([
+            ("old".to_owned(), Target::Song("new".to_owned())),
+            ("gone".to_owned(), Target::Pending(4)),
+        ]);
         let doc = json!({"a": ["old", "gone", "other"], "b": {"songAId": "old"}});
         assert_eq!(
             remap_song_ids(&doc, &targets),

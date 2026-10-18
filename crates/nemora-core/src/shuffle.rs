@@ -135,11 +135,8 @@ pub fn weights(inputs: &Inputs<'_>, targets: &[String], intensity: f64) -> HashM
         } else {
             0.0
         };
-        let score = if has_elo {
-            0.45 * t + 0.35 * a + 0.1 * elo_score(id) + 0.1 * l
-        } else {
-            0.5 * t + 0.4 * a + 0.1 * l
-        };
+        let score =
+            if has_elo { 0.45 * t + 0.35 * a + 0.1 * elo_score(id) + 0.1 * l } else { 0.5 * t + 0.4 * a + 0.1 * l };
         let w = (1.0 - blend + blend * score).max(0.001);
         out.insert(id.clone(), w * freshness(id));
     }
@@ -189,12 +186,14 @@ pub fn weighted_order(
         let previous = order.last().map(|(_, id)| id.as_str());
         let mut pick = head;
         if let Some(prev) = previous
-            && pairs.iter().any(|(a, b)| a == prev || b == prev) {
-                // The best key that is not a too-different neighbour; if every one is, the best key.
-                if let Some(free) = (head..keyed.len()).find(|&k| !taken[k] && !pairs.contains(&pair_key(prev, keyed[k].2))) {
-                    pick = free;
-                }
+            && pairs.iter().any(|(a, b)| a == prev || b == prev)
+        {
+            // The best key that is not a too-different neighbour; if every one is, the best key.
+            if let Some(free) = (head..keyed.len()).find(|&k| !taken[k] && !pairs.contains(&pair_key(prev, keyed[k].2)))
+            {
+                pick = free;
             }
+        }
         taken[pick] = true;
         order.push((keyed[pick].1, keyed[pick].2));
     }
@@ -209,7 +208,8 @@ pub fn weighted_order(
 
 /// Tierlists as the shuffle sees them; pending items are left out.
 pub fn stored_tierlists(db: &crate::db::Db) -> crate::Result<Vec<Tierlist>> {
-    let mut stmt = db.conn().prepare("SELECT doc FROM tierlists WHERE deleted_at IS NULL ORDER BY created_at, tierlist_id")?;
+    let mut stmt =
+        db.conn().prepare("SELECT doc FROM tierlists WHERE deleted_at IS NULL ORDER BY created_at, tierlist_id")?;
     let docs: Vec<String> = stmt.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
     Ok(docs
         .into_iter()
@@ -271,7 +271,14 @@ pub fn stored_weights(db: &crate::db::Db, targets: &[String], intensity: f64) ->
     let tierlists = stored_tierlists(db)?;
     let recent = recent_songs(db, 50)?;
     let ratings = crate::elo::ratings(db)?;
-    let inputs = Inputs { songs: &songs, tierlists: &tierlists, full_listens: &full, recent: &recent, ratings: &ratings, total_duels: crate::elo::total_duels(db)? };
+    let inputs = Inputs {
+        songs: &songs,
+        tierlists: &tierlists,
+        full_listens: &full,
+        recent: &recent,
+        ratings: &ratings,
+        total_duels: crate::elo::total_duels(db)?,
+    };
     Ok(weights(&inputs, targets, intensity))
 }
 
@@ -300,8 +307,7 @@ mod tests {
             draws[i - 1]
         };
         // Current = "a"; keys b > c > d, but "a" and "b" are too different.
-        let (order, positions) =
-            weighted_order(&queue, &weights, &[("b".into(), "a".into())], Some(0), &mut random);
+        let (order, positions) = weighted_order(&queue, &weights, &[("b".into(), "a".into())], Some(0), &mut random);
         assert_eq!(order, ["a", "c", "b", "d"]);
         assert_eq!(positions, [0, 2, 1, 3]);
     }

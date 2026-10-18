@@ -1,6 +1,8 @@
 //! The M3U resolver against android/base's own answers (`tools/oracle/m3u.ts`).
 
-use nemora_core::m3u::{LibraryTrack, Resolver, clean_file_stem, compact_key, file_name_from_content_uri, location_to_path, parse};
+use nemora_core::m3u::{
+    LibraryTrack, Resolver, clean_file_stem, compact_key, file_name_from_content_uri, location_to_path, parse,
+};
 use serde_json::Value;
 
 fn load() -> Value {
@@ -27,7 +29,10 @@ fn helpers_match_android_base() {
         }
         let got = file_name_from_content_uri(input).map(|(f, d)| (f, d.unwrap_or_default()));
         let want = h["contentName"].as_object().map(|o| {
-            (o["fileName"].as_str().unwrap().to_owned(), o.get("folderName").and_then(Value::as_str).unwrap_or_default().to_owned())
+            (
+                o["fileName"].as_str().unwrap().to_owned(),
+                o.get("folderName").and_then(Value::as_str).unwrap_or_default().to_owned(),
+            )
         });
         if got != want {
             failures.push(format!("content name({input:?}) = {got:?}, android/base {want:?}"));

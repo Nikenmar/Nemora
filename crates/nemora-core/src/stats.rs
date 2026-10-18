@@ -137,9 +137,9 @@ pub fn dashboard(db: &Db, range: Range, today: &str) -> Result<Dashboard> {
          FROM ({DAY_ROWS}) d JOIN tracks t ON t.song_id = d.song_id
          WHERE d.day BETWEEN ?1 AND ?2 GROUP BY d.song_id"
     ))?;
-    for row in stmt.query_map(params![from, to], |r| {
-        Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))
-    })? {
+    for row in stmt
+        .query_map(params![from, to], |r| Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))))?
+    {
         let (song, figures) = row?;
         per_song.insert(song, figures);
     }
@@ -181,12 +181,24 @@ pub fn dashboard(db: &Db, range: Range, today: &str) -> Result<Dashboard> {
     let visible: Vec<(&String, &(i64, i64, i64, i64))> =
         per_song.iter().filter(|(s, _)| !blacklisted.contains(*s)).collect();
 
-    let mut top_songs: Vec<SongEntry> = visible.iter().filter(|(_, f)| f.0 > 0).filter_map(|(s, f)| entry(s, f)).collect();
-    top_songs.sort_by(|a, b| b.plays.cmp(&a.plays).then_with(|| normalize(&a.title).cmp(&normalize(&b.title))).then_with(|| a.song_id.cmp(&b.song_id)));
+    let mut top_songs: Vec<SongEntry> =
+        visible.iter().filter(|(_, f)| f.0 > 0).filter_map(|(s, f)| entry(s, f)).collect();
+    top_songs.sort_by(|a, b| {
+        b.plays
+            .cmp(&a.plays)
+            .then_with(|| normalize(&a.title).cmp(&normalize(&b.title)))
+            .then_with(|| a.song_id.cmp(&b.song_id))
+    });
     top_songs.truncate(TOP_SONGS);
 
-    let mut most_skipped: Vec<SongEntry> = visible.iter().filter(|(_, f)| f.2 > 0).filter_map(|(s, f)| entry(s, f)).collect();
-    most_skipped.sort_by(|a, b| b.skips.cmp(&a.skips).then_with(|| normalize(&a.title).cmp(&normalize(&b.title))).then_with(|| a.song_id.cmp(&b.song_id)));
+    let mut most_skipped: Vec<SongEntry> =
+        visible.iter().filter(|(_, f)| f.2 > 0).filter_map(|(s, f)| entry(s, f)).collect();
+    most_skipped.sort_by(|a, b| {
+        b.skips
+            .cmp(&a.skips)
+            .then_with(|| normalize(&a.title).cmp(&normalize(&b.title)))
+            .then_with(|| a.song_id.cmp(&b.song_id))
+    });
     most_skipped.truncate(TOP_NAMES);
 
     let plays_of = |s: &str| per_song.get(s).map_or(0, |f| f.0);
@@ -201,7 +213,12 @@ pub fn dashboard(db: &Db, range: Range, today: &str) -> Result<Dashboard> {
         }
         let mut list: Vec<NameEntry> =
             totals.into_iter().filter(|(_, p)| *p > 0).map(|(name, plays)| NameEntry { name, plays }).collect();
-        list.sort_by(|a, b| b.plays.cmp(&a.plays).then_with(|| normalize(&a.name).cmp(&normalize(&b.name))).then_with(|| a.name.cmp(&b.name)));
+        list.sort_by(|a, b| {
+            b.plays
+                .cmp(&a.plays)
+                .then_with(|| normalize(&a.name).cmp(&normalize(&b.name)))
+                .then_with(|| a.name.cmp(&b.name))
+        });
         list.truncate(TOP_NAMES);
         Ok(list)
     };
@@ -210,7 +227,8 @@ pub fn dashboard(db: &Db, range: Range, today: &str) -> Result<Dashboard> {
         "SELECT DISTINCT v.song_id, a.name FROM variant_artists a JOIN track_variants v USING (variant_id) WHERE a.role = 'artist'",
     )?;
     let top_albums = names("SELECT DISTINCT song_id, album FROM track_variants WHERE album IS NOT NULL")?;
-    let top_genres = names("SELECT DISTINCT v.song_id, g.name FROM variant_genres g JOIN track_variants v USING (variant_id)")?;
+    let top_genres =
+        names("SELECT DISTINCT v.song_id, g.name FROM variant_genres g JOIN track_variants v USING (variant_id)")?;
 
     Ok(Dashboard {
         range,
@@ -247,18 +265,21 @@ fn hour_histogram(db: &Db, from: &str, to: &str) -> Result<(Vec<i64>, Option<Str
         }
         note(day);
     }
-    let mut stmt = conn.prepare("SELECT day, hours FROM legacy_daily WHERE song_id IS NOT NULL AND hours IS NOT NULL")?;
+    let mut stmt =
+        conn.prepare("SELECT day, hours FROM legacy_daily WHERE song_id IS NOT NULL AND hours IS NOT NULL")?;
     for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
         let (day, json) = row?;
         if (from..=to).contains(&day.as_str())
-            && let Ok(map) = serde_json::from_str::<HashMap<String, i64>>(&json) {
-                for (hour, n) in map {
-                    if let Ok(h) = hour.parse::<usize>()
-                        && h < 24 {
-                            hours[h] += n;
-                        }
+            && let Ok(map) = serde_json::from_str::<HashMap<String, i64>>(&json)
+        {
+            for (hour, n) in map {
+                if let Ok(h) = hour.parse::<usize>()
+                    && h < 24
+                {
+                    hours[h] += n;
                 }
             }
+        }
         note(day);
     }
     Ok((hours, since))
@@ -292,7 +313,8 @@ fn song_display(db: &Db) -> Result<HashMap<String, (String, Vec<String>, Option<
 }
 
 fn activity(per_day: &BTreeMap<String, i64>, range: Range, today: i64) -> Vec<Bucket> {
-    let plays_between = |from: &str, to: &str| -> i64 { per_day.range(from.to_owned()..=to.to_owned()).map(|(_, p)| p).sum() };
+    let plays_between =
+        |from: &str, to: &str| -> i64 { per_day.range(from.to_owned()..=to.to_owned()).map(|(_, p)| p).sum() };
     let month_bucket = |y: i64, m: i64| {
         let first = format!("{y:04}-{m:02}-01");
         let last = format!("{y:04}-{m:02}-31");
@@ -355,11 +377,14 @@ mod tests {
 
     fn seed(db: &Db) {
         let c = db.conn();
-        for (song, title, artist, album, duration) in
-            [("a", "Alpha", "X", Some("One"), 200_000), ("b", "Beta", "Y", Some("One"), 100_000), ("c", "Gamma", "X", None, 300_000)]
-        {
+        for (song, title, artist, album, duration) in [
+            ("a", "Alpha", "X", Some("One"), 200_000),
+            ("b", "Beta", "Y", Some("One"), 100_000),
+            ("c", "Gamma", "X", None, 300_000),
+        ] {
             let id = song.repeat(26);
-            c.execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, ?2, NULL, 0, 0)", params![id, duration]).unwrap();
+            c.execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, ?2, NULL, 0, 0)", params![id, duration])
+                .unwrap();
             c.execute(
                 "INSERT INTO track_variants (song_id, tag_signature, title, title_sort, artist_sort, album, album_sort, last_seen_at)
                  VALUES (?1, 'sig', ?2, lower(?2), ?3, ?4, ?4, 0)",
@@ -379,7 +404,8 @@ mod tests {
         c.execute("INSERT INTO play_daily VALUES (?1, '2026-10-16', 3, 1, 0, 2, 40000)", [&b]).unwrap();
         c.execute("INSERT INTO play_hourly VALUES (?1, '2026-10-17', 21, 3)", [&a]).unwrap();
         // Imported 1.x days for c: l=5, s=1 -> 4 plays, with an hour histogram of listens.
-        c.execute("INSERT INTO legacy_daily VALUES ('DEV', ?1, NULL, '2025-12-31', 5, 2, 1, '{\"9\": 5}', 0)", [&c_]).unwrap();
+        c.execute("INSERT INTO legacy_daily VALUES ('DEV', ?1, NULL, '2025-12-31', 5, 2, 1, '{\"9\": 5}', 0)", [&c_])
+            .unwrap();
         crate::plays::recompute_legacy_plays(c).unwrap();
         c.execute("INSERT INTO favorites VALUES (?1, 1, 0, 'x')", [&a]).unwrap();
     }
@@ -389,11 +415,30 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         seed(&db);
         let all = dashboard(&db, Range::AllTime, "2026-10-18").unwrap();
-        assert_eq!(all.totals, Totals { distinct_songs: 3, plays: 9, full: 5, skips: 3, listening_ms: 500_000 + 100_000 + 40_000 + 4 * 300_000, favorites: 1 });
+        assert_eq!(
+            all.totals,
+            Totals {
+                distinct_songs: 3,
+                plays: 9,
+                full: 5,
+                skips: 3,
+                listening_ms: 500_000 + 100_000 + 40_000 + 4 * 300_000,
+                favorites: 1
+            }
+        );
         assert_eq!(all.available_years, [2026, 2025]);
-        assert_eq!(all.top_songs.iter().map(|s| (s.title.as_str(), s.plays)).collect::<Vec<_>>(), [("Alpha", 4), ("Gamma", 4), ("Beta", 1)]);
-        assert_eq!(all.most_skipped.iter().map(|s| (s.title.as_str(), s.skips)).collect::<Vec<_>>(), [("Beta", 2), ("Gamma", 1)]);
-        assert_eq!(all.top_artists, [NameEntry { name: "X".into(), plays: 8 }, NameEntry { name: "Y".into(), plays: 1 }]);
+        assert_eq!(
+            all.top_songs.iter().map(|s| (s.title.as_str(), s.plays)).collect::<Vec<_>>(),
+            [("Alpha", 4), ("Gamma", 4), ("Beta", 1)]
+        );
+        assert_eq!(
+            all.most_skipped.iter().map(|s| (s.title.as_str(), s.skips)).collect::<Vec<_>>(),
+            [("Beta", 2), ("Gamma", 1)]
+        );
+        assert_eq!(
+            all.top_artists,
+            [NameEntry { name: "X".into(), plays: 8 }, NameEntry { name: "Y".into(), plays: 1 }]
+        );
         assert_eq!(all.top_albums, [NameEntry { name: "One".into(), plays: 5 }]);
         assert_eq!(all.hours[21], 3);
         assert_eq!(all.hours[9], 5);

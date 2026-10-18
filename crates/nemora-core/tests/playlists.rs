@@ -16,10 +16,13 @@ fn playlists_keep_songs_through_edits_and_import_m3u() {
     let root = common::temp_dir("playlists");
     let music = root.join("music");
     std::fs::create_dir_all(&music).unwrap();
-    for (i, (file, title, artist)) in
-        [("01. Red X - Shiniest Sky.flac", "Shiniest Sky", "Red X"), ("Night Drive.flac", "Night Drive", "Lvstlove"), ("c.flac", "Gats", "Susumu Hirasawa")]
-            .into_iter()
-            .enumerate()
+    for (i, (file, title, artist)) in [
+        ("01. Red X - Shiniest Sky.flac", "Shiniest Sky", "Red X"),
+        ("Night Drive.flac", "Night Drive", "Lvstlove"),
+        ("c.flac", "Gats", "Susumu Hirasawa"),
+    ]
+    .into_iter()
+    .enumerate()
     {
         let path = music.join(file);
         common::flac(&path, 300 + i as u32, 2);
@@ -33,9 +36,17 @@ fn playlists_keep_songs_through_edits_and_import_m3u() {
 
     // Create, add, move, remove.
     let p = playlists::create(&db, "Mine").unwrap();
-    playlists::add(&mut db, &p, &[(id_of("Gats"), None), (id_of("Night Drive"), None), (id_of("Shiniest Sky"), None)], None).unwrap();
+    playlists::add(
+        &mut db,
+        &p,
+        &[(id_of("Gats"), None), (id_of("Night Drive"), None), (id_of("Shiniest Sky"), None)],
+        None,
+    )
+    .unwrap();
     playlists::move_item(&mut db, &p, 2, 0).unwrap();
-    let titles = |db: &Db, missing: bool| playlists::items(db, &p, missing).unwrap().into_iter().map(|i| i.title).collect::<Vec<_>>();
+    let titles = |db: &Db, missing: bool| {
+        playlists::items(db, &p, missing).unwrap().into_iter().map(|i| i.title).collect::<Vec<_>>()
+    };
     assert_eq!(titles(&db, false), ["Shiniest Sky", "Gats", "Night Drive"]);
     playlists::remove(&mut db, &p, &[1]).unwrap();
     assert_eq!(titles(&db, false), ["Shiniest Sky", "Night Drive"]);
@@ -84,7 +95,12 @@ fn playlists_keep_songs_through_edits_and_import_m3u() {
     assert_eq!(library::songs(&db, &SongScope::Favorites, &SongSort::TitleAsc, 0, 10).unwrap().total, 0);
 
     // Tierlists are documents.
-    let t = playlists::save_tierlist(&db, None, &serde_json::json!({"name": "best", "tiers": [{"name": "S", "items": [id_of("Gats")]}]})).unwrap();
+    let t = playlists::save_tierlist(
+        &db,
+        None,
+        &serde_json::json!({"name": "best", "tiers": [{"name": "S", "items": [id_of("Gats")]}]}),
+    )
+    .unwrap();
     assert_eq!(playlists::tierlists(&db).unwrap()[0].0, t);
     playlists::delete_tierlist(&db, &t).unwrap();
     assert!(playlists::tierlists(&db).unwrap().is_empty());

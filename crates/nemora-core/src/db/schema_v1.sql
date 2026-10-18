@@ -182,8 +182,8 @@ CREATE TABLE tierlists (
 
 CREATE TABLE lyrics (
   song_id     TEXT PRIMARY KEY REFERENCES tracks(song_id),
-  plain       TEXT,
-  synced      TEXT,                          -- JSON [[ms, line], ...] when the source has timing
+  text        TEXT NOT NULL,                 -- LRC (timed lines, word timing, [lang:] translations) or plain text
+  synced      INTEGER NOT NULL DEFAULT 0,    -- derived from text: at least one timed line
   source      TEXT NOT NULL CHECK (source IN ('tags', 'lrc_file', 'lrclib', 'musixmatch', 'user')),
   language    TEXT,
   user_edited INTEGER NOT NULL DEFAULT 0,

@@ -163,7 +163,11 @@ fn tagger_edits_keep_the_id_and_other_audio_changes_it() {
         retag(&p, |t| t.push_picture(big_picture()));
         same("1.5 MB cover added", &p, true);
 
-        let p = copy_to(&dir.join(format!("picture.{}", format.extension)), &dir, &format!("stripped.{}", format.extension));
+        let p = copy_to(
+            &dir.join(format!("picture.{}", format.extension)),
+            &dir,
+            &format!("stripped.{}", format.extension),
+        );
         strip_tags(&p);
         same("every tag removed after a cover was added", &p, false);
 

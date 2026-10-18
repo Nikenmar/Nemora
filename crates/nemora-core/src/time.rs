@@ -56,7 +56,8 @@ pub fn parse_iso_ms(s: &str) -> Option<i64> {
     }
     let num = |r: std::ops::Range<usize>| s.get(r)?.parse::<i64>().ok();
     let (y, mo, d, h, mi, sec) = (num(0..4)?, num(5..7)?, num(8..10)?, num(11..13)?, num(14..16)?, num(17..19)?);
-    let millis = if b[19] == b'.' { s[20..s.len() - 1].get(..3).and_then(|m| m.parse::<i64>().ok()).unwrap_or(0) } else { 0 };
+    let millis =
+        if b[19] == b'.' { s[20..s.len() - 1].get(..3).and_then(|m| m.parse::<i64>().ok()).unwrap_or(0) } else { 0 };
     Some(((days_from_civil(y, mo, d) * 24 + h) * 60 + mi) * 60_000 + sec * 1000 + millis)
 }
 

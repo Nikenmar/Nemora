@@ -340,8 +340,13 @@ pub fn select_opponent(
                 let older_penalty = if older.contains(&pair_key(anchor_id, &c.id)) { 0.12 } else { 0.0 };
                 Scored {
                     id: c.id.clone(),
-                    score: lane_score(lane, closeness, context_similarity(anchor, c), confidence(&r), freshness(&r, now))
-                        - exposure_penalty
+                    score: lane_score(
+                        lane,
+                        closeness,
+                        context_similarity(anchor, c),
+                        confidence(&r),
+                        freshness(&r, now),
+                    ) - exposure_penalty
                         - older_penalty,
                     jitter: random() * 0.035,
                 }
@@ -383,14 +388,23 @@ pub fn ratings(db: &Db) -> Result<HashMap<String, Rating>> {
     for row in stmt.query_map([], |r| {
         Ok((
             r.get::<_, String>(0)?,
-            Rating { rating: r.get(1)?, games: r.get(2)?, wins: r.get(3)?, losses: r.get(4)?, draws: r.get(5)?, last_duel_at: None },
+            Rating {
+                rating: r.get(1)?,
+                games: r.get(2)?,
+                wins: r.get(3)?,
+                losses: r.get(4)?,
+                draws: r.get(5)?,
+                last_duel_at: None,
+            },
         ))
     })? {
         let (id, rating) = row?;
         ratings.insert(id, rating);
     }
     // The last imported duel of a song is its last duel, for freshness.
-    let mut stmt = conn.prepare("SELECT song_a, song_b, max(at) FROM duels WHERE imported = 1 AND outcome <> 'skip' GROUP BY song_a, song_b")?;
+    let mut stmt = conn.prepare(
+        "SELECT song_a, song_b, max(at) FROM duels WHERE imported = 1 AND outcome <> 'skip' GROUP BY song_a, song_b",
+    )?;
     for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?)))? {
         let (a, b, at) = row?;
         for id in [a, b] {
@@ -402,7 +416,9 @@ pub fn ratings(db: &Db) -> Result<HashMap<String, Rating>> {
     let mut stmt = conn.prepare(
         "SELECT song_a, song_b, outcome, at FROM duels WHERE imported = 0 AND outcome <> 'skip' ORDER BY at, duel_id",
     )?;
-    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?)))? {
+    for row in stmt.query_map([], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?))
+    })? {
         let (a, b, outcome, at) = row?;
         let winner = match outcome.as_str() {
             "a" => Winner::A,
@@ -507,11 +523,10 @@ pub fn total_duels(db: &Db) -> Result<i64> {
         .query_row("SELECT value FROM settings_shared WHERE key = 'elo.imported_total_duels'", [], |r| r.get(0))
         .optional()?;
     // Stored as a JSON string by the import.
-    let imported: i64 = imported
-        .and_then(|v| serde_json::from_str::<String>(&v).ok())
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0);
-    let own: i64 = db.conn().query_row("SELECT count(*) FROM duels WHERE imported = 0 AND outcome <> 'skip'", [], |r| r.get(0))?;
+    let imported: i64 =
+        imported.and_then(|v| serde_json::from_str::<String>(&v).ok()).and_then(|v| v.parse().ok()).unwrap_or(0);
+    let own: i64 =
+        db.conn().query_row("SELECT count(*) FROM duels WHERE imported = 0 AND outcome <> 'skip'", [], |r| r.get(0))?;
     Ok(imported + own)
 }
 
@@ -549,10 +564,19 @@ pub fn match_songs(db: &Db, ratings: &HashMap<String, Rating>) -> Result<Vec<Mat
          WHERE v.present = 1 AND v.song_id NOT IN (SELECT song_id FROM blacklist_songs WHERE value = 1)
          GROUP BY v.song_id ORDER BY v.title_sort, v.song_id",
     )?;
-    let split = |s: Option<String>| -> Vec<String> { s.map(|s| s.split('\u{1f}').map(str::to_owned).collect()).unwrap_or_default() };
+    let split = |s: Option<String>| -> Vec<String> {
+        s.map(|s| s.split('\u{1f}').map(str::to_owned).collect()).unwrap_or_default()
+    };
     let mut out = Vec::new();
     for row in stmt.query_map([], |r| {
-        Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?, r.get::<_, Option<String>>(2)?, r.get::<_, Option<String>>(3)?, r.get::<_, bool>(4)?, r.get::<_, bool>(5)?))
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, Option<String>>(1)?,
+            r.get::<_, Option<String>>(2)?,
+            r.get::<_, Option<String>>(3)?,
+            r.get::<_, bool>(4)?,
+            r.get::<_, bool>(5)?,
+        ))
     })? {
         let (id, album, artists, genres, played, favorite) = row?;
         let rated = ratings.get(&id).is_some_and(|r| r.games > 0);
@@ -598,7 +622,8 @@ pub fn next_pair(db: &Db, pinned: Option<&str>, random: &mut Random<'_>) -> Resu
             }
             let use_recent = !recent.is_empty() && random() < 0.7;
             let pool: Vec<String> = if use_recent { recent } else { songs.iter().map(|s| s.id.clone()).collect() };
-            let candidates: Vec<(String, i64)> = pool.into_iter().enumerate().map(|(i, id)| (id, now - i as i64)).collect();
+            let candidates: Vec<(String, i64)> =
+                pool.into_iter().enumerate().map(|(i, id)| (id, now - i as i64)).collect();
             select_anchor(&candidates, &eligible, &HashSet::new(), &ratings, now, random)
         }
     };
@@ -632,13 +657,27 @@ pub fn standings(db: &Db, top: usize, recent: usize) -> Result<(Vec<Standing>, V
     let mut list: Vec<Standing> = ratings
         .into_iter()
         .filter(|(id, r)| r.games > 0 && !blacklisted.contains(id))
-        .map(|(song_id, rating)| Standing { effective: effective(&rating), provisional: confidence(&rating) < 1.0, song_id, rating })
+        .map(|(song_id, rating)| Standing {
+            effective: effective(&rating),
+            provisional: confidence(&rating) < 1.0,
+            song_id,
+            rating,
+        })
         .collect();
-    list.sort_by(|a, b| b.effective.partial_cmp(&a.effective).unwrap_or(std::cmp::Ordering::Equal).then_with(|| a.song_id.cmp(&b.song_id)));
+    list.sort_by(|a, b| {
+        b.effective
+            .partial_cmp(&a.effective)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.song_id.cmp(&b.song_id))
+    });
     list.truncate(top);
-    let known: HashSet<String> =
-        db.conn().prepare("SELECT song_id FROM tracks")?.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
-    let duels = history(db)?.into_iter().filter(|d| known.contains(&d.a) && known.contains(&d.b)).take(recent).collect();
+    let known: HashSet<String> = db
+        .conn()
+        .prepare("SELECT song_id FROM tracks")?
+        .query_map([], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let duels =
+        history(db)?.into_iter().filter(|d| known.contains(&d.a) && known.contains(&d.b)).take(recent).collect();
     Ok((list, duels))
 }
 
@@ -653,9 +692,7 @@ mod tests {
         for id in [&a, &b] {
             db.conn().execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, 1000, NULL, 0, 0)", [id]).unwrap();
         }
-        db.conn()
-            .execute("INSERT INTO elo_baseline VALUES (?1, 1300.0, 5, 5, 0, 0, 0)", [&a])
-            .unwrap();
+        db.conn().execute("INSERT INTO elo_baseline VALUES (?1, 1300.0, 5, 5, 0, 0, 0)", [&a]).unwrap();
         let r = submit(&mut db, &a, &b, Winner::B).unwrap();
         // Expected for A at 1300 vs 1200 is 0.64; losing costs 32 * 0.64 = 20.5.
         assert_eq!((r.delta_a, r.delta_b), (-20.5, 20.5));

@@ -19,8 +19,19 @@ fn store(dir: &Path, file: &str, key: &str) -> Value {
 fn dump_hash(db: &Path) -> String {
     let conn = rusqlite::Connection::open(db).unwrap();
     let mut hasher = blake3::Hasher::new();
-    for table in ["favorites", "playlists", "playlist_items", "pending_tracks", "legacy_daily", "elo_baseline",
-                  "duels", "tierlists", "blacklist_songs", "settings_shared", "settings_device"] {
+    for table in [
+        "favorites",
+        "playlists",
+        "playlist_items",
+        "pending_tracks",
+        "legacy_daily",
+        "elo_baseline",
+        "duels",
+        "tierlists",
+        "blacklist_songs",
+        "settings_shared",
+        "settings_device",
+    ] {
         let mut stmt = conn.prepare(&format!("SELECT * FROM {table}")).unwrap();
         let n = stmt.column_count();
         let mut rows: Vec<String> = stmt
@@ -83,5 +94,9 @@ fn main() {
     let first = dump_hash(&db_path);
     let again = import_nemora_1x(&mut db, &old).unwrap();
     let second = dump_hash(&db_path);
-    println!("re-import: dump {first} -> {second} ({}), pending {}", if first == second { "unchanged" } else { "CHANGED" }, again.pending);
+    println!(
+        "re-import: dump {first} -> {second} ({}), pending {}",
+        if first == second { "unchanged" } else { "CHANGED" },
+        again.pending
+    );
 }

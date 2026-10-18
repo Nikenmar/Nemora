@@ -111,10 +111,8 @@ pub fn scan_folders(db: &mut Db, covers: &CoverStore, roots: &[PathBuf]) -> Resu
     }
 
     let claims = CoverClaims::default();
-    let results: Vec<_> = to_process
-        .into_par_iter()
-        .map(|(file, existed)| (process(file, covers, &claims), existed))
-        .collect();
+    let results: Vec<_> =
+        to_process.into_par_iter().map(|(file, existed)| (process(file, covers, &claims), existed)).collect();
     let failed_covers = claims.failed.into_inner().unwrap_or_default();
 
     let tx = db.conn_mut().transaction()?;
@@ -176,12 +174,15 @@ fn walk(dir: &Path, folder_id: i64, out: &mut Vec<FoundFile>) {
             continue;
         }
         let Ok(meta) = entry.metadata() else { continue };
-        let mtime = meta
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-            .map_or(0, |d| d.as_millis() as i64);
-        out.push(FoundFile { uri: path.to_string_lossy().into_owned(), path, size: meta.len() as i64, mtime, folder_id });
+        let mtime =
+            meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map_or(0, |d| d.as_millis() as i64);
+        out.push(FoundFile {
+            uri: path.to_string_lossy().into_owned(),
+            path,
+            size: meta.len() as i64,
+            mtime,
+            folder_id,
+        });
     }
 }
 
@@ -313,17 +314,15 @@ fn insert_variant(
         ],
     )?;
     let variant_id = tx.last_insert_rowid();
-    let mut artist = tx.prepare_cached(
-        "INSERT INTO variant_artists (variant_id, role, position, name) VALUES (?1, ?2, ?3, ?4)",
-    )?;
+    let mut artist =
+        tx.prepare_cached("INSERT INTO variant_artists (variant_id, role, position, name) VALUES (?1, ?2, ?3, ?4)")?;
     for (position, name) in tags.artists.iter().enumerate() {
         artist.execute(params![variant_id, "artist", position as i64, name])?;
     }
     for (position, name) in tags.album_artists.iter().enumerate() {
         artist.execute(params![variant_id, "album_artist", position as i64, name])?;
     }
-    let mut genre =
-        tx.prepare_cached("INSERT INTO variant_genres (variant_id, position, name) VALUES (?1, ?2, ?3)")?;
+    let mut genre = tx.prepare_cached("INSERT INTO variant_genres (variant_id, position, name) VALUES (?1, ?2, ?3)")?;
     for (position, name) in tags.genres.iter().enumerate() {
         genre.execute(params![variant_id, position as i64, name])?;
     }
