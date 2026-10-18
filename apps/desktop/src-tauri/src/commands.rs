@@ -737,6 +737,27 @@ pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res
     Ok(json!({ "synced": nemora_core::lyrics::is_synced(&text), "text": text, "source": source }))
 }
 
+/// Keeps lyrics the view found elsewhere (Musixmatch) under their source; like any found text they
+/// never replace the user's own, and replace a found text only when they are synced and it is not.
+#[tauri::command]
+pub fn lyrics_store_found(
+    handle: AppHandle,
+    app: State<'_, App>,
+    path: String,
+    text: String,
+    source: String,
+) -> Res<bool> {
+    if source == "user" || !nemora_core::lyrics::SOURCES.contains(&source.as_str()) {
+        return Err(format!("unknown lyrics source {source}"));
+    }
+    let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(false) };
+    let saved = app.write(|db| nemora_core::lyrics::save(db, &song, &text, &source)).map_err(fail)?;
+    if saved {
+        notify(&handle, &["songs/lyrics"]);
+    }
+    Ok(saved)
+}
+
 /// Keeps the user's lyrics for the song at `path`; a found text never replaces them.
 #[tauri::command]
 pub fn lyrics_save(handle: AppHandle, app: State<'_, App>, path: String, text: String) -> Res<bool> {
@@ -1101,6 +1122,7 @@ pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<Stri
         .map_err(fail)?;
     app.scan().map_err(fail)?;
     notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
+    crate::watch::sync(&handle);
     let db = app.read();
     let ids: Vec<i64> = library::files(&db)
         .map_err(fail)?
@@ -1116,6 +1138,7 @@ pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<Stri
 pub fn folders_remove(handle: AppHandle, app: State<'_, App>, path: String) -> Res<()> {
     app.write(|db| nemora_core::settings::remove_music_folder(db, std::path::Path::new(&path))).map_err(fail)?;
     notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
+    crate::watch::sync(&handle);
     Ok(())
 }
 

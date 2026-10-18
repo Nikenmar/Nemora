@@ -300,8 +300,24 @@ export class NemoraRuntime {
     return call('play_record', { session });
   }
 
-  toggleLikeSongs(songIds: string[], like?: boolean): Promise<ToggleLikeSongReturnValue> {
-    return call('favorites_toggle', { songIds, like });
+  async toggleLikeSongs(songIds: string[], like?: boolean): Promise<ToggleLikeSongReturnValue> {
+    const result = await call<ToggleLikeSongReturnValue>('favorites_toggle', { songIds, like });
+    if (this.getUserData().preferences.sendSongFavoritesDataToLastFM) {
+      void this.sendLovesToLastFm(result).catch((error: unknown) =>
+        console.error('Hearts were not sent to Last.fm.', error)
+      );
+    }
+    return result;
+  }
+
+  /** As 1.x: a heart is a Last.fm "love", taking it away an "unlove". */
+  private async sendLovesToLastFm({ likes, dislikes }: ToggleLikeSongReturnValue): Promise<void> {
+    const { default: sendLove } = await import('../core/net/lastFm/sendFavoritesDataToLastFM');
+    const repository = await this.networkRepository({ songIds: [...likes, ...dislikes] });
+    for (const song of repository.getSongs()) {
+      const method = likes.includes(song.songId) ? 'track.love' : 'track.unlove';
+      await sendLove(repository, method, song.title, song.artists?.map((artist) => artist.name));
+    }
   }
 
   getBlacklist(): Promise<Blacklist> {
@@ -733,7 +749,16 @@ export class NemoraRuntime {
     _saveLyricsAutomatically?: AutomaticallySaveLyricsTypes
   ): Promise<SongLyrics | undefined> {
     const { default: getSongLyrics } = await import('../core/lyrics/getSongLyrics');
-    return getSongLyrics(songInfo, lyricsType, lyricsRequestType);
+    return getSongLyrics(songInfo, lyricsType, lyricsRequestType, await this.musixmatchToken());
+  }
+
+  /** The Musixmatch token when the user turned Musixmatch on: their own, else the build's. */
+  private async musixmatchToken(): Promise<string | undefined> {
+    const userData = this.getUserData();
+    if (!userData.preferences.isMusixmatchLyricsEnabled) return undefined;
+    const own = userData.customMusixmatchUserToken?.trim();
+    if (own) return decryptCredential(own).catch(() => undefined);
+    return getBuildEnvVariable('MAIN_VITE_MUSIXMATCH_DEFAULT_USER_TOKEN') || undefined;
   }
 
   /** What the 1.x lyrics helpers (translation, romanisation) need from the app. */

@@ -580,26 +580,20 @@ pub fn members(db: &Db, group: Group) -> Result<HashMap<String, Vec<Member>>> {
             &mut out,
         )?,
         Group::Album => {
-            for (key, group) in group_albums(db)? {
-                let ids: Vec<i64> = group.iter().map(|m| m.variant_id).collect();
-                let rows = rows_by_id(db, &ids)?;
-                let mut list: Vec<(Option<i64>, Option<i64>, Member)> = rows
-                    .into_iter()
-                    .map(|r| {
-                        (
-                            r.disc_no,
-                            r.track_no,
-                            Member {
-                                variant_id: r.variant_id,
-                                song_id: r.song_id,
-                                title: r.title,
-                                is_primary: r.is_primary,
-                            },
-                        )
-                    })
-                    .collect();
-                list.sort_by_key(|(d, t, m)| (d.unwrap_or(i64::MAX), t.unwrap_or(i64::MAX), m.variant_id));
-                out.insert(key, list.into_iter().map(|(_, _, m)| m).collect());
+            // One read of every present row, then the groups: a query per album took 0.2 s for
+            // a thousand albums.
+            let mut stmt = conn.prepare(&format!(
+                "SELECT v.variant_id, v.song_id, v.title, {primary} FROM track_variants v WHERE {PRESENT}"
+            ))?;
+            let mut rows: HashMap<i64, Member> = stmt
+                .query_map([], |r| {
+                    Ok(Member { variant_id: r.get(0)?, song_id: r.get(1)?, title: r.get(2)?, is_primary: r.get(3)? })
+                })?
+                .map(|m| m.map(|m| (m.variant_id, m)))
+                .collect::<rusqlite::Result<_>>()?;
+            for (key, mut group) in group_albums(db)? {
+                group.sort_by_key(|m| (m.track.0.unwrap_or(i64::MAX), m.track.1.unwrap_or(i64::MAX), m.variant_id));
+                out.insert(key, group.iter().filter_map(|m| rows.remove(&m.variant_id)).collect());
             }
         }
     }

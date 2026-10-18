@@ -77,15 +77,19 @@ export const parseMusicmatchDataFromLyrics = async (
           metadata.copyright = lyrics_copyright;
         }
 
-        const lyricsLinesData = JSON.parse(subtitle_body) as MusixmatchLyricsLine[];
-
-        for (let i = 0; i < lyricsLinesData.length; i += 1) {
-          const { text, time } = lyricsLinesData[i];
-          output.push(
-            `[${time.minutes >= 10 ? time.minutes : `0${time.minutes}`}:${
-              time.seconds.toString().length > 1 ? time.seconds : `0${time.seconds}`
-            }.${time.hundredths}]${text || '♪'}`
-          );
+        // Musixmatch answers `subtitle_format=mxm` with LRC text nowadays; the JSON lines are the
+        // older answer. Both are accepted.
+        const body = subtitle_body.trim();
+        if (/^\[\d/.test(body)) {
+          output.push(...body.split('\n').map((line) => line.trimEnd()));
+        } else {
+          const lyricsLinesData = JSON.parse(body) as MusixmatchLyricsLine[];
+          const pad = (n: number) => String(n).padStart(2, '0');
+          for (const { text, time } of lyricsLinesData) {
+            output.push(
+              `[${pad(time.minutes)}:${pad(time.seconds)}.${pad(time.hundredths)}]${text || '♪'}`
+            );
+          }
         }
       }
     } else if (

@@ -22,6 +22,7 @@ mod tags_cmd;
 mod taskbar;
 mod user_data;
 mod view;
+mod watch;
 mod widget_server;
 #[allow(unsafe_op_in_unsafe_fn)]
 mod window_backdrop;
@@ -114,6 +115,7 @@ pub fn run() {
             commands::stats_recap,
             commands::lyrics_get,
             commands::lyrics_save,
+            commands::lyrics_store_found,
             tags_cmd::tags_get,
             tags_cmd::tags_update,
             tags_cmd::song_reparse,
@@ -188,6 +190,7 @@ pub fn run() {
         })
         .manage(system::PendingSecondInstanceArgs::default())
         .manage(shellops::ScreenSleepState::default())
+        .manage(watch::FolderWatch::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;
             let profile =
@@ -197,10 +200,12 @@ pub fn run() {
 
             // First start of a profile that 1.x used: scan its folders and import, without holding
             // up the window. The view asks whether it is running and hears when it is done.
+            // The folders are watched from then on: the first scan is the import's own.
             let legacy = legacy_profile(&profile);
-            if tauri_app.state::<app::App>().needs_first_start(&legacy) {
-                let handle = tauri_app.handle().clone();
-                std::thread::spawn(move || {
+            let needs_import = tauri_app.state::<app::App>().needs_first_start(&legacy);
+            let handle = tauri_app.handle().clone();
+            std::thread::spawn(move || {
+                if needs_import {
                     let state = handle.state::<app::App>();
                     if let Err(error) = state.first_start(&legacy) {
                         eprintln!("[nemora] importing the 1.x profile failed: {error}");
@@ -210,8 +215,11 @@ pub fn run() {
                         &handle,
                         &["songs", "artists", "albums", "genres", "playlists", "userData", "userData/musicFolder"],
                     );
-                });
-            }
+                }
+                if let Err(error) = watch::start(&handle) {
+                    eprintln!("[nemora] the music folders cannot be watched: {error}");
+                }
+            });
 
             system::spawn_system_watcher(tauri_app.handle().clone());
             // Paint both layers before the first frame, from native code: the renderer's own call
