@@ -268,12 +268,14 @@ fn add_to_rollups(tx: &Connection, song_id: &str, started_at: i64, offset: i64, 
     Ok(())
 }
 
-/// Songs by their latest session, newest first, each once: the listening history.
-pub fn recent_songs(db: &Db, limit: usize) -> Result<Vec<String>> {
-    let mut stmt = db
-        .conn()
-        .prepare("SELECT song_id FROM play_events GROUP BY song_id ORDER BY max(started_at) DESC, song_id LIMIT ?1")?;
-    let ids = stmt.query_map([limit as i64], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
+/// Songs by their latest session since `since` (ms), newest first, each once: the listening
+/// history. Clearing the history moves `since`; the sessions themselves stay.
+pub fn recent_songs(db: &Db, limit: usize, since: i64) -> Result<Vec<String>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT song_id FROM play_events WHERE started_at > ?2 GROUP BY song_id
+         ORDER BY max(started_at) DESC, song_id LIMIT ?1",
+    )?;
+    let ids = stmt.query_map(params![limit as i64, since], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
     Ok(ids)
 }
 

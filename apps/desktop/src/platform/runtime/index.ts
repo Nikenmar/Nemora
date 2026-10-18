@@ -10,6 +10,7 @@
  */
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 
 import albumCover from '../../renderer/src/assets/images/webp/album_cover_default.webp';
 import artistCover from '../../renderer/src/assets/images/webp/artist_cover_default.webp';
@@ -179,6 +180,11 @@ export class NemoraRuntime {
         payload.map((dataType): DataUpdateEvent => ({ dataType, eventData: [] }))
       );
     });
+    // Notifications the core raises for the user, as 1.x's sendMessage.
+    await listen<{ code: MessageCodes; data?: MessageToRendererData }>(
+      'nemora://message',
+      ({ payload }) => emitLocal('app/sendMessageToRendererEvent', payload.code, payload.data)
+    );
   }
 
   isHydrated(): boolean {
@@ -288,16 +294,16 @@ export class NemoraRuntime {
     return call('library_blacklist');
   }
 
-  blacklistSongs(_ids: string[]): Promise<void> {
-    return later('blacklistSongs');
+  blacklistSongs(ids: string[]): Promise<void> {
+    return call('blacklist_songs', { songIds: ids, value: true });
   }
 
-  restoreBlacklistedSongs(_ids: string[]): Promise<void> {
-    return later('restoreBlacklistedSongs');
+  restoreBlacklistedSongs(ids: string[]): Promise<void> {
+    return call('blacklist_songs', { songIds: ids, value: false });
   }
 
-  deleteSongsFromSystem(_paths: string[], _permanent: boolean): Promise<Result> {
-    return later('deleteSongsFromSystem');
+  deleteSongsFromSystem(paths: string[], permanent: boolean): Promise<Result> {
+    return call('songs_delete_files', { paths, permanent });
   }
 
   getSongFromUnknownSource(_songPath: string): Promise<PathBackedAudioPlayerData> {
@@ -327,19 +333,20 @@ export class NemoraRuntime {
     return call('library_genres', { idsOrNames, sortType });
   }
 
-  getFolders(_folderPaths: string[] = [], _sortType?: FolderSortTypes): Promise<MusicFolder[]> {
-    return later('getFolders');
+  getFolders(folderPaths: string[] = [], sortType?: FolderSortTypes): Promise<MusicFolder[]> {
+    return call('library_folders', { folderPaths, sortType });
   }
 
   getFolderStructures(): Promise<FolderStructure[]> {
     return call('library_folder_structures');
   }
 
+  /** The chosen folders become music folders; subfolder choices are 1.x's and not kept. */
   addSongsFromFolderStructures(
-    _structures: FolderStructure[],
+    structures: FolderStructure[],
     _sortType?: SongSortTypes
   ): Promise<SongData[]> {
-    return later('addSongsFromFolderStructures');
+    return call('folders_add', { paths: structures.map((structure) => structure.path) });
   }
 
   async resyncSongsLibrary(): Promise<true> {
@@ -354,20 +361,20 @@ export class NemoraRuntime {
 
   async clearStaleTempArtwork(_startedAt: Date): Promise<void> {}
 
-  removeMusicFolder(_folderPath: string): Promise<void> {
-    return later('removeMusicFolder');
+  removeMusicFolder(folderPath: string): Promise<void> {
+    return call('folders_remove', { path: folderPath });
   }
 
-  blacklistFolders(_paths: string[]): Promise<void> {
-    return later('blacklistFolders');
+  blacklistFolders(paths: string[]): Promise<void> {
+    return call('blacklist_folders', { folderPaths: paths, value: true });
   }
 
-  restoreBlacklistedFolders(_paths: string[]): Promise<void> {
-    return later('restoreBlacklistedFolders');
+  restoreBlacklistedFolders(paths: string[]): Promise<void> {
+    return call('blacklist_folders', { folderPaths: paths, value: false });
   }
 
-  toggleBlacklistedFolders(_paths: string[], _value?: boolean): Promise<void> {
-    return later('toggleBlacklistedFolders');
+  toggleBlacklistedFolders(paths: string[], value?: boolean): Promise<void> {
+    return call('blacklist_folders', { folderPaths: paths, value });
   }
 
   toggleLikeArtists(_artistIds: string[], _like?: boolean): Promise<ToggleLikeSongReturnValue> {
@@ -433,51 +440,75 @@ export class NemoraRuntime {
   }
 
   addNewPlaylist(
-    _name: string,
-    _songIds?: string[],
-    _artworkPath?: string
+    name: string,
+    songIds?: string[],
+    artworkPath?: string
   ): Promise<{ success: boolean; message?: string; playlist?: Playlist }> {
-    return later('addNewPlaylist');
+    return call('playlist_create', { name, songIds, artworkPath });
   }
 
-  addSongsToPlaylist(_playlistId: string, _songIds: string[]): Promise<void> {
-    return later('addSongsToPlaylist');
+  addSongsToPlaylist(playlistId: string, songIds: string[]): Promise<void> {
+    return call('playlist_add_songs', { playlistId, songIds });
   }
 
-  addPlaylistArtwork(_playlistId: string, _artworkPath: string): Promise<ArtworkPaths | undefined> {
-    return later('addPlaylistArtwork');
+  addPlaylistArtwork(playlistId: string, artworkPath: string): Promise<ArtworkPaths | undefined> {
+    return call('playlist_set_artwork', { playlistId, path: artworkPath });
   }
 
-  renamePlaylist(_playlistId: string, _newName: string): Promise<void> {
-    return later('renamePlaylist');
+  renamePlaylist(playlistId: string, newName: string): Promise<void> {
+    return call('playlist_rename', { playlistId, name: newName });
   }
 
-  removePlaylists(_ids: string[]): Promise<true> {
-    return later('removePlaylists');
+  removePlaylists(ids: string[]): Promise<true> {
+    return call('playlist_remove', { playlistIds: ids });
   }
 
-  removeSongFromPlaylist(_playlistId: string, _songId: string): Promise<Result> {
-    return later('removeSongFromPlaylist');
+  removeSongFromPlaylist(playlistId: string, songId: string): Promise<Result> {
+    return call('playlist_remove_song', { playlistId, songId });
   }
 
-  importPlaylist(): Promise<void> {
-    return later('importPlaylist');
+  async importPlaylist(): Promise<void> {
+    const path = await openDialog({
+      title: 'Select a Destination where your M3U8 file is',
+      filters: [
+        { name: 'M3U8 Files', extensions: ['m3u8', 'm3u'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (typeof path !== 'string') {
+      emitLocal('app/sendMessageToRendererEvent', 'DESTINATION_NOT_SELECTED');
+      return;
+    }
+    await call('playlist_import', { path });
   }
 
-  exportPlaylist(_id: string): Promise<void> {
-    return later('exportPlaylist');
+  async exportPlaylist(id: string): Promise<void> {
+    const [playlist] = await this.getPlaylists([id]);
+    const name = playlist?.name ?? 'playlist';
+    const path = await saveDialog({
+      title: `Select the destination to save '${name}' playlist`,
+      defaultPath: `${name}.m3u8`,
+      filters: [{ name: 'M3U8 Files', extensions: ['m3u8'] }]
+    });
+    if (typeof path !== 'string') {
+      emitLocal('app/sendMessageToRendererEvent', 'DESTINATION_NOT_SELECTED');
+      return;
+    }
+    await call('playlist_export', { playlistId: id, path });
   }
 
-  getMultipleArtworkPaths(_songIds: string[]): Promise<string[]> {
-    return later('getMultipleArtworkPaths');
+  /** Full-size covers: they are composed into the large multi-cover cards. */
+  async getMultipleArtworkPaths(songIds: string[]): Promise<string[]> {
+    const songs = await this.getSongInfo(songIds, undefined, undefined, 0, true);
+    return songs.map((song) => song.artworkPaths.artworkPath);
   }
 
   clearHistory(): Promise<Result> {
-    return later('clearHistory');
+    return call('history_clear', { now: Date.now() });
   }
 
-  refreshRediscover(_thresholdDays?: number): Promise<{ count: number }> {
-    return later('refreshRediscover');
+  refreshRediscover(thresholdDays?: number): Promise<{ count: number }> {
+    return call('rediscover_refresh', { thresholdDays, today: today() });
   }
 
   // ----- tierlists and shuffle -------------------------------------------------------------------

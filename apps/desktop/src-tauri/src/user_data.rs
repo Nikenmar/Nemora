@@ -75,18 +75,7 @@ pub fn set(db: &Db, key: &str, value: &Value) -> nemora_core::Result<()> {
     }
 }
 
-/// The music folders as 1.x `FolderStructure`s.
+/// The music folders as 1.x `FolderStructure`s, with every subfolder that holds songs.
 pub fn music_folders(db: &Db) -> nemora_core::Result<Vec<Value>> {
-    let epoch = "1970-01-01T00:00:00.000Z";
-    Ok(settings::music_folders(db)?
-        .into_iter()
-        .map(|f| {
-            json!({
-                "path": f.path.to_string_lossy(),
-                "stats": { "lastModifiedDate": epoch, "lastChangedDate": epoch, "fileCreatedDate": epoch, "lastParsedDate": epoch },
-                "subFolders": [],
-                "noOfSongs": f.files
-            })
-        })
-        .collect())
+    Ok(crate::folders::trees(db)?.iter().map(crate::folders::structure).collect())
 }

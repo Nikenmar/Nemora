@@ -7,6 +7,7 @@ mod audio_session;
 mod commands;
 mod discord;
 mod dragout;
+mod folders;
 mod protocol;
 mod secrets;
 // Win32 code carried over from 1.1.9 (edition 2021), where an unsafe fn body was one unsafe block.
@@ -91,8 +92,24 @@ pub fn run() {
             commands::library_genres,
             commands::library_playlists,
             commands::library_search,
+            commands::playlist_create,
+            commands::playlist_add_songs,
+            commands::playlist_rename,
+            commands::playlist_remove,
+            commands::playlist_remove_song,
+            commands::playlist_set_artwork,
+            commands::playlist_import,
+            commands::playlist_export,
+            commands::history_clear,
+            commands::rediscover_refresh,
             commands::stats_dashboard,
             commands::library_blacklist,
+            commands::blacklist_songs,
+            commands::blacklist_folders,
+            commands::library_folders,
+            commands::folders_add,
+            commands::folders_remove,
+            commands::songs_delete_files,
             commands::library_folder_structures,
             commands::library_rescan,
             commands::library_listening,

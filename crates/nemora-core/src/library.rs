@@ -79,6 +79,12 @@ pub struct Page<T> {
 
 const PRESENT: &str = "v.present = 1";
 
+/// Whether the row `v` is blacklisted: the song itself, or a file of it inside a blacklisted folder.
+const BLACKLISTED: &str = "(EXISTS (SELECT 1 FROM blacklist_songs b WHERE b.song_id = v.song_id AND b.value = 1)
+     OR EXISTS (SELECT 1 FROM locations bl JOIN folders bf ON bf.excluded = 1
+                  AND substr(bl.uri, 1, length(bf.uri) + 1) IN (bf.uri || '\\', bf.uri || '/')
+                WHERE bl.variant_id = v.variant_id AND bl.missing_since IS NULL))";
+
 /// One page of songs. The order of a list is computed once and cached until the library or the
 /// plays change, so scrolling never re-sorts: a page is a slice of the cached ids.
 pub fn songs(db: &Db, scope: &SongScope, sort: &SongSort, offset: i64, limit: i64) -> Result<Page<SongRow>> {
@@ -106,12 +112,8 @@ fn ordered_ids(
     match scope {
         SongScope::All => {}
         SongScope::Favorites => filter.push_str(" AND v.song_id IN (SELECT song_id FROM favorites WHERE value = 1)"),
-        SongScope::Blacklisted => {
-            filter.push_str(" AND v.song_id IN (SELECT song_id FROM blacklist_songs WHERE value = 1)")
-        }
-        SongScope::NotBlacklisted => {
-            filter.push_str(" AND v.song_id NOT IN (SELECT song_id FROM blacklist_songs WHERE value = 1)")
-        }
+        SongScope::Blacklisted => filter.push_str(&format!(" AND {BLACKLISTED}")),
+        SongScope::NotBlacklisted => filter.push_str(&format!(" AND NOT {BLACKLISTED}")),
         SongScope::Album(_) => filter.push_str(&format!(" AND v.variant_id IN ({})", join_ids(album.unwrap_or(&[])))),
         SongScope::Artist(name) => {
             filter.push_str(" AND v.variant_id IN (SELECT variant_id FROM variant_artists WHERE name = ?)");
@@ -185,7 +187,7 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
     let sql = format!(
         "SELECT v.variant_id, v.song_id, v.title, v.album, v.year, v.track_no, v.disc_no, t.duration_ms, v.cover_hash,
                 EXISTS (SELECT 1 FROM favorites f WHERE f.song_id = v.song_id AND f.value = 1),
-                EXISTS (SELECT 1 FROM blacklist_songs b WHERE b.song_id = v.song_id AND b.value = 1),
+                {BLACKLISTED},
                 coalesce((SELECT plays FROM song_totals st WHERE st.song_id = v.song_id), 0), t.first_seen_at,
                 (SELECT group_concat(name, char(31)) FROM (SELECT name FROM variant_artists a
                    WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position)),
@@ -221,6 +223,15 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
         .map(|row| row.map(|r| (r.variant_id, r)))
         .collect::<rusqlite::Result<_>>()?;
     Ok(ids.iter().filter_map(|id| by_id.remove(id)).collect())
+}
+
+/// The tag signature of a variant: what a playlist item keeps to show the same tags again.
+pub fn variant_signature(db: &Db, variant_id: i64) -> Result<Option<String>> {
+    use rusqlite::OptionalExtension;
+    Ok(db
+        .conn()
+        .query_row("SELECT tag_signature FROM track_variants WHERE variant_id = ?1", [variant_id], |r| r.get(0))
+        .optional()?)
 }
 
 /// The first present variant of each song; songs with no file present are left out.
@@ -454,6 +465,30 @@ fn apply_order<T>(rows: &mut [T], order: &[usize]) {
             position.swap(i, target);
         }
     }
+}
+
+/// A file of the library: where it is and the row it belongs to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct File {
+    pub path: String,
+    pub variant_id: i64,
+    pub song_id: String,
+    pub is_primary: bool,
+}
+
+/// Every present file, in path order.
+pub fn files(db: &Db) -> Result<Vec<File>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT l.uri, v.variant_id, v.song_id,
+                v.variant_id = (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = v.song_id AND w.present = 1)
+         FROM locations l JOIN track_variants v USING (variant_id) WHERE l.missing_since IS NULL ORDER BY l.uri",
+    )?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(File { path: r.get(0)?, variant_id: r.get(1)?, song_id: r.get(2)?, is_primary: r.get(3)? })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
 }
 
 /// A present library row as a member of an artist, a genre or an album.

@@ -64,3 +64,41 @@ pub fn add_music_folder(db: &Db, path: &Path) -> Result<()> {
     )?;
     Ok(())
 }
+
+/// Takes a music folder out of the library: its files are forgotten by this device, their songs
+/// and statistics stay (a song never dies with its file).
+pub fn remove_music_folder(db: &mut Db, path: &Path) -> Result<()> {
+    let path: PathBuf = path.components().collect();
+    let tx = db.conn_mut().transaction()?;
+    let id: Option<i64> = tx
+        .query_row("SELECT folder_id FROM folders WHERE uri = ?1", [path.to_string_lossy().as_ref()], |r| r.get(0))
+        .optional()?;
+    if let Some(id) = id {
+        tx.execute("DELETE FROM locations WHERE folder_id = ?1", [id])?;
+        tx.execute("DELETE FROM folders WHERE folder_id = ?1", [id])?;
+        tx.execute(
+            "UPDATE track_variants SET present = EXISTS (SELECT 1 FROM locations l
+               WHERE l.variant_id = track_variants.variant_id AND l.missing_since IS NULL)",
+            [],
+        )?;
+    }
+    tx.commit()?;
+    db.touch();
+    Ok(())
+}
+
+/// Folders whose songs are blacklisted (1.x folder blacklist).
+pub fn excluded_folders(db: &Db) -> Result<Vec<String>> {
+    let mut stmt = db.conn().prepare("SELECT uri FROM folders WHERE excluded = 1 ORDER BY uri")?;
+    let rows = stmt.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
+pub fn set_folder_excluded(db: &Db, path: &str, excluded: bool) -> Result<()> {
+    db.conn().execute(
+        "INSERT INTO folders (uri, excluded) VALUES (?1, ?2) ON CONFLICT(uri) DO UPDATE SET excluded = excluded.excluded",
+        params![path, i64::from(excluded)],
+    )?;
+    db.touch();
+    Ok(())
+}

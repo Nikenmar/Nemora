@@ -298,7 +298,7 @@ fn playlists_of(
     if !mutable_only {
         let system: [(&str, Vec<String>); 3] = [
             ("Favorites", playlists::favorites(db)?),
-            ("History", nemora_core::plays::recent_songs(db, 500)?),
+            ("History", nemora_core::plays::recent_songs(db, 500, history_cleared_at(db))?),
             ("Rediscover", stored_rediscover(db)),
         ];
         for (id, songs) in system {
@@ -313,7 +313,7 @@ fn playlists_of(
             .filter_map(|i| Some(view_id(i.song_id.as_deref()?, i.variant_id?, true)))
             .collect();
         let count = songs.len() as i64;
-        let cover = row.covers.first().map(String::as_str);
+        let cover = row.custom_cover.as_deref().or(row.covers.first().map(String::as_str));
         out.push((row.name.clone(), count, v.playlist(&row.id, &row.name, songs, row.created_at, cover)));
     }
     use nemora_core::search::fold::normalize;
@@ -391,6 +391,222 @@ pub fn library_search(app: State<'_, App>, filter: String, value: String) -> Res
         "songs": songs, "artists": artists, "albums": albums, "playlists": playlists, "genres": genres,
         "availableResults": found.suggestions,
     }))
+}
+
+/// When the user last cleared the history; sessions before it stay in the statistics.
+fn history_cleared_at(db: &Db) -> i64 {
+    nemora_core::settings::device(db, "history.clearedAt").ok().flatten().and_then(|v| v.as_i64()).unwrap_or(0)
+}
+
+/// A view id as a playlist item: the song, and the tags of the row the user picked.
+fn as_item(db: &Db, id: &str) -> nemora_core::Result<(String, Option<String>)> {
+    let (song, variant) = parse_view_id(id);
+    let hint = match variant {
+        Some(v) => library::variant_signature(db, v)?,
+        None => None,
+    };
+    Ok((song.to_owned(), hint))
+}
+
+fn find_playlist(db: &Db, id: &str) -> nemora_core::Result<Option<playlists::PlaylistRow>> {
+    Ok(playlists::list(db)?.into_iter().find(|p| p.id == id))
+}
+
+fn message(handle: &AppHandle, code: &str, data: Value) {
+    let _ = handle.emit("nemora://message", json!({ "code": code, "data": data }));
+}
+
+#[tauri::command]
+pub fn playlist_create(
+    handle: AppHandle,
+    app: State<'_, App>,
+    name: String,
+    song_ids: Option<Vec<String>>,
+    artwork_path: Option<String>,
+) -> Res<Value> {
+    if playlists::list(&app.read()).map_err(fail)?.iter().any(|p| p.name == name) {
+        return Ok(json!({ "success": false, "message": format!("Playlist with name '{name}' already exists.") }));
+    }
+    let id = app
+        .write(|db| {
+            let id = playlists::create(db, &name)?;
+            let items =
+                song_ids.unwrap_or_default().iter().map(|s| as_item(db, s)).collect::<nemora_core::Result<Vec<_>>>()?;
+            if !items.is_empty() {
+                playlists::add(db, &id, &items, None)?;
+            }
+            if let Some(path) = artwork_path.as_deref().filter(|p| !p.is_empty()) {
+                playlists::set_custom_cover(db, &app.covers, &id, &std::fs::read(path)?)?;
+            }
+            Ok(id)
+        })
+        .map_err(fail)?;
+    notify(&handle, &["playlists/newPlaylist"]);
+    let playlist = playlists_of(&app.read(), &view(&app), std::slice::from_ref(&id), None, true).map_err(fail)?;
+    Ok(json!({ "success": true, "playlist": playlist.first() }))
+}
+
+/// Adds songs to a playlist, leaving out those already in it; adding to Favorites hearts them.
+#[tauri::command]
+pub fn playlist_add_songs(
+    handle: AppHandle,
+    app: State<'_, App>,
+    playlist_id: String,
+    song_ids: Vec<String>,
+) -> Res<()> {
+    if playlist_id == "Favorites" {
+        app.write(|db| song_ids.iter().try_for_each(|id| playlists::set_favorite(db, parse_view_id(id).0, true)))
+            .map_err(fail)?;
+        notify(&handle, &["songs/likes", "playlists/favorites"]);
+        return Ok(());
+    }
+    let (name, added) = app
+        .write(|db| {
+            let playlist = find_playlist(db, &playlist_id)?;
+            let present: std::collections::HashSet<String> =
+                playlists::items(db, &playlist_id, true)?.into_iter().filter_map(|i| i.song_id).collect();
+            let mut items = Vec::new();
+            for id in &song_ids {
+                let item = as_item(db, id)?;
+                if !present.contains(&item.0) && !items.iter().any(|(s, _): &(String, Option<String>)| *s == item.0) {
+                    items.push(item);
+                }
+            }
+            playlists::add(db, &playlist_id, &items, None)?;
+            Ok((playlist.map(|p| p.name).unwrap_or_default(), items.len()))
+        })
+        .map_err(fail)?;
+    notify(&handle, &["playlists/newSong"]);
+    message(&handle, "ADDED_SONGS_TO_PLAYLIST", json!({ "count": added, "name": name }));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn playlist_rename(handle: AppHandle, app: State<'_, App>, playlist_id: String, name: String) -> Res<()> {
+    if find_playlist(&app.read(), &playlist_id).map_err(fail)?.is_none() {
+        message(&handle, "PLAYLIST_NOT_FOUND", Value::Null);
+        return Ok(());
+    }
+    app.write(|db| playlists::rename(db, &playlist_id, &name)).map_err(fail)?;
+    notify(&handle, &["playlists/updatedPlaylist"]);
+    message(&handle, "PLAYLIST_RENAME_SUCCESS", Value::Null);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn playlist_remove(handle: AppHandle, app: State<'_, App>, playlist_ids: Vec<String>) -> Res<bool> {
+    app.write(|db| playlist_ids.iter().try_for_each(|id| playlists::delete(db, id))).map_err(fail)?;
+    notify(&handle, &["playlists/deletedPlaylist"]);
+    Ok(true)
+}
+
+/// Removes every occurrence of a song from a playlist; from Favorites it takes the heart away.
+#[tauri::command]
+pub fn playlist_remove_song(
+    handle: AppHandle,
+    app: State<'_, App>,
+    playlist_id: String,
+    song_id: String,
+) -> Res<Value> {
+    let song = parse_view_id(&song_id).0.to_owned();
+    if playlist_id == "Favorites" {
+        app.write(|db| playlists::set_favorite(db, &song, false)).map_err(fail)?;
+        notify(&handle, &["songs/likes", "playlists/favorites"]);
+        return Ok(json!({ "success": true }));
+    }
+    let removed = app
+        .write(|db| {
+            let positions: Vec<i64> = playlists::items(db, &playlist_id, true)?
+                .into_iter()
+                .filter(|i| i.song_id.as_deref() == Some(song.as_str()))
+                .map(|i| i.position)
+                .collect();
+            playlists::remove(db, &playlist_id, &positions)?;
+            Ok(!positions.is_empty())
+        })
+        .map_err(fail)?;
+    notify(&handle, &["playlists/deletedSong"]);
+    Ok(json!({ "success": removed }))
+}
+
+#[tauri::command]
+pub fn playlist_set_artwork(handle: AppHandle, app: State<'_, App>, playlist_id: String, path: String) -> Res<Value> {
+    let picture = std::fs::read(&path).map_err(fail)?;
+    let hash = app.write(|db| playlists::set_custom_cover(db, &app.covers, &playlist_id, &picture)).map_err(fail)?;
+    notify(&handle, &["playlists"]);
+    Ok(view(&app).artwork(Some(&hash), ""))
+}
+
+/// Imports an M3U/M3U8 file: into the playlist of the same name if there is one, else as a new one.
+#[tauri::command]
+pub fn playlist_import(handle: AppHandle, app: State<'_, App>, path: String) -> Res<()> {
+    let file = std::path::Path::new(&path);
+    let name = file.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let bytes = std::fs::read(file).map_err(fail)?;
+    let text = String::from_utf8_lossy(&bytes);
+    let found = playlists::match_m3u(&app.read(), &text).map_err(fail)?;
+    if found.entries == 0 {
+        message(&handle, "PLAYLIST_IMPORT_FAILED_DUE_TO_INVALID_FILE_DATA", Value::Null);
+        return Ok(());
+    }
+    let existing = playlists::list(&app.read()).map_err(fail)?.into_iter().find(|p| p.name == name);
+    match existing {
+        Some(playlist) => {
+            app.write(|db| playlists::add(db, &playlist.id, &found.songs, None)).map_err(fail)?;
+            message(
+                &handle,
+                "PLAYLIST_IMPORT_TO_EXISTING_PLAYLIST",
+                json!({ "count": found.songs.len(), "name": playlist.name }),
+            );
+        }
+        None => {
+            app.write(|db| {
+                let id = playlists::create(db, &name)?;
+                playlists::add(db, &id, &found.songs, None)
+            })
+            .map_err(fail)?;
+            message(&handle, "PLAYLIST_IMPORT_SUCCESS", json!({ "name": name, "count": found.songs.len() }));
+        }
+    }
+    notify(&handle, &["playlists"]);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn playlist_export(handle: AppHandle, app: State<'_, App>, playlist_id: String, path: String) -> Res<()> {
+    let name = find_playlist(&app.read(), &playlist_id).map_err(fail)?.map(|p| p.name).unwrap_or_default();
+    let written = playlists::export_m3u(&app.read(), &playlist_id)
+        .map_err(fail)
+        .and_then(|text| std::fs::write(&path, text).map_err(fail));
+    match written {
+        Ok(()) => message(&handle, "PLAYLIST_EXPORT_SUCCESS", json!({ "name": name })),
+        Err(_) => message(&handle, "PLAYLIST_EXPORT_FAILED", json!({ "name": name })),
+    }
+    Ok(())
+}
+
+/// Clears the History playlist. The sessions stay: they are the statistics.
+#[tauri::command]
+pub fn history_clear(handle: AppHandle, app: State<'_, App>, now: i64) -> Res<Value> {
+    app.write(|db| nemora_core::settings::set_device(db, "history.clearedAt", &json!(now))).map_err(fail)?;
+    notify(&handle, &["playlists/history"]);
+    Ok(json!({ "success": true }))
+}
+
+/// Recomputes Rediscover: songs the user rated or loved but has not heard for `threshold_days`.
+#[tauri::command]
+pub fn rediscover_refresh(
+    handle: AppHandle,
+    app: State<'_, App>,
+    threshold_days: Option<i64>,
+    today: String,
+) -> Res<Value> {
+    let days = threshold_days.filter(|&d| d > 0).unwrap_or(30);
+    let songs = nemora_core::rediscover::stored(&app.read(), days, &today).map_err(fail)?;
+    let count = songs.len();
+    app.write(|db| nemora_core::settings::set_device(db, "rediscover.songs", &json!(songs))).map_err(fail)?;
+    notify(&handle, &["playlists/rediscover"]);
+    Ok(json!({ "count": count }))
 }
 
 /// The Rediscover list as last refreshed.
@@ -595,8 +811,44 @@ pub fn favorites_toggle(
 #[tauri::command]
 pub fn library_blacklist(app: State<'_, App>) -> Res<Value> {
     let db = app.read();
-    let folders: Vec<String> = Vec::new();
-    Ok(json!({ "songBlacklist": playlists::blacklisted(&db).map_err(fail)?, "folderBlacklist": folders }))
+    Ok(json!({
+        "songBlacklist": playlists::blacklisted(&db).map_err(fail)?,
+        "folderBlacklist": nemora_core::settings::excluded_folders(&db).map_err(fail)?,
+    }))
+}
+
+#[tauri::command]
+pub fn blacklist_songs(handle: AppHandle, app: State<'_, App>, song_ids: Vec<String>, value: bool) -> Res<()> {
+    app.write(|db| song_ids.iter().try_for_each(|id| playlists::set_blacklisted(db, parse_view_id(id).0, value)))
+        .map_err(fail)?;
+    notify(&handle, &["blacklist", "songs"]);
+    Ok(())
+}
+
+/// Blacklists or restores folders. A music folder itself cannot be blacklisted: that is removing
+/// it, which has its own action.
+#[tauri::command]
+pub fn blacklist_folders(
+    handle: AppHandle,
+    app: State<'_, App>,
+    folder_paths: Vec<String>,
+    value: Option<bool>,
+) -> Res<()> {
+    app.write(|db| {
+        let roots: Vec<String> = nemora_core::settings::music_folders(db)?
+            .into_iter()
+            .map(|f| f.path.to_string_lossy().into_owned())
+            .collect();
+        let excluded = nemora_core::settings::excluded_folders(db)?;
+        for path in folder_paths.iter().filter(|p| !roots.contains(p)) {
+            let value = value.unwrap_or(!excluded.contains(path));
+            nemora_core::settings::set_folder_excluded(db, path, value)?;
+        }
+        Ok(())
+    })
+    .map_err(fail)?;
+    notify(&handle, &["blacklist", "songs"]);
+    Ok(())
 }
 
 // ----- folders and scanning -------------------------------------------------------------------
@@ -604,6 +856,89 @@ pub fn library_blacklist(app: State<'_, App>) -> Res<Value> {
 #[tauri::command]
 pub fn library_folder_structures(app: State<'_, App>) -> Res<Vec<Value>> {
     user_data::music_folders(&app.read()).map_err(fail)
+}
+
+/// 1.x `MusicFolder`s: all music folders, or the asked ones wherever they are in the trees.
+#[tauri::command]
+pub fn library_folders(
+    app: State<'_, App>,
+    folder_paths: Option<Vec<String>>,
+    sort_type: Option<String>,
+) -> Res<Vec<Value>> {
+    let db = app.read();
+    let trees = crate::folders::trees(&db).map_err(fail)?;
+    let blacklisted = nemora_core::settings::excluded_folders(&db).map_err(fail)?;
+    let wanted = folder_paths.unwrap_or_default();
+    let mut nodes: Vec<&crate::folders::Node> = Vec::new();
+    if wanted.is_empty() {
+        nodes.extend(trees.iter());
+    } else {
+        crate::folders::select(trees.iter(), &wanted, &mut nodes);
+    }
+    let mut out: Vec<Value> = nodes.into_iter().map(|n| crate::folders::music_folder(n, &blacklisted)).collect();
+    use nemora_core::search::fold::normalize;
+    let count = |f: &Value| f["noOfSongs"].as_u64().unwrap_or(0);
+    match sort_type.as_deref() {
+        Some("aToZ") => out.sort_by_cached_key(|f| normalize(f["path"].as_str().unwrap_or(""))),
+        Some("zToA") => {
+            out.sort_by_cached_key(|f| normalize(f["path"].as_str().unwrap_or("")));
+            out.reverse();
+        }
+        Some("noOfSongsAscending") => out.sort_by_key(count),
+        Some("noOfSongsDescending") => out.sort_by_key(|f| std::cmp::Reverse(count(f))),
+        Some("blacklistedFolders") => out.retain(|f| f["isBlacklisted"] == true),
+        Some("whitelistedFolders") => out.retain(|f| f["isBlacklisted"] == false),
+        _ => {}
+    }
+    Ok(out)
+}
+
+/// Adds music folders and scans them; answers with the songs found in them.
+#[tauri::command]
+pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<String>) -> Res<Vec<Value>> {
+    app.write(|db| paths.iter().try_for_each(|p| nemora_core::settings::add_music_folder(db, std::path::Path::new(p))))
+        .map_err(fail)?;
+    app.scan().map_err(fail)?;
+    notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
+    let db = app.read();
+    let ids: Vec<i64> = library::files(&db)
+        .map_err(fail)?
+        .into_iter()
+        .filter(|f| paths.iter().any(|p| f.path.starts_with(p.as_str())))
+        .map(|f| f.variant_id)
+        .collect();
+    let v = view(&app);
+    Ok(library::rows_by_id(&db, &ids).map_err(fail)?.iter().map(|r| v.song_data(r)).collect())
+}
+
+#[tauri::command]
+pub fn folders_remove(handle: AppHandle, app: State<'_, App>, path: String) -> Res<()> {
+    app.write(|db| nemora_core::settings::remove_music_folder(db, std::path::Path::new(&path))).map_err(fail)?;
+    notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
+    Ok(())
+}
+
+/// Moves files to the recycle bin, or deletes them for good, then lets the scan notice.
+#[tauri::command]
+pub async fn songs_delete_files(
+    handle: AppHandle,
+    app: State<'_, App>,
+    paths: Vec<String>,
+    permanent: bool,
+) -> Res<Value> {
+    for path in &paths {
+        let result = if permanent {
+            std::fs::remove_file(path).map_err(fail)
+        } else {
+            crate::shellops::trash_item(path.clone())
+        };
+        if let Err(error) = result {
+            return Ok(json!({ "success": false, "message": error }));
+        }
+    }
+    app.scan().map_err(fail)?;
+    notify(&handle, &["songs/deletedSong", "songs", "artists", "albums", "genres"]);
+    Ok(json!({ "success": true }))
 }
 
 /// Brings the library in line with the music folders.

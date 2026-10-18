@@ -21,6 +21,8 @@ pub struct PlaylistRow {
     pub name: String,
     pub song_count: i64,
     pub pinned_position: Option<i64>,
+    /// A picture the user chose for the playlist.
+    pub custom_cover: Option<String>,
     /// Up to four distinct covers for a mosaic.
     pub covers: Vec<String>,
     pub created_at: i64,
@@ -57,7 +59,8 @@ pub fn list(db: &Db) -> Result<Vec<PlaylistRow>> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
         "SELECT p.playlist_id, p.name, p.pinned_position, p.created_at,
-                (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.playlist_id AND i.song_id IS NOT NULL)
+                (SELECT count(*) FROM playlist_items i WHERE i.playlist_id = p.playlist_id AND i.song_id IS NOT NULL),
+                p.cover_hash
          FROM playlists p WHERE p.deleted_at IS NULL",
     )?;
     let mut rows: Vec<PlaylistRow> = stmt
@@ -68,6 +71,7 @@ pub fn list(db: &Db) -> Result<Vec<PlaylistRow>> {
                 pinned_position: r.get(2)?,
                 created_at: r.get(3)?,
                 song_count: r.get(4)?,
+                custom_cover: r.get(5)?,
                 covers: Vec::new(),
             })
         })?
@@ -240,6 +244,17 @@ pub fn move_item(db: &mut Db, id: &str, from: usize, to: usize) -> Result<()> {
     write_items(db, id, &items)
 }
 
+/// The songs of an M3U/M3U8 file found in the present library, before they go anywhere.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct M3uMatch {
+    /// (song, tag signature of the matched file), in file order.
+    pub songs: Vec<(String, Option<String>)>,
+    pub entries: usize,
+    pub by_method: Vec<(String, usize)>,
+    /// The lines nothing in the library matched (as written in the file).
+    pub unresolved: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct M3uImport {
     pub playlist_id: String,
@@ -250,9 +265,24 @@ pub struct M3uImport {
     pub unresolved: Vec<String>,
 }
 
-/// Creates a playlist from an M3U/M3U8 file written by any player, matching each entry against the
-/// present library by path, file name, folder and tags. Unmatched entries are reported, not added.
+/// Creates a playlist from an M3U/M3U8 file written by any player. Unmatched entries are reported,
+/// not added.
 pub fn import_m3u(db: &mut Db, name: &str, text: &str) -> Result<M3uImport> {
+    let found = match_m3u(db, text)?;
+    let playlist_id = create(db, name)?;
+    add(db, &playlist_id, &found.songs, None)?;
+    Ok(M3uImport {
+        playlist_id,
+        entries: found.entries,
+        resolved: found.songs.len(),
+        by_method: found.by_method,
+        unresolved: found.unresolved,
+    })
+}
+
+/// Matches each entry of an M3U/M3U8 file against the present library by path, file name, folder
+/// and tags.
+pub fn match_m3u(db: &Db, text: &str) -> Result<M3uMatch> {
     let mut stmt = db.conn().prepare(
         "SELECT v.song_id, l.uri, v.title, t.duration_ms,
                 (SELECT group_concat(name, char(31)) FROM variant_artists a WHERE a.variant_id = v.variant_id AND a.role = 'artist'),
@@ -300,11 +330,24 @@ pub fn import_m3u(db: &mut Db, name: &str, text: &str) -> Result<M3uImport> {
             None => unresolved.push(entry.location.clone()),
         }
     }
-    let playlist_id = create(db, name)?;
-    add(db, &playlist_id, &songs, None)?;
     let mut by_method: Vec<(String, usize)> = by_method.into_iter().map(|(m, n)| (m.to_owned(), n)).collect();
     by_method.sort();
-    Ok(M3uImport { playlist_id, entries: entries.len(), resolved: songs.len(), by_method, unresolved })
+    Ok(M3uMatch { songs, entries: entries.len(), by_method, unresolved })
+}
+
+/// Sets a picture the user chose as the playlist's cover: stored once in the cover store like any
+/// other picture, with origin `custom`. Returns its hash.
+pub fn set_custom_cover(db: &Db, covers: &crate::covers::CoverStore, id: &str, picture: &[u8]) -> Result<String> {
+    let hash = crate::covers::cover_hash(picture);
+    let size = if covers.has_thumbnails(&hash) { None } else { Some(covers.write_thumbnails(&hash, picture)?) };
+    db.conn().execute(
+        "INSERT INTO covers (cover_hash, width, height, mime, origin, created_at) VALUES (?1, ?2, ?3, NULL, 'custom', ?4)
+         ON CONFLICT(cover_hash) DO NOTHING",
+        params![hash, size.map(|s| s.width), size.map(|s| s.height), now_ms()],
+    )?;
+    db.conn().execute("UPDATE playlists SET cover_hash = ?2 WHERE playlist_id = ?1", params![id, hash])?;
+    touch_playlist(db, id)?;
+    Ok(hash)
 }
 
 /// The playlist as M3U8, with the path of each present song.
