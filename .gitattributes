@@ -1,0 +1,4 @@
+# LF everywhere, whatever core.autocrlf says: the spec-sync test compares the SQL in
+# spec/schema-v1.md with src/db/schema_v1.sql byte for byte.
+* text=auto eol=lf
+*.ico binary
