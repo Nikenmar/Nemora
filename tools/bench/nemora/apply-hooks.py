@@ -6,9 +6,12 @@ The Rust half lives in apps/desktop/src-tauri/src/bench.rs. Idempotent.
 """
 import pathlib
 import shutil
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
 SRC = REPO / 'apps/desktop/src'
+sys.path.insert(0, str(REPO / 'tools/bench/app'))
+from bridge import put_bridge  # noqa: E402
 
 shutil.copyfile(REPO / 'tools/bench/app/bench.ts', SRC / 'renderer/src/other/bench.ts')
 
@@ -29,17 +32,5 @@ patch(api, '  bench,\n', '  appControls,\n', '  appControls,\n  bench,\n')
 app = SRC / 'renderer/src/App.tsx'
 patch(app, "from './other/bench'", "import { AppUpdateContext",
       "import { registerBenchApp } from './other/bench';\nimport { AppUpdateContext")
-text = app.read_text(encoding='utf-8')
-if 'registerBenchApp({' not in text:
-    lines = text.split('\n')
-    start = next(i for i, line in enumerate(lines) if 'const changeCurrentActivePage = useCallback(' in line)
-    end = next(i for i in range(start, len(lines)) if lines[i] == '  );')
-    lines[end + 1:end + 1] = [
-        '',
-        '  useEffect(',
-        '    () => registerBenchApp({ changeCurrentActivePage, playSong }),',
-        '    [changeCurrentActivePage, playSong]',
-        '  );',
-    ]
-    app.write_text('\n'.join(lines), encoding='utf-8', newline='\n')
+app.write_text(put_bridge(app.read_text(encoding='utf-8')), encoding='utf-8', newline='\n')
 print('bench hooks in place')

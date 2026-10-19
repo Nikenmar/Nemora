@@ -11,6 +11,8 @@ import sys
 
 ROOT = pathlib.Path(sys.argv[1])
 HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / 'app'))
+from bridge import put_bridge  # noqa: E402
 
 
 def patch(relative, edits):
@@ -101,22 +103,11 @@ patch('src/renderer/src/App.tsx', [
      '      const intervalId = setInterval(checkUnlessBenchmark, 1000 * 60 * 15);'),
 ])
 
-# The bridge goes right after changeCurrentActivePage, the later of the two callbacks it hands over.
+# The bridge: App's own navigation, playback, queue and seek callbacks (tools/bench/app/bridge.py).
 app = ROOT / 'src/renderer/src/App.tsx'
 raw = app.read_bytes().decode('utf-8')
 crlf = '\r\n' in raw
-lines = raw.replace('\r\n', '\n').split('\n')
-if not any('registerBenchApp({' in line for line in lines):
-    start = next(i for i, line in enumerate(lines) if 'const changeCurrentActivePage = useCallback(' in line)
-    end = next(i for i in range(start, len(lines)) if lines[i] == '  );')
-    lines[end + 1:end + 1] = [
-        '',
-        '  useEffect(',
-        '    () => registerBenchApp({ changeCurrentActivePage, playSong }),',
-        '    [changeCurrentActivePage, playSong]',
-        '  );',
-    ]
-    text = '\n'.join(lines)
-    app.write_bytes((text.replace('\n', '\r\n') if crlf else text).encode('utf-8'))
+text = put_bridge(raw.replace('\r\n', '\n'))
+app.write_bytes((text.replace('\n', '\r\n') if crlf else text).encode('utf-8'))
 
 print('bench hooks in place')

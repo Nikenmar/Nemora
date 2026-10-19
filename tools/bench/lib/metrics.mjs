@@ -13,8 +13,28 @@ export const spread = (values) => {
 };
 
 const metricSamples = (events) => events.filter((e) => e.k === 'm');
+/** The meter's readings between two times; a reading above this is sound. */
+const AUDIBLE = 0.0005;
+const loud = (sample) => sample.p > AUDIBLE;
+const audio = (events, from, to) => events.filter((e) => e.k === 'a' && e.t >= from && e.t <= to);
 const mark = (marks, name) => marks.find((m) => m.name === name);
 const marksNamed = (marks, name) => marks.filter((m) => m.name === name);
+
+/**
+ * Whether another app was adding sound to the device while the capture listened. A session that
+ * only mirrors the player (a recorder capturing the desktop audio, OBS for one) reads the same
+ * level as the player; one that plays something of its own does not.
+ */
+function anotherAppPlaying(events, from, to) {
+  const samples = audio(events, from, to).filter((e) => (e.q ?? 0) > AUDIBLE);
+  const foreign = samples.filter((e) => Math.abs(e.q - e.p) > 0.05 * Math.max(e.p, e.q) + 0.002);
+  const all = audio(events, from, to).length;
+  return all > 0 && foreign.length / all > 0.2 ? Math.max(...foreign.map((e) => e.q)) : 0;
+}
+
+/** Silences the loopback capture heard between two times. */
+const silencesIn = (events, from, to) => events.filter((e) => e.k === 's' && e.t >= from && e.t <= to);
+const captured = (events) => events.some((e) => e.k === 'l');
 
 /** CPU as a percentage of ONE core, between two wall-clock times, from cumulative tree CPU. */
 export function cpuPercent(events, from, to) {
@@ -23,6 +43,12 @@ export function cpuPercent(events, from, to) {
   const first = samples[0];
   const last = samples.at(-1);
   return ((last.cpu - first.cpu) / (last.t - first.t)) * 100;
+}
+
+/** Bytes the tree read (`rd`) or wrote (`wr`) between two times. */
+export function ioBytes(events, from, to, field) {
+  const samples = metricSamples(events).filter((e) => e.t >= from && e.t <= to && e[field] != null);
+  return samples.length < 2 ? null : samples.at(-1)[field] - samples[0][field];
 }
 
 export function cpuSeconds(events, from, to) {
@@ -73,13 +99,19 @@ export const reduce = {
     // quiet in the gap before they start.
     const palettes = app === 'nora' ? mark(marks, 'palettes-done')?.at : listed;
     const finished = launch.finishedAt ?? null;
+    const end = finished ?? Infinity;
     return {
       ok: finished != null && palettes != null,
       reason: finished == null ? 'never went quiet' : palettes == null ? 'colours never finished' : undefined,
       listedMs: listed - start,
       finishedMs: finished != null ? finished - start : null,
       cpuSeconds: finished != null ? cpuSeconds(events, start, finished) : null,
-      peakPrivateWorkingSet: peak(events, 'pws', start, finished ?? Infinity),
+      peakPrivateWorkingSet: peak(events, 'pws', start, end),
+      bytesRead: ioBytes(events, start, end, 'rd'),
+      bytesWritten: ioBytes(events, start, end, 'wr'),
+      // The interface while the songs were being added: frames recorded inside the app.
+      frames: mark(marks, 'scan-listed')?.data?.frames ?? null,
+      profileBytes: launch.profileBytes ?? null,
       songs: mark(marks, 'scan-listed')?.data?.count
     };
   },
@@ -95,6 +127,10 @@ export const reduce = {
       ok: true,
       windowMs: shown ? shown - spawnedAt : null,
       readyMs: ready - spawnedAt,
+      // Everything the app does once started, including work after its window is up.
+      firstMinuteCpuSeconds: cpuSeconds(events, spawnedAt, from),
+      firstMinuteBytesRead: ioBytes(events, spawnedAt, from, 'rd'),
+      firstMinuteBytesWritten: ioBytes(events, spawnedAt, from, 'wr'),
       steadyPrivateWorkingSet: memory(events, from, to, 'pws'),
       steadyWorkingSet: memory(events, from, to, 'ws'),
       steadyPrivateBytes: memory(events, from, to, 'priv'),
@@ -127,22 +163,60 @@ export const reduce = {
     const { marks, events } = launch;
     const requested = mark(marks, 'play-requested')?.at;
     if (!requested) return { ok: false, reason: 'never asked to play' };
-    const audible = events.filter((e) => e.k === 'a' && e.t >= requested);
-    if (!audible.length) return { ok: false, reason: 'SILENT: no sound left the app' };
-    const firstSound = audible[0].t;
+    const samples = audio(events, requested, Infinity);
+    const firstSound = samples.find(loud)?.t;
+    if (!firstSound) return { ok: false, reason: 'SILENT: no sound left the app' };
     const from = firstSound + listenFromMs;
     const to = from + listenForMs;
     // Sound must be there for most of the window, or the CPU figure belongs to a player that is not
     // playing (the false row this harness exists to prevent).
-    const heard = audible.filter((e) => e.t >= from && e.t <= to).length / (listenForMs / 25);
+    const window = audio(events, from, to);
+    const heard = window.length ? window.filter(loud).length / window.length : 0;
     if (heard < 0.6) return { ok: false, reason: `SILENT for most of the window (${Math.round(heard * 100)} % heard)` };
+    // The track is loud throughout its first 40 s (chosen so by `prepare`), so any silence the
+    // capture hears in the window is the player dropping out.
+    let dropouts = null;
+    if (captured(events) && !anotherAppPlaying(events, from, to)) {
+      const silences = silencesIn(events, from, to);
+      dropouts = { count: silences.length, ms: silences.reduce((sum, s) => sum + s.d, 0) };
+    }
     return {
       ok: true,
       startMs: firstSound - requested,
       cpuPercent: cpuPercent(events, from, to),
       privateWorkingSet: memory(events, from, to, 'pws'),
       workingSet: memory(events, from, to, 'ws'),
+      dropouts,
       heard
     };
+  },
+
+  /**
+   * The silence between two queued songs, from the device's own output (the sampler's loopback
+   * capture, to the millisecond; silences under 2 ms are not reported and read as none). The first
+   * song ends loud and the second starts loud (chosen so by `prepare`), so any silence at the change
+   * is the player's.
+   */
+  transition(launch) {
+    const { marks, events } = launch;
+    const seek = mark(marks, 'seek-to-end');
+    const check = mark(marks, 'transition-check')?.data;
+    if (!seek || !check) return { ok: false, reason: 'never reached the end of the first song' };
+    if (!check.firstWasPlaying) return { ok: false, reason: 'the first song was not the one playing' };
+    if (!check.secondIsPlaying) return { ok: false, reason: 'the second song did not start' };
+    if (!captured(events)) {
+      const error = events.find((e) => e.k === 'e')?.msg;
+      return { ok: false, reason: `no loopback capture${error ? `: ${error}` : ''}` };
+    }
+    const endsAt = seek.data.endsAt;
+    // The capture hears the whole device: another app's sound would fill the very gap measured.
+    const others = anotherAppPlaying(events, seek.at, endsAt + 4_000);
+    if (others) return { ok: false, reason: `another app was playing (peak ${others.toFixed(3)})` };
+    if (!audio(events, endsAt + 1_000, endsAt + 4_000).some(loud))
+      return { ok: false, reason: 'SILENT after the change' };
+    // A silence starting near the end of the first song is the change; the seek's own, four seconds
+    // earlier, is not.
+    const silences = silencesIn(events, endsAt - 2_500, endsAt + 2_500);
+    return { ok: true, gapMs: Math.max(0, ...silences.map((e) => e.d)), silences: silences.length };
   }
 };

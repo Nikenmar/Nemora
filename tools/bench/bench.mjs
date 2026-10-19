@@ -2,25 +2,28 @@
 /**
  * Nora 3.1.0 against Nemora 2.0, measured from outside and driven from inside.
  *
- *   node tools/bench/bench.mjs prepare --root <folder> [--source <music folder>]... [--count 400]
- *   node tools/bench/bench.mjs run     --root <folder> [--quick] [--only nora|nemora] [--phases scan,startup,ui,playback]
+ *   node tools/bench/bench.mjs prepare --root <folder> [--source <music folder>]... [--count 400] [--large 0]
+ *   node tools/bench/bench.mjs run     --root <folder> [--quick] [--only nora|nemora] [--phases scan,startup,ui,playback,transition]
  *   node tools/bench/bench.mjs report  --root <folder>
  *
- * ONE FOLDER HOLDS EVERYTHING. `prepare` fills it with a seeded sample of real tracks (hard links)
- * and a bench.json naming the two builds; `run` gives every launch a fresh subfolder and starts the
- * app with `--bench=<subfolder>`, which both builds understand: profile, renderer state, logs, temp
- * files all stay inside it. Deleting the folder removes every trace.
+ * ONE FOLDER HOLDS EVERYTHING. `prepare` fills it with two libraries of real tracks (hard links): a
+ * seeded sample and, for the scale runs, the whole collection (`--large N` caps it); `run` gives
+ * every launch a fresh subfolder and starts the app with `--bench=<subfolder>`, which both builds
+ * understand: profile, renderer state, logs, temp files all stay inside it. Deleting the folder
+ * removes every trace.
  *
  * THE RULES, each one paid for by an earlier, wrong benchmark (vault: nemora/BenchmarkHarness):
  *  - Both sides run the same scenario through the same code (tools/bench/app/bench.ts, built into
  *    both views); each app only says where its own data lives.
- *  - Every number comes from Windows, not from the app: the window on screen, CPU and memory of the
- *    WHOLE process tree, sound from the audio session peak meter.
+ *  - Every number comes from Windows, not from the app: the window on screen, CPU, memory and I/O of
+ *    the WHOLE process tree, sound from the audio session peak meter. Frame times are the one
+ *    exception, and they are recorded by the same code in both views.
  *  - A playback run with no sound is discarded, never averaged.
  *  - Memory is the private working set (what Task Manager shows), sampled over a window at the same
  *    age for both players, not a peak caught at a lucky moment.
  *  - The real profiles are fingerprinted around every launch; any change stops the benchmark.
- *  - Launches alternate between the players, so drift (heat, background work) hits both alike.
+ *  - Launches alternate between the players, so drift (heat, background work) hits both alike, and
+ *    each waits for the machine to be quiet first.
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -30,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 
 import { launch } from './lib/launch.mjs';
 import { createGuard, runningPlayers } from './lib/guard.mjs';
-import { buildLibrary, installedMusicFolders } from './lib/library.mjs';
+import { buildLibraries, installedMusicFolders } from './lib/library.mjs';
 import { quietAt, reduce } from './lib/metrics.mjs';
 import { writeReport } from './lib/report.mjs';
 
@@ -93,22 +96,36 @@ async function prepare() {
   if (!sources.length) sources = await installedMusicFolders();
   if (!sources.length) throw new Error('no music folder found; pass --source <folder>');
   const count = Number(option('count', 400));
+  const large = Number(option('large', 0));
   const seed = Number(option('seed', 20261019));
-  const lib = buildLibrary({ root: ROOT, sources, count, seed });
+  const lib = buildLibraries({ root: ROOT, sources, count, large, seed });
   const config = {
     createdAt: new Date().toISOString(),
     seed,
-    library: lib.library,
-    tracks: lib.tracks,
+    libraries: {
+      small: { dir: lib.small.dir, tracks: lib.small.tracks },
+      large: { dir: lib.large.dir, tracks: lib.large.tracks }
+    },
     play: lib.play,
+    transition: lib.transition,
     queries: lib.queries,
     apps: defaultApps(),
-    runs: { scan: 3, startup: 5, ui: 3, playback: 3 }
+    runs: {
+      scan: { small: 3, large: 2 },
+      startup: { small: 5, large: 3 },
+      ui: { small: 3, large: 2 },
+      playback: 3,
+      transition: 3
+    }
   };
   writeFileSync(CONFIG, JSON.stringify(config, null, 2));
-  console.log(`library: ${lib.tracks.length} tracks of ${lib.available} (${lib.linked} linked, ${lib.copied} copied)`);
+  const placed = (l) => `${l.tracks.length} tracks (${l.linked} linked, ${l.copied} copied)`;
+  console.log(`small library: ${placed(lib.small)}; large library: ${placed(lib.large)}; ${lib.available} available`);
   console.log(`playback tracks: ${Object.entries(lib.play).map(([f, n]) => `${f}: ${n}`).join(', ') || 'none found'}`);
-  if (!lib.screened) console.log('  WARNING: ffmpeg not found, playback tracks were chosen by size and not checked for quiet passages');
+  console.log(
+    `transition: ${lib.transition ? `${lib.transition.from} -> ${lib.transition.to}` : 'no pair found, the phase is skipped'}`
+  );
+  if (!lib.screened) console.log('  WARNING: ffmpeg not found, tracks were not checked for quiet passages');
   console.log(`search terms: ${lib.queries.join(', ')}`);
   for (const [key, app] of Object.entries(config.apps)) {
     console.log(`${key}: ${app.exe} ${existsSync(app.exe) ? '' : '(MISSING)'}`);
@@ -138,30 +155,80 @@ function sizeOf(path) {
   return total;
 }
 
+/** The whole machine's CPU use over `ms`, as a percentage of all its cores. */
+async function machineBusy(ms = 1_000) {
+  const total = () =>
+    os.cpus().reduce(
+      (acc, cpu) => {
+        const t = cpu.times;
+        acc.idle += t.idle;
+        acc.all += t.user + t.nice + t.sys + t.idle + t.irq;
+        return acc;
+      },
+      { idle: 0, all: 0 }
+    );
+  const a = total();
+  await sleep(ms);
+  const b = total();
+  return (1 - (b.idle - a.idle) / Math.max(1, b.all - a.all)) * 100;
+}
+
+/**
+ * Waits until the machine has been quiet for two seconds running, so an indexer or an update in
+ * the background does not land in one player's numbers. Gives up after 90 s and says so.
+ */
+async function waitForQuiet(limit = 6) {
+  const started = Date.now();
+  let calm = 0;
+  let busy = 0;
+  while (Date.now() - started < 90_000) {
+    busy = await machineBusy();
+    calm = busy < limit ? calm + 1 : 0;
+    if (calm >= 2) return { quiet: true, busy, waitedMs: Date.now() - started };
+  }
+  return { quiet: false, busy, waitedMs: Date.now() - started };
+}
+
+const PLAYBACK_TITLES = {
+  flac: { format: 'flac' },
+  mp3: { format: 'mp3' },
+  'flac-minimized': { format: 'flac', window: 'minimized' },
+  'flac-tray': { format: 'flac', window: 'hidden' }
+};
+
 function phases(config, quick) {
-  const lib = config.library;
-  const n = config.tracks.length;
   const steady = quick ? { steadyFromMs: 20_000, steadyForMs: 5_000 } : { steadyFromMs: 60_000, steadyForMs: 10_000 };
   const listen = quick ? { listenFromMs: 3_000, listenForMs: 8_000 } : { listenFromMs: 5_000, listenForMs: 20_000 };
   const pageOrder = ['Songs', 'Albums', 'Artists', 'Genres', 'Playlists', 'Home'];
   const again = ['Albums', 'Artists', 'Genres', 'Playlists', 'Home', 'Songs'];
-  const runs = (key) => (quick ? 1 : config.runs[key]);
-  const playFormats = Object.entries(config.play ?? {});
+  const runs = (key, variant) => {
+    if (quick) return 1;
+    const n = config.runs[key];
+    return typeof n === 'object' ? (n[variant] ?? 0) : n;
+  };
+  const lib = (size) => config.libraries[size].dir;
+  const small = lib('small');
+  const sizes = ['small', 'large'].filter((size) => config.libraries[size]?.tracks.length);
+  // The background states with FLAC when there is one: the window open is the comparison point.
+  const background = config.play.flac ? ['flac-minimized', 'flac-tray'] : [];
+  const playVariants = [...Object.keys(config.play), ...background].filter((v) => PLAYBACK_TITLES[v]);
 
   return [
     {
       key: 'scan',
-      runs: runs('scan'),
-      variants: [null],
+      variants: sizes,
+      runs,
       // Not a first launch: see the priming below.
-      seedFrom: 'blank',
-      timeoutMs: 25 * 60_000,
-      scenario: () => ({
-        library: lib,
+      seed: (app) => join(ROOT, 'blank', app),
+      timeoutMs: 45 * 60_000,
+      scenario: (size) => ({
+        library: lib(size),
         steps: [
           { do: 'home' },
-          { do: 'addFolder', expect: n },
-          { do: 'waitSignal', name: 'continue', timeoutMs: 20 * 60_000 },
+          // The song list is on screen while the library is built, as it would be for a person.
+          { do: 'goto', page: 'Songs' },
+          { do: 'addFolder', expect: config.libraries[size].tracks.length },
+          { do: 'waitSignal', name: 'continue', timeoutMs: 40 * 60_000 },
           { do: 'quit' }
         ]
       }),
@@ -187,30 +254,32 @@ function phases(config, quick) {
     },
     {
       key: 'startup',
-      runs: runs('startup'),
-      variants: [null],
-      seedFrom: 'base',
+      variants: sizes,
+      runs,
+      seed: (app, size) => join(ROOT, 'base', size, app),
       timeoutMs: 5 * 60_000,
-      scenario: () => ({
-        library: lib,
+      scenario: (size) => ({
+        library: lib(size),
         steps: [{ do: 'ready' }, { do: 'wait', ms: steady.steadyFromMs + steady.steadyForMs + 2_000 }, { do: 'quit' }]
       }),
       reduce: (result) => reduce.startup(result, steady)
     },
     {
       key: 'ui',
-      runs: runs('ui'),
-      variants: [null],
-      seedFrom: 'base',
+      variants: sizes,
+      runs,
+      seed: (app, size) => join(ROOT, 'base', size, app),
       timeoutMs: 5 * 60_000,
-      scenario: () => ({
-        library: lib,
+      scenario: (size) => ({
+        library: lib(size),
         steps: [
           { do: 'ready' },
           { do: 'wait', ms: 4_000 },
           ...pageOrder.map((page) => ({ do: 'page', page, label: `${page} (first)` })),
           ...again.map((page) => ({ do: 'page', page, label: `${page} (again)` })),
-          ...config.queries.map((query) => ({ do: 'search', query })),
+          { do: 'page', page: 'Search', label: 'Search' },
+          ...config.queries.map((query) => ({ do: 'typeSearch', query })),
+          { do: 'page', page: 'Songs', label: 'Songs (for scrolling)' },
           { do: 'scroll', ms: quick ? 3_000 : 8_000 },
           { do: 'wait', ms: 1_000 },
           { do: 'quit' }
@@ -220,21 +289,52 @@ function phases(config, quick) {
     },
     {
       key: 'playback',
-      runs: runs('playback'),
-      variants: playFormats.map(([format]) => format),
-      seedFrom: 'base',
+      variants: playVariants,
+      runs,
+      // The recorded output tells a dropout from a quiet note; the meter cannot.
+      capture: true,
+      seed: (app) => join(ROOT, 'base', 'small', app),
       timeoutMs: 5 * 60_000,
-      scenario: (format) => ({
-        library: lib,
+      scenario: (variant) => {
+        const { format, window } = PLAYBACK_TITLES[variant];
+        return {
+          library: small,
+          steps: [
+            { do: 'ready' },
+            { do: 'wait', ms: 3_000 },
+            { do: 'play', path: join(small, config.play[format]) },
+            ...(window ? [{ do: 'wait', ms: 1_500 }, { do: 'window', state: window }] : []),
+            { do: 'wait', ms: listen.listenFromMs + listen.listenForMs + 3_000 },
+            { do: 'quit' }
+          ]
+        };
+      },
+      reduce: (result) => reduce.playback(result, listen)
+    },
+    {
+      key: 'transition',
+      variants: config.transition ? [null] : [],
+      runs,
+      // The meter is too coarse for a gap; the device's output is recorded instead.
+      capture: true,
+      seed: (app) => join(ROOT, 'base', 'small', app),
+      timeoutMs: 3 * 60_000,
+      scenario: () => ({
+        library: small,
         steps: [
           { do: 'ready' },
+          { do: 'wait', ms: 2_000 },
+          {
+            do: 'transition',
+            from: join(small, config.transition.from),
+            to: join(small, config.transition.to),
+            tailSec: 4
+          },
           { do: 'wait', ms: 3_000 },
-          { do: 'play', path: join(lib, config.play[format]) },
-          { do: 'wait', ms: listen.listenFromMs + listen.listenForMs + 3_000 },
           { do: 'quit' }
         ]
       }),
-      reduce: (result) => reduce.playback(result, listen)
+      reduce: (result) => reduce.transition(result)
     }
   ];
 }
@@ -247,6 +347,7 @@ function saveRaw(raw) {
 async function run() {
   if (!existsSync(CONFIG)) throw new Error(`no ${CONFIG}; run prepare first`);
   const config = JSON.parse(readFileSync(CONFIG, 'utf8'));
+  if (!config.libraries) throw new Error(`${CONFIG} predates the two libraries; run prepare again`);
   const quick = flag('quick');
   const only = option('only');
   const wanted = option('phases')?.split(',') ?? null;
@@ -273,7 +374,13 @@ async function run() {
       memoryBytes: os.totalmem(),
       windows: os.release()
     },
-    library: { tracks: config.tracks.length, play: config.play, queries: config.queries },
+    library: {
+      small: config.libraries.small.tracks.length,
+      large: config.libraries.large.tracks.length,
+      play: config.play,
+      transition: config.transition,
+      queries: config.queries
+    },
     apps: Object.fromEntries(
       appKeys.map((key) => {
         const app = config.apps[key];
@@ -293,8 +400,7 @@ async function run() {
   saveRaw(raw);
 
   const all = phases(config, quick).filter((phase) => !wanted || wanted.includes(phase.key));
-  const base = (app) => join(ROOT, 'base', app);
-  const failedScan = new Set();
+  const failed = new Set();
   const record = (entry) => {
     raw.launches.push(entry);
     saveRaw(raw);
@@ -314,11 +420,11 @@ async function run() {
   // by someone who has started it before adding music. Not a ritual: Nora 3.1.0 records its store
   // migrations only on the SECOND launch, and that launch runs the 3.0.0 migration, which empties
   // the library. A scan measured on a never-opened profile would be wiped by the next launch.
-  if (all.some((phase) => phase.seedFrom === 'blank')) {
+  if (all.some((phase) => phase.key === 'scan')) {
     for (const key of appKeys) {
       for (const pass of [1, 2]) {
         const name = `prime-${key}-${pass}`;
-        process.stdout.write(`${name.padEnd(28)} `);
+        process.stdout.write(`${name.padEnd(34)} `);
         const result = await launch({
           app: { key, exe: config.apps[key].exe },
           dir: join(ROOT, 'blank', key),
@@ -339,7 +445,7 @@ async function run() {
           metrics: { ok, prime: true }
         });
         console.log(ok ? 'ok' : `FAILED (${result.outcome})`);
-        if (!ok) failedScan.add(key);
+        if (!ok) failed.add(key);
         await sleep(2_000);
       }
     }
@@ -347,16 +453,18 @@ async function run() {
 
   for (const phase of all) {
     for (const variant of phase.variants) {
-      for (let i = 0; i < phase.runs; i += 1) {
+      const count = phase.runs(phase.key, variant);
+      for (let i = 0; i < count; i += 1) {
         // Alternate who goes first, so drift does not always land on the same player.
         const order = i % 2 === 0 ? appKeys : [...appKeys].reverse();
         for (const key of order) {
-          const seed = join(ROOT, phase.seedFrom, key);
-          if (failedScan.has(key) || !existsSync(seed)) continue;
+          const seed = phase.seed(key, variant);
+          if (failed.has(key) || !existsSync(seed)) continue;
           const app = { key, exe: config.apps[key].exe };
           const name = `${phase.key}${variant ? `-${variant}` : ''}-${key}-${i + 1}`;
           const dir = join(ROOT, 'runs', name);
-          process.stdout.write(`${name.padEnd(28)} `);
+          process.stdout.write(`${name.padEnd(34)} `);
+          const machine = await waitForQuiet();
           const tick = phase.tick?.(key);
           const result = await launch({
             app,
@@ -365,9 +473,11 @@ async function run() {
             scenario: phase.scenario(variant),
             timeoutMs: phase.timeoutMs,
             guard,
-            onTick: tick?.onTick
+            onTick: tick?.onTick,
+            capture: phase.capture === true
           });
           result.finishedAt = tick?.finishedAt() ?? null;
+          if (phase.key === 'scan') result.profileBytes = (sizeOf(join(dir, 'profile')) ?? 0) + (sizeOf(join(dir, 'webview')) ?? 0);
           writeFileSync(join(dir, 'events.jsonl'), result.events.map((e) => JSON.stringify(e)).join('\n'));
 
           const metrics = result.outcome === 'done' ? phase.reduce(result, { app: key }) : { ok: false };
@@ -378,20 +488,23 @@ async function run() {
             run: i + 1,
             outcome: result.outcome,
             forced: result.forced,
+            machine,
             isolation: result.isolation,
             error: result.marks.find((m) => m.name === 'error')?.data,
             metrics
           };
           record(entry);
           const why = entry.error?.message ?? metrics.reason ?? result.outcome;
-          console.log(metrics.ok ? 'ok' : `DISCARDED (${why})`);
+          const note = machine.quiet ? '' : ` (machine busy: ${machine.busy.toFixed(1)} %)`;
+          console.log(`${metrics.ok ? 'ok' : `DISCARDED (${why})`}${note}`);
 
           if (phase.key === 'scan') {
-            if (metrics.ok && !existsSync(base(key))) {
-              // The first good scan becomes the library every later launch starts from.
-              mkdirSync(base(key), { recursive: true });
+            const base = join(ROOT, 'base', variant, key);
+            if (metrics.ok && !existsSync(base)) {
+              // The first good scan becomes the library every later launch of that size starts from.
+              mkdirSync(base, { recursive: true });
               for (const part of ['profile', 'webview']) {
-                if (existsSync(join(dir, part))) cpSync(join(dir, part), join(base(key), part), { recursive: true });
+                if (existsSync(join(dir, part))) cpSync(join(dir, part), join(base, part), { recursive: true });
               }
             }
           }
@@ -399,7 +512,6 @@ async function run() {
         }
       }
     }
-    if (phase.key === 'scan') for (const key of appKeys) if (!existsSync(base(key))) failedScan.add(key);
   }
 
   raw.finishedAt = new Date().toISOString();

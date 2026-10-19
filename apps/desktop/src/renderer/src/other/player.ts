@@ -34,6 +34,12 @@ const BAND_ORDER = Object.keys(equalizerBandHertzData) as EqualizerBandFilters[]
 
 /** How long a queued track may play on its own before the view takes it over. */
 const ADOPT_WITHIN_MS = 5000;
+/**
+ * How long an adopted track keeps sounding while the view decides to play it. The view asks after
+ * `canplay`, not inside it; pausing at once and resuming a moment later faded the music out and in
+ * right after every gapless change (measured: a 10 ms silence 1.2 s into the next song).
+ */
+const ADOPT_PLAY_GRACE_MS = 1500;
 
 const withoutQuery = (url: string) => url.split(/[?#]/)[0];
 
@@ -300,7 +306,10 @@ class AudioPlayer extends EventTarget {
         this.readyState = 4;
         this.playRequested = false;
         this.fire(...ready);
-        if (!this.playRequested && queued.playing) void this.pause().catch(() => undefined);
+        if (!queued.playing) return;
+        setTimeout(() => {
+          if (this.token === token && !this.playRequested) void this.pause().catch(() => undefined);
+        }, ADOPT_PLAY_GRACE_MS);
       }, 0);
     }
     setTimeout(() => this.queueNext(), 0);

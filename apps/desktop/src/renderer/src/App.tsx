@@ -1680,11 +1680,6 @@ export default function App() {
     [addNewNotifications, t]
   );
 
-  useEffect(
-    () => registerBenchApp({ changeCurrentActivePage, playSong }),
-    [changeCurrentActivePage, playSong]
-  );
-
   const updatePlayerType = useCallback((type: PlayerTypes) => {
     if (store.state.playerType !== type) {
       dispatch({ type: 'UPDATE_PLAYER_TYPE', data: type });
@@ -1726,6 +1721,18 @@ export default function App() {
   const updateSongPosition = useCallback((position: number) => {
     if (position >= 0 && position <= player.duration) player.currentTime = position;
   }, []);
+
+  useEffect(
+    () =>
+      registerBenchApp({
+        changeCurrentActivePage,
+        playSong,
+        createQueue,
+        updateSongPosition,
+        currentSongId: () => store.state.currentSongData?.songId
+      }),
+    [changeCurrentActivePage, playSong, createQueue, updateSongPosition]
+  );
 
   const toggleMutedState = useCallback((isMute?: boolean) => {
     if (isMute !== undefined) {

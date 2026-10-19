@@ -12,10 +12,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Starts the sampler and resolves once it has compiled and is waiting for a pid. */
-async function startSampler() {
+async function startSampler(capture) {
   const child = spawn(
     'powershell',
-    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', join(HERE, 'sampler.ps1')],
+    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', join(HERE, 'sampler.ps1'), ...(capture ? ['-Capture'] : [])],
     { stdio: ['pipe', 'pipe', 'pipe'] }
   );
   const events = [];
@@ -86,8 +86,9 @@ function killTree(pid) {
  * @param {Function} [o.onTick]    called every 250 ms with ({ marks, events, signal }); `signal(name)`
  *                                 creates the file a `waitSignal` step is waiting for
  * @param {boolean} [o.keep]       reuse the folder as it is (a second launch on the same profile)
+ * @param {boolean} [o.capture]    also record the device's output and report its silences
  */
-export async function launch({ app, dir, seed, scenario, timeoutMs, guard, onTick, keep = false }) {
+export async function launch({ app, dir, seed, scenario, timeoutMs, guard, onTick, keep = false, capture = false }) {
   if (!keep) rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   // Only the app's state is carried over; a stale marks file would read as a finished scenario.
@@ -100,7 +101,7 @@ export async function launch({ app, dir, seed, scenario, timeoutMs, guard, onTic
   writeFileSync(join(dir, 'scenario.json'), JSON.stringify(scenario, null, 2));
 
   const before = guard.fingerprint();
-  const sampler = await startSampler();
+  const sampler = await startSampler(capture);
   const spawnedAt = Date.now();
   const child = spawn(app.exe, [`--bench=${dir}`], { cwd: dirname(app.exe), stdio: 'ignore', detached: false });
   sampler.watch(child.pid);

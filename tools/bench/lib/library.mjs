@@ -1,7 +1,8 @@
 /**
- * The library both players are measured on: a fixed, seeded sample of real tracks, placed in the
- * bench folder as hard links (same volume) or copies, so each player scans a folder of its own and
- * nothing of the real music folders is ever handed to either app.
+ * The libraries both players are measured on: a fixed, seeded sample of real tracks and, for the
+ * scale runs, a larger one (the whole collection by default), placed in the bench folder as hard
+ * links (same volume) or copies. Each player scans a folder of its own; nothing of the real music
+ * folders is ever handed to either app.
  */
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -54,14 +55,25 @@ function audioFiles(dir, out) {
   }
 }
 
+/** mulberry32: the same seed gives the same sample on any machine with the same files. */
+function prng(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /**
- * Peaks of 250 ms windows over the first `seconds` of a file, decoded by ffmpeg; null when ffmpeg is
- * not there or cannot read the file.
+ * Peaks of 250 ms windows, decoded by ffmpeg: the first `seconds` of a file, or with `fromEnd` its
+ * last `seconds`. Null when ffmpeg is not there or cannot read the file.
  */
-function windowPeaks(file, seconds) {
+function windowPeaks(file, seconds, fromEnd = false) {
+  const position = fromEnd ? ['-sseof', `-${seconds}`] : ['-t', String(seconds)];
   const decoded = spawnSync(
     'ffmpeg',
-    ['-v', 'error', '-t', String(seconds), '-i', file, '-ac', '1', '-ar', '8000', '-f', 's16le', '-'],
+    ['-v', 'error', ...position, '-i', file, '-ac', '1', '-ar', '8000', '-f', 's16le', '-'],
     { maxBuffer: 64 * 1024 * 1024 }
   );
   if (decoded.error || decoded.status !== 0) return null;
@@ -78,9 +90,9 @@ function windowPeaks(file, seconds) {
 }
 
 /**
- * A playback track must be loud from its first quarter second and never go quiet in the first 40 s:
- * the harness hears the start of the sound and requires sound for most of its window. A track with
- * a soft intro once read as a 7 s start and a silent player.
+ * Loud from the first quarter second and never quiet in the first 40 s: the harness hears the start
+ * of the sound and requires sound for most of its window. A track with a soft intro once read as a
+ * 7 s start and a silent player.
  */
 function loudThroughout(file) {
   const peaks = windowPeaks(file, 40);
@@ -88,36 +100,29 @@ function loudThroughout(file) {
   return peaks.length >= 160 && peaks[0] >= 0.05 && Math.min(...peaks) >= 0.02;
 }
 
-/** mulberry32: the same seed gives the same sample on any machine with the same files. */
-function prng(seed) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+/** Loud right up to the end, no fade: silence after it is the player's, not the recording's. */
+function loudEnding(file) {
+  const peaks = windowPeaks(file, 3, true);
+  if (peaks === null) return null;
+  // The very last window may hold the encoder's padding; the ones before it must carry sound.
+  return peaks.length >= 10 && Math.min(...peaks.slice(0, -1)) >= 0.03;
 }
 
-/** Puts `count` tracks into `<root>/library` and describes them. */
-export function buildLibrary({ root, sources, count, seed }) {
-  const all = [];
-  for (const source of sources) audioFiles(source, all);
-  all.sort();
-  if (all.length === 0) throw new Error(`no audio files under ${sources.join(', ')}`);
-  const random = prng(seed);
-  for (let i = all.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    [all[i], all[j]] = [all[j], all[i]];
-  }
-  const picked = all.slice(0, Math.min(count, all.length));
+/** Loud from the first quarter second for a few seconds. */
+function loudStart(file) {
+  const peaks = windowPeaks(file, 5);
+  if (peaks === null) return null;
+  return peaks.length >= 18 && peaks[0] >= 0.05 && Math.min(...peaks) >= 0.02;
+}
 
-  const library = join(root, 'library');
-  mkdirSync(library, { recursive: true });
+/** Hard-links (or copies) `sources` into `dir` under numbered names. */
+function place(dir, sources) {
+  mkdirSync(dir, { recursive: true });
   let linked = 0;
   let copied = 0;
-  const tracks = picked.map((source, index) => {
+  const tracks = sources.map((source, index) => {
     const name = `${String(index + 1).padStart(4, '0')} ${basename(source)}`;
-    const target = join(library, name);
+    const target = join(dir, name);
     if (!existsSync(target)) {
       try {
         linkSync(source, target);
@@ -129,17 +134,34 @@ export function buildLibrary({ root, sources, count, seed }) {
     }
     return { name, bytes: statSync(target).size, ext: extname(name).toLowerCase() };
   });
+  return { dir, tracks, linked, copied };
+}
 
-  // One long track per common format for the playback runs: a lossless one and a lossy one decode
-  // at very different costs, and a real library has both.
+/**
+ * The small library (`count` tracks) and the large one (`large` tracks, 0 for everything), with
+ * the playback tracks, the transition pair and the search terms all taken from the small one.
+ */
+export function buildLibraries({ root, sources, count, large, seed }) {
+  const all = [];
+  for (const source of sources) audioFiles(source, all);
+  all.sort();
+  if (all.length === 0) throw new Error(`no audio files under ${sources.join(', ')}`);
+  const random = prng(seed);
+  for (let i = all.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  const small = place(join(root, 'library-small'), all.slice(0, Math.min(count, all.length)));
+  const big = place(join(root, 'library-large'), large > 0 ? all.slice(0, Math.min(large, all.length)) : all);
+
   let screened = true;
+  const check = (test, track) => {
+    const result = test(join(small.dir, track.name));
+    if (result === null) screened = false;
+    return result !== false;
+  };
   const pick = (ext, min, max) =>
-    tracks.find((t) => {
-      if (t.ext !== ext || t.bytes < min || t.bytes > max) return false;
-      const loud = loudThroughout(join(library, t.name));
-      if (loud === null) screened = false;
-      return loud !== false;
-    });
+    small.tracks.find((t) => t.ext === ext && t.bytes >= min && t.bytes <= max && check(loudThroughout, t));
   const play = Object.fromEntries(
     [
       ['flac', pick('.flac', 12e6, 120e6)],
@@ -149,15 +171,27 @@ export function buildLibrary({ root, sources, count, seed }) {
       .map(([format, track]) => [format, track.name])
   );
 
+  // Two tracks of one format, the first ending loud and the second starting loud.
+  let transition = null;
+  for (const ext of ['.flac', '.mp3']) {
+    const from = small.tracks.find((t) => t.ext === ext && t.bytes > 2e6 && check(loudEnding, t));
+    const to = from && small.tracks.find((t) => t.ext === ext && t !== from && check(loudStart, t));
+    if (from && to) {
+      transition = { from: from.name, to: to.name, format: ext.slice(1) };
+      break;
+    }
+  }
+
   // Search terms taken from the sample itself, so both players have something to find.
   const words = [];
-  for (const track of tracks) {
+  for (const track of small.tracks) {
     for (const word of track.name.replace(/\.[^.]+$/, '').split(/[\s\-_()[\],.]+/)) {
-      if (/^\p{L}{4,}$/u.test(word) && !words.some((w) => w.toLowerCase() === word.toLowerCase())) words.push(word);
+      if (/^\p{L}{4,}$/u.test(word) && !words.some((w) => w.toLowerCase() === word.toLowerCase()))
+        words.push(word);
     }
     if (words.length >= 12) break;
   }
   const queries = [words[0], words[4], words[8]].filter(Boolean).map((w) => w.toLowerCase());
 
-  return { library, tracks, play, screened, queries, linked, copied, available: all.length };
+  return { small, large: big, play, transition, screened, queries, available: all.length };
 }
