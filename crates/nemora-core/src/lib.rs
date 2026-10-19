@@ -20,6 +20,7 @@ pub mod m3u;
 pub mod palette;
 pub mod playlists;
 pub mod plays;
+pub mod queue;
 pub mod recap;
 pub mod rediscover;
 pub mod scan;
