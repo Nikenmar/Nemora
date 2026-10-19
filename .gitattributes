@@ -2,3 +2,6 @@
 # spec/schema-v1.md with src/db/schema_v1.sql byte for byte.
 * text=auto eol=lf
 *.ico binary
+
+# GitHub's language bar shows the app: the benchmark, oracles and licence generator are tools.
+tools/** linguist-detectable=false
