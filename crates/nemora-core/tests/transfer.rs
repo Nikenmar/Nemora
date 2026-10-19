@@ -94,6 +94,20 @@ fn an_export_from_another_device_merges_once() {
     );
     assert_eq!(one(&db_path, "SELECT count(*) FROM tierlists"), "Integer(1)");
 
+    // A later export of the same install (another id) with one more duel: its ratings and tierlists
+    // are counted already; only the new duel is added, and no duel twice.
+    let mut later: serde_json::Value = serde_json::from_str(&export).unwrap();
+    later["exportId"] = json!("EXP2");
+    later["elo"]["history"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({ "at": 9, "songAId": "FB", "songBId": "FA", "winner": "B", "deltaA": -15, "deltaB": 15 }));
+    let next = import_stats_export(&mut db, &later.to_string()).unwrap();
+    assert!(next.from_known_install && !next.elo_merged && !next.already_imported, "{next:?}");
+    assert_eq!(one(&db_path, "SELECT games FROM elo_baseline"), "Integer(4)");
+    assert_eq!(one(&db_path, "SELECT count(*) FROM duels"), "Integer(2)");
+    assert_eq!(one(&db_path, "SELECT count(*) FROM tierlists"), "Integer(1)");
+
     // Not an export: refused with a reason, nothing written.
     assert!(import_stats_export(&mut db, r#"{"format":"something else"}"#).is_err());
 

@@ -51,7 +51,7 @@ const LyricsPage = () => {
 
   const copyright = useMemo(() => lyrics?.lyrics?.copyright, [lyrics]);
 
-  const requestedLyricsTitle = useRef<string>();
+  const requestedLyricsTitle = useRef<string>(undefined);
 
   useEffect(() => {
     if (requestedLyricsTitle.current !== currentSongData.title) {

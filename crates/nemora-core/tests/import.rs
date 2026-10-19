@@ -116,7 +116,8 @@ fn a_1x_profile_lands_on_the_right_songs_and_imports_once() {
         "playlists",
         json!([
             { "playlistId": "Favorites", "name": "Favorites", "createdDate": "2026-01-01T00:00:00.000Z", "songs": [] },
-            { "playlistId": "History", "name": "History", "createdDate": "2026-01-01T00:00:00.000Z", "songs": ["OLDA"] },
+            { "playlistId": "History", "name": "History", "createdDate": "2026-01-01T00:00:00.000Z", "songs": ["OLDB", "OLDA", "OLDB"] },
+            { "playlistId": "Rediscover", "name": "Rediscover", "createdDate": "2026-01-02T00:00:00.000Z", "songs": ["OLDA"] },
             { "playlistId": "P1", "name": "Mine", "createdDate": "2026-02-01T10:00:00.000Z", "songs": ["OLDA", "OLDC", "NOBODY"] }
         ]),
     );
@@ -164,6 +165,24 @@ fn a_1x_profile_lands_on_the_right_songs_and_imports_once() {
     assert_eq!((report.ratings, report.ratings_unmapped, report.duels), (2, 1, 1));
     assert_eq!(report.blacklisted_songs, 1);
 
+    // 1.x's History becomes the tail of 2.0's, newest first, once each; a cleared history drops it.
+    let title_of = |id: &str| -> String {
+        rusqlite::Connection::open(&db_path)
+            .unwrap()
+            .query_row("SELECT title FROM track_variants WHERE song_id = ?1", [id], |r| r.get(0))
+            .unwrap()
+    };
+    let history = nemora_core::plays::history(&db, 50, 0).unwrap();
+    assert_eq!(history.iter().map(|id| title_of(id)).collect::<Vec<_>>(), ["Song B", "Song A"]);
+    assert!(nemora_core::plays::history(&db, 50, 1).unwrap().is_empty());
+    let rediscover = nemora_core::settings::device(&db, "rediscover.songs").unwrap().unwrap();
+    assert_eq!(
+        rediscover.as_array().map(|l| l.iter().map(|id| title_of(id.as_str().unwrap())).collect::<Vec<_>>()),
+        Some(vec!["Song A".to_owned()])
+    );
+    let created = nemora_core::settings::device(&db, nemora_core::import::SYSTEM_CREATED).unwrap().unwrap();
+    assert_eq!(created["History"], json!(1_767_225_600_000_i64));
+
     // Two track keys of one song on one day are summed, not lost.
     assert_eq!(one(&db_path, "SELECT l FROM legacy_daily WHERE day = '2026-01-01'"), 5);
     assert_eq!(one(&db_path, "SELECT s FROM legacy_daily WHERE day = '2026-01-01'"), 2);
@@ -189,6 +208,21 @@ fn a_1x_profile_lands_on_the_right_songs_and_imports_once() {
     let again = import_nemora_1x(&mut db, &profile).unwrap();
     assert_eq!(again.pending, 1);
     assert_eq!(dump(&db_path), before);
+
+    // A stats export this 1.x install made holds the same history: its ratings and tierlists are
+    // not counted a second time.
+    let games = one(&db_path, "SELECT sum(games) FROM elo_baseline");
+    let export = json!({
+        "format": "nora-cmr-stats-export", "formatVersion": 1, "exportId": "FROM-DEV",
+        "songs": [ { "songId": "OLDA", "title": "Song A", "artists": ["artist"], "duration": 3.0, "fileName": "a.flac" } ],
+        "events": { "version": 1, "installId": "DEV", "tracks": {}, "counters": {} },
+        "elo": { "ratings": { "OLDA": { "rating": 1250.0, "games": 3, "wins": 2, "losses": 1, "draws": 0 } }, "history": [], "totalDuels": 3 },
+        "tierlists": [ { "tierlistId": "T2", "name": "again", "tiers": [ { "name": "S", "items": ["OLDA"] } ] } ]
+    });
+    let merged = nemora_core::transfer::import_stats_export(&mut db, &export.to_string()).unwrap();
+    assert!(merged.from_known_install && !merged.elo_merged, "{merged:?}");
+    assert_eq!(one(&db_path, "SELECT sum(games) FROM elo_baseline"), games);
+    assert_eq!(one(&db_path, "SELECT count(*) FROM tierlists"), 1);
 
     // The deleted song's file comes back (any name, any folder): its history, its playlist slot and
     // its tier placement re-attach on the next scan.

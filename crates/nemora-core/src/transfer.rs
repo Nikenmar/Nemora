@@ -36,6 +36,15 @@ pub struct TransferReport {
     pub already_imported: bool,
     /// This device made the export: only what it does not hold already (imported days) is merged.
     pub from_this_device: bool,
+    /// The export comes from an install whose history is here already (the 1.x profile this
+    /// database started from, or an earlier export of it): its ratings and tierlists are counted,
+    /// so only duels and days this database lacks are added.
+    pub from_known_install: bool,
+}
+
+/// The `meta` key that records an install whose history this database holds.
+pub(crate) fn install_marker(install_id: &str) -> String {
+    format!("import:install:{install_id}")
 }
 
 fn round1(v: f64) -> f64 {
@@ -58,10 +67,20 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
     let now = now_ms();
     let library = library_index(db)?;
     // A device's own export brings back its own ratings and tierlists: merging those would count
-    // every game twice and duplicate every tierlist.
-    let own = data["events"]["installId"].as_str() == Some(device_id.as_str());
-    let mut report = TransferReport { already_imported: already, from_this_device: own, ..Default::default() };
-    let once_only = !already && !own;
+    // every game twice and duplicate every tierlist. The same holds for an install already merged.
+    let install = data["events"]["installId"].as_str().filter(|i| !i.is_empty()).map(str::to_owned);
+    let own = install.as_deref() == Some(device_id.as_str());
+    let known_install = match &install {
+        Some(i) if !own => db.meta(&install_marker(i))?.is_some(),
+        _ => false,
+    };
+    let mut report = TransferReport {
+        already_imported: already,
+        from_this_device: own,
+        from_known_install: known_install,
+        ..Default::default()
+    };
+    let once_only = !already && !own && !known_install;
 
     let tx = db.conn_mut().transaction()?;
     let mut resolver = Resolver { tx: &tx, library: &library, cache: HashMap::new(), source: SOURCE };
@@ -95,6 +114,7 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
     report.listening_days = write_counters(&tx, &events, &targets)?.0;
 
     if once_only && data["elo"].is_object() {
+        report.elo_merged = true;
         for (old_id, r) in data["elo"]["ratings"].as_object().into_iter().flatten() {
             let Some(Target::Song(song)) = targets.get(old_id) else { continue };
             let current: Option<(f64, i64, i64, i64, i64)> = tx
@@ -130,6 +150,22 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
                 params![song, merged.0, merged.1, merged.2, merged.3, merged.4, now],
             )?;
         }
+        if let Some(total) = data["elo"]["totalDuels"].as_i64() {
+            let current: i64 = tx
+                .query_row("SELECT value FROM settings_shared WHERE key = 'elo.imported_total_duels'", [], |q| {
+                    q.get::<_, String>(0)
+                })
+                .optional()?
+                .and_then(|v| serde_json::from_str::<String>(&v).ok())
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0);
+            put_shared(&tx, "elo.imported_total_duels", &json!((current + total).to_string()), now, &device_id)?;
+        }
+    }
+    // Duels are history (ratings come from the baseline and this device's own games), so any this
+    // database lacks are added, also from an install merged before; a duel already here, under
+    // whatever id, is not added again.
+    if !already && !own {
         for (n, duel) in data["elo"]["history"].as_array().into_iter().flatten().enumerate() {
             let (Some(Target::Song(a)), Some(Target::Song(b))) = (
                 duel["songAId"].as_str().and_then(|i| targets.get(i)),
@@ -144,7 +180,9 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
             };
             tx.execute(
                 "INSERT INTO duels (duel_id, device_id, at, song_a, song_b, outcome, imported, delta_a, delta_b)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8) ON CONFLICT(duel_id) DO NOTHING",
+                 SELECT ?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?8
+                 WHERE NOT EXISTS (SELECT 1 FROM duels WHERE at = ?3 AND song_a = ?4 AND song_b = ?5)
+                 ON CONFLICT(duel_id) DO NOTHING",
                 params![
                     format!("import:{SOURCE}:{export_id}:{n}"),
                     device_id,
@@ -157,18 +195,6 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
                 ],
             )?;
         }
-        if let Some(total) = data["elo"]["totalDuels"].as_i64() {
-            let current: i64 = tx
-                .query_row("SELECT value FROM settings_shared WHERE key = 'elo.imported_total_duels'", [], |q| {
-                    q.get::<_, String>(0)
-                })
-                .optional()?
-                .and_then(|v| serde_json::from_str::<String>(&v).ok())
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(0);
-            put_shared(&tx, "elo.imported_total_duels", &json!((current + total).to_string()), now, &device_id)?;
-        }
-        report.elo_merged = true;
     }
 
     // Playlists merge by name: missing songs are appended to an existing one, else it is created.
@@ -256,6 +282,12 @@ pub fn import_stats_export(db: &mut Db, text: &str) -> Result<TransferReport> {
         "INSERT INTO meta (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         params![marker, now.to_string()],
     )?;
+    if let Some(i) = install.as_deref().filter(|_| !own) {
+        tx.execute(
+            "INSERT INTO meta (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO NOTHING",
+            params![install_marker(i), now.to_string()],
+        )?;
+    }
     drop(resolver);
     crate::plays::recompute_legacy_plays(&tx)?;
     crate::plays::rebuild_song_totals(&tx)?;

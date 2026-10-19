@@ -24,6 +24,9 @@ const SOURCE: &str = "nemora-1.x";
 /// computed. None of them is a user playlist.
 const SYSTEM_PLAYLISTS: &[&str] = &["Favorites", "History", "Rediscover"];
 
+/// Device setting: when 1.x created its system playlists, `{playlistId: ms}`.
+pub const SYSTEM_CREATED: &str = "playlists.systemCreated";
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ImportReport {
     pub old_songs: usize,
@@ -312,6 +315,45 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
     }
 
     // Settings: shared ones may sync later, device ones never leave this installation.
+    // 1.x's History (newest first, at most 50) is the "recently played" its user knows; 2.0 builds
+    // its own from play events, which start empty, so the old list follows them (`plays::history`).
+    // The system playlists' creation dates are kept for their pages.
+    let mut history: Vec<String> = Vec::new();
+    let mut rediscover: Vec<String> = Vec::new();
+    let mut system_created = serde_json::Map::new();
+    for playlist in playlists.as_array().into_iter().flatten() {
+        let Some(id) = playlist["playlistId"].as_str().filter(|id| SYSTEM_PLAYLISTS.contains(id)) else { continue };
+        if let Some(created) = playlist["createdDate"].as_str().and_then(parse_iso_ms) {
+            system_created.insert(id.to_owned(), json!(created));
+        }
+        let list = match id {
+            "History" => &mut history,
+            "Rediscover" => &mut rediscover,
+            _ => continue,
+        };
+        for song in playlist["songs"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+            if let Some(Target::Song(new)) = target_of(song)
+                && !list.contains(&new)
+            {
+                list.push(new);
+            }
+        }
+    }
+    // The Rediscover list 1.x last made, until the user refreshes it here; a list made here already
+    // is not replaced by importing again.
+    tx.execute(
+        "INSERT INTO settings_device (key, value) VALUES ('rediscover.songs', ?1) ON CONFLICT(key) DO NOTHING",
+        [serde_json::to_string(&rediscover)?],
+    )?;
+    for (key, value) in
+        [(crate::plays::IMPORTED_HISTORY, json!(history)), (SYSTEM_CREATED, Value::Object(system_created))]
+    {
+        tx.execute(
+            "INSERT INTO settings_device (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![key, serde_json::to_string(&value)?],
+        )?;
+    }
+
     for key in ["language", "theme", "preferences"] {
         if !user_data[key].is_null() {
             put_shared(&tx, key, &user_data[key], now, &device_id)?;
@@ -362,6 +404,13 @@ pub fn import_nemora_1x(db: &mut Db, profile: &Path) -> Result<ImportReport> {
         "INSERT INTO meta (key, value) VALUES ('import:nemora-1.x', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         [now.to_string()],
     )?;
+    // A stats export this install made carries the same history: see `transfer`.
+    if let Some(install) = events["installId"].as_str().filter(|i| !i.is_empty()) {
+        tx.execute(
+            "INSERT INTO meta (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO NOTHING",
+            params![crate::transfer::install_marker(install), now.to_string()],
+        )?;
+    }
     drop(resolver);
     tx.commit()?;
     db.touch();

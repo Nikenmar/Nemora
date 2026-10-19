@@ -237,10 +237,19 @@ pub(crate) fn artists_of(
     let members = library::members(db, Group::Artist)?;
     let liked = liked_artists(db)?;
     let online = nemora_core::settings::device(db, ONLINE_ARTWORKS)?.unwrap_or_default();
+    // An artist's albums are the ones crediting them, as 1.x linked them: by album artist, or by
+    // track artist on an album without one (`AlbumRow::artists` follows the same rule).
+    let mut albums: HashMap<String, Vec<Value>> = HashMap::new();
+    for album in library::albums(db, NameSort::NameAsc)? {
+        for name in &album.artists {
+            albums.entry(name.clone()).or_default().push(json!({ "albumId": album.key, "title": album.title }));
+        }
+    }
     Ok(rows
         .iter()
         .map(|r| {
             let mut artist = v.artist(r, members.get(&r.name).map_or(&[], Vec::as_slice));
+            artist["albums"] = json!(albums.get(&r.name).cloned().unwrap_or_default());
             artist["isAFavorite"] = json!(liked.contains(&r.name));
             if let Some(artworks) = online.get(&r.name).filter(|a| a.is_object()) {
                 artist["onlineArtworkPaths"] = artworks.clone();
@@ -310,13 +319,13 @@ pub fn artist_set_online_artworks(
     Ok(())
 }
 
-fn albums_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
+pub(crate) fn albums_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
     let rows = pick(library::albums(db, name_sort(sort))?, wanted, |r| vec![r.key.as_str(), r.title.as_str()]);
     let members = library::members(db, Group::Album)?;
     Ok(rows.iter().map(|r| v.album(r, members.get(&r.key).map_or(&[], Vec::as_slice))).collect())
 }
 
-fn genres_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
+pub(crate) fn genres_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>) -> nemora_core::Result<Vec<Value>> {
     let rows = pick(library::genres(db, name_sort(sort))?, wanted, |r| vec![r.name.as_str()]);
     let members = library::members(db, Group::Genre)?;
     Ok(rows.iter().map(|r| v.genre(r, members.get(&r.name).map_or(&[], Vec::as_slice))).collect())
@@ -395,12 +404,16 @@ fn playlists_of(
     if !mutable_only {
         let system: [(&str, Vec<String>); 3] = [
             ("Favorites", playlists::favorites(db)?),
-            ("History", nemora_core::plays::recent_songs(db, 500, history_cleared_at(db))?),
+            ("History", nemora_core::plays::history(db, 500, history_cleared_at(db))?),
             ("Rediscover", stored_rediscover(db)),
         ];
+        // 1.x's creation dates when the profile came from it, else this library's.
+        let created = nemora_core::settings::device(db, nemora_core::import::SYSTEM_CREATED)?.unwrap_or_default();
+        let library_created = db.meta("created_at")?.and_then(|v| v.parse::<i64>().ok()).unwrap_or(0);
         for (id, songs) in system {
             let songs = present_ids(db, songs)?;
-            out.push((id.to_owned(), songs.len() as i64, v.playlist(id, id, songs, 0, None)));
+            let since = created[id].as_i64().unwrap_or(library_created);
+            out.push((id.to_owned(), songs.len() as i64, v.playlist(id, id, songs, since, None)));
         }
     }
     let show_missing = playlists::show_missing_in_playlists(db)?;
@@ -918,6 +931,8 @@ pub fn stats_import(handle: AppHandle, app: State<'_, App>, path: String) -> Res
         "importedPreferences": preferences,
         "notes": if report.from_this_device {
             vec!["This export was made on this device: only history it did not hold yet was merged."]
+        } else if report.from_known_install {
+            vec!["This export comes from an install already merged here: only history it did not hold yet was merged."]
         } else {
             Vec::new()
         },

@@ -65,7 +65,7 @@ const ArtistInfoPage = () => {
   const fetchArtistsData = useCallback(() => {
     if (currentlyActivePage?.data?.artistId) {
       window.api.artistsData
-        .getArtistData([currentlyActivePage.data.artistId])
+        .getArtistData([currentlyActivePage.data.artistId as string])
         .then((res) => {
           if (res && res.length > 0) {
             if (res[0].onlineArtworkPaths?.picture_medium)

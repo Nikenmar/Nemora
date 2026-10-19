@@ -1,4 +1,6 @@
-const isAnObject = (obj: unknown): obj is Record<string, unknown> => typeof obj === 'object';
+// `null` is a plain value here: the data layer sends it for an absent field.
+const isAnObject = (obj: unknown): obj is Record<string, unknown> =>
+  obj !== null && typeof obj === 'object';
 
 const isAnArray = (obj: unknown): obj is [] => Array.isArray(obj);
 

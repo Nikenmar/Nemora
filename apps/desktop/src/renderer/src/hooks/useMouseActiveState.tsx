@@ -21,8 +21,8 @@ const useMouseActiveState = (
 
   const [isMouseActive, setIsMouseActive] = useState(false);
   const prevPositionRef = useRef({ x: 0, y: 0 });
-  const activeTimeOutIdRef = useRef<ReturnType<typeof setTimeout>>();
-  const idleTimeOutIdRef = useRef<ReturnType<typeof setTimeout>>();
+  const activeTimeOutIdRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const idleTimeOutIdRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const manageMouseMovement = useCallback(() => {
     const setIdleTimeouts = () => {

@@ -99,7 +99,7 @@ const DuplicateArtistsSuggestion = (props: Props) => {
             }));
           }
           setIsVisible(false);
-          if (duplicateIds.includes(currentlyActivePage.data?.artistId))
+          if (duplicateIds.includes(currentlyActivePage.data?.artistId as string))
             changeCurrentActivePage('Home');
           return addNewNotifications([
             {

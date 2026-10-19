@@ -10,6 +10,7 @@ use rusqlite::{Connection, Transaction, params};
 use crate::db::Db;
 use crate::error::Result;
 use crate::time::{local_day, local_hour};
+use serde_json::Value;
 
 /// A play needs this much heard, or half the track if it is shorter.
 pub const PLAY_MIN_MS: i64 = 30_000;
@@ -270,6 +271,27 @@ fn add_to_rollups(tx: &Connection, song_id: &str, started_at: i64, offset: i64, 
 
 /// Songs by their latest session since `since` (ms), newest first, each once: the listening
 /// history. Clearing the history moves `since`; the sessions themselves stay.
+/// Device setting: the 1.x History imported with the profile, song ids newest first.
+pub const IMPORTED_HISTORY: &str = "history.imported";
+
+/// The History list: songs by their last play here, newest first, then what 1.x had played before
+/// (its History, imported). Clearing the history (`since` > 0) drops the imported part as well.
+pub fn history(db: &Db, limit: usize, since: i64) -> Result<Vec<String>> {
+    let mut songs = recent_songs(db, limit, since)?;
+    if since == 0 {
+        let imported = crate::settings::device(db, IMPORTED_HISTORY)?;
+        for id in imported.as_ref().and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str) {
+            if songs.len() >= limit {
+                break;
+            }
+            if !songs.iter().any(|s| s == id) {
+                songs.push(id.to_owned());
+            }
+        }
+    }
+    Ok(songs)
+}
+
 pub fn recent_songs(db: &Db, limit: usize, since: i64) -> Result<Vec<String>> {
     let mut stmt = db.conn().prepare(
         "SELECT song_id FROM play_events WHERE started_at > ?2 GROUP BY song_id

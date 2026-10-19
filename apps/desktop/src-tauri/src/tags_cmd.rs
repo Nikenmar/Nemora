@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use tauri::{AppHandle, State};
 
 use crate::app::App;
-use crate::commands::{Res, fail, notify, rows_for, view};
+use crate::commands::{Res, albums_of, artists_of, fail, genres_of, notify, rows_for, view};
 
 /// The file of a known song (view id), or the path itself for a file outside the library.
 fn resolve(app: &App, id_or_path: &str, known: bool) -> Res<(String, Option<SongRow>)> {
@@ -25,6 +25,61 @@ fn resolve(app: &App, id_or_path: &str, known: bool) -> Res<(String, Option<Song
 
 fn names(list: &[String]) -> Vec<Value> {
     list.iter().map(|n| json!({ "artistId": n, "name": n })).collect()
+}
+
+struct Entries {
+    artists: Vec<Value>,
+    album_artists: Vec<Value>,
+    album: Option<Value>,
+    genres: Vec<Value>,
+}
+
+/// The artists, album and genres of a library song as the editor shows them, with their artwork
+/// and the album's size, as 1.x took them from its library. Names the library does not know stay
+/// plain names.
+fn library_entries(app: &App, tags: &nemora_core::tags::TrackTags) -> Res<Entries> {
+    let db = app.read();
+    let v = view(app);
+    let people = |list: &[String]| -> Res<Vec<Value>> {
+        let known = artists_of(&db, &v, list, None, 0).map_err(fail)?;
+        Ok(list
+            .iter()
+            .map(|name| match known.iter().find(|a| a["name"] == name.as_str()) {
+                Some(a) => {
+                    json!({ "artistId": a["artistId"], "name": name, "artworkPath": a["artworkPaths"]["artworkPath"] })
+                }
+                None => json!({ "name": name }),
+            })
+            .collect())
+    };
+    let album = match &tags.album {
+        Some(title) => {
+            let found = albums_of(&db, &v, std::slice::from_ref(title), None).map_err(fail)?;
+            Some(match found.into_iter().find(|a| a["title"] == title.as_str()) {
+                Some(a) => json!({
+                    "title": title,
+                    "albumId": a["albumId"],
+                    "noOfSongs": a["songs"].as_array().map_or(0, Vec::len),
+                    "artists": a["artists"].as_array().map(|list| list.iter().map(|x| x["name"].clone()).collect::<Vec<_>>()),
+                    "artworkPath": a["artworkPaths"]["artworkPath"],
+                }),
+                None => json!({ "title": title }),
+            })
+        }
+        None => None,
+    };
+    let known_genres = genres_of(&db, &v, &tags.genres, None).map_err(fail)?;
+    let genres = tags
+        .genres
+        .iter()
+        .map(|name| match known_genres.iter().find(|g| g["name"] == name.as_str()) {
+            Some(g) => {
+                json!({ "genreId": g["genreId"], "name": name, "artworkPath": g["artworkPaths"]["artworkPath"] })
+            }
+            None => json!({ "name": name }),
+        })
+        .collect();
+    Ok(Entries { artists: people(&tags.artists)?, album_artists: people(&tags.album_artists)?, album, genres })
 }
 
 /// 1.x `SongTags` for the editor.
@@ -44,14 +99,23 @@ pub fn tags_get(app: State<'_, App>, song_id_or_path: String, is_known_source: b
     };
     let artwork =
         row.as_ref().and_then(|r| r.cover_hash.as_deref()).map(|h| v.artwork(Some(h), "")["artworkPath"].clone());
+    let Entries { artists, album_artists, album, genres } = match &row {
+        Some(_) => library_entries(&app, &tags)?,
+        None => Entries {
+            artists: names(&tags.artists),
+            album_artists: names(&tags.album_artists),
+            album: tags.album.as_ref().map(|a| json!({ "title": a })),
+            genres: tags.genres.iter().map(|g| json!({ "name": g })).collect(),
+        },
+    };
     Ok(json!({
         "title": tags.title,
-        "artists": names(&tags.artists),
-        "albumArtists": names(&tags.album_artists),
-        "album": tags.album.as_ref().map(|a| json!({ "title": a, "albumId": a })),
+        "artists": artists,
+        "albumArtists": album_artists,
+        "album": album,
         "trackNumber": tags.track_no,
         "releasedYear": tags.year,
-        "genres": tags.genres.iter().map(|g| json!({ "genreId": g, "name": g })).collect::<Vec<_>>(),
+        "genres": genres,
         "composer": tags.composer,
         "synchronizedLyrics": synced,
         "unsynchronizedLyrics": unsynced,

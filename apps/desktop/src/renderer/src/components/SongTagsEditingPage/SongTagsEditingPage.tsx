@@ -166,7 +166,7 @@ function SongTagsEditingPage() {
   useEffect(() => {
     if (artistKeyword.trim()) {
       window.api.search
-        .search('Artists', artistKeyword, false, false)
+        .search('Artists', artistKeyword, false)
         .then((res) => {
           console.log(res);
           if (res.artists.length > 0)
@@ -190,7 +190,7 @@ function SongTagsEditingPage() {
   useEffect(() => {
     if (albumKeyword.trim()) {
       window.api.search
-        .search('Albums', albumKeyword, false, false)
+        .search('Albums', albumKeyword, false)
         .then((res) => {
           console.log(res);
           if (res.albums.length > 0)
@@ -214,7 +214,7 @@ function SongTagsEditingPage() {
   useEffect(() => {
     if (albumArtistKeyword.trim()) {
       window.api.search
-        .search('Artists', albumArtistKeyword, false, false)
+        .search('Artists', albumArtistKeyword, false)
         .then((res) => {
           console.log(res);
           if (res.artists.length > 0)
@@ -238,7 +238,7 @@ function SongTagsEditingPage() {
   useEffect(() => {
     if (genreKeyword.trim()) {
       window.api.search
-        .search('Genres', genreKeyword, false, false)
+        .search('Genres', genreKeyword, false)
         .then((res) => {
           console.log(res);
           if (res.genres.length > 0)

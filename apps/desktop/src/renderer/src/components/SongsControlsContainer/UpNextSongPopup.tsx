@@ -28,7 +28,7 @@ const UpNextSongPopup = (props: Props) => {
   const { onPopupAppears, isSemiTransparent = false, className } = props;
 
   const [upNextSongData, setUpNextSongData] = useState<SongData>();
-  const upNextSongDataCache = useRef<SongData>();
+  const upNextSongDataCache = useRef<SongData>(undefined);
 
   useEffect(() => {
     onPopupAppears(!!upNextSongData);

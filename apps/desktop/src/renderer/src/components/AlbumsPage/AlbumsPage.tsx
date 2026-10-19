@@ -45,7 +45,9 @@ const AlbumsPage = () => {
 
   const [albumsData, setAlbumsData] = useState([] as Album[]);
   const [sortingOrder, setSortingOrder] = useState<AlbumSortTypes>(
-    currentlyActivePage?.data?.sortingOrder || sortingStates?.albumsPage || 'aToZ'
+    (currentlyActivePage?.data?.sortingOrder as AlbumSortTypes | undefined) ||
+      sortingStates?.albumsPage ||
+      'aToZ'
   );
 
   const fetchAlbumData = useCallback(

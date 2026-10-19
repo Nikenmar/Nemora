@@ -82,11 +82,12 @@ const PlaylistInfoPage = () => {
           preserveAddedOrder
         )
         .then((songsData) => {
-          if (songsData && songsData.length > 0) setPlaylistSongs(songsData);
+          setPlaylistSongs(songsData ?? []);
           return undefined;
         })
         .catch((err) => console.error(err));
-    }
+      // An empty playlist (or one just emptied) must not keep the songs of the page before it.
+    } else setPlaylistSongs([]);
   }, [filteringOrder, playlistData.songs, sortingOrder]);
 
   useEffect(() => {

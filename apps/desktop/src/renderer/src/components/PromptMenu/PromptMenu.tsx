@@ -18,7 +18,7 @@ const PromptMenu = () => {
   const { changePromptMenuData, updatePromptMenuHistoryIndex } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
-  const promptMenuRef = useRef() as MutableRefObject<HTMLDialogElement>;
+  const promptMenuRef = useRef(null) as unknown as MutableRefObject<HTMLDialogElement>;
 
   useEffect(() => {
     const dialog = promptMenuRef.current;

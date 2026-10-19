@@ -59,7 +59,9 @@ const ArtistPage = () => {
 
   const [artistsData, setArtistsData] = useState([] as Artist[]);
   const [sortingOrder, setSortingOrder] = useState<ArtistSortTypes>(
-    currentlyActivePage?.data?.sortingOrder || sortingStates?.artistsPage || 'aToZ'
+    (currentlyActivePage?.data?.sortingOrder as ArtistSortTypes | undefined) ||
+      sortingStates?.artistsPage ||
+      'aToZ'
   );
   const [filteringOrder, setFilteringOrder] = useState<ArtistFilterTypes>('notSelected');
 
@@ -181,7 +183,7 @@ const ArtistPage = () => {
               data={artistsData}
               fixedItemWidth={MIN_ITEM_WIDTH}
               fixedItemHeight={MIN_ITEM_HEIGHT}
-              scrollTopOffset={currentlyActivePage.data?.gridState}
+              scrollTopOffset={currentlyActivePage.data?.gridState as number | undefined}
               itemContent={(index, artist) => {
                 return (
                   <Artist

@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react';
+import { Fragment, type ReactNode, useMemo } from 'react';
 import Button, { type ButtonProps } from './Button';
 import Dropdown, { type DropdownProp } from './Dropdown';
 // import useResizeObserver from '../hooks/useResizeObserver';
@@ -88,7 +88,10 @@ const TitleContainer = (props: Props) => {
         >
           {title}
         </p>
-        {otherItems}
+        {otherItems.map((item, index) => (
+          // The items are fixed slots handed in by position.
+          <Fragment key={index}>{item}</Fragment>
+        ))}
       </div>
       {isButtonsAndDropdownsVisible && (
         <div className="other-controls-container flex">

@@ -9,7 +9,7 @@ import localReleseNotes from '../../../../../release-notes.json';
 // The changelog is read straight from the bundled release-notes.json. The stock
 // version fetched it from upstream Nora, which no longer publishes that file —
 // see src/main/update.ts for the fork's actual update mechanism.
-const releaseNotes = localReleseNotes as Changelog;
+const releaseNotes = localReleseNotes as unknown as Changelog;
 
 const ReleaseNotesPrompt = () => {
   const { t } = useTranslation();

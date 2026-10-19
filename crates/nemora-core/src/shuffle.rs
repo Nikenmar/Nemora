@@ -248,6 +248,20 @@ pub fn recent_songs(db: &crate::db::Db, limit: usize) -> crate::Result<Vec<Strin
             }
         }
     }
+    // As 1.x read its History: what it had played before 2.0 follows, unless the history was cleared.
+    if out.len() < limit && crate::settings::device(db, "history.clearedAt")?.is_none() {
+        let imported = crate::settings::device(db, crate::plays::IMPORTED_HISTORY)?;
+        for id in
+            imported.as_ref().and_then(serde_json::Value::as_array).into_iter().flatten().filter_map(|v| v.as_str())
+        {
+            if out.len() == limit {
+                break;
+            }
+            if !out.iter().any(|s| s == id) {
+                out.push(id.to_owned());
+            }
+        }
+    }
     Ok(out)
 }
 

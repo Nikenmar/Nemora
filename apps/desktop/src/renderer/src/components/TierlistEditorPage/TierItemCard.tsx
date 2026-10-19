@@ -34,7 +34,8 @@ const getCaptionClass = (text: string) => {
   return cls;
 };
 
-interface TierItemCardProps extends HTMLAttributes<HTMLDivElement> {
+// `onPlay` here plays the card's song; the element's media `onPlay` does not apply to a card.
+interface TierItemCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onPlay'> {
   song?: SongData;
   labelMode: TierlistLabelMode;
   showPlayButton?: boolean;

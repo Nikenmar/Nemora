@@ -1,4 +1,3 @@
-import { TagConstants } from 'node-id3';
 // import logger from '../main/logger';
 import isLyricsSynced, {
   EXTENDED_SYNCED_LYRICS_LINE_REGEX,
@@ -410,12 +409,18 @@ const getNextTimestamp = (
   return 0;
 };
 
+/**
+ * The ID3 SYLT time stamp format for milliseconds (node-id3's `TimeStampFormat.MILLISECONDS`).
+ * Kept here so the view does not load node-id3, a CommonJS package that drags Node's `stream` in.
+ */
+const ID3_TIMESTAMPS_IN_MILLISECONDS = 2;
+
 export const parseSyncedLyricsFromAudioDataSource = (
   input: SyncedLyricsInput
 ): LyricsData | undefined => {
   const { timeStampFormat, synchronisedText, shortText } = input;
 
-  if (timeStampFormat === TagConstants.TimeStampFormat.MILLISECONDS) {
+  if (timeStampFormat === ID3_TIMESTAMPS_IN_MILLISECONDS) {
     const metadata = parseMetadataFromShortText(shortText);
 
     const lyrics: LyricLine[] = synchronisedText.map((line, index, arr) => {
