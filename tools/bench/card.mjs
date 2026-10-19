@@ -135,10 +135,14 @@ const metricRow = (row, index) => {
         borderTop: index === 0 ? 'none' : `1px solid ${COLORS.line}`
       }
     },
-    h('div', { style: { display: 'flex', width: '230px', fontSize: '18px', fontWeight: 400 } }, row.label),
     h(
       'div',
-      { style: { display: 'flex', flexDirection: 'column', width: '450px', gap: '8px' } },
+      { style: { display: 'flex', width: '248px', paddingRight: '18px', fontSize: '18px', fontWeight: 400 } },
+      row.label
+    ),
+    h(
+      'div',
+      { style: { display: 'flex', flexDirection: 'column', width: '432px', gap: '8px' } },
       line(row.a, COLORS.nora, { color: COLORS.muted }),
       line(row.b, COLORS.nemora, { color: COLORS.text, fontWeight: 500 })
     ),
