@@ -39,8 +39,6 @@ Drag songs into tiers, then play a tierlist like a playlist. Your rankings feed 
 
 Listens, skips, hours, streaks, a heatmap of every day you listened, and the hours and weekdays you play music, for any year or all time.
 
-**Recap** turns a year or a month into a short slideshow: your top tracks, the artist you kept coming back to, your biggest day, the song you found and then wore out.
-
 Your history exports to a single file, and importing it twice never doubles a listen.
 
 ### Duels & SongGuessr
@@ -75,7 +73,7 @@ Any word order, typos forgiven, and text nobody can type: "hikari" finds `ひか
 
 Against [Nora 3.1.0](https://github.com/Sandakan/Nora/releases/tag/v3.1.0-stable): a 1775-track library builds 17× faster with 45× less written to disk, memory drops to a third, CPU during playback to under a quarter, and songs run into each other with no gap where Nora leaves 35 ms of silence.
 
-Nemora is not ahead everywhere: it writes more in its first minute (13 MB against 3 MB) and idles slightly higher (1.0 % of a core against 0.6 %). Most of the size gap is Chromium, which Electron ships and Nemora takes from Windows.
+Nemora is not ahead everywhere: it writes more in its first minute (13 MB against 3 MB) and idles slightly higher (1.0 % of a core against 0.6 %).
 
 Same machine, both players offline in separate profiles, every process counted, medians of 2 to 5 launches. [Full report](docs/benchmark.md) · [harness](tools/bench)
 
@@ -92,8 +90,7 @@ Development builds keep their data in `%APPDATA%\Nemora-dev`; `NEMORA_PROFILE_DI
 
 <div align="center">
 
-Made by nikenmar  
-CMR
+Made by nikenmar, CMR
 
 _All songs, artists, albums, and cover art used in demonstrations are property of their respective owners and used for illustrative purposes only. All copyrights are respected._
 
@@ -103,6 +100,6 @@ _All songs, artists, albums, and cover art used in demonstrations are property o
 
 ## Credits
 
-Built on [Nora](https://github.com/Sandakan/Nora) by [Sandakan Nipunajith](https://github.com/Sandakan) (MIT), which made all of this possible; Nora took its cues from [Oto Music](https://play.google.com/store/apps/details?id=com.piyush.music) by Piyush Mamidwar.
+Built on [Nora](https://github.com/Sandakan/Nora) by [Sandakan Nipunajith](https://github.com/Sandakan) (MIT), which made all of this possible.
 
-Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev); audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch); lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com); artist info from [Deezer](https://www.deezer.com) and [Genius](https://genius.com); scrobbling via [Last.fm](https://www.last.fm). Every third-party licence is listed in **Settings > About > Open-source licenses**.
+Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com). artist info from [Deezer](https://www.deezer.com) and [Genius](https://genius.com). scrobbling via [Last.fm](https://www.last.fm). Every third-party licence is listed in **Settings > About > Open-source licenses**.
