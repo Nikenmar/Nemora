@@ -101,12 +101,23 @@ impl App {
         self.defaults.get().cloned().unwrap_or_default()
     }
 
-    /// Scans the music folders.
+    /// Scans the music folders, then gives the new covers their palettes.
     pub fn scan(&self) -> nemora_core::Result<nemora_core::scan::ScanReport> {
-        self.write(|db| {
+        let report = self.write(|db| {
             let roots: Vec<PathBuf> = nemora_core::settings::music_folders(db)?.into_iter().map(|f| f.path).collect();
             nemora_core::scan::scan_folders(db, &self.covers, &roots)
-        })
+        })?;
+        self.fill_palettes()?;
+        Ok(report)
+    }
+
+    /// Computes the palettes covers do not have yet; the decoding runs without holding the writer.
+    pub fn fill_palettes(&self) -> nemora_core::Result<usize> {
+        nemora_core::palette::fill_missing(
+            &self.covers,
+            || nemora_core::palette::covers_without_palette(&self.read()),
+            |palettes| self.write(|db| nemora_core::palette::store_palettes(db, palettes)),
+        )
     }
 
     /// Whether `legacy` holds 1.x stores this profile has not imported yet. Marks the import as

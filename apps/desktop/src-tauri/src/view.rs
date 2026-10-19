@@ -62,6 +62,20 @@ impl View<'_> {
         }
     }
 
+    /// 1.x `PaletteData` of a cover: what is stored, nothing while it is still being computed, and
+    /// 1.x's default for no cover at all.
+    fn palette(cover: Option<&str>, stored: Option<&str>) -> Value {
+        match (cover, stored) {
+            (None, _) => serde_json::from_str(nemora_core::palette::DEFAULT_PALETTE).unwrap_or(Value::Null),
+            (Some(_), Some(json)) => serde_json::from_str(json).unwrap_or(Value::Null),
+            (Some(_), None) => Value::Null,
+        }
+    }
+
+    fn song_palette(r: &SongRow) -> Value {
+        Self::palette(r.cover_hash.as_deref(), r.palette.as_deref())
+    }
+
     fn song_artwork(&self, r: &SongRow) -> Value {
         self.artwork(r.cover_hash.as_deref(), &self.defaults.song)
     }
@@ -73,6 +87,7 @@ impl View<'_> {
             "album": album(r),
             "duration": seconds(r.duration_ms),
             "artworkPaths": self.song_artwork(r),
+            "paletteData": Self::song_palette(r),
             "path": r.path,
             "songId": view_id(&r.song_id, r.variant_id, r.is_primary),
             "addedDate": r.added_at,
@@ -98,6 +113,7 @@ impl View<'_> {
             "path": r.path,
             "addedDate": r.added_at,
             "artworkPaths": self.song_artwork(r),
+            "paletteData": Self::song_palette(r),
             "isBlacklisted": r.is_blacklisted,
         })
     }
@@ -115,6 +131,7 @@ impl View<'_> {
             "path": r.path.as_deref().map(|p| asset_url(Path::new(p))),
             "isAFavorite": r.is_favorite,
             "album": album(r),
+            "paletteData": Self::song_palette(r),
             "isKnownSource": true,
             "isBlacklisted": r.is_blacklisted,
         })
@@ -147,6 +164,7 @@ impl View<'_> {
             "name": row.name,
             "songs": songs(members),
             "artworkPaths": self.artwork(row.cover_hash.as_deref(), &self.defaults.genre),
+            "paletteData": Self::palette(row.cover_hash.as_deref(), row.palette.as_deref()),
         })
     }
 

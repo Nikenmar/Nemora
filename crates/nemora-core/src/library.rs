@@ -60,6 +60,8 @@ pub struct SongRow {
     pub disc_no: Option<i64>,
     pub duration_ms: i64,
     pub cover_hash: Option<String>,
+    /// The cover's palette as stored, JSON.
+    pub palette: Option<String>,
     pub is_favorite: bool,
     pub is_blacklisted: bool,
     pub plays: i64,
@@ -193,7 +195,8 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
                    WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position)),
                 (SELECT uri FROM locations l WHERE l.variant_id = v.variant_id AND l.missing_since IS NULL
                    ORDER BY l.location_id LIMIT 1),
-                v.variant_id = (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = v.song_id AND w.present = 1)
+                v.variant_id = (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = v.song_id AND w.present = 1),
+                (SELECT palette FROM covers c WHERE c.cover_hash = v.cover_hash)
          FROM track_variants v JOIN tracks t ON t.song_id = v.song_id WHERE v.variant_id IN ({})",
         join_ids(ids)
     );
@@ -218,6 +221,7 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
                 added_at: r.get(12)?,
                 path: r.get(14)?,
                 is_primary: r.get::<_, Option<bool>>(15)?.unwrap_or(false),
+                palette: r.get(16)?,
             })
         })?
         .map(|row| row.map(|r| (r.variant_id, r)))
@@ -427,13 +431,14 @@ pub struct NamedRow {
     pub name: String,
     pub song_count: i64,
     pub cover_hash: Option<String>,
+    pub palette: Option<String>,
 }
 
 /// Artists credited on present songs (track artists and album artists).
 pub fn artists(db: &Db, sort: NameSort) -> Result<Vec<NamedRow>> {
     named_rows(
         db,
-        "SELECT a.name, count(DISTINCT v.song_id), max(v.cover_hash) FROM variant_artists a JOIN track_variants v USING (variant_id)",
+        "SELECT a.name, count(DISTINCT v.song_id), max(v.cover_hash) AS cover FROM variant_artists a JOIN track_variants v USING (variant_id)",
         "a.name",
         sort,
     )
@@ -442,16 +447,21 @@ pub fn artists(db: &Db, sort: NameSort) -> Result<Vec<NamedRow>> {
 pub fn genres(db: &Db, sort: NameSort) -> Result<Vec<NamedRow>> {
     named_rows(
         db,
-        "SELECT g.name, count(DISTINCT v.song_id), max(v.cover_hash) FROM variant_genres g JOIN track_variants v USING (variant_id)",
+        "SELECT g.name, count(DISTINCT v.song_id), max(v.cover_hash) AS cover FROM variant_genres g JOIN track_variants v USING (variant_id)",
         "g.name",
         sort,
     )
 }
 
 fn named_rows(db: &Db, select: &str, group: &str, sort: NameSort) -> Result<Vec<NamedRow>> {
-    let mut stmt = db.conn().prepare(&format!("{select} WHERE {PRESENT} GROUP BY {group}"))?;
+    let mut stmt = db.conn().prepare(&format!(
+        "SELECT n.*, (SELECT palette FROM covers c WHERE c.cover_hash = n.cover)
+         FROM ({select} WHERE {PRESENT} GROUP BY {group}) n"
+    ))?;
     let mut rows: Vec<NamedRow> = stmt
-        .query_map([], |r| Ok(NamedRow { name: r.get(0)?, song_count: r.get(1)?, cover_hash: r.get(2)? }))?
+        .query_map([], |r| {
+            Ok(NamedRow { name: r.get(0)?, song_count: r.get(1)?, cover_hash: r.get(2)?, palette: r.get(3)? })
+        })?
         .collect::<rusqlite::Result<_>>()?;
     sort_named(&mut rows, sort, |r| (&r.name, r.song_count, &r.name));
     Ok(rows)

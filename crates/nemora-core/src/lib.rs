@@ -17,6 +17,7 @@ pub mod import;
 pub mod library;
 pub mod lyrics;
 pub mod m3u;
+pub mod palette;
 pub mod playlists;
 pub mod plays;
 pub mod recap;

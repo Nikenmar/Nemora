@@ -229,6 +229,13 @@ pub fn run() {
                         &["songs", "artists", "albums", "genres", "playlists", "userData", "userData/musicFolder"],
                     );
                 }
+                // Covers a scan left without a palette: a profile from before palettes, or a scan
+                // that was cut short.
+                match handle.state::<app::App>().fill_palettes() {
+                    Ok(0) => {}
+                    Ok(_) => commands::notify(&handle, &["songs", "genres"]),
+                    Err(error) => eprintln!("[nemora] cover palettes failed: {error}"),
+                }
                 if let Err(error) = watch::start(&handle) {
                     eprintln!("[nemora] the music folders cannot be watched: {error}");
                 }
