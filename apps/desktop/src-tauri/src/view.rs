@@ -80,6 +80,8 @@ impl View<'_> {
         self.artwork(r.cover_hash.as_deref(), &self.defaults.song)
     }
 
+    /// A row of the song lists. No `trackNo`, as in 1.x: the row shows a track number as its
+    /// index badge wherever one is present, which only the album page asks for.
     pub fn audio_info(&self, r: &SongRow) -> Value {
         json!({
             "title": r.title,
@@ -94,7 +96,6 @@ impl View<'_> {
             "isAFavorite": r.is_favorite,
             "year": r.year,
             "isBlacklisted": r.is_blacklisted,
-            "trackNo": r.track_no,
         })
     }
 

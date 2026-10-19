@@ -60,8 +60,11 @@ pub fn legacy_import_state(app: State<'_, App>) -> Res<Value> {
 fn song_sort(sort: Option<&str>, month_start: &str) -> SongSort {
     match sort.unwrap_or("aToZ") {
         "zToA" => SongSort::TitleDesc,
-        "addedOrder" | "dateAddedAscending" => SongSort::AddedAsc,
-        "dateAddedDescending" => SongSort::AddedDesc,
+        // The view's names are Nora's and read backwards: `dateAddedAscending` is labelled
+        // "Newest" and 1.x listed the newest songs first under it (Home's Recently Added asks
+        // for it too); `dateAddedDescending` is "Oldest".
+        "dateAddedAscending" => SongSort::AddedDesc,
+        "addedOrder" | "dateAddedDescending" => SongSort::AddedAsc,
         "releasedYearAscending" => SongSort::YearAsc,
         "releasedYearDescending" => SongSort::YearDesc,
         "trackNoAscending" => SongSort::TrackAsc,
@@ -1223,4 +1226,16 @@ pub fn library_listening(app: State<'_, App>, song_ids: Vec<String>) -> Res<Vec<
         }));
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn newest_lists_the_newest_songs_first() {
+        // "Newest" and Home's Recently Added send `dateAddedAscending`; "Oldest" sends the other.
+        assert_eq!(song_sort(Some("dateAddedAscending"), "2026-10-01"), SongSort::AddedDesc);
+        assert_eq!(song_sort(Some("dateAddedDescending"), "2026-10-01"), SongSort::AddedAsc);
+    }
 }

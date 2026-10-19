@@ -18,8 +18,10 @@ const NewTierlistPrompt = lazy(() => import('./NewTierlistPrompt'));
 const tierlistSortTypes: DropdownOption<TierlistSortTypes>[] = [
   { label: i18n.t('sortTypes.aToZ'), value: 'aToZ' },
   { label: i18n.t('sortTypes.zToA'), value: 'zToA' },
-  { label: i18n.t('sortTypes.dateAddedAscending'), value: 'dateAddedAscending' },
-  { label: i18n.t('sortTypes.dateAddedDescending'), value: 'dateAddedDescending' }
+  // Tierlists sort by date the opposite way to songs (oldest first for `dateAddedAscending`, as
+  // in 1.x and in saved settings), so the shared "Newest" / "Oldest" labels are swapped here.
+  { label: i18n.t('sortTypes.dateAddedDescending'), value: 'dateAddedAscending' },
+  { label: i18n.t('sortTypes.dateAddedAscending'), value: 'dateAddedDescending' }
 ];
 
 const TierlistsPage = () => {

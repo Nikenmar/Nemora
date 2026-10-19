@@ -221,6 +221,7 @@ pub fn tierlists_list(app: State<'_, App>, ids: Option<Vec<String>>, sort_type: 
             docs.sort_by_key(name);
             docs.reverse();
         }
+        // Oldest first, as 1.x sorted it; the Tierlists page labels the two date sorts to match.
         Some("dateAddedAscending") => docs.sort_by_key(created),
         Some("dateAddedDescending") => {
             docs.sort_by_key(created);
