@@ -253,8 +253,11 @@ mod tests {
             let out = stretched(&input, speed);
             // In music time: the tone begins one second in.
             let landed = onset(&out) as f64 * speed / RATE as f64;
-            // The stretcher's analysis window smears an onset by a few milliseconds.
-            assert!((landed - 1.0).abs() < 0.008, "{speed}x: the tone starts at {landed:.4} s of music, not 1 s");
+            // The stretcher's analysis window smears an onset by a few milliseconds (worst 4.3 ms in
+            // 300 runs). Stretching by more than 2x (below 0.5x) it also randomises phases, seeded
+            // from std::random_device, so the smear varies run to run: worst 10.2 ms in 300 at 0.25x.
+            let tolerance = if speed < 0.5 { 0.020 } else { 0.008 };
+            assert!((landed - 1.0).abs() < tolerance, "{speed}x: the tone starts at {landed:.4} s of music, not 1 s");
         }
     }
 }
