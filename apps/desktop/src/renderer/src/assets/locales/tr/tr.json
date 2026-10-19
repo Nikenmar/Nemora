@@ -810,7 +810,7 @@
     "message": "<li> Musixmatch Şarkı Sözleri, bu yazılıma bir değerlendirme özelliği olarak eklenmiştir ve herhangi bir zamanda kaldırılabilir.</li><li>Nemora, hiçbir şekilde Musixmatch Lyrics veya herhangi bir iştiraki veya yan kuruluşu ile bağlantılı, yetkili, bakımlı, sponsorlu veya onaylı değildir.</li><li> Bu uygulamanın geliştiricileri, Musixmatch Lyrics tarafından uygulanan telif haklarına uyarak kullanılması amaçlandığından, kullanıcılarının kişisel sorumluluğunu bu özelliği adil bir şekilde kullanmaya çağırır.</li>",
     "implementationNotice": "Fashni'den uygulama<hyperlink></hyperlink>.",
     "hyperlinkTitle": "MxLRC Github Deposu",
-    "contactAboutComplaints": "Herhangi bir şikayetiniz varsa, <hyperlink>e - postam aracılığıyla benimle iletişime geçin.</hyperlink>."
+    "contactAboutComplaints": "Herhangi bir şikayetiniz varsa, Nemora'nın <Hyperlink>GitHub</Hyperlink> sayfasında bir sorun bildirin."
   },
   "musixmatchSettingsPrompt": {
     "title": "Musixmatch Ayarları",

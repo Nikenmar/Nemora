@@ -927,7 +927,7 @@
     "message": "<li> Musixmatch Lyrics được thêm vào như một tính năng thử nghiệm cho phần mềm này và có thể bị xoá bất kỳ lúc nào.</li><li>Nemora không có mối liên kết, được ủy quyền, duy trì, tài trợ hoặc được tài trợ bởi Musixmatch hoặc bất kỳ công ty liên kết hoặc chi nhánh nào của họ.</li><li>Người quản lý và đóng góp của ứng dụng này kêu gọi người dùng có trách nhiệm cá nhân trong việc sử dụng tính năng này một cách công bằng, vì tính năng này được sử dụng theo mục đích tuân thủ bản quyền do Musixmatch thực hiện.</li>",
     "implementationNotice": "Implementation from Fashni's <Hyperlink/>.",
     "hyperlinkTitle": "Kho lưu trữ GitHub của MxLRC",
-    "contactAboutComplaints": "Nếu bạn có bất kỳ khiếu nại nào, bạn có thể liên hệ với tôi qua máy chủ Discord của Nora, hoặc qua <Hyperlink>email</Hyperlink> của tôi."
+    "contactAboutComplaints": "Nếu bạn có bất kỳ khiếu nại nào, hãy tạo một issue trên <Hyperlink>GitHub</Hyperlink> của Nemora."
   },
 
   "musixmatchSettingsPrompt": {

@@ -28,8 +28,8 @@ const MusixmatchDisclaimerPrompt = () => {
             components={{
               Hyperlink: (
                 <Hyperlink
-                  link="mailto:sandakannipunajith@gmail.com?subject=Regarding Nemora"
-                  linkTitle="Email"
+                  link="https://github.com/Nikenmar/Nemora/issues"
+                  linkTitle="GitHub"
                   noValidityCheck
                 />
               )

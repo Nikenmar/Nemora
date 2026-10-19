@@ -34,7 +34,7 @@ const ErrorPrompt = (props: ErrorPromptProps) => {
                 Hyperlink1: (
                   <Hyperlink
                     noValidityCheck
-                    link="mailto:sandakannipunajith@gmail.com?subject=Regarding Nemora&body=If you found a bug in the app, please try to attach the log file of the app with a detailed explanation of the bug.%0d%0a%0d%0aYou can get to it by going to  Settings > About > Open Log File."
+                    link="https://github.com/Nikenmar/Nemora/issues/new?template=bug_report.yml"
                   />
                 ),
                 Hyperlink2: <Hyperlink noValidityCheck linkTitle="" link={packageFile.bugs.url} />
