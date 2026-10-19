@@ -324,7 +324,10 @@ class AudioPlayer extends EventTarget {
       this.lastEqualizer = key;
       void invoke('engine_equalizer', { gains }).catch(() => undefined);
     }
-    if (player.playbackRate !== this.rate) this.playbackRate = player.playbackRate;
+    // The setting itself: `player.playbackRate` is only its value at startup, so in 1.x a change
+    // took effect after a restart.
+    const rate = localStorage.playback.playbackRate || player.playbackRate || 1;
+    if (rate !== this.rate) this.playbackRate = rate;
     this.queueNext();
   }
 
@@ -461,10 +464,14 @@ class AudioPlayer extends EventTarget {
     return this.rate;
   }
 
-  /** Speed is not in the engine yet: the value is kept out, playback stays at 1x. */
+  /** Speed with the pitch kept, 0.25x to 4x as the view offers; the engine stretches the sound. */
   set playbackRate(rate: number) {
-    if (rate !== 1) console.warn('Playback speed is not available yet; playing at 1x.');
-    this.rate = 1;
+    const speed = Math.min(Math.max(Number.isFinite(rate) ? rate : 1, 0.25), 4);
+    if (speed === this.rate) return;
+    // `currentTime` runs on at the new speed from here.
+    this.setPosition(this.currentTime);
+    this.rate = speed;
+    void invoke('engine_speed', { speed }).catch(() => undefined);
     this.fireLater('ratechange');
   }
 }

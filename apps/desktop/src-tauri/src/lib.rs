@@ -154,6 +154,7 @@ pub fn run() {
             engine::engine_stop,
             engine::engine_volume,
             engine::engine_equalizer,
+            engine::engine_speed,
             smtc::smtc_update,
             duels::duel_pair,
             duels::duel_pair_by_ids,

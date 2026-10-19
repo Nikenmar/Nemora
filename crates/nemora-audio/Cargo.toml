@@ -13,3 +13,6 @@ cpal = "0.18.2"
 rubato = "5.0.1"
 symphonia = { workspace = true, features = ["opt-simd", "flac", "mp1", "mp2", "mp3", "aac", "alac", "isomp4", "ogg", "vorbis", "wav", "aiff", "pcm", "mkv"] }
 thiserror.workspace = true
+
+[build-dependencies]
+cc = "1.2"

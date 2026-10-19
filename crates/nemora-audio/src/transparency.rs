@@ -107,3 +107,43 @@ fn every_format_leaves_the_engine_bit_identical() {
     assert!(checked >= 3, "only {checked} formats could be checked");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_seek_lands_on_the_requested_frame() {
+    if !ffmpeg(&["-version"]) {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("nemora-seek-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    // Not on any packet boundary.
+    let target = 1.234_567;
+    let cases: [(&str, &[&str]); 3] = [
+        ("s16.flac", &["-sample_fmt", "s16"]),
+        ("s16.wav", &["-c:a", "pcm_s16le"]),
+        ("a.mp3", &["-c:a", "libmp3lame"]),
+    ];
+    for (name, args) in cases {
+        let Some(path) = generated(&dir, name, args) else {
+            eprintln!("SKIPPED {name}: this ffmpeg cannot encode it");
+            continue;
+        };
+        let (reference, rate, channels) = decoded(&path);
+        let mut decoder = Decoder::open(&path).unwrap();
+        let landed = decoder.seek(target).unwrap();
+        let frame = (landed * rate as f64).round() as usize;
+        assert!((landed - target).abs() * rate as f64 <= 1.0, "{name}: landed at {landed}, not {target}");
+        let mut block = Vec::new();
+        assert!(decoder.next_block(&mut block).unwrap());
+        let expected = &reference[frame * channels..frame * channels + block.len().min(256)];
+        let got = &block[..expected.len()];
+        if name.ends_with(".mp3") {
+            // A lossy decoder restarted mid-stream converges within a frame; the timing is what counts.
+            let error = expected.iter().zip(got).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+            assert!(error < 0.05, "{name}: {error} off the reference after the seek");
+        } else {
+            assert_eq!(got, expected, "{name}: different samples after the seek");
+        }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}

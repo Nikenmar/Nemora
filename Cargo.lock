@@ -2887,6 +2887,7 @@ dependencies = [
 name = "nemora-audio"
 version = "2.0.0-dev.0"
 dependencies = [
+ "cc",
  "cpal",
  "rubato",
  "symphonia",

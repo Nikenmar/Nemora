@@ -112,3 +112,9 @@ pub fn engine_volume(handle: AppHandle, engine: State<'_, Engine>, percent: f64,
 pub fn engine_equalizer(handle: AppHandle, engine: State<'_, Engine>, gains: [f64; 10]) -> Res<()> {
     with_player(&handle, &engine, |p| p.set_equalizer(gains))
 }
+
+/// Playback speed with the pitch kept (0.25 to 4; 1 leaves the sound untouched).
+#[tauri::command]
+pub fn engine_speed(handle: AppHandle, engine: State<'_, Engine>, speed: f64) -> Res<()> {
+    with_player(&handle, &engine, |p| p.set_speed(speed))
+}

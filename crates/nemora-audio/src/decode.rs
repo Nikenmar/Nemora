@@ -33,6 +33,9 @@ pub struct Decoder {
     pub frames: Option<u64>,
     /// Frames handed out since the start (or since the last seek's landing point).
     position: u64,
+    /// Frames still to drop after a seek: the reader lands on the start of the packet that holds
+    /// the requested moment.
+    skip: u64,
 }
 
 impl Decoder {
@@ -61,7 +64,7 @@ impl Decoder {
         let channels =
             params.channels.as_ref().map(|c| c.count()).filter(|&c| c > 0).ok_or_else(|| fail("no channels".into()))?;
         let (track_id, time_base, frames) = (track.id, track.time_base, track.num_frames);
-        Ok(Self { reader, decoder, track_id, time_base, sample_rate, channels, frames, position: 0 })
+        Ok(Self { reader, decoder, track_id, time_base, sample_rate, channels, frames, position: 0, skip: 0 })
     }
 
     /// Seconds of audio, when known.
@@ -92,6 +95,11 @@ impl Decoder {
                     out.clear();
                     out.resize(buffer.samples_interleaved(), 0.0);
                     buffer.copy_to_slice_interleaved(out.as_mut_slice());
+                    if self.skip > 0 {
+                        let dropped = (self.skip as usize).min(out.len() / self.channels);
+                        out.drain(..dropped * self.channels);
+                        self.skip -= dropped as u64;
+                    }
                     if out.is_empty() {
                         continue;
                     }
@@ -105,7 +113,8 @@ impl Decoder {
         }
     }
 
-    /// Moves to `seconds`; answers where it landed (at or before the request).
+    /// Moves to `seconds`; answers where playback resumes: the requested moment itself, unless the
+    /// container cannot place it.
     pub fn seek(&mut self, seconds: f64) -> Result<f64, DecodeError> {
         let time = Time::try_from_secs_f64(seconds.max(0.0)).unwrap_or(Time::ZERO);
         let seeked = self
@@ -113,7 +122,13 @@ impl Decoder {
             .seek(SeekMode::Accurate, SeekTo::Time { time, track_id: Some(self.track_id) })
             .map_err(|e| DecodeError::Decode(e.to_string()))?;
         self.decoder.reset();
-        let landed = self.time_base.and_then(|tb| tb.calc_time(seeked.actual_ts)).map_or(seconds, |t| t.as_secs_f64());
+        let time = |ts| self.time_base.and_then(|tb| tb.calc_time(ts)).map(|t| t.as_secs_f64());
+        let (actual, required) = (time(seeked.actual_ts), time(seeked.required_ts));
+        let landed = required.or(actual).unwrap_or(seconds);
+        self.skip = match (actual, required) {
+            (Some(a), Some(r)) if r > a => ((r - a) * self.sample_rate as f64).round() as u64,
+            _ => 0,
+        };
         self.position = (landed * self.sample_rate as f64).round().max(0.0) as u64;
         Ok(landed)
     }

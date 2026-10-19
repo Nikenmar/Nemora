@@ -6,15 +6,17 @@
 //! end, the following one continues in the same buffer from the very next frame, and its events
 //! begin when the device plays its first frame.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+use crate::decode::DecodeError;
 use crate::dsp::perceptual_gain;
 use crate::output::{Control, Output};
 use crate::source::Source;
+use crate::stretch::SPEED_RANGE;
 
 /// About how much audio waits in the device buffer.
 const BUFFER_SECONDS: f64 = 0.2;
@@ -67,6 +69,7 @@ enum Command {
     Stop,
     Volume { percent: f64, muted: bool },
     Equalizer([f64; 10]),
+    Speed(f64),
     Shutdown,
 }
 
@@ -117,6 +120,10 @@ impl Player {
     pub fn set_equalizer(&self, gains_db: [f64; 10]) {
         self.send(Command::Equalizer(gains_db));
     }
+    /// Playback speed with the pitch kept, within `stretch::SPEED_RANGE`.
+    pub fn set_speed(&self, speed: f64) {
+        self.send(Command::Speed(speed));
+    }
 }
 
 impl Drop for Player {
@@ -155,6 +162,7 @@ struct Engine {
     playing: bool,
     volume: (f64, bool),
     equalizer: [f64; 10],
+    speed: f64,
     last_position: Instant,
 }
 
@@ -168,6 +176,7 @@ impl Engine {
             playing: false,
             volume: (100.0, false),
             equalizer: [0.0; 10],
+            speed: 1.0,
             last_position: Instant::now(),
         }
     }
@@ -184,7 +193,14 @@ impl Engine {
         let Some(c) = &self.current else { return 0.0 };
         let consumed = self.output.shared.consumed.load(Ordering::SeqCst);
         let played = consumed.saturating_sub(c.starts_at).min(c.pushed);
-        c.start_position + played as f64 / self.output.sample_rate as f64
+        // Everything waiting in the buffer was made at the current speed (a change restarts it).
+        c.start_position + played as f64 * self.speed / self.output.sample_rate as f64
+    }
+
+    fn open(&self, path: &Path) -> Result<Source, DecodeError> {
+        let mut source = Source::open(path, self.output.sample_rate, self.output.channels)?;
+        source.set_speed(self.speed);
+        Ok(source)
     }
 
     fn clear_buffer(&self) -> u64 {
@@ -224,7 +240,7 @@ impl Engine {
             Command::Load { token, path, play, at } => {
                 self.next = None;
                 let starts_at = self.clear_buffer();
-                match Source::open(&path, self.output.sample_rate, self.output.channels) {
+                match self.open(&path) {
                     Ok(mut source) => {
                         let start_position = if at > 0.0 { source.seek(at).unwrap_or(0.0) } else { 0.0 };
                         let duration = source.duration().unwrap_or(0.0);
@@ -249,7 +265,7 @@ impl Engine {
                     return;
                 }
                 if let Some(path) = path {
-                    match Source::open(&path, self.output.sample_rate, self.output.channels) {
+                    match self.open(&path) {
                         Ok(source) => self.next = Some(Current::new(token, source)),
                         // The owner hears of it when it loads the track itself.
                         Err(error) => eprintln!("[nemora-audio] queueing {}: {error}", path.display()),
@@ -299,6 +315,35 @@ impl Engine {
                 self.volume = (percent, muted);
                 self.apply_volume();
             }
+            Command::Speed(speed) => {
+                let speed = speed.clamp(SPEED_RANGE.0, SPEED_RANGE.1);
+                if speed == self.speed {
+                    return;
+                }
+                // What is buffered was made at the old speed: start over from what is heard now.
+                let position = self.position();
+                self.speed = speed;
+                let starts_at = self.clear_buffer();
+                if let Some(c) = &mut self.current {
+                    c.source.set_speed(speed);
+                    match c.source.seek(position) {
+                        Ok(landed) => {
+                            c.starts_at = starts_at;
+                            c.start_position = landed;
+                            c.pushed = 0;
+                            c.drained = false;
+                        }
+                        Err(error) => {
+                            let token = c.token;
+                            self.emit(Event::Error { token, message: error.to_string() });
+                        }
+                    }
+                }
+                if let Some(next) = &mut self.next {
+                    next.source.set_speed(speed);
+                }
+                self.rewind_next();
+            }
             Command::Equalizer(gains) => {
                 self.equalizer = gains;
                 self.output.send(Control::Equalizer(gains));
@@ -334,15 +379,12 @@ impl Engine {
 
     /// The buffer was cleared under a queued track that had begun: start it over.
     fn rewind_next(&mut self) {
-        let Some(next) = &mut self.next else { return };
+        let Some(next) = &self.next else { return };
         if next.pushed == 0 && !next.drained {
             return;
         }
-        let path = next.source.path().to_owned();
-        match Source::open(&path, self.output.sample_rate, self.output.channels) {
-            Ok(source) => *next = Current::new(next.token, source),
-            Err(_) => self.next = None,
-        }
+        let (token, path) = (next.token, next.source.path().to_owned());
+        self.next = self.open(&path).ok().map(|source| Current::new(token, source));
     }
 
     /// Keeps about `BUFFER_SECONDS` waiting for the device: the current track, then the queued one
@@ -451,3 +493,5 @@ impl Engine {
 
 #[cfg(test)]
 mod gapless;
+#[cfg(test)]
+mod speed;
