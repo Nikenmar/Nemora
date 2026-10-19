@@ -1,37 +1,15 @@
 {
   "latestVersion": {
-    "version": "2.0.0-stable",
-    "releaseDate": "2026-10-19T12:00:00.000Z",
+    "version": "2.0.1-stable",
+    "releaseDate": "2026-10-19T20:00:00.000Z",
     "notes": {
-      "new": [
-        {
-          "note": "Nemora plays through its own audio engine, bit-perfect at full volume"
-        },
-        {
-          "note": "Gapless playback between tracks"
-        },
-        {
-          "note": "Playback speed keeps the pitch"
-        },
-        {
-          "note": "Seeking lands on the exact moment"
-        },
-        {
-          "note": "Library and statistics live in one database, imported from 1.x on first start"
-        },
-        {
-          "note": "Songs keep their statistics through tag edits, renames and moves"
-        },
-        {
-          "note": "Speed changes apply without a restart"
-        }
-      ],
+      "new": [],
       "fixed": [
         {
-          "note": "Importing a stats export from the same install no longer doubles ratings"
+          "note": "Song lists no longer show track numbers in front of songs"
         },
         {
-          "note": "An empty playlist no longer shows the songs of the previous page"
+          "note": "Newest and Oldest sorting were swapped; Recently Added shows the newest songs again"
         }
       ],
       "knownIssues": [
@@ -42,6 +20,26 @@
     }
   },
   "versions": [
+    {
+      "version": "2.0.1-stable",
+      "releaseDate": "2026-10-19T20:00:00.000Z",
+      "notes": {
+        "new": [],
+        "fixed": [
+          {
+            "note": "Song lists no longer show track numbers in front of songs"
+          },
+          {
+            "note": "Newest and Oldest sorting were swapped; Recently Added shows the newest songs again"
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Going back to 1.x is not supported, though its files are left untouched"
+          }
+        ]
+      }
+    },
     {
       "version": "2.0.0-stable",
       "releaseDate": "2026-10-19T12:00:00.000Z",

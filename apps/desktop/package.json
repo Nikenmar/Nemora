@@ -1,7 +1,7 @@
 {
   "name": "nemora",
   "private": true,
-  "version": "2.0.0-stable",
+  "version": "2.0.1-stable",
   "type": "module",
   "description": "Nemora - music player by nikenmar (CMR)",
   "author": {
