@@ -1,0 +1,10 @@
+{
+  "name": "nemora-bench",
+  "private": true,
+  "type": "module",
+  "description": "Only the benchmark card needs packages; the harness itself runs on Node alone.",
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "satori": "0.29.0"
+  }
+}

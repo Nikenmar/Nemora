@@ -7,7 +7,11 @@ touched; deleting the folder removes every trace.
 node tools/bench/bench.mjs prepare --root E:\bench\2026-10   # sample the libraries, write bench.json
 node tools/bench/bench.mjs run     --root E:\bench\2026-10   # ~70 min; --quick for a short check
 node tools/bench/bench.mjs report  --root E:\bench\2026-10   # rebuild results\report.md from raw.json
+node tools/bench/card.mjs          --root E:\bench\2026-10   # results\benchmark.png, the README card
 ```
+
+The card needs `npm install` in `tools/bench` once (satori, resvg) and Python with fontTools to
+convert the app's Poppins to ttf; the harness itself runs on Node alone.
 
 Close every Nemora and Nora first, the tray icon included; `run` refuses to start otherwise. Close
 anything else that plays sound too: a playback or transition run during which another app adds sound
