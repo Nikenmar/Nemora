@@ -17,6 +17,7 @@ import 'material-symbols/rounded.css';
 import { appPreferences } from '../../../package.json';
 
 // ? CONTEXTS
+import { registerBenchApp } from './other/bench';
 import { AppUpdateContext, type AppUpdateContextType } from './contexts/AppUpdateContext';
 // import { SongPositionContext } from './contexts/SongPositionContext';
 
@@ -1677,6 +1678,11 @@ export default function App() {
         ]);
     },
     [addNewNotifications, t]
+  );
+
+  useEffect(
+    () => registerBenchApp({ changeCurrentActivePage, playSong }),
+    [changeCurrentActivePage, playSong]
   );
 
   const updatePlayerType = useCallback((type: PlayerTypes) => {

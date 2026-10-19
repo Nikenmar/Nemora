@@ -740,6 +740,8 @@ fn song_for_path(db: &Db, path: &str) -> nemora_core::Result<Option<String>> {
 /// finds (the `.lrc` file, the tags, LRCLIB when `network`), which it then keeps.
 #[tauri::command]
 pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res<Value> {
+    // A benchmark run is offline (bench.rs).
+    let network = network && crate::bench::dir().is_none();
     let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(Value::Null) };
     if app.write(|db| nemora_core::lyrics::get(db, &song, network)).map_err(fail)?.is_none() {
         return Ok(Value::Null);

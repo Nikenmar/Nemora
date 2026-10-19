@@ -130,11 +130,11 @@ pub fn drain_pending_second_instance_args(state: tauri::State<'_, PendingSecondI
 /// passes it here, in our own argv, and nowhere else.
 #[tauri::command]
 pub fn startup_args() -> Vec<String> {
-    std::env::args().skip(1).collect()
+    std::env::args().skip(1).filter(|arg| !arg.starts_with("--bench=")).collect()
 }
 
 /// True when the app is being measured and must not reach the network at
-/// startup. Set by `scripts/benchmark.mjs` through `NEMORA_BENCHMARK_MODE`.
+/// startup: a `--bench` run (tools/bench), or `NEMORA_BENCHMARK_MODE`.
 ///
 /// The update check runs a few seconds after first paint, and a benchmark that
 /// waits for the CPU to go quiet was therefore timing a request to GitHub: the
@@ -143,5 +143,6 @@ pub fn startup_args() -> Vec<String> {
 /// to it.
 #[tauri::command]
 pub fn benchmark_mode() -> bool {
-    std::env::var("NEMORA_BENCHMARK_MODE").map(|value| !value.is_empty() && value != "0").unwrap_or(false)
+    crate::bench::dir().is_some()
+        || std::env::var("NEMORA_BENCHMARK_MODE").map(|value| !value.is_empty() && value != "0").unwrap_or(false)
 }

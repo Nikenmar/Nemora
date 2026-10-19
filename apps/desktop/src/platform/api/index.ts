@@ -3,6 +3,7 @@ import { appControls } from './app-controls';
 import { artistsData } from './artists-data';
 import { audioLibraryControls } from './audio-library-controls';
 import { battery } from './battery';
+import { bench } from './bench';
 import { dataUpdates } from './data-updates';
 import { eloDuels } from './elo-duels';
 import { folderData } from './folder-data';
@@ -81,6 +82,7 @@ export const api = {
   obsWidget,
   settingsHelpers,
   appControls,
+  bench,
   utils
 };
 

@@ -5,6 +5,7 @@
 mod app;
 mod appdata;
 mod audio_session;
+mod bench;
 mod commands;
 mod discord;
 mod dragout;
@@ -69,20 +70,39 @@ fn core_info(app: tauri::State<'_, app::App>) -> CoreInfo {
     }
 }
 
+/// Info and up: lofty traces every tag block it reads, which buries a scan's log. A benchmark run
+/// logs into its own folder.
+fn log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    use tauri_plugin_log::{Builder, Target, TargetKind, log::LevelFilter};
+    let builder = Builder::new().level(LevelFilter::Info);
+    match bench::logs() {
+        Some(path) => builder.clear_targets().target(Target::new(TargetKind::Folder { path, file_name: None })),
+        None => builder,
+    }
+    .build()
+}
+
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            // A second launch ("Open with Nemora") forwards its argv to the running instance. It is
-            // queued as well as emitted: on a cold start the webview may not be listening yet.
-            system::queue_second_instance_args(app, argv);
-        }))
+    bench::prepare();
+    let mut builder = tauri::Builder::default();
+    // Under the harness this instance runs beside the user's own Nemora instead of handing its argv to
+    // it and quitting. It is also offline: the HTTP plugin is what the view's `fetch` goes through, and
+    // its cookie jar lives in the installed app's cache folder, outside the run's.
+    if bench::dir().is_none() {
+        builder = builder
+            .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+                // A second launch ("Open with Nemora") forwards its argv to the running instance. It is
+                // queued as well as emitted: on a cold start the webview may not be listening yet.
+                system::queue_second_instance_args(app, argv);
+            }))
+            .plugin(tauri_plugin_http::init());
+    }
+    builder
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
-        // Info and up: lofty traces every tag block it reads, which buries a scan's log.
-        .plugin(tauri_plugin_log::Builder::new().level(tauri_plugin_log::log::LevelFilter::Info).build())
+        .plugin(log_plugin())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::Builder::new().app_name("Nemora").args(["--autostart"]).build())
         .invoke_handler(tauri::generate_handler![
@@ -193,6 +213,10 @@ pub fn run() {
             system::drain_pending_second_instance_args,
             system::startup_args,
             system::benchmark_mode,
+            bench::bench_config,
+            bench::bench_mark,
+            bench::bench_signal,
+            bench::bench_quit,
             widget_server::widget_set_state,
             widget_server::widget_set_enabled,
         ])
@@ -206,15 +230,18 @@ pub fn run() {
         .manage(engine::Engine::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;
-            let profile =
-                profile_dir(&roaming, std::env::var_os(PROFILE_DIR_ENV).map(PathBuf::from), cfg!(debug_assertions));
+            let profile = bench::profile().unwrap_or_else(|| {
+                profile_dir(&roaming, std::env::var_os(PROFILE_DIR_ENV).map(PathBuf::from), cfg!(debug_assertions))
+            });
             appdata::apply_staged(&profile)?;
             tauri_app.manage(app::App::open(&profile)?);
 
             // First start of a profile that 1.x used: scan its folders and import, without holding
             // up the window. The view asks whether it is running and hears when it is done.
             // The folders are watched from then on: the first scan is the import's own.
-            let legacy = legacy_profile(&profile);
+            // A benchmark run starts from its own empty profile and never imports anything.
+            let legacy = if bench::dir().is_some() { profile.clone() } else { legacy_profile(&profile) };
+            bench::write_env(&profile, &legacy);
             let needs_import = tauri_app.state::<app::App>().needs_first_start(&legacy);
             let handle = tauri_app.handle().clone();
             std::thread::spawn(move || {
