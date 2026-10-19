@@ -42,16 +42,21 @@ export function writeReport(root, raw) {
 
   const rows = [];
   const section = (title) => rows.push({ title });
-  const row = (label, pick, format, { phase, variant, up = false } = {}) => {
+  const row = (label, pick, format, { phase, variant, up = false, total = false } = {}) => {
     const values = Object.fromEntries(
       apps.map((app) => [app, phase ? good(phase, app, variant).map(pick) : [pick(raw.apps[app])]])
     );
-    const med = Object.fromEntries(apps.map((app) => [app, median(values[app])]));
+    const known = (app) => values[app].filter((v) => v != null);
+    // A rare event (a dropout in one run of three) is the finding; a median would read it as none.
+    const med = Object.fromEntries(
+      apps.map((app) => [app, total ? (known(app).length ? known(app).reduce((s, v) => s + v, 0) : null) : median(values[app])])
+    );
     if (apps.every((app) => med[app] == null)) return;
     const cell = (app) => {
       const s = spread(values[app]);
-      const count = values[app].filter((v) => v != null).length;
+      const count = known(app).length;
       if (med[app] == null) return '–';
+      if (total) return `${format(med[app])} <sub>in ${count} runs</sub>`;
       if (!phase || count < 2 || !s) return format(med[app]);
       return `${format(med[app])} <sub>${format(s.min)}–${format(s.max)}, n=${count}</sub>`;
     };
@@ -119,7 +124,11 @@ export function writeReport(root, raw) {
     if (!variant.includes('-')) row('Sound starts after the click', (m) => m.startMs, fmt.ms, playback);
     row('CPU while playing', (m) => m.cpuPercent, fmt.pct, playback);
     row('RAM while playing', (m) => m.privateWorkingSet, fmt.mb, playback);
-    row('Dropouts: silences of 2 ms or more in the recorded output', (m) => m.dropouts?.count, fmt.n, playback);
+    row('Dropouts: silences of 2 ms or more in the recorded output, all runs together', (m) => m.dropouts?.count, fmt.n, {
+      ...playback,
+      total: true
+    });
+    row('Dropouts: their total length', (m) => m.dropouts?.ms, fmt.ms, { ...playback, total: true });
   }
 
   if (raw.launches.some((l) => l.phase === 'transition')) {

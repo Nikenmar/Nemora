@@ -66,10 +66,10 @@ function prng(seed) {
 }
 
 /**
- * Peaks of 250 ms windows, decoded by ffmpeg: the first `seconds` of a file, or with `fromEnd` its
+ * Peaks of `windowMs` windows, decoded by ffmpeg: the first `seconds` of a file, or with `fromEnd` its
  * last `seconds`. Null when ffmpeg is not there or cannot read the file.
  */
-function windowPeaks(file, seconds, fromEnd = false) {
+function windowPeaks(file, seconds, fromEnd = false, windowMs = 250) {
   const position = fromEnd ? ['-sseof', `-${seconds}`] : ['-t', String(seconds)];
   const decoded = spawnSync(
     'ffmpeg',
@@ -78,10 +78,11 @@ function windowPeaks(file, seconds, fromEnd = false) {
   );
   if (decoded.error || decoded.status !== 0) return null;
   const samples = decoded.stdout;
+  const size = windowMs * 8;
   const peaks = [];
-  for (let start = 0; start < samples.length / 2; start += 2000) {
+  for (let start = 0; start < samples.length / 2; start += size) {
     let peak = 0;
-    for (let i = start; i < Math.min(samples.length / 2, start + 2000); i += 1) {
+    for (let i = start; i < Math.min(samples.length / 2, start + size); i += 1) {
       peak = Math.max(peak, Math.abs(samples.readInt16LE(i * 2)));
     }
     peaks.push(peak / 32768);
@@ -92,12 +93,15 @@ function windowPeaks(file, seconds, fromEnd = false) {
 /**
  * Loud from the first quarter second and never quiet in the first 40 s: the harness hears the start
  * of the sound and requires sound for most of its window. A track with a soft intro once read as a
- * 7 s start and a silent player.
+ * 7 s start and a silent player. Every 10 ms must carry sound too, or a break in the music reads as
+ * dropouts: a track that fell to -60 dB for 200 ms once gave 15 of them.
  */
 function loudThroughout(file) {
   const peaks = windowPeaks(file, 40);
   if (peaks === null) return null;
-  return peaks.length >= 160 && peaks[0] >= 0.05 && Math.min(...peaks) >= 0.02;
+  if (!(peaks.length >= 160 && peaks[0] >= 0.05 && Math.min(...peaks) >= 0.02)) return false;
+  const fine = windowPeaks(file, 40, false, 10);
+  return fine !== null && Math.min(...fine.slice(25, -1)) >= 0.003;
 }
 
 /** Loud right up to the end, no fade: silence after it is the player's, not the recording's. */
