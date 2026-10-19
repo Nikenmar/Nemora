@@ -7,7 +7,8 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, TryLockError};
+use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
@@ -100,9 +101,14 @@ impl Output {
     }
 }
 
+/// How long the callback waits for the renderer to let go of the buffer. A top-up holds it for
+/// microseconds; giving up at once played the whole period (10 ms) as silence whenever the device
+/// asked during one, an audible dropout every few tens of seconds.
+const LOCK_WAIT: Duration = Duration::from_millis(1);
+
 /// The device callback's state. It never allocates after the first call of a given size, and takes
-/// the buffer lock only briefly; if the lock is busy it plays silence for that period rather than
-/// wait.
+/// the buffer lock only briefly; if the lock stays busy past `LOCK_WAIT` it plays silence for that
+/// period rather than wait longer.
 pub(crate) struct Callback {
     shared: Arc<Shared>,
     controls: Receiver<Control>,
@@ -132,16 +138,7 @@ impl Callback {
             data.fill(0.0);
             return;
         }
-        let taken = match self.shared.buffer.try_lock() {
-            Ok(mut buffer) => {
-                let n = data.len().min(buffer.len()) / self.channels * self.channels;
-                for (out, sample) in data.iter_mut().zip(buffer.drain(..n)) {
-                    *out = sample;
-                }
-                n
-            }
-            Err(_) => 0,
-        };
+        let taken = self.take(data);
         data[taken..].fill(0.0);
         self.shared.consumed.fetch_add((taken / self.channels) as u64, Ordering::SeqCst);
         self.chain.process(&mut data[..taken]);
@@ -149,6 +146,24 @@ impl Callback {
             self.pause_after_fade = false;
             self.shared.paused.store(true, Ordering::SeqCst);
         }
+    }
+
+    /// Moves what the buffer holds, up to a period, into `data`; the samples taken.
+    fn take(&self, data: &mut [f32]) -> usize {
+        let started = Instant::now();
+        let mut buffer = loop {
+            match self.shared.buffer.try_lock() {
+                Ok(buffer) => break buffer,
+                Err(TryLockError::Poisoned(poisoned)) => break poisoned.into_inner(),
+                Err(TryLockError::WouldBlock) if started.elapsed() < LOCK_WAIT => std::hint::spin_loop(),
+                Err(TryLockError::WouldBlock) => return 0,
+            }
+        };
+        let n = data.len().min(buffer.len()) / self.channels * self.channels;
+        for (out, sample) in data.iter_mut().zip(buffer.drain(..n)) {
+            *out = sample;
+        }
+        n
     }
 }
 
@@ -193,5 +208,42 @@ mod tests {
         tx.send(Control::Fade { to: 1.0, frames: 100, pause_after: false }).unwrap();
         cb.fill(&mut out);
         assert!(shared.consumed.load(Ordering::SeqCst) > consumed);
+    }
+
+    #[test]
+    fn a_period_is_not_lost_to_a_top_up_in_progress() {
+        const PERIODS: usize = 5_000;
+        let (mut cb, shared, _tx) = callback();
+        // Enough for every period up front: a short period can only be the lock's.
+        shared.buffer.lock().unwrap().extend(std::iter::repeat_n(0.25f32, PERIODS * 960));
+        let stop = Arc::new(AtomicBool::new(false));
+        // The renderer's pattern, far more often than its 10 ms: look at the length, top up, let go.
+        let producer = {
+            let (shared, stop) = (Arc::clone(&shared), Arc::clone(&stop));
+            std::thread::spawn(move || {
+                while !stop.load(Ordering::SeqCst) {
+                    let waiting = shared.buffer.lock().unwrap().len();
+                    if waiting < PERIODS * 960 {
+                        shared.buffer.lock().unwrap().extend(std::iter::repeat_n(0.25f32, 960));
+                    }
+                    let rest = Instant::now();
+                    while rest.elapsed() < Duration::from_micros(20) {
+                        std::hint::spin_loop();
+                    }
+                }
+            })
+        };
+        let mut out = vec![0.0f32; 960];
+        let mut short = 0;
+        for _ in 0..PERIODS {
+            let before = shared.consumed.load(Ordering::SeqCst);
+            cb.fill(&mut out);
+            if shared.consumed.load(Ordering::SeqCst) - before < 480 {
+                short += 1;
+            }
+        }
+        stop.store(true, Ordering::SeqCst);
+        producer.join().unwrap();
+        assert_eq!(short, 0, "periods played as silence while the buffer held audio");
     }
 }
