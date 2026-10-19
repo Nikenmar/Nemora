@@ -25,3 +25,6 @@ Thumbs.db
 
 # Build-time API keys (apps/desktop/.env.example lists them)
 .env
+
+# Python
+__pycache__/
