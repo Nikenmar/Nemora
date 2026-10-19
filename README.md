@@ -19,7 +19,7 @@ Built with Rust, Tauri and React / Based on [Nora](https://github.com/Sandakan/N
 
 Nemora 2.0 is a rewrite underneath the same player. Your library, listening history, tierlists and duel ratings now live in one database kept by a Rust core, and music plays through Nemora's own audio engine instead of the webview's.
 
-- **Bit-perfect at full volume.** The engine decodes every file itself. At full volume with the equalizer flat, a file at the device's sample rate reaches Windows sample for sample; a file at another rate goes through Nemora's own high-quality resampler rather than Windows'. It plays in shared mode, so other apps keep their sound.
+- **Bit-perfect at full volume.** The engine decodes every file itself. At full volume with the equalizer flat, a file at the device's sample rate reaches Windows sample for sample, a file at another rate goes through Nemora's own high-quality resampler rather than Windows'.
 - **Gapless.** One track runs into the next without a gap, so live albums and mixes play the way they were cut.
 - **Songs keep their history.** A song is recognised by its audio, not by its file path or its tags, so editing tags, renaming the file or moving it to another folder keeps every listen, rating and tierlist place.
 
