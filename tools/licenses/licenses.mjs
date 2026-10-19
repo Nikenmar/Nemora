@@ -218,7 +218,7 @@ function standardText(id, project) {
   const spdx = existsSync(project.dir) ? readdirSync(project.dir).find((name) => /\.spdx$/i.test(name)) : null;
   const declared = spdx && read(join(project.dir, spdx)).match(/^PackageCopyrightText:\s*(.+)$/m)?.[1].trim();
   const holders =
-    declared || project.authors.map((a) => a.replace(/\s*<[^>]*>/, '')).join(', ') || `the ${project.name} authors`;
+    declared || project.authors.map((a) => a.split('<')[0].trim()).join(', ') || `the ${project.name} authors`;
   return template.replace(/^Copyright.*$/m, `Copyright (c) ${holders}`);
 }
 

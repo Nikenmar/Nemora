@@ -56,7 +56,7 @@ const generated = Array.from({ length: 120 }, () => {
       const stamp = ts(t, pick([2, 2, 3]));
       if (prng() < 0.15) {
         let w = t;
-        lines.push(stamp + text.split(' ').map((word) => { const s = ts(w).replace('[', '<').replace(']', '>'); w += 0.3; return `${s} ${word}`; }).join(' '));
+        lines.push(stamp + text.split(' ').map((word) => { const s = `<${ts(w).slice(1, -1)}>`; w += 0.3; return `${s} ${word}`; }).join(' '));
       } else lines.push(`${stamp}${prng() < 0.05 ? '' : text}`);
       if (prng() < 0.2) lines.push(`${stamp}[lang:${pick(['ru', 'es', 'JA'])}]${pick(WORDS)}`);
       t += 0.5 + prng() * 6;
