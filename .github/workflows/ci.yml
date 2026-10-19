@@ -2,6 +2,12 @@ name: CI
 
 on: [push, pull_request]
 
+# Bash, which stops at the first failing command. The Windows default, PowerShell, runs on past a
+# failing program and fails a step only on its last one: a broken fmt or clippy passed unseen.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   check:
     runs-on: windows-latest

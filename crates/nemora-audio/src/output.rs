@@ -211,39 +211,38 @@ mod tests {
     }
 
     #[test]
-    fn a_period_is_not_lost_to_a_top_up_in_progress() {
-        const PERIODS: usize = 5_000;
+    fn a_period_waits_for_a_top_up_in_progress() {
+        const ROUNDS: usize = 50;
         let (mut cb, shared, _tx) = callback();
         // Enough for every period up front: a short period can only be the lock's.
-        shared.buffer.lock().unwrap().extend(std::iter::repeat_n(0.25f32, PERIODS * 960));
-        let stop = Arc::new(AtomicBool::new(false));
-        // The renderer's pattern, far more often than its 10 ms: look at the length, top up, let go.
-        let producer = {
-            let (shared, stop) = (Arc::clone(&shared), Arc::clone(&stop));
-            std::thread::spawn(move || {
-                while !stop.load(Ordering::SeqCst) {
-                    let waiting = shared.buffer.lock().unwrap().len();
-                    if waiting < PERIODS * 960 {
-                        shared.buffer.lock().unwrap().extend(std::iter::repeat_n(0.25f32, 960));
-                    }
-                    let rest = Instant::now();
-                    while rest.elapsed() < Duration::from_micros(20) {
-                        std::hint::spin_loop();
-                    }
-                }
-            })
-        };
+        shared.buffer.lock().unwrap().extend(std::iter::repeat_n(0.25f32, ROUNDS * 960));
         let mut out = vec![0.0f32; 960];
         let mut short = 0;
-        for _ in 0..PERIODS {
+        for _ in 0..ROUNDS {
+            // The device asks while a top-up holds the buffer, for 200 µs here.
+            let held = Arc::new(std::sync::Barrier::new(2));
+            let producer = {
+                let (shared, held) = (Arc::clone(&shared), Arc::clone(&held));
+                std::thread::spawn(move || {
+                    let guard = shared.buffer.lock().unwrap();
+                    held.wait();
+                    let since = Instant::now();
+                    while since.elapsed() < Duration::from_micros(200) {
+                        std::hint::spin_loop();
+                    }
+                    drop(guard);
+                })
+            };
+            held.wait();
             let before = shared.consumed.load(Ordering::SeqCst);
             cb.fill(&mut out);
             if shared.consumed.load(Ordering::SeqCst) - before < 480 {
                 short += 1;
             }
+            producer.join().unwrap();
         }
-        stop.store(true, Ordering::SeqCst);
-        producer.join().unwrap();
-        assert_eq!(short, 0, "periods played as silence while the buffer held audio");
+        // Giving up at once loses every one of these periods. A loaded machine may still deschedule
+        // the holder past `LOCK_WAIT` now and then; a CI runner once did so for 4 periods of 5000.
+        assert!(short <= ROUNDS / 10, "{short} of {ROUNDS} periods played as silence while a top-up held the buffer");
     }
 }

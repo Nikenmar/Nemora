@@ -9,6 +9,12 @@ on:
 
 # Windows only: the player renders through WASAPI shared and integrates with the taskbar, the
 # volume mixer and file associations; there is no macOS or Linux build to publish.
+# Bash, which stops at the first failing command. The Windows default, PowerShell, runs on past a
+# failing program and fails a step only on its last one: 2.0.0's release went on past a failed test.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   release:
     runs-on: windows-latest
