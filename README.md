@@ -22,7 +22,6 @@ Nemora 2.0 is a rewrite underneath the same player. Your library, listening hist
 - **Bit-perfect at full volume.** The engine decodes every file itself. At full volume with the equalizer flat, a file at the device's sample rate reaches Windows sample for sample; a file at another rate goes through Nemora's own high-quality resampler rather than Windows'. It plays in shared mode, so other apps keep their sound.
 - **Gapless.** One track runs into the next without a gap, so live albums and mixes play the way they were cut.
 - **Speed that keeps the pitch.** Slow a track down or speed it up and it stays in key, and the change applies at once.
-- **Seeking lands on the exact moment you pick.**
 - **Songs keep their history.** A song is recognised by its audio, not by its file path or its tags, so editing tags, renaming the file or moving it to another folder keeps every listen, rating and tierlist place.
 
 The first start of 2.0 imports the library and statistics of a 1.x install. The 1.x files are left untouched, but going back to 1.x afterwards is not supported.
