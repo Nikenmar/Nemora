@@ -1,0 +1,70 @@
+name: Release
+
+# Tag-driven, not branch-driven: a release is a deliberate act, and pushing to a branch is not.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Windows only: the player renders through WASAPI shared and integrates with the taskbar, the
+# volume mixer and file associations; there is no macOS or Linux build to publish.
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    env:
+      # Build-time values baked into the view bundle (apps/desktop/.env.example lists them). A
+      # missing one disables its feature rather than failing the build.
+      MAIN_VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      MAIN_VITE_LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
+      MAIN_VITE_LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
+      MAIN_VITE_GENIUS_API_KEY: ${{ secrets.GENIUS_API_KEY }}
+      MAIN_VITE_MUSIXMATCH_DEFAULT_USER_TOKEN: ${{ secrets.MUSIXMATCH_DEFAULT_USER_TOKEN }}
+      # Encrypts stored credentials. The same secret as every 1.x release: CHANGING IT MAKES THE
+      # LOGINS 1.x SAVED UNREADABLE.
+      MAIN_VITE_ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Check and test
+        run: |
+          cargo test --workspace --locked
+          npx --prefix apps/desktop tsc --noEmit -p apps/desktop
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update. Without these the build still succeeds and produces NO .sig, and
+          # clients reject the update. It must be the key 1.x shipped with (id 1B02376F048B2979),
+          # or no installed 1.x accepts 2.0. Check the release assets for a .sig by eye.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Nemora __VERSION__'
+          releaseBody: 'See the assets below to download and install.'
+          # Published by hand after the assets are checked: a draft cannot become the "latest" the
+          # updater points at by accident.
+          releaseDraft: true
+          prerelease: false
+          # latest.json, from the signatures: what the updater endpoint in tauri.conf.json fetches.
+          includeUpdaterJson: true

@@ -39,11 +39,15 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/icon.ico"
     ],
     "licenseFile": "../../../LICENSE",
+    "createUpdaterArtifacts": true,
     "fileAssociations": [
       {
         "ext": [
@@ -101,7 +105,16 @@
         "description": "M4R Ringtone File",
         "mimeType": "audio/x-m4r"
       }
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/header.bmp",
+        "sidebarImage": "installer/sidebar.bmp"
+      }
+    }
   },
   "plugins": {
     "updater": {

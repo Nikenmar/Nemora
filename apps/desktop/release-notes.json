@@ -1,25 +1,89 @@
 {
   "latestVersion": {
-    "version": "1.1.9-stable",
-    "releaseDate": "2026-09-28T12:00:00.000Z",
+    "version": "2.0.0-stable",
+    "releaseDate": "2026-10-19T12:00:00.000Z",
     "notes": {
-      "new": [],
+      "new": [
+        {
+          "note": "Nemora plays through its own audio engine, bit-perfect at full volume"
+        },
+        {
+          "note": "Gapless playback between tracks"
+        },
+        {
+          "note": "Playback speed keeps the pitch"
+        },
+        {
+          "note": "Seeking lands on the exact moment"
+        },
+        {
+          "note": "Library and statistics live in one database, imported from 1.x on first start"
+        },
+        {
+          "note": "Songs keep their statistics through tag edits, renames and moves"
+        },
+        {
+          "note": "Speed changes apply without a restart"
+        }
+      ],
       "fixed": [
         {
-          "note": "Listens and playlist changes keep saving after Windows briefly locks a profile file."
+          "note": "Importing a stats export from the same install no longer doubles ratings"
+        },
+        {
+          "note": "An empty playlist no longer shows the songs of the previous page"
         }
       ],
       "knownIssues": [
         {
-          "note": "Tag editing covers MP3 and FLAC; other formats stay read-only."
-        },
-        {
-          "note": "Shutting down or signing out of Windows with Nemora open still loses the playback position."
+          "note": "Going back to 1.x is not supported, though its files are left untouched"
         }
       ]
     }
   },
   "versions": [
+    {
+      "version": "2.0.0-stable",
+      "releaseDate": "2026-10-19T12:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "Nemora plays through its own audio engine, bit-perfect at full volume"
+          },
+          {
+            "note": "Gapless playback between tracks"
+          },
+          {
+            "note": "Playback speed keeps the pitch"
+          },
+          {
+            "note": "Seeking lands on the exact moment"
+          },
+          {
+            "note": "Library and statistics live in one database, imported from 1.x on first start"
+          },
+          {
+            "note": "Songs keep their statistics through tag edits, renames and moves"
+          },
+          {
+            "note": "Speed changes apply without a restart"
+          }
+        ],
+        "fixed": [
+          {
+            "note": "Importing a stats export from the same install no longer doubles ratings"
+          },
+          {
+            "note": "An empty playlist no longer shows the songs of the previous page"
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Going back to 1.x is not supported, though its files are left untouched"
+          }
+        ]
+      }
+    },
     {
       "version": "1.1.9-stable",
       "releaseDate": "2026-09-28T12:00:00.000Z",
