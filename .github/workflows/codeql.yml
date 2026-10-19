@@ -1,0 +1,38 @@
+name: CodeQL
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  schedule:
+    - cron: '15 2 * * 3'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    # Windows, or every `cfg(windows)` path of the app (most of it) would go unread.
+    runs-on: windows-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # The view and the Rust side, both read from source without a build (the only mode CodeQL
+        # offers for Rust).
+        language: ['javascript-typescript', 'rust']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'

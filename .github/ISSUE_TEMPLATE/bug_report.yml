@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in Nemora does not work as it should
+title: '[BUG]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please check that no open or closed issue covers it already.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: What happened
+      description: What you did, what happened, and what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Nemora version
+      description: Settings > About shows it.
+      placeholder: v2.0.0-stable
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See the problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-information
+    attributes:
+      label: Logs and screenshots
+      description: |
+        Screenshots, the file or format of a song that misbehaves, anything that helps.
+
+        Nemora's log is `%LOCALAPPDATA%\com.cmrdevs.nemora\logs\Nemora.log`; paste it into the Run dialog (Win+R) to open it, and attach the file here.
+
+  - type: checkboxes
+    id: checkboxes
+    attributes:
+      label: Validations
+      options:
+        - label: There is no issue yet that reports the same bug.
+          required: true
