@@ -1,8 +1,8 @@
 # Regenerates the oracle outputs from the 1.1.9 code.
-#   tools/oracle/run.ps1 [-Old E:\tmp\nemora-hotfix] [-Name search]
+#   tools/oracle/run.ps1 [-Old E:\Nemora-1.x] [-Name search]
 # Needs a 1.1.9 checkout with node_modules installed. Outputs go to fixtures/synthetic/oracle/.
 param(
-  [string]$Old = 'E:\tmp\nemora-hotfix',
+  [string]$Old = 'E:\Nemora-1.x',
   [string]$Name = 'search'
 )
 $ErrorActionPreference = 'Stop'
