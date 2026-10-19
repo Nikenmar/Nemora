@@ -305,4 +305,63 @@ mod tests {
         assert_eq!(more[150], 0.5);
         assert!(chain.is_neutral(), "after fading back in nothing is applied any more");
     }
+
+    /// Level change of a steady sine through the chain, in dB.
+    fn response_db(chain: &mut Chain, hz: f64) -> f64 {
+        let rate = 48_000.0;
+        let mut sine: Vec<f32> =
+            (0..96_000).map(|i| (2.0 * std::f64::consts::PI * hz * i as f64 / rate).sin() as f32 * 0.5).collect();
+        let before = sine[48_000..].iter().map(|s| (*s as f64).powi(2)).sum::<f64>();
+        chain.process(&mut sine);
+        let after = sine[48_000..].iter().map(|s| (*s as f64).powi(2)).sum::<f64>();
+        10.0 * (after / before).log10()
+    }
+
+    #[test]
+    fn a_band_moves_its_own_frequency_by_its_gain_and_leaves_far_ones_alone() {
+        // 1.x: WebAudio peaking filters, Q 1, on these centres. A cut needs no headroom, so the
+        // band's gain is heard as it is set.
+        let mut chain = Chain::new(48_000, 1);
+        chain.equalizer.set_gains([0.0, 0.0, 0.0, 0.0, 0.0, -6.0, 0.0, 0.0, 0.0, 0.0]);
+        let at_centre = response_db(&mut chain, 1000.0);
+        assert!((at_centre + 6.0).abs() < 0.05, "1 kHz moved by {at_centre:.2} dB");
+        let mut chain = Chain::new(48_000, 1);
+        chain.equalizer.set_gains([0.0, 0.0, 0.0, 0.0, 0.0, -6.0, 0.0, 0.0, 0.0, 0.0]);
+        let far = response_db(&mut chain, 100.0);
+        assert!(far.abs() < 0.5, "100 Hz moved by {far:.2} dB");
+        // The skirt an octave away is the Web Audio peaking filter's at Q 1 (its spec formula).
+        let web_audio_db = |hz: f64| {
+            let (a, w0) = (10f64.powf(-6.0 / 40.0), 2.0 * std::f64::consts::PI * 1000.0 / 48_000.0);
+            let alpha = w0.sin() / 2.0;
+            let (b0, b1, b2) = (1.0 + alpha * a, -2.0 * w0.cos(), 1.0 - alpha * a);
+            let (a0, a1, a2) = (1.0 + alpha / a, -2.0 * w0.cos(), 1.0 - alpha / a);
+            let w = 2.0 * std::f64::consts::PI * hz / 48_000.0;
+            let magnitude = |c0: f64, c1: f64, c2: f64| {
+                let re = c0 + c1 * w.cos() + c2 * (2.0 * w).cos();
+                let im = -(c1 * w.sin() + c2 * (2.0 * w).sin());
+                (re * re + im * im).sqrt()
+            };
+            20.0 * (magnitude(b0, b1, b2) / magnitude(a0, a1, a2)).log10()
+        };
+        for hz in [500.0, 2000.0] {
+            let mut chain = Chain::new(48_000, 1);
+            chain.equalizer.set_gains([0.0, 0.0, 0.0, 0.0, 0.0, -6.0, 0.0, 0.0, 0.0, 0.0]);
+            let measured = response_db(&mut chain, hz);
+            let expected = web_audio_db(hz);
+            assert!((measured - expected).abs() < 0.05, "{hz} Hz: {measured:.3} dB, Web Audio {expected:.3} dB");
+        }
+    }
+
+    #[test]
+    fn a_fade_is_a_straight_ramp() {
+        // 1.x stepped the element volume linearly over 250 ms; here every sample gets its share.
+        let mut chain = Chain::new(48_000, 1);
+        chain.start_fade(0.0, 1000);
+        let mut ones = vec![1.0f32; 1000];
+        chain.process(&mut ones);
+        for i in [100, 250, 500, 750, 900] {
+            let expected = 1.0 - i as f32 / 1000.0;
+            assert!((ones[i] - expected).abs() < 1e-3, "frame {i}: {} instead of {expected}", ones[i]);
+        }
+    }
 }
