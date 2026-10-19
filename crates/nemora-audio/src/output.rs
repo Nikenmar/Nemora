@@ -115,11 +115,20 @@ pub(crate) struct Callback {
     chain: Chain,
     channels: usize,
     pause_after_fade: bool,
+    /// `LOCK_WAIT`; a test widens it so a loaded machine cannot fail it by descheduling the holder.
+    lock_wait: Duration,
 }
 
 impl Callback {
     pub(crate) fn new(shared: Arc<Shared>, controls: Receiver<Control>, sample_rate: u32, channels: usize) -> Self {
-        Self { shared, controls, chain: Chain::new(sample_rate, channels), channels, pause_after_fade: false }
+        Self {
+            shared,
+            controls,
+            chain: Chain::new(sample_rate, channels),
+            channels,
+            pause_after_fade: false,
+            lock_wait: LOCK_WAIT,
+        }
     }
 
     pub(crate) fn fill(&mut self, data: &mut [f32]) {
@@ -155,7 +164,7 @@ impl Callback {
             match self.shared.buffer.try_lock() {
                 Ok(buffer) => break buffer,
                 Err(TryLockError::Poisoned(poisoned)) => break poisoned.into_inner(),
-                Err(TryLockError::WouldBlock) if started.elapsed() < LOCK_WAIT => std::hint::spin_loop(),
+                Err(TryLockError::WouldBlock) if started.elapsed() < self.lock_wait => std::hint::spin_loop(),
                 Err(TryLockError::WouldBlock) => return 0,
             }
         };
@@ -214,6 +223,10 @@ mod tests {
     fn a_period_waits_for_a_top_up_in_progress() {
         const ROUNDS: usize = 50;
         let (mut cb, shared, _tx) = callback();
+        // The mechanism, not the timing: with room to spare, a holder descheduled by a loaded
+        // machine (a CI runner once held it past 1 ms in 31 of 50 rounds) still lets go in time.
+        // Giving up at once, as before the fix, loses every round whatever the wait.
+        cb.lock_wait = Duration::from_secs(5);
         // Enough for every period up front: a short period can only be the lock's.
         shared.buffer.lock().unwrap().extend(std::iter::repeat_n(0.25f32, ROUNDS * 960));
         let mut out = vec![0.0f32; 960];
@@ -241,8 +254,6 @@ mod tests {
             }
             producer.join().unwrap();
         }
-        // Giving up at once loses every one of these periods. A loaded machine may still deschedule
-        // the holder past `LOCK_WAIT` now and then; a CI runner once did so for 4 periods of 5000.
-        assert!(short <= ROUNDS / 10, "{short} of {ROUNDS} periods played as silence while a top-up held the buffer");
+        assert_eq!(short, 0, "periods played as silence while a top-up held the buffer");
     }
 }
