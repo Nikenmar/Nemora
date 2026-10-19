@@ -48,7 +48,7 @@ const of = (app, phase, variant, pick) =>
 const both = (phase, variant, pick) => [of(A, phase, variant, pick), of(B, phase, variant, pick)];
 
 const fmt = {
-  mb: (bytes) => `${Math.round(bytes / 1048576)} MB`,
+  mb: (bytes) => (bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.round(bytes / 1048576)} MB`),
   seconds: (ms) => `${(ms / 1000).toFixed(ms >= 10_000 ? 1 : 2)} s`,
   percent: (value) => `${value.toFixed(2)} %`,
   gap: (ms) => (ms === 0 ? 'none' : `${Math.round(ms)} ms`)
@@ -58,14 +58,12 @@ const scale = raw.library.large ? 'large' : 'small';
 const tracks = raw.library[scale];
 const row = (label, [a, b], format) => a != null && b != null && { label, a, b, format };
 const rows = [
+  // The installer is left out: its size tells the same story as the installed size.
   row('Installed on disk', [raw.apps[A].installedBytes, raw.apps[B].installedBytes], fmt.mb),
-  // Drawn only when both sides have an installer to weigh: a missing one is not "0 MB".
-  raw.apps[A].installerBytes > 0 &&
-    raw.apps[B].installerBytes > 0 &&
-    row('Installer download', [raw.apps[A].installerBytes, raw.apps[B].installerBytes], fmt.mb),
   row('Window on screen', both('startup', scale, (m) => m.windowMs), fmt.seconds),
   row('RAM in use', both('startup', scale, (m) => m.steadyPrivateWorkingSet), fmt.mb),
   row(`Building a ${tracks}-track library`, both('scan', scale, (m) => m.finishedMs), fmt.seconds),
+  row('Disk writes while building',both('scan', scale, (m) => m.bytesWritten), fmt.mb),
   row('CPU while a track plays', both('playback', 'flac', (m) => m.cpuPercent), fmt.percent),
   row('RAM while a track plays', both('playback', 'flac', (m) => m.privateWorkingSet), fmt.mb),
   row('Silence between two songs', both('transition', null, (m) => m.gapMs), fmt.gap)
