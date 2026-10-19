@@ -147,6 +147,7 @@ pub fn run() {
             commands::favorites_toggle,
             commands::play_record,
             engine::engine_load,
+            engine::engine_queue_next,
             engine::engine_play,
             engine::engine_pause,
             engine::engine_seek,

@@ -1,13 +1,16 @@
 //! The playback engine (`nemora-audio`) behind the view's player. Audio is rendered by this
 //! process through WASAPI shared, so the volume mixer and OBS see Nemora itself, not the webview.
 
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use nemora_audio::{Event, Player};
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::commands::Res;
+use crate::app::App;
+use crate::commands::{Res, fail, rows_for};
+use crate::view::asset_url;
 
 #[derive(Default)]
 pub struct Engine(Mutex<Option<Player>>);
@@ -19,7 +22,7 @@ fn event_json(event: &Event) -> serde_json::Value {
         Event::Paused { token, position } => json!({ "kind": "paused", "token": token, "position": position }),
         Event::Position { token, position } => json!({ "kind": "position", "token": token, "position": position }),
         Event::Seeked { token, position } => json!({ "kind": "seeked", "token": token, "position": position }),
-        Event::Ended { token } => json!({ "kind": "ended", "token": token }),
+        Event::Ended { token, next } => json!({ "kind": "ended", "token": token, "next": next }),
         Event::Error { token, message } => json!({ "kind": "error", "token": token, "message": message }),
     }
 }
@@ -53,6 +56,29 @@ pub fn engine_load(
     let clean = source.split(['?', '#']).next().unwrap_or(&source).to_owned();
     let path = crate::protocol::local_path_from_asset_url(&clean).unwrap_or(clean);
     with_player(&handle, &engine, |p| p.load(token, path.into(), play, at))
+}
+
+/// The song to continue with, gaplessly, when the current track ends; no song withdraws it.
+/// Answers the URL the view will set for that song, so it can recognise the track already playing.
+#[tauri::command]
+pub fn engine_queue_next(
+    handle: AppHandle,
+    engine: State<'_, Engine>,
+    app: State<'_, App>,
+    token: u64,
+    song_id: Option<String>,
+) -> Res<Option<String>> {
+    let path = match song_id {
+        Some(song_id) => {
+            let db = app.read();
+            let row = rows_for(&db, std::slice::from_ref(&song_id)).map_err(fail)?.into_iter().next();
+            row.and_then(|r| r.path)
+        }
+        None => None,
+    };
+    let url = path.as_deref().map(|p| asset_url(Path::new(p)));
+    with_player(&handle, &engine, |p| p.queue_next(token, path.map(PathBuf::from)))?;
+    Ok(url)
 }
 
 #[tauri::command]

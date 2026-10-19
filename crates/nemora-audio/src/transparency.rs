@@ -13,7 +13,7 @@ use crate::decode::Decoder;
 use crate::output::{Callback, Shared};
 use crate::source::Source;
 
-fn ffmpeg(args: &[&str]) -> bool {
+pub(crate) fn ffmpeg(args: &[&str]) -> bool {
     Command::new("ffmpeg")
         .args(["-hide_banner", "-loglevel", "error", "-y"])
         .args(args)
@@ -31,7 +31,7 @@ fn generated(dir: &Path, name: &str, codec_args: &[&str]) -> Option<PathBuf> {
 }
 
 /// Everything a decoder gives for a file.
-fn decoded(path: &Path) -> (Vec<f32>, u32, usize) {
+pub(crate) fn decoded(path: &Path) -> (Vec<f32>, u32, usize) {
     let mut decoder = Decoder::open(path).unwrap();
     let (rate, channels) = (decoder.sample_rate, decoder.channels);
     let (mut all, mut block) = (Vec::new(), Vec::new());

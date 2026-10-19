@@ -36,7 +36,8 @@ pub struct Shared {
 }
 
 pub struct Output {
-    _stream: cpal::Stream,
+    /// `None` only for an output a test drives by hand.
+    _stream: Option<cpal::Stream>,
     pub sample_rate: u32,
     pub channels: usize,
     pub shared: Arc<Shared>,
@@ -77,7 +78,21 @@ impl Output {
             )
             .map_err(|e| e.to_string())?;
         stream.play().map_err(|e| e.to_string())?;
-        Ok(Self { _stream: stream, sample_rate, channels, shared, control, failed })
+        Ok(Self { _stream: Some(stream), sample_rate, channels, shared, control, failed })
+    }
+
+    /// An output with no device behind it: the test pulls periods through the returned callback.
+    #[cfg(test)]
+    pub(crate) fn detached(sample_rate: u32, channels: usize) -> (Self, Callback) {
+        let shared = Arc::new(Shared {
+            buffer: Mutex::new(VecDeque::new()),
+            consumed: AtomicU64::new(0),
+            paused: AtomicBool::new(true),
+        });
+        let (control, controls) = channel();
+        let callback = Callback::new(Arc::clone(&shared), controls, sample_rate, channels);
+        let failed = Arc::new(AtomicBool::new(false));
+        (Self { _stream: None, sample_rate, channels, shared, control, failed }, callback)
     }
 
     pub fn send(&self, control: Control) {

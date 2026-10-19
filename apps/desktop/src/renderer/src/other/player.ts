@@ -22,11 +22,34 @@ export const getPerceptualGain = (volumeValue: number) => {
 
 type EngineEvent =
   | { kind: 'loaded'; token: number; duration: number }
-  | { kind: 'playing' | 'paused' | 'position' | 'seeked'; token: number; position: number }
-  | { kind: 'ended'; token: number }
+  | {
+      kind: 'playing' | 'paused' | 'position' | 'seeked';
+      token: number;
+      position: number;
+    }
+  | { kind: 'ended'; token: number; next: number | null }
   | { kind: 'error'; token: number; message: string };
 
 const BAND_ORDER = Object.keys(equalizerBandHertzData) as EqualizerBandFilters[];
+
+/** How long a queued track may play on its own before the view takes it over. */
+const ADOPT_WITHIN_MS = 5000;
+
+const withoutQuery = (url: string) => url.split(/[?#]/)[0];
+
+/** The song the engine is told to continue with, and what it has said about it since. */
+type QueuedTrack = {
+  token: number;
+  songId: string;
+  /** The URL the view will set for it; unknown until the engine answers. */
+  url: string | null;
+  /** The engine has moved on to it: the previous track ended. */
+  started: boolean;
+  duration: number;
+  position: number;
+  positionAt: number;
+  playing: boolean;
+};
 
 /**
  * The player the view drives, with the surface of the audio element it used to be.
@@ -35,9 +58,20 @@ const BAND_ORDER = Object.keys(equalizerBandHertzData) as EqualizerBandFilters[]
  * shared), not by the webview: nothing in between resamples, normalises or lowers it. This class
  * only forwards what the view asks for and turns the engine's reports back into media events, so
  * the rest of the view needs no change.
+ *
+ * Gapless: the player tells the engine which song follows in the queue. When the track ends the
+ * engine is already playing that song, and the view's own move to it (setting `src`, or rewinding
+ * for repeat-one) takes over the playing track instead of loading it again.
  */
 class AudioPlayer extends EventTarget {
   private token = 0;
+  private lastToken = 0;
+  private queued: QueuedTrack | null = null;
+  /** Token and song of the last queue request, so an unchanged queue is not sent again. */
+  private queuedKey = '';
+  private adoptTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Set by `play()`, so an adopted track the view does not start can be paused. */
+  private playRequested = false;
   private source = '';
   private position = 0;
   /** When `position` was last known, for a smooth `currentTime` between reports. */
@@ -83,19 +117,30 @@ class AudioPlayer extends EventTarget {
   }
 
   private onEngine(event: EngineEvent) {
+    if (this.queued && event.token === this.queued.token) {
+      this.onQueuedEngine(this.queued, event);
+      return;
+    }
     if (event.token !== this.token) return;
     switch (event.kind) {
       case 'loaded':
         this.length = event.duration;
-        this.readyState = 4;
-        this.fire('durationchange', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough');
+        // An adopted track is ready already; only its length was still unknown.
+        if (this.readyState === 4) this.fire('durationchange');
+        else {
+          this.readyState = 4;
+          this.fire('durationchange', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough');
+        }
+        this.queueNext();
         break;
-      case 'playing':
+      case 'playing': {
+        const wasPaused = this.isPaused;
         this.isPaused = false;
         this.hasEnded = false;
         this.setPosition(event.position);
-        this.fire('play', 'playing');
+        if (wasPaused) this.fire('play', 'playing');
         break;
+      }
       case 'paused':
         this.isPaused = true;
         this.setPosition(event.position);
@@ -111,6 +156,8 @@ class AudioPlayer extends EventTarget {
         this.fire('seeked', 'timeupdate');
         break;
       case 'ended':
+        // Marked before the view hears of the end: repeat-one rewinds inside its 'ended' handler.
+        if (this.queued && event.next === this.queued.token) this.queuedStarted(this.queued);
         this.isPaused = true;
         this.hasEnded = true;
         this.setPosition(Number.isFinite(this.length) ? this.length : this.position);
@@ -121,6 +168,143 @@ class AudioPlayer extends EventTarget {
         this.fire('error');
         break;
     }
+  }
+
+  /** The engine moved on to the queued track, from the frame after the last one of this track. */
+  private queuedStarted(queued: QueuedTrack) {
+    queued.started = true;
+    queued.playing = !this.isPaused;
+    queued.position = 0;
+    queued.positionAt = performance.now();
+    clearTimeout(this.adoptTimer);
+    // A view that does not move on (its queue changed at the very end) must not leave the engine
+    // playing a song nobody chose.
+    this.adoptTimer = setTimeout(() => {
+      if (this.queued !== queued) return;
+      this.queued = null;
+      void invoke('engine_stop').catch(() => undefined);
+    }, ADOPT_WITHIN_MS);
+  }
+
+  private onQueuedEngine(queued: QueuedTrack, event: EngineEvent) {
+    switch (event.kind) {
+      case 'loaded':
+        queued.duration = event.duration;
+        break;
+      case 'playing':
+      case 'paused':
+      case 'position':
+      case 'seeked':
+        if (event.kind === 'playing') queued.playing = true;
+        if (event.kind === 'paused') queued.playing = false;
+        queued.position = event.position;
+        queued.positionAt = performance.now();
+        break;
+      case 'ended':
+      case 'error':
+        this.queued = null;
+        break;
+    }
+  }
+
+  /** The song after the current one, as the view will choose it when this one ends. */
+  private nextSongId(): string | null {
+    if (!this.source || this.error) return null;
+    const { localStorage, player, currentSongData } = store.state;
+    if (player.isRepeating === 'repeat-1') return currentSongData.songId || null;
+    const { queue, currentSongIndex } = localStorage.queue;
+    if (typeof currentSongIndex !== 'number' || queue.length === 0) return null;
+    let next: string | null = null;
+    if (currentSongIndex < queue.length - 1) next = queue[currentSongIndex + 1];
+    else if (player.isRepeating === 'repeat') next = queue[0];
+    // The view toggles playback instead of reloading when asked for the song it already has.
+    return next && next !== currentSongData.songId ? next : null;
+  }
+
+  /** Keeps the engine's queued track in step with the view's queue. */
+  private queueNext() {
+    // Between an end and the view's move on, the queue already names the song after the next.
+    if (this.readyState < 4 || this.hasEnded || this.queued?.started) return;
+    const songId = this.nextSongId();
+    const key = `${this.token}|${songId ?? ''}`;
+    if (key === this.queuedKey) return;
+    this.queuedKey = key;
+    if (!songId) {
+      if (this.queued) {
+        this.queued = null;
+        void invoke('engine_queue_next', { token: 0, songId: null }).catch(() => undefined);
+      }
+      return;
+    }
+    this.lastToken += 1;
+    const queued: QueuedTrack = {
+      token: this.lastToken,
+      songId,
+      url: null,
+      started: false,
+      duration: Number.NaN,
+      position: 0,
+      positionAt: performance.now(),
+      playing: false
+    };
+    this.queued = queued;
+    invoke<string | null>('engine_queue_next', { token: queued.token, songId })
+      .then((url) => {
+        if (this.queued !== queued) return;
+        if (url) queued.url = withoutQuery(url);
+        else this.queued = null;
+      })
+      .catch(() => {
+        if (this.queued === queued) this.queued = null;
+      });
+  }
+
+  /**
+   * Takes over the queued track the engine already plays, for the view's move to `url`.
+   *
+   * A rewind (repeat-one) keeps playing, as an element told to seek does. A new `src` goes through
+   * the steps of a load, as the view expects: nothing is ready and nothing plays until `canplay`,
+   * where the view asks for play. The engine keeps sounding meanwhile, so nothing is lost at the
+   * join; a view that does not ask for play gets the track paused.
+   */
+  private adopt(url: string, rewind: boolean): boolean {
+    const queued = this.queued;
+    if (!queued?.started || !queued.url || queued.url !== withoutQuery(url)) return false;
+    clearTimeout(this.adoptTimer);
+    this.queued = null;
+    this.token = queued.token;
+    this.source = url;
+    this.length = queued.duration;
+    this.error = null;
+    this.hasEnded = false;
+    this.isSeeking = false;
+    const elapsed = queued.playing ? (performance.now() - queued.positionAt) / 1000 : 0;
+    this.setPosition(queued.position + elapsed);
+    const ready = ['durationchange', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough'];
+    if (rewind) {
+      this.readyState = 4;
+      this.isPaused = !queued.playing;
+      this.fireLater(
+        'emptied',
+        'loadstart',
+        ...ready,
+        ...(queued.playing ? ['play', 'playing'] : [])
+      );
+    } else {
+      const token = this.token;
+      this.readyState = 0;
+      this.isPaused = true;
+      this.fireLater('emptied', 'loadstart');
+      setTimeout(() => {
+        if (this.token !== token) return;
+        this.readyState = 4;
+        this.playRequested = false;
+        this.fire(...ready);
+        if (!this.playRequested && queued.playing) void this.pause().catch(() => undefined);
+      }, 0);
+    }
+    setTimeout(() => this.queueNext(), 0);
+    return true;
   }
 
   /** Volume, mute and equalizer follow the store, as they did for the audio element. */
@@ -141,6 +325,7 @@ class AudioPlayer extends EventTarget {
       void invoke('engine_equalizer', { gains }).catch(() => undefined);
     }
     if (player.playbackRate !== this.rate) this.playbackRate = player.playbackRate;
+    this.queueNext();
   }
 
   get src(): string {
@@ -148,7 +333,11 @@ class AudioPlayer extends EventTarget {
   }
 
   set src(url: string) {
-    this.token += 1;
+    if (url && this.adopt(url, false)) return;
+    this.lastToken += 1;
+    this.token = this.lastToken;
+    this.queued = null;
+    clearTimeout(this.adoptTimer);
     this.source = url;
     this.length = Number.NaN;
     this.readyState = 0;
@@ -163,9 +352,12 @@ class AudioPlayer extends EventTarget {
     }
     this.fireLater('emptied', 'loadstart');
     const token = this.token;
-    void invoke('engine_load', { token, source: url, play: false, at: 0 }).catch((error: unknown) =>
-      this.onEngine({ kind: 'error', token, message: String(error) })
-    );
+    void invoke('engine_load', {
+      token,
+      source: url,
+      play: false,
+      at: 0
+    }).catch((error: unknown) => this.onEngine({ kind: 'error', token, message: String(error) }));
   }
 
   load() {
@@ -175,7 +367,25 @@ class AudioPlayer extends EventTarget {
 
   play(): Promise<void> {
     if (!this.source) return Promise.reject(new DOMException('No source', 'NotSupportedError'));
+    this.playRequested = true;
+    // An ended track has left the engine; playing it again starts it over, as an element does.
+    if (this.hasEnded) return this.reload(0, true);
     return invoke<void>('engine_play');
+  }
+
+  private reload(at: number, play: boolean): Promise<void> {
+    this.hasEnded = false;
+    // A load replaces whatever the engine had queued or moved on to.
+    this.queued = null;
+    this.queuedKey = '';
+    clearTimeout(this.adoptTimer);
+    const token = this.token;
+    return invoke<void>('engine_load', {
+      token,
+      source: this.source,
+      play,
+      at
+    }).catch((error: unknown) => this.onEngine({ kind: 'error', token, message: String(error) }));
   }
 
   pause(): Promise<void> {
@@ -191,10 +401,18 @@ class AudioPlayer extends EventTarget {
   set currentTime(seconds: number) {
     if (!this.source || !Number.isFinite(seconds)) return;
     const target = Math.max(0, seconds);
+    // Repeat-one rewinds an ended track: the engine is already playing it again from the start.
+    if (target < 1 && this.hasEnded && this.adopt(this.source, true)) return;
     this.isSeeking = true;
-    this.hasEnded = false;
     this.setPosition(target);
     this.fireLater('seeking');
+    if (this.hasEnded) {
+      void this.reload(target, false).then(() => {
+        this.isSeeking = false;
+        this.fireLater('seeked', 'timeupdate');
+      });
+      return;
+    }
     void invoke('engine_seek', { seconds: target }).catch(() => undefined);
   }
 
@@ -221,9 +439,10 @@ class AudioPlayer extends EventTarget {
 
   set volume(value: number) {
     this.volumePercent = Math.round(Math.min(Math.max(value, 0), 1) * 100);
-    void invoke('engine_volume', { percent: this.volumePercent, muted: this.isMuted }).catch(
-      () => undefined
-    );
+    void invoke('engine_volume', {
+      percent: this.volumePercent,
+      muted: this.isMuted
+    }).catch(() => undefined);
   }
 
   get muted(): boolean {
@@ -232,9 +451,10 @@ class AudioPlayer extends EventTarget {
 
   set muted(value: boolean) {
     this.isMuted = value;
-    void invoke('engine_volume', { percent: this.volumePercent, muted: value }).catch(
-      () => undefined
-    );
+    void invoke('engine_volume', {
+      percent: this.volumePercent,
+      muted: value
+    }).catch(() => undefined);
   }
 
   get playbackRate(): number {

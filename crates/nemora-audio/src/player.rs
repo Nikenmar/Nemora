@@ -1,6 +1,10 @@
 //! The player: one thread that keeps the device buffer topped up from the current track, takes
 //! commands, and reports what is heard. Positions are counted in frames the device has actually
 //! taken, so they describe what the listener hears, not what was decoded.
+//!
+//! Gapless: the owner may queue the track that follows. Once the current track is decoded to its
+//! end, the following one continues in the same buffer from the very next frame, and its events
+//! begin when the device plays its first frame.
 
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
@@ -42,9 +46,11 @@ pub enum Event {
         token: u64,
         position: f64,
     },
-    /// The track played to its end.
+    /// The track played to its end. `next` is the queued track that follows from the very next
+    /// frame; its own `Loaded` and `Playing` come right after.
     Ended {
         token: u64,
+        next: Option<u64>,
     },
     Error {
         token: u64,
@@ -54,6 +60,7 @@ pub enum Event {
 
 enum Command {
     Load { token: u64, path: PathBuf, play: bool, at: f64 },
+    QueueNext { token: u64, path: Option<PathBuf> },
     Play,
     Pause,
     Seek(f64),
@@ -86,6 +93,11 @@ impl Player {
 
     pub fn load(&self, token: u64, path: PathBuf, play: bool, at: f64) {
         self.send(Command::Load { token, path, play, at });
+    }
+    /// The track to continue with when the current one ends; `None` withdraws it. A track whose
+    /// first frames are already heard can no longer be withdrawn.
+    pub fn queue_next(&self, token: u64, path: Option<PathBuf>) {
+        self.send(Command::QueueNext { token, path });
     }
     pub fn play(&self) {
         self.send(Command::Play);
@@ -128,10 +140,18 @@ struct Current {
     drained: bool,
 }
 
+impl Current {
+    fn new(token: u64, source: Source) -> Self {
+        Self { token, source, starts_at: 0, start_position: 0.0, pushed: 0, drained: false }
+    }
+}
+
 struct Engine {
     output: Output,
     on_event: Box<dyn Fn(Event) + Send>,
     current: Option<Current>,
+    /// The queued track; its `starts_at` is set when its first frame is pushed.
+    next: Option<Current>,
     playing: bool,
     volume: (f64, bool),
     equalizer: [f64; 10],
@@ -144,6 +164,7 @@ impl Engine {
             output,
             on_event,
             current: None,
+            next: None,
             playing: false,
             volume: (100.0, false),
             equalizer: [0.0; 10],
@@ -201,6 +222,7 @@ impl Engine {
     fn handle(&mut self, command: Command) {
         match command {
             Command::Load { token, path, play, at } => {
+                self.next = None;
                 let starts_at = self.clear_buffer();
                 match Source::open(&path, self.output.sample_rate, self.output.channels) {
                     Ok(mut source) => {
@@ -216,6 +238,21 @@ impl Engine {
                     Err(error) => {
                         self.current = None;
                         self.emit(Event::Error { token, message: error.to_string() });
+                    }
+                }
+            }
+            Command::QueueNext { token, path } => {
+                if path.is_some() && self.next.as_ref().is_some_and(|n| n.token == token) {
+                    return;
+                }
+                if !self.withdraw_next() {
+                    return;
+                }
+                if let Some(path) = path {
+                    match Source::open(&path, self.output.sample_rate, self.output.channels) {
+                        Ok(source) => self.next = Some(Current::new(token, source)),
+                        // The owner hears of it when it loads the track itself.
+                        Err(error) => eprintln!("[nemora-audio] queueing {}: {error}", path.display()),
                     }
                 }
             }
@@ -240,6 +277,7 @@ impl Engine {
                             c.pushed = 0;
                             c.drained = false;
                             let token = c.token;
+                            self.rewind_next();
                             self.emit(Event::Seeked { token, position: landed });
                         }
                         Err(error) => {
@@ -254,6 +292,7 @@ impl Engine {
                 self.playing = false;
                 self.clear_buffer();
                 self.current = None;
+                self.next = None;
                 self.fade(0.0, true);
             }
             Command::Volume { percent, muted } => {
@@ -277,42 +316,105 @@ impl Engine {
         self.emit(Event::Playing { token, position: self.position() });
     }
 
-    /// Keeps about `BUFFER_SECONDS` of the current track waiting for the device.
-    fn top_up(&mut self) {
-        let target = self.frames(BUFFER_SECONDS) as usize * self.output.channels;
-        let channels = self.output.channels;
-        let Some(c) = &mut self.current else { return };
-        if c.drained {
+    /// Takes the queued track back, with any of its frames still waiting in the buffer. Returns
+    /// false when the device has already played some of them: it is playing by now.
+    fn withdraw_next(&mut self) -> bool {
+        let Some(next) = &self.next else { return true };
+        if next.pushed > 0 {
+            let mut buffer = self.output.shared.buffer.lock().unwrap_or_else(|e| e.into_inner());
+            if self.output.shared.consumed.load(Ordering::SeqCst) > next.starts_at {
+                return false;
+            }
+            let keep = buffer.len().saturating_sub(next.pushed as usize * self.output.channels);
+            buffer.truncate(keep);
+        }
+        self.next = None;
+        true
+    }
+
+    /// The buffer was cleared under a queued track that had begun: start it over.
+    fn rewind_next(&mut self) {
+        let Some(next) = &mut self.next else { return };
+        if next.pushed == 0 && !next.drained {
             return;
         }
+        let path = next.source.path().to_owned();
+        match Source::open(&path, self.output.sample_rate, self.output.channels) {
+            Ok(source) => *next = Current::new(next.token, source),
+            Err(_) => self.next = None,
+        }
+    }
+
+    /// Keeps about `BUFFER_SECONDS` waiting for the device: the current track, then the queued one
+    /// from the frame right after the current track's last.
+    fn top_up(&mut self) {
+        let channels = self.output.channels;
+        let target = self.frames(BUFFER_SECONDS) as usize * channels;
         let waiting = self.output.shared.buffer.lock().map_or(0, |b| b.len());
         if waiting >= target {
             return;
         }
+        let Some(current) = &mut self.current else { return };
+        let (track, is_next) = if !current.drained {
+            (current, false)
+        } else if let Some(next) = &mut self.next {
+            if next.pushed == 0 {
+                next.starts_at = current.starts_at + current.pushed;
+            }
+            (next, true)
+        } else {
+            return;
+        };
+        if track.drained {
+            return;
+        }
         let mut block = Vec::with_capacity(target - waiting);
-        match c.source.fill(&mut block, (target - waiting) / channels) {
+        match track.source.fill(&mut block, (target - waiting) / channels) {
             Ok(more) => {
-                c.pushed += (block.len() / channels) as u64;
-                c.drained = !more;
+                track.pushed += (block.len() / channels) as u64;
+                track.drained = !more;
                 self.output.shared.buffer.lock().unwrap_or_else(|e| e.into_inner()).extend(block);
             }
+            Err(error) if is_next => {
+                // What of it was pushed stays; the owner hears of the fault when it loads it.
+                eprintln!("[nemora-audio] decoding the queued track: {error}");
+                track.drained = true;
+            }
             Err(error) => {
-                c.drained = true;
-                let token = c.token;
+                track.drained = true;
+                let token = track.token;
                 self.emit(Event::Error { token, message: error.to_string() });
             }
         }
     }
 
-    /// Positions while playing, and the end once the device has played the last frame.
+    /// Positions while playing, and the end once the device has played the last frame; a queued
+    /// track takes over at that frame.
     fn report(&mut self) {
         let Some(c) = &self.current else { return };
         let token = c.token;
+        let end = c.starts_at + c.pushed;
         let consumed = self.output.shared.consumed.load(Ordering::SeqCst);
-        if c.drained && consumed >= c.starts_at + c.pushed {
-            self.current = None;
-            self.playing = false;
-            self.emit(Event::Ended { token });
+        if c.drained && consumed >= end {
+            self.emit(Event::Ended { token, next: self.next.as_ref().map(|n| n.token) });
+            match self.next.take() {
+                Some(mut next) => {
+                    if next.pushed == 0 {
+                        next.starts_at = end;
+                    }
+                    let (token, duration) = (next.token, next.source.duration().unwrap_or(0.0));
+                    self.current = Some(next);
+                    self.emit(Event::Loaded { token, duration });
+                    if self.playing {
+                        self.emit(Event::Playing { token, position: self.position() });
+                    }
+                    self.last_position = Instant::now();
+                }
+                None => {
+                    self.current = None;
+                    self.playing = false;
+                }
+            }
             return;
         }
         if self.playing && self.last_position.elapsed() >= POSITION_EVERY {
@@ -336,9 +438,16 @@ impl Engine {
         self.output = output;
         self.apply_volume();
         self.output.send(Control::Equalizer(self.equalizer));
+        let next = self.next.take().map(|n| (n.token, n.source.path().to_owned()));
         if let Some(c) = self.current.take() {
             let (token, path) = (c.token, c.source.path().to_owned());
             self.handle(Command::Load { token, path, play: self.playing, at: position });
         }
+        if let Some((token, path)) = next {
+            self.handle(Command::QueueNext { token, path: Some(path) });
+        }
     }
 }
+
+#[cfg(test)]
+mod gapless;
