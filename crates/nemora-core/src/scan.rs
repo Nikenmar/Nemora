@@ -7,6 +7,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::UNIX_EPOCH;
 
 use rayon::prelude::*;
@@ -17,6 +18,7 @@ use crate::db::{Db, now_ms};
 use crate::error::Result;
 use crate::identity::{Identity, identify_path};
 use crate::search::fold::normalize;
+use crate::settings;
 use crate::tags::{TrackTags, read_tags};
 
 /// The extensions 1.1.9 accepted.
@@ -77,6 +79,18 @@ struct KnownLocation {
 
 /// Scans `roots` (music folders) and brings the database in line with them.
 pub fn scan_folders(db: &mut Db, covers: &CoverStore, roots: &[PathBuf]) -> Result<ScanReport> {
+    scan_folders_with_progress(db, covers, roots, &|_, _| {})
+}
+
+/// [`scan_folders`], telling `progress` how many of the files to read are read (done, total) as it
+/// goes; called from the reading threads. Subfolders left out ([`settings::left_out_folders`]) are
+/// not walked, so their files leave the library as if deleted.
+pub fn scan_folders_with_progress(
+    db: &mut Db,
+    covers: &CoverStore,
+    roots: &[PathBuf],
+    progress: &(dyn Fn(usize, usize) + Sync),
+) -> Result<ScanReport> {
     let mut report = ScanReport::default();
     let now = now_ms();
     // One spelling per folder: `E:/Music` and `E:\Music` must give the same location uris, or a
@@ -84,10 +98,11 @@ pub fn scan_folders(db: &mut Db, covers: &CoverStore, roots: &[PathBuf]) -> Resu
     let roots: Vec<PathBuf> = roots.iter().map(|r| r.components().collect()).collect();
     let roots = roots.as_slice();
 
+    let left_out: HashSet<PathBuf> = settings::left_out_folders(db)?.into_iter().collect();
     let mut found = Vec::new();
     for root in roots {
         let folder_id = ensure_folder(db, root)?;
-        walk(root, folder_id, &mut found);
+        walk(root, folder_id, &left_out, &mut found);
     }
     report.files = found.len();
 
@@ -111,8 +126,17 @@ pub fn scan_folders(db: &mut Db, covers: &CoverStore, roots: &[PathBuf]) -> Resu
     }
 
     let claims = CoverClaims::default();
-    let results: Vec<_> =
-        to_process.into_par_iter().map(|(file, existed)| (process(file, covers, &claims), existed)).collect();
+    let total = to_process.len();
+    let done = AtomicUsize::new(0);
+    progress(0, total);
+    let results: Vec<_> = to_process
+        .into_par_iter()
+        .map(|(file, existed)| {
+            let result = (process(file, covers, &claims), existed);
+            progress(done.fetch_add(1, Ordering::Relaxed) + 1, total);
+            result
+        })
+        .collect();
     let failed_covers = claims.failed.into_inner().unwrap_or_default();
 
     let tx = db.conn_mut().transaction()?;
@@ -167,13 +191,15 @@ fn ensure_folder(db: &Db, root: &Path) -> Result<i64> {
     Ok(db.conn().query_row("SELECT folder_id FROM folders WHERE uri = ?1", [uri.as_ref()], |r| r.get(0))?)
 }
 
-fn walk(dir: &Path, folder_id: i64, out: &mut Vec<FoundFile>) {
+fn walk(dir: &Path, folder_id: i64, left_out: &HashSet<PathBuf>, out: &mut Vec<FoundFile>) {
     let Ok(entries) = std::fs::read_dir(dir) else { return };
     for entry in entries.flatten() {
         let Ok(file_type) = entry.file_type() else { continue };
         let path = entry.path();
         if file_type.is_dir() {
-            walk(&path, folder_id, out);
+            if !left_out.contains(&path) {
+                walk(&path, folder_id, left_out, out);
+            }
             continue;
         }
         if !file_type.is_file() || !is_supported(&path) {

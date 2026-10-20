@@ -83,8 +83,34 @@ pub fn remove_music_folder(db: &mut Db, path: &Path) -> Result<()> {
         )?;
     }
     tx.commit()?;
+    set_left_out_folders(db, &path, &[])?;
     db.touch();
     Ok(())
+}
+
+const LEFT_OUT: &str = "library.leftOutFolders";
+
+/// The subfolders of the music folders the user left out ("Telegram"): the scan does not walk
+/// them, so their files leave the library as if deleted; their songs and statistics stay.
+pub fn left_out_folders(db: &Db) -> Result<Vec<PathBuf>> {
+    let paths: Vec<String> = device(db, LEFT_OUT)?.and_then(|v| serde_json::from_value(v).ok()).unwrap_or_default();
+    Ok(paths.into_iter().map(|p| PathBuf::from(p).components().collect()).collect())
+}
+
+/// Replaces the left-out subfolders of `root` with `left_out`; those of other music folders stay.
+/// The next scan applies it.
+pub fn set_left_out_folders(db: &Db, root: &Path, left_out: &[PathBuf]) -> Result<()> {
+    let root: PathBuf = root.components().collect();
+    let mut all: Vec<PathBuf> = left_out_folders(db)?.into_iter().filter(|p| !p.starts_with(&root)).collect();
+    for path in left_out {
+        let path: PathBuf = path.components().collect();
+        if path.starts_with(&root) && path != root && !all.contains(&path) {
+            all.push(path);
+        }
+    }
+    all.sort();
+    let all: Vec<String> = all.iter().map(|p| p.to_string_lossy().into_owned()).collect();
+    set_device(db, LEFT_OUT, &serde_json::json!(all))
 }
 
 /// Folders whose songs are blacklisted (1.x folder blacklist).

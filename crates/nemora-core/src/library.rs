@@ -155,7 +155,13 @@ fn ordered_ids(
         SongSort::AddedAsc | SongSort::AddedDesc => {
             joins.push_str(" JOIN tracks t ON t.song_id = v.song_id");
             let direction = if *sort == SongSort::AddedDesc { "DESC" } else { "" };
-            format!("t.first_seen_at {direction}, v.title_sort, v.variant_id")
+            // A file that was on the device before the first scan counts as added when it was
+            // written: after a fresh install every song is first seen in the same minute.
+            format!(
+                "min(t.first_seen_at, coalesce((SELECT min(l.mtime) FROM locations l \
+                   WHERE l.variant_id = v.variant_id AND l.mtime > 0), t.first_seen_at)) {direction}, \
+                 v.title_sort, v.variant_id"
+            )
         }
         SongSort::PlaysAsc | SongSort::PlaysDesc => {
             joins.push_str(" LEFT JOIN song_totals st ON st.song_id = v.song_id");

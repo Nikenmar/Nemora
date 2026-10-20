@@ -122,3 +122,51 @@ fn an_invalidated_file_is_read_again_although_it_looks_unchanged() {
     let r = scan_folders(&mut db, &covers, &roots).unwrap();
     assert_eq!((r.updated, r.unchanged), (1, 0), "{r:?}");
 }
+
+#[test]
+fn a_left_out_subfolder_leaves_the_library_and_comes_back_when_ticked_again() {
+    if !common::ffmpeg_available() {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let root = common::temp_dir("scan-left-out");
+    let music = root.join("music");
+    let telegram = music.join("Telegram");
+    std::fs::create_dir_all(telegram.join("Voice")).unwrap();
+    common::flac(&music.join("a.flac"), 1, 3);
+    common::flac(&telegram.join("b.flac"), 2, 3);
+    common::flac(&telegram.join("Voice").join("c.flac"), 3, 3);
+    let db_path = root.join("nemora.db");
+    let mut db = Db::open(&db_path).unwrap();
+    let covers = CoverStore::new(root.join("covers"));
+    let roots = vec![music.clone()];
+    let present = "SELECT count(*) FROM track_variants WHERE present = 1";
+
+    let seen = std::sync::Mutex::new(Vec::new());
+    let r = nemora_core::scan::scan_folders_with_progress(&mut db, &covers, &roots, &|done, total| {
+        seen.lock().unwrap().push((done, total))
+    })
+    .unwrap();
+    assert_eq!(r.added, 3);
+    let seen = seen.into_inner().unwrap();
+    assert_eq!(seen.first(), Some(&(0, 3)));
+    assert!(seen.contains(&(3, 3)), "{seen:?}");
+
+    // Leaving Telegram out takes it and everything below it out at the next scan.
+    nemora_core::settings::set_left_out_folders(&db, &music, std::slice::from_ref(&telegram)).unwrap();
+    assert_eq!(nemora_core::settings::left_out_folders(&db).unwrap(), vec![telegram.clone()]);
+    let r = scan_folders(&mut db, &covers, &roots).unwrap();
+    assert_eq!((r.files, r.missing), (1, 2), "{r:?}");
+    assert_eq!(count(&db_path, present), 1);
+
+    // Ticked again, its files are back as they were.
+    nemora_core::settings::set_left_out_folders(&db, &music, &[]).unwrap();
+    let r = scan_folders(&mut db, &covers, &roots).unwrap();
+    assert_eq!(r.restored, 2, "{r:?}");
+    assert_eq!(count(&db_path, present), 3);
+
+    // Removing the music folder forgets what was left out of it.
+    nemora_core::settings::set_left_out_folders(&db, &music, std::slice::from_ref(&telegram)).unwrap();
+    nemora_core::settings::remove_music_folder(&mut db, &music).unwrap();
+    assert!(nemora_core::settings::left_out_folders(&db).unwrap().is_empty());
+}
