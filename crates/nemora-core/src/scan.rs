@@ -155,6 +155,12 @@ pub fn scan_folders(db: &mut Db, covers: &CoverStore, roots: &[PathBuf]) -> Resu
     Ok(report)
 }
 
+/// Makes the next scan read `uri` again even if its size and time are unchanged: "Re-parse song".
+pub fn invalidate(db: &Db, uri: &str) -> Result<()> {
+    db.conn().execute("UPDATE locations SET size = -1 WHERE uri = ?1", [uri])?;
+    Ok(())
+}
+
 fn ensure_folder(db: &Db, root: &Path) -> Result<i64> {
     let uri = root.to_string_lossy();
     db.conn().execute("INSERT INTO folders (uri) VALUES (?1) ON CONFLICT(uri) DO NOTHING", [uri.as_ref()])?;

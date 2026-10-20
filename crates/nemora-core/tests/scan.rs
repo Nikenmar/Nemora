@@ -100,3 +100,25 @@ fn scan_follows_the_folder_through_edits_copies_and_missing_files() {
     drop(db);
     let _ = std::fs::remove_dir_all(&root);
 }
+
+#[test]
+fn an_invalidated_file_is_read_again_although_it_looks_unchanged() {
+    if !common::ffmpeg_available() {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let root = common::temp_dir("scan-invalidate");
+    let music = root.join("music");
+    std::fs::create_dir_all(&music).unwrap();
+    let a = music.join("a.flac");
+    common::flac(&a, 1, 3);
+    let mut db = Db::open(&root.join("nemora.db")).unwrap();
+    let covers = CoverStore::new(root.join("covers"));
+    let roots = vec![music.clone()];
+    scan_folders(&mut db, &covers, &roots).unwrap();
+    assert_eq!(scan_folders(&mut db, &covers, &roots).unwrap().unchanged, 1);
+
+    nemora_core::scan::invalidate(&db, &a.to_string_lossy()).unwrap();
+    let r = scan_folders(&mut db, &covers, &roots).unwrap();
+    assert_eq!((r.updated, r.unchanged), (1, 0), "{r:?}");
+}
