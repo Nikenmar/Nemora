@@ -551,26 +551,12 @@ pub fn get(db: &crate::db::Db, song_id: &str, network: bool) -> crate::Result<Op
     if let Some((text, source)) = stored(db, song_id)? {
         return Ok(Some((parse(&text), source)));
     }
-    let location: Option<(String, String, Option<String>, i64, Option<String>)> = rusqlite::OptionalExtension::optional(db.conn().query_row(
-        "SELECT l.uri, v.title, v.album, t.duration_ms,
-                (SELECT name FROM variant_artists a WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position LIMIT 1)
-         FROM locations l JOIN track_variants v USING (variant_id) JOIN tracks t ON t.song_id = v.song_id
-         WHERE v.song_id = ?1 AND l.missing_since IS NULL ORDER BY l.uri LIMIT 1",
-        [song_id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
-    ))?;
-    let Some((uri, title, album, duration_ms, artist)) = location else { return Ok(None) };
-    let path = std::path::Path::new(&uri);
-    let found =
-        from_lrc_file(path).map(|t| (t, "lrc_file")).or_else(|| from_tags(path).map(|t| (t, "tags"))).or_else(|| {
-            if !network {
-                return None;
-            }
-            lrclib::fetch(&title, artist.as_deref().unwrap_or(""), album.as_deref(), duration_ms as f64 / 1000.0)
-                .ok()
-                .flatten()
-                .map(|t| (t, "lrclib"))
-        });
+    let Some(song) = lookup(db, song_id)? else { return Ok(None) };
+    let path = std::path::Path::new(&song.uri);
+    let found = from_lrc_file(path)
+        .map(|t| (t, "lrc_file"))
+        .or_else(|| from_tags(path).map(|t| (t, "tags")))
+        .or_else(|| if network { song.fetch_online().map(|t| (t, "lrclib")) } else { None });
     match found {
         Some((text, source)) => {
             save(db, song_id, &text, source)?;
@@ -578,6 +564,59 @@ pub fn get(db: &crate::db::Db, song_id: &str, network: bool) -> crate::Result<Op
         }
         None => Ok(None),
     }
+}
+
+/// "Refresh online lyrics": asks LRCLIB again past what is stored. What it finds replaces lyrics
+/// that were found before (a file, the tags, an earlier search); the user's own are never replaced.
+/// Answers whether the stored text changed.
+pub fn refresh(db: &crate::db::Db, song_id: &str) -> crate::Result<bool> {
+    let edited: Option<i64> = rusqlite::OptionalExtension::optional(db.conn().query_row(
+        "SELECT user_edited FROM lyrics WHERE song_id = ?1",
+        [song_id],
+        |r| r.get(0),
+    ))?;
+    if edited == Some(1) {
+        return Ok(false);
+    }
+    let Some(text) = lookup(db, song_id)?.and_then(|song| song.fetch_online()) else { return Ok(false) };
+    if stored(db, song_id)?.is_some_and(|(current, _)| current == text) {
+        return Ok(false);
+    }
+    db.conn().execute("DELETE FROM lyrics WHERE song_id = ?1", [song_id])?;
+    save(db, song_id, &text, "lrclib")
+}
+
+/// What a lyrics search needs to know about a song: its file, and the tags LRCLIB matches on.
+struct SongLookup {
+    uri: String,
+    title: String,
+    album: Option<String>,
+    duration_ms: i64,
+    artist: Option<String>,
+}
+
+impl SongLookup {
+    fn fetch_online(&self) -> Option<String> {
+        lrclib::fetch(
+            &self.title,
+            self.artist.as_deref().unwrap_or(""),
+            self.album.as_deref(),
+            self.duration_ms as f64 / 1000.0,
+        )
+        .ok()
+        .flatten()
+    }
+}
+
+fn lookup(db: &crate::db::Db, song_id: &str) -> crate::Result<Option<SongLookup>> {
+    Ok(rusqlite::OptionalExtension::optional(db.conn().query_row(
+        "SELECT l.uri, v.title, v.album, t.duration_ms,
+                (SELECT name FROM variant_artists a WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position LIMIT 1)
+         FROM locations l JOIN track_variants v USING (variant_id) JOIN tracks t ON t.song_id = v.song_id
+         WHERE v.song_id = ?1 AND l.missing_since IS NULL ORDER BY l.uri LIMIT 1",
+        [song_id],
+        |r| Ok(SongLookup { uri: r.get(0)?, title: r.get(1)?, album: r.get(2)?, duration_ms: r.get(3)?, artist: r.get(4)? }),
+    ))?)
 }
 
 #[cfg(test)]
