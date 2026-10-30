@@ -18,10 +18,18 @@
 //! Windows is the right place for this and not a new place: `taskbar.rs`
 //! already subclasses this same window for its thumbbar buttons. This uses its
 //! own subclass id, so the two chain instead of fighting.
+//!
+//! The strip follows the theme: the black canvas or the light one, switched by
+//! the view through `window_backdrop_set` whenever the theme changes.
+
+/// The canvas of each theme, as written in the stylesheet (`--canvas`).
+pub const DARK: u32 = 0x000000;
+pub const LIGHT: u32 = 0xf6f7f8;
 
 #[cfg(windows)]
 mod windows_impl {
     use std::sync::OnceLock;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
     use windows::Win32::Graphics::Gdi::{CreateSolidBrush, FillRect, HBRUSH, HDC};
@@ -32,13 +40,30 @@ mod windows_impl {
     /// Distinct from the taskbar subclass on the same window.
     const SUBCLASS_ID: usize = 0x4e454d31; // "NEM1"
 
-    /// The brush outlives the window deliberately.
+    /// The brushes outlive the window deliberately.
     ///
-    /// It is created once and never destroyed: it is referenced by a window
+    /// Each is created once and never destroyed: they are referenced by a window
     /// procedure that can run at any time until the process ends, and freeing a
-    /// GDI object that a paint is still using is a far worse bug than one brush
+    /// GDI object that a paint is still using is a far worse bug than two brushes
     /// held for the life of the app.
-    static BRUSH: OnceLock<usize> = OnceLock::new();
+    static BRUSHES: OnceLock<(usize, usize)> = OnceLock::new();
+    static IS_DARK: AtomicBool = AtomicBool::new(true);
+
+    fn brush(colour: u32) -> Result<usize, String> {
+        // COLORREF is 0x00BBGGRR, the reverse of the CSS byte order.
+        let red = (colour >> 16) & 0xff;
+        let green = (colour >> 8) & 0xff;
+        let blue = colour & 0xff;
+        let brush = unsafe { CreateSolidBrush(COLORREF(blue << 16 | green << 8 | red)) };
+        if brush.is_invalid() {
+            return Err("could not create the window background brush".to_owned());
+        }
+        Ok(brush.0 as usize)
+    }
+
+    pub fn set_dark(is_dark: bool) {
+        IS_DARK.store(is_dark, Ordering::Relaxed);
+    }
 
     unsafe extern "system" fn subclass_proc(
         hwnd: HWND,
@@ -49,12 +74,13 @@ mod windows_impl {
         _data: usize,
     ) -> LRESULT {
         if message == WM_ERASEBKGND {
-            if let Some(brush) = BRUSH.get() {
+            if let Some(&(dark, light)) = BRUSHES.get() {
+                let brush = if IS_DARK.load(Ordering::Relaxed) { dark } else { light };
                 let mut rect = RECT::default();
                 if GetClientRect(hwnd, &mut rect).is_ok() {
                     // wParam of WM_ERASEBKGND is the device context to paint in.
                     let hdc = HDC(wparam.0 as *mut core::ffi::c_void);
-                    FillRect(hdc, &rect, HBRUSH(*brush as *mut core::ffi::c_void));
+                    FillRect(hdc, &rect, HBRUSH(brush as *mut core::ffi::c_void));
                 }
             }
             // Non-zero means "erased"; returning 0 would let the default
@@ -65,17 +91,11 @@ mod windows_impl {
         DefSubclassProc(hwnd, message, wparam, lparam)
     }
 
-    /// `colour` is 0xRRGGBB, as it is written in the stylesheet.
-    pub fn install(hwnd: HWND, colour: u32) -> Result<(), String> {
-        // COLORREF is 0x00BBGGRR, the reverse of the CSS byte order.
-        let red = (colour >> 16) & 0xff;
-        let green = (colour >> 8) & 0xff;
-        let blue = colour & 0xff;
-        let brush = unsafe { CreateSolidBrush(COLORREF(blue << 16 | green << 8 | red)) };
-        if brush.is_invalid() {
-            return Err("could not create the window background brush".to_owned());
+    pub fn install(hwnd: HWND, is_dark: bool) -> Result<(), String> {
+        set_dark(is_dark);
+        if BRUSHES.get().is_none() {
+            let _ = BRUSHES.set((brush(super::DARK)?, brush(super::LIGHT)?));
         }
-        let _ = BRUSH.set(brush.0 as usize);
 
         let installed = unsafe { SetWindowSubclass(hwnd, Some(subclass_proc), SUBCLASS_ID, 0) }.as_bool();
         if !installed {
@@ -85,18 +105,33 @@ mod windows_impl {
     }
 }
 
-/// Paints the window's own background so a resize never shows bare black.
+/// Paints the window's own background so a resize never shows a colour the app does not have.
 ///
 /// A no-op off Windows, where the artefact does not exist.
-pub fn install(window: &tauri::WebviewWindow, colour: u32) -> Result<(), String> {
+pub fn install(window: &tauri::WebviewWindow, is_dark: bool) -> Result<(), String> {
     #[cfg(windows)]
     {
         let hwnd = window.hwnd().map_err(|error| format!("no window handle: {error}"))?;
-        windows_impl::install(hwnd, colour)
+        windows_impl::install(hwnd, is_dark)
     }
     #[cfg(not(windows))]
     {
-        let _ = (window, colour);
+        let _ = (window, is_dark);
         Ok(())
     }
+}
+
+/// The canvas of a theme as a Tauri colour, for the window and webview layers.
+pub fn colour(is_dark: bool) -> tauri::webview::Color {
+    let c = if is_dark { DARK } else { LIGHT };
+    tauri::webview::Color((c >> 16) as u8, (c >> 8) as u8, c as u8, 0xff)
+}
+
+/// The view's theme changed: the strip painted during a resize follows it.
+#[tauri::command]
+pub fn window_backdrop_set(is_dark: bool) {
+    #[cfg(windows)]
+    windows_impl::set_dark(is_dark);
+    #[cfg(not(windows))]
+    let _ = is_dark;
 }

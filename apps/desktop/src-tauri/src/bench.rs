@@ -94,3 +94,45 @@ pub fn bench_signal(name: String) -> bool {
 pub fn bench_quit(handle: AppHandle) {
     handle.exit(0);
 }
+
+/// Whether this run belongs to the redesign's screenshot stand (tools/redesign/shots.mjs), which
+/// sets `NEMORA_SHOTS_BACKGROUND`: the user keeps working while it runs.
+pub fn in_background() -> bool {
+    dir().is_some() && std::env::var_os("NEMORA_SHOTS_BACKGROUND").is_some()
+}
+
+#[tauri::command]
+pub fn bench_background() -> bool {
+    in_background()
+}
+
+/// The stand's window has no taskbar button, stays behind every other window, and whenever Windows
+/// activates it anyway (showing a window activates it) gives the focus straight back to the window
+/// that had it when the app started.
+pub fn keep_in_background(window: &tauri::WebviewWindow) {
+    if !in_background() {
+        return;
+    }
+    let _ = window.set_focusable(false);
+    let _ = window.set_skip_taskbar(true);
+    let _ = window.set_always_on_bottom(true);
+    #[cfg(windows)]
+    {
+        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow};
+        let previous = unsafe { GetForegroundWindow() }.0 as isize;
+        let own = window.hwnd().map(|h| h.0 as isize).unwrap_or_default();
+        if previous == 0 || previous == own {
+            return;
+        }
+        window.on_window_event(move |event| {
+            if let tauri::WindowEvent::Focused(true) = event {
+                let hwnd = windows::Win32::Foundation::HWND(previous as *mut core::ffi::c_void);
+                unsafe {
+                    if IsWindow(Some(hwnd)).as_bool() {
+                        let _ = SetForegroundWindow(hwnd);
+                    }
+                }
+            }
+        });
+    }
+}

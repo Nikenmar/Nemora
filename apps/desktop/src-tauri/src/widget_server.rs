@@ -43,8 +43,11 @@ const DEFAULT_PORT: u16 = 41237;
 /// has to work from a fresh install with no user intervention beyond pasting a
 /// URL into OBS.
 const WIDGET_HTML: &str = include_str!("../widget/index.html");
-const POPPINS_REGULAR: &[u8] = include_bytes!("../../src/renderer/src/assets/fonts/Poppins-Regular.woff2");
-const POPPINS_MEDIUM: &[u8] = include_bytes!("../../src/renderer/src/assets/fonts/Poppins-Medium.woff2");
+/// The app's typeface, variable weight: Latin (with Latin Extended) and Cyrillic cover what titles
+/// usually need; anything else falls back to the system font.
+const GEOLOGICA_LATIN: &[u8] = include_bytes!("../../src/renderer/src/assets/fonts/Geologica-latin.woff2");
+const GEOLOGICA_LATIN_EXT: &[u8] = include_bytes!("../../src/renderer/src/assets/fonts/Geologica-latin-ext.woff2");
+const GEOLOGICA_CYRILLIC: &[u8] = include_bytes!("../../src/renderer/src/assets/fonts/Geologica-cyrillic.woff2");
 
 /// What the renderer pushes on every change worth showing.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -316,11 +319,14 @@ fn handle(request: Request) {
                 _ => not_found(request),
             }
         }
-        "/font/poppins-regular.woff2" => {
-            respond(request, 200, "font/woff2", POPPINS_REGULAR.to_vec(), "public, max-age=31536000, immutable")
+        "/font/geologica-latin.woff2" => {
+            respond(request, 200, "font/woff2", GEOLOGICA_LATIN.to_vec(), "public, max-age=31536000, immutable")
         }
-        "/font/poppins-medium.woff2" => {
-            respond(request, 200, "font/woff2", POPPINS_MEDIUM.to_vec(), "public, max-age=31536000, immutable")
+        "/font/geologica-latin-ext.woff2" => {
+            respond(request, 200, "font/woff2", GEOLOGICA_LATIN_EXT.to_vec(), "public, max-age=31536000, immutable")
+        }
+        "/font/geologica-cyrillic.woff2" => {
+            respond(request, 200, "font/woff2", GEOLOGICA_CYRILLIC.to_vec(), "public, max-age=31536000, immutable")
         }
         _ => not_found(request),
     }

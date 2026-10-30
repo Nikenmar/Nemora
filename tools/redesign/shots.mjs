@@ -15,7 +15,7 @@
  * navigation, so the shots survive the redesign's DOM changes. Output: one PNG per surface and
  * theme, plus index.html to look at them side by side.
  */
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, openSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,8 +54,8 @@ const SHOTS = [
     id: '06-notifications',
     surface: 'Notifications',
     setup: `S.addNewNotifications([
-      { id: 'shot-1', content: 'Added 3 songs to Night drive', iconName: 'done', duration: 5000 },
-      { id: 'shot-2', content: 'Scanning music folders', iconName: 'sync', duration: 5000, progressBarData: { total: 100, value: 40 } }
+      { id: 'shot-1', content: 'Added 3 songs to Night drive', iconName: 'done', duration: 3000 },
+      { id: 'shot-2', content: 'Scanning music folders', iconName: 'sync', duration: 3000, progressBarData: { total: 100, value: 40 } }
     ]);`
   },
   { id: '08-mini-player', surface: 'Mini player', view: { width: 400, height: 240 }, setup: `S.updatePlayerType('mini');`, settle: 1500 },
@@ -262,6 +262,17 @@ class Cdp {
   }
 }
 
+/** The process id owning the foreground window: the stand's app must never be it. */
+function foreground() {
+  const script = `Add-Type -Name F -Namespace W -MemberDefinition '[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(System.IntPtr h, out int p);'
+$p = 0; [void][W.F]::GetWindowThreadProcessId([W.F]::GetForegroundWindow(), [ref]$p); $p`;
+  try {
+    return execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 15_000 }).trim();
+  } catch {
+    return '?';
+  }
+}
+
 function prepareProfile(dir, copyFrom) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, 'profile'), { recursive: true });
@@ -282,7 +293,18 @@ async function runOne(name, shots, copyFrom) {
   await prepareProfile(dir, copyFrom);
   const log = openSync(join(dir, 'stdout.log'), 'w');
   const app = spawn(EXE, [`--bench=${dir}`], {
-    env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${PORT}` },
+    env: {
+      ...process.env,
+      // In the background (bench.rs): no focus, no taskbar button, behind every window. The window
+      // is then covered, so Chromium must not stop painting it.
+      NEMORA_SHOTS_BACKGROUND: '1',
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: [
+        `--remote-debugging-port=${PORT}`,
+        '--disable-features=CalculateNativeWinOcclusion,msWebOOUI,msPdfOOUI,AudioServiceOutOfProcess',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
+      ].join(' ')
+    },
     stdio: ['ignore', log, log]
   });
   const failures = [];
@@ -312,6 +334,7 @@ async function runOne(name, shots, copyFrom) {
     if (copyFrom && data.queue.length) {
       await cdp.eval(`S.createQueue(D.queue, 'songs', false, undefined, true); await wait(2500); S.togglePlay(false); await wait(300); S.updateSongPosition(Math.round((D.song?.duration ?? 200) * 0.4));`);
     }
+    if (Number(foreground()) === app.pid) failures.push(`focus: the stand's window took the foreground`);
     for (const theme of THEMES) {
       await cdp.eval(`api.theme.changeAppTheme('${theme}');`);
       await sleep(800);

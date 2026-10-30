@@ -107,6 +107,8 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::Builder::new().app_name("Nemora").args(["--autostart"]).build())
         .invoke_handler(tauri::generate_handler![
             core_info,
+            window_backdrop::window_backdrop_set,
+            bench::bench_background,
             commands::app_hydrate,
             commands::user_data_get,
             commands::user_data_set,
@@ -272,12 +274,20 @@ pub fn run() {
             // Paint both layers before the first frame, from native code: the renderer's own call
             // arrives after the profile is readable, far too late for an immediate resize.
             if let Some(window) = tauri_app.get_webview_window("main") {
-                let _ = window.set_background_color(Some(tauri::webview::Color(0x21, 0x22, 0x26, 0xff)));
-                if let Err(error) = window_backdrop::install(&window, 0x212226) {
+                let is_dark = user_data::get(&tauri_app.state::<app::App>().read())
+                    .ok()
+                    .and_then(|data| data["theme"]["isDarkMode"].as_bool())
+                    .unwrap_or(true);
+                let _ = window.set_background_color(Some(window_backdrop::colour(is_dark)));
+                bench::keep_in_background(&window);
+                if let Err(error) = window_backdrop::install(&window, is_dark) {
                     eprintln!("[nemora] window backdrop unavailable: {error}");
                 }
+                // Not for the screenshot stand, which runs in the background (bench.rs).
                 #[cfg(debug_assertions)]
-                window.open_devtools();
+                if std::env::var_os("NEMORA_SHOTS_BACKGROUND").is_none() {
+                    window.open_devtools();
+                }
             }
             Ok(())
         })

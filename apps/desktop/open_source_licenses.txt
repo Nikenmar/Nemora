@@ -243,10 +243,10 @@ MATERIAL DESIGN ICONS
 
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-POPPINS FONT
-============
+GEOLOGICA FONT
+==============
 
-Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+Copyright 2020 The Geologisk Project Authors (https://github.com/monokromskriftforlag/geologisk)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

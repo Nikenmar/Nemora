@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow, type Theme } from '@tauri-apps/api/window';
 
@@ -9,8 +10,8 @@ type ThemeCallback = (event: unknown, isDarkMode: boolean, usingSystemTheme: boo
 const appWindow = getCurrentWindow();
 let systemThemeBridgeInstalled = false;
 
-/** `--background-color-1` and `--dark-background-color-1`, resolved to hex. */
-const WINDOW_BACKGROUNDS = { dark: '#212226', light: '#ffffff' } as const;
+/** `--canvas` of each theme in styles.css; window_backdrop.rs paints the same two natively. */
+const WINDOW_BACKGROUNDS = { dark: '#000000', light: '#f6f7f8' } as const;
 
 /**
  * Keeps the window and webview layers painted in the app's own background.
@@ -29,6 +30,8 @@ const syncWindowBackground = (isDarkMode: boolean): void => {
   void getCurrentWebviewWindow()
     .setBackgroundColor(isDarkMode ? WINDOW_BACKGROUNDS.dark : WINDOW_BACKGROUNDS.light)
     .catch((error: unknown) => console.error('Failed to set the window background color.', error));
+  // The strip Windows paints during a resize, before the webview catches up.
+  void invoke('window_backdrop_set', { isDark: isDarkMode }).catch(() => undefined);
 };
 
 /** Applies the stored theme to the window layers once the profile is readable. */

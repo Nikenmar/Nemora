@@ -88,7 +88,9 @@ const revealWindow = (): void => {
     .then(async ({ getCurrentWindow }) => {
       const appWindow = getCurrentWindow();
       await appWindow.show();
-      await appWindow.setFocus();
+      // The redesign's screenshot stand runs in the background and must not take the focus.
+      const { invoke } = await import('@tauri-apps/api/core');
+      if (!(await invoke<boolean>('bench_background').catch(() => false))) await appWindow.setFocus();
     })
     .catch((error: unknown) => console.error('Failed to reveal the window', error));
 };

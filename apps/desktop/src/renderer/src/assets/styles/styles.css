@@ -1,103 +1,207 @@
-/* 
-  * App is mainly styled using Tailwind.css
-  * This css file is here to achieve some styling requirements that otherwise 
-  * wouldn't be able to achieve using Tailwind.css like Electron specific styles.
-
-  * This file previously had 3200+ lines.
-*/
+/*
+ * Global styles of the view. Colour, type, radius, shadow and motion are tokens declared here and
+ * used by the components through Tailwind (tailwind.config.js). The design (2026: black Obsidian
+ * palette, Geologica, pills and panels) is specified in the vault, PROJECTS/nemora-reborn/PLAN/13.
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ? POPPINS FONT CONFIG */
+/* ? GEOLOGICA: one variable file per script, weights 100-900 */
 @font-face {
-  font-family: 'Poppins';
-  src: url('../fonts/Poppins-Light.woff2');
-  font-weight: 300;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Poppins';
-  src: url('../fonts/Poppins-Regular.woff2');
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Poppins';
-  src: url('../fonts/Poppins-Medium.woff2');
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Poppins';
-  src: url('../fonts/Poppins-SemiBold.woff2');
-  font-weight: 600;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Poppins';
-  src: url('../fonts/Poppins-Bold.woff2');
-  font-weight: 700;
-  font-display: swap;
-}
-
-/* ? MATERIAL ICONS CONFIG */
-/* @font-face {
-  font-family: 'Material Icons Round';
+  font-family: 'Geologica';
   font-style: normal;
-  font-display: block;
-  src: url('../fonts/MaterialSymbolsRounded.woff2');
-} */
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geologica-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Geologica';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geologica-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Geologica';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geologica-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Geologica';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geologica-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0,
+    U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Geologica';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geologica-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Geologica';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Geologica-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
-/* ? ROOT STYLES */
+/*
+ * ? TOKENS
+ * Colours are RGB channels, so Tailwind's opacity modifiers work (`bg-surface-2/60`). Values come
+ * from the Obsidian seeds in OKLCH (grey H 270 C 0.002, panels L 0.15 step 0.055; blue H 264
+ * C 0.145 L 0.40; echo L 0.68); see PLAN/13 for the derivation and the measured contrast.
+ */
 :root {
-  --background-color-1: 0 0% 100%; /* hsl(0 0% 100%) */
-  --background-color-2: 212 48% 94%; /* hsl(212 48% 94%) */
-  --background-color-3: 213 80% 88%; /* hsl(213 80% 88%) */
-  --side-bar-background: 212 50% 94%; /* hsl(212 50% 94%) */
-  --background-color-dimmed: 0 0% 30%; /* hsl(0 0% 30% / 50%) */
-  --song-background-color: var(--background-color-1);
-  --text-color: 0 0% 0%; /* hsl(0 0% 0%) */
-  --text-color-dimmed: 0 0% 50%; /* hsl(0 0% 50%) */
-  --text-color-white: 0 0% 100%; /* hsl(0 0% 100%) */
-  --text-color-black: 0 0% 0%; /* hsl(0 0% 0%) */
-  --text-color-crimson: 348 83% 47%; /* hsl(348 83% 47%) */
-  --text-color-highlight: 203 39% 44%; /* hsl(203 39% 44%) */
-  --text-color-highlight-2: 247 74% 63%; /* hsl(247 74% 63%) */
-  --context-menu-background: 0 0% 100%; /* hsl(0 0% 100% / 90%) */
-  --context-menu-list-hover: 198 18% 89%; /* hsl(198 18% 89% / 75%) */
-  --seekbar-background-color: 0 0% 20%; /* hsl(0 0% 20%) */
-  --seekbar-track-background-color: 0 0% 80%; /* hsl(0 0% 80%) */
-  --foreground-color-1: 247 74% 65%; /* hsl(247 74% 65%) */
-  --scrollbar-thumb-background-color: 212 48% 94%; /* hsl(212, 48%, 94%) */
+  color-scheme: light;
+  --canvas: 246 247 248;
+  --surface-1: 255 255 255;
+  --surface-2: 237 238 239;
+  --surface-3: 255 255 255;
+  --line: 221 222 223;
+  --ink: 17 18 18;
+  --ink-dim: 99 99 100;
+  --ink-faint: 158 158 159;
+  --accent: 29 64 148;
+  --accent-hover: 16 49 132;
+  --on-accent: 255 255 255;
+  --accent-soft: 216 221 234;
+  --echo: 29 64 148;
+  --danger: 201 47 51;
+  --danger-soft: 241 223 224;
+  --success: 0 136 68;
+  --warning: 183 119 0;
+  --glass: 255 255 255;
+  --glass-alpha: 0.62;
+  --glass-hover: 0 0 0 / 0.06;
+  --glass-border: 0 0 0 / 0.08;
+  --scrim: 0 0 0 / 0.35;
+  --shadow-float: 0 18px 50px rgb(0 0 0 / 0.18);
+  --cover-glow-strength: 16%;
+
+  --font-ui: 'Geologica', 'Yu Gothic UI', 'Meiryo UI', 'Microsoft YaHei UI', 'Malgun Gothic',
+    'Segoe UI', sans-serif;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Kept for the components that still read them as durations. */
   --transition-duration-0_2s: 0.2s;
   --transition-duration-0_25s: 0.25s;
   --transition-duration-0_3s: 0.3s;
-  --slider-opacity: 0.5;
-
-  /* Dark colors */
-  --dark-background-color-1: 228 7% 14%; /* hsl(228 7% 14%) */
-  --dark-background-color-2: 225 8% 20%; /* hsl(225 8% 20%) */
-  --dark-background-color-3: 213 80% 88%; /* hsl(213 80% 88%) */
-  --dark-song-background-color: var(--background-color-2);
-  --dark-side-bar-background: 228 7% 20%; /* hsl(228 7% 20%) */
-  --dark-text-color: 0 0% 100%; /* hsl(0 0% 100%) */
-  --dark-text-color-dimmed: 0 0% 50%; /* hsl(0 0% 50%) */
-  --dark-text-color-highlight: 213 80% 88%; /* hsl(213 80% 88%) */
-  --dark-text-color-highlight-2: 244 98% 80%; /* hsl(244 98% 80%) */
-  --dark-context-menu-background: 228 7% 14%; /* hsla(228 7% 14% / 90%) */
-  --dark-context-menu-list-hover: 224 8% 28%; /* hsl(224 8% 28%) */
-  --dark-seekbar-background-color: 240 1% 83%; /* hsl(240 1% 83%) */
-  --dark-seekbar-track-background-color: 0 0% 25%;
-  --dark-scrollbar-thumb-background-color: 212 48% 94%; /* hsl(212, 48%, 94%) */
-  --dark-slider-opacity: 0.25;
 }
 
-/* ? BASIC STYLING */
+/* `.dark` sits on <body>; the mini and full-screen players and portalled dialogs carry it too. */
+.dark {
+  color-scheme: dark;
+  --canvas: 0 0 0;
+  --surface-1: 11 11 12;
+  --surface-2: 23 23 24;
+  --surface-3: 29 29 30;
+  --line: 36 36 37;
+  --ink: 240 240 241;
+  --ink-dim: 146 146 147;
+  --ink-faint: 88 88 89;
+  --accent: 29 64 148;
+  --accent-hover: 42 79 164;
+  --on-accent: 255 255 255;
+  --accent-soft: 12 27 62;
+  --echo: 99 151 241;
+  --danger: 210 84 80;
+  --danger-soft: 34 13 13;
+  --success: 46 165 92;
+  --warning: 195 146 39;
+  --glass: 29 29 30;
+  --glass-alpha: 0.55;
+  --glass-hover: 255 255 255 / 0.08;
+  --glass-border: 255 255 255 / 0.09;
+  --scrim: 0 0 0 / 0.6;
+  --shadow-float: 0 18px 50px rgb(0 0 0 / 0.55);
+  --cover-glow-strength: 45%;
+}
+
+/* The playing cover's colour (other/coverLight.ts); registered so a song change crossfades it. */
+@property --cover-glow {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+:root {
+  transition: --cover-glow 600ms ease;
+}
+
+/*
+ * ? BRIDGE (removed in P9)
+ * The variable names of the old theme, pointed at the new tokens, so every component not yet
+ * rebuilt already shows the new palette. Declared again under `.dark` because a custom property
+ * resolves `var()` where it is declared. The old pale-blue highlight becomes the blue accent in the
+ * black theme and the soft blue in the light one, where its black text keeps reading.
+ */
+:root,
+.dark {
+  --bridge-highlight: var(--accent-soft);
+  --bridge-on-highlight: var(--ink);
+}
+.dark {
+  --bridge-highlight: var(--accent);
+  --bridge-on-highlight: var(--on-accent);
+}
+:root,
+.dark {
+  --background-color-1: var(--canvas);
+  --background-color-2: var(--surface-2);
+  --background-color-3: var(--bridge-highlight);
+  --background-color-dimmed: 0 0 0;
+  --side-bar-background: var(--surface-1);
+  --song-background-color: var(--canvas);
+  --text-color: var(--ink);
+  --text-color-dimmed: var(--ink-dim);
+  --text-color-white: 255 255 255;
+  --text-color-black: var(--bridge-on-highlight);
+  --text-color-crimson: var(--danger);
+  --text-color-highlight: var(--echo);
+  --text-color-highlight-2: var(--echo);
+  --context-menu-background: var(--surface-3);
+  --context-menu-list-hover: var(--surface-2);
+  --seekbar-background-color: var(--echo);
+  --seekbar-track-background-color: var(--line);
+  --foreground-color-1: var(--accent);
+  --scrollbar-thumb-background-color: var(--line);
+  --slider-opacity: 1;
+
+  --dark-background-color-1: var(--canvas);
+  --dark-background-color-2: var(--surface-2);
+  --dark-background-color-3: var(--bridge-highlight);
+  --dark-song-background-color: var(--canvas);
+  --dark-side-bar-background: var(--surface-1);
+  --dark-text-color: var(--ink);
+  --dark-text-color-dimmed: var(--ink-dim);
+  --dark-text-color-variant: var(--canvas);
+  --dark-text-color-highlight: var(--echo);
+  --dark-text-color-highlight-2: var(--echo);
+  --dark-context-menu-background: var(--surface-3);
+  --dark-context-menu-list-hover: var(--surface-2);
+  --dark-seekbar-background-color: var(--echo);
+  --dark-seekbar-track-background-color: var(--line);
+  --dark-scrollbar-thumb-background-color: var(--line);
+  --dark-slider-opacity: 1;
+}
+
+/* ? BASE */
 html {
   scroll-behavior: smooth;
 }
@@ -106,43 +210,60 @@ html {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Poppins', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+  font-family: var(--font-ui);
 }
 
-*:focus {
-  outline: var(--text-color-highlight-2) !important;
+body,
+#root {
+  width: 100%;
+  height: 100vh;
+  overflow-x: hidden;
+  background-color: rgb(var(--canvas));
+  color: rgb(var(--ink));
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'calt' 1;
 }
 
-/* ? DEFAULT SCROLL BAR STYLES */
-::-webkit-scrollbar-track {
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
-  background-color: hsl(var(--background-color-1));
+::selection {
+  background: rgb(var(--accent-soft));
+  color: rgb(var(--ink));
 }
 
+/* A ring for the keyboard only; a mouse click leaves nothing behind. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid rgb(var(--echo));
+  outline-offset: 2px;
+}
+
+/* ? SCROLLBARS: thin, on the canvas, no track */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 8px;
-  background-color: hsl(var(--background-color-1));
-  transition: 'background';
+  width: 10px;
+  height: 10px;
+  background: transparent;
 }
-
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
-  border-radius: 10px;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-  background-color: hsl(var(--scrollbar-thumb-background-color));
-  transition: 'background';
-  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: rgb(var(--line));
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--background-color-3));
+  background-color: rgb(var(--ink-faint));
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
-/* ? MATERIAL SYMBOLS STYLES */
-.material-icons-round {
+/* ? MATERIAL SYMBOLS: outline at weight 300; filled marks what is selected or on */
+.material-icons-round,
+.material-icons-round-outlined,
+.material-icons-round.material-icons-round-outlined {
   font-family: 'Material Symbols Rounded';
   font-weight: normal;
   font-style: normal;
@@ -155,84 +276,37 @@ html {
   direction: ltr;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'liga';
   user-select: none;
-  transition: font-variation-settings 0.15s ease-in-out;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 300,
+    'opsz' 24;
+}
+.material-icons-round.icon-filled,
+.icon-filled .material-icons-round {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'opsz' 24;
 }
 
-.material-icons-round {
-  font-family: 'Material Symbols Rounded';
-  font-variation-settings: 'FILL' 1;
-}
-
-.material-icons-round-outlined,
-.material-icons-round.material-icons-round-outlined {
-  font-family: 'Material Symbols Rounded';
-  font-variation-settings: 'FILL' 0;
-}
-
-/* ? BODY STYLES */
-body,
-#root {
-  width: 100%;
-  height: 100vh;
-  overflow-x: hidden;
-  background-color: var(--background-color-1);
-}
-
-body,
-body * {
-  transition:
-    color var(--transition-duration-0_2s) linear,
-    background-color var(--transition-duration-0_2s) linear;
-  -webkit-transition:
-    color var(--transition-duration-0_2s) linear,
-    background-color var(--transition-duration-0_2s) linear;
-  -moz-transition:
-    color var(--transition-duration-0_2s) linear,
-    background-color var(--transition-duration-0_2s) linear;
-  -ms-transition:
-    color var(--transition-duration-0_2s) linear,
-    background-color var(--transition-duration-0_2s) linear;
-  -o-transition:
-    color var(--transition-duration-0_2s) linear,
-    background-color var(--transition-duration-0_2s) linear;
-}
-
-/* ? APP DARK THEME STYLES */
-/* `dialog.dark` covers panels portalled to document.body: they render outside
-   `.App`, so without their own scope every var-driven rule (seekbar, sliders,
-   scrollbars) would resolve against the light palette in dark mode. */
-.App.dark,
-.full-screen-player.dark,
-.mini-player.dark,
-dialog.dark {
-  --background-color-1: var(--dark-background-color-1);
-  --background-color-2: var(--dark-background-color-2);
-  --background-color-3: var(--dark-background-color-3);
-  --song-background-color: var(--dark-song-background-color);
-  --side-bar-background: var(--dark-side-bar-background);
-  --text-color: var(--dark-text-color);
-  --text-color-dimmed: var(--dark-text-color-dimmed);
-  --text-color-highlight: var(--dark-text-color-highlight);
-  --text-color-highlight-2: var(--dark-text-color-highlight-2);
-  --context-menu-background: var(--dark-context-menu-background);
-  --context-menu-list-hover: var(--dark-context-menu-list-hover);
-  --seekbar-background-color: var(--dark-seekbar-background-color);
-  --scrollbar-thumb-background-color: var(--dark-scrollbar-thumb-background-color);
-  --seekbar-track-background-color: var(--dark-seekbar-track-background-color);
-  --slider-opacity: var(--dark-slider-opacity);
-}
-
-/* ? APP REDUCED MOTION STYLES */
+/* ? REDUCED MOTION: the app's own switch and the system's */
 :is(.App.reduced-motion, .mini-player.reduced-motion) * {
   animation-duration: 0ms !important;
   transition-duration: 0ms !important;
-  backdrop-filter: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-/* ? TITLE BAR STYLES */
+/* ? TITLE BAR: the window drags by it, its buttons do not */
 #title-bar {
   -webkit-app-region: drag;
   user-select: none;
@@ -243,28 +317,18 @@ dialog.dark {
 .mini-player-title-bar .special-controls-container,
 .special-controls-and-indicators-container :is(.indicators-container, .special-controls-container),
 .window-controls-container :is(.minimize-btn, .maximize-btn, .close-btn),
+.title-bar-search,
 .app-version {
   -webkit-app-region: no-drag;
 }
 
-/* 
- ?  CONTEXT MENU STYLING 
-
-.context-menu::-webkit-scrollbar-track {
-  background-color: transparent;
-  box-shadow: transparent;
-  -webkit-box-shadow: transparent;
-}
-
-*/
-
-/* ? SEEKBAR STYLING */
+/* ? RANGE INPUTS: a 4 px track, the thumb shows on hover */
 input[type='range']::-webkit-slider-runnable-track {
   width: 100%;
   height: 0.25rem;
   cursor: pointer;
-  background: hsl(var(--seekbar-track-background-color) / var(--slider-opacity));
-  border-radius: 5rem;
+  background: rgb(var(--line));
+  border-radius: 999px;
 }
 
 input[type='range'].vertical::-webkit-slider-runnable-track {
@@ -280,23 +344,23 @@ input[type='range'].vertical::-webkit-slider-thumb {
   position: relative;
   -webkit-appearance: none;
   box-sizing: content-box;
-  border: 0.15rem solid hsl(var(--seekbar-background-color));
+  border: 0;
   height: 0.75rem;
   width: 0.75rem;
   border-radius: 50%;
-  background-color: hsl(var(--seekbar-background-color));
+  background-color: rgb(var(--ink));
   cursor: pointer;
-  margin: -6px 0 0 0;
+  margin: -4px 0 0 0;
   opacity: 0;
-  transition-property: transform, opacity;
-  transition: 150ms ease-in-out;
-  transform: scale(0.5);
+  transition:
+    transform 140ms var(--ease-out),
+    opacity 140ms ease;
+  transform: scale(0.6);
 }
 
 [type='range'].thumb-visible::-webkit-slider-thumb {
   opacity: 1;
-  /* margin-left: 2px; */
-  transform: scale(0.8);
+  transform: scale(0.85);
 }
 [type='range'].vertical::-webkit-slider-thumb {
   height: 0.875rem;
@@ -304,52 +368,31 @@ input[type='range'].vertical::-webkit-slider-thumb {
   cursor: row-resize;
 }
 
-input[type='range']:hover::-webkit-slider-thumb {
+input[type='range']:hover::-webkit-slider-thumb,
+input[type='range']:focus-visible::-webkit-slider-thumb {
   opacity: 1;
-  background: hsl(var(--text-color-highlight));
-  backdrop-filter: blur(4px);
-  border-color: hsl(var(--text-color-highlight));
   transform: scale(1);
-  -webkit-transform: scale(1);
-  -moz-transform: scale(1);
-  -ms-transform: scale(1);
-  -o-transform: scale(1);
-}
-
-input[type='range'].full-screen-player-seek-slider:hover::-webkit-slider-thumb {
-  background: hsl(var(--background-color-3));
-  border-color: hsl(var(--background-color-3));
 }
 
 input[type='range']:active::-webkit-slider-thumb {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
 #miniPlayerLyricsContainer::-webkit-scrollbar {
   display: none !important;
 }
 
-/* ? CHECKBOX STYLING */
+/* ? CHECKBOX */
 input[type='checkbox']:checked ~ .checkmark .icon {
   opacity: 1;
 }
 
-/* ? THEME RADIO BUTTONS STYLES */
-.theme-change-radio-btns > .theme-change-radio-btn input[type='radio']:checked + *::before {
-  background: radial-gradient(
-    hsl(var(--text-color-highlight) / 0%),
-    hsl(var(--text-color-highlight) / 40%),
-    transparent 50%,
-    transparent
-  );
-  border-color: hsl(var(--text-color-highlight));
-}
-
+/* ? THEME CHOICE IN SETTINGS */
 .theme-change-radio-btns > .theme-change-radio-btn input[type='radio']:checked + * {
-  color: hsl(var(--text-color-highlight));
+  color: rgb(var(--echo));
 }
 
-/* ? MINI PLAYER STYLES */
+/* ? MINI PLAYER */
 .mini-player .container .mini-player-title-bar {
   -webkit-app-region: drag;
 }
@@ -359,14 +402,13 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   height: 0.25rem;
   cursor: pointer;
   background: transparent;
-  border-radius: 5rem;
+  border-radius: 999px;
 }
 
-/* ? / / / /  KEYFRAMES / / / / / / / */
-/* Tierlist drag-and-drop (SortableJS) feedback */
+/* ? TIERLIST drag-and-drop (SortableJS) feedback */
 .tierlist-ghost {
   opacity: 0.35;
-  outline: 2px dashed hsl(var(--text-color-highlight));
+  outline: 2px dashed rgb(var(--echo));
   outline-offset: -2px;
 }
 
@@ -374,34 +416,47 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   visibility: hidden;
 }
 
+/* ? ENTER AND LEAVE */
 .appear-from-bottom {
   opacity: 0;
-  transform: translateY(2rem);
-  animation: appearFromBottom var(--transition-duration-0_25s) ease forwards !important;
+  transform: translateY(0.75rem);
+  animation: appearFromBottom 200ms var(--ease-out) forwards !important;
 }
 
 .disappear-to-bottom {
   opacity: 1;
   transform: translateY(0rem);
-  animation: disappearToBottom var(--transition-duration-0_25s) ease forwards !important;
+  animation: disappearToBottom 160ms ease forwards !important;
 }
 
 .appear-from-top-and-dissappear {
   opacity: 0;
-  transform: translateY(-2rem);
+  transform: translateY(-0.75rem);
   animation: appearFromTopAndDissappear 5000ms ease forwards;
 }
 
 .appear-from-top {
   opacity: 0;
-  transform: translateY(-2rem);
-  animation: appearFromTop var(--transition-duration-0_25s) ease forwards;
+  transform: translateY(-0.75rem);
+  animation: appearFromTop 200ms var(--ease-out) forwards;
 }
 
 .disappear-to-top {
   opacity: 1;
   transform: translateY(0rem);
-  animation: disappearToTop var(--transition-duration-0_25s) ease forwards;
+  animation: disappearToTop 160ms ease forwards;
+}
+
+/* A page that has just opened: in from 6 px below. */
+.page-enter {
+  animation: pageEnter 160ms var(--ease-out) both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 @keyframes appearFromBottom {
@@ -414,7 +469,7 @@ input[type='checkbox']:checked ~ .checkmark .icon {
 @keyframes disappearToBottom {
   to {
     opacity: 0;
-    transform: translateY(2rem);
+    transform: translateY(0.75rem);
   }
 }
 
@@ -426,12 +481,12 @@ input[type='checkbox']:checked ~ .checkmark .icon {
 
   50% {
     opacity: 0;
-    transform: translateY(-2rem);
+    transform: translateY(-0.75rem);
   }
 
   100% {
     opacity: 0;
-    transform: translateY(-2rem);
+    transform: translateY(-0.75rem);
     display: none;
   }
 }
@@ -446,7 +501,7 @@ input[type='checkbox']:checked ~ .checkmark .icon {
 @keyframes disappearToTop {
   to {
     opacity: 0;
-    transform: translateY(-2rem);
+    transform: translateY(-0.75rem);
   }
 }
 
@@ -474,7 +529,7 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   from {
     opacity: 0;
     visibility: hidden;
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(0.97);
   }
 
   to {
@@ -494,7 +549,7 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   to {
     opacity: 0;
     visibility: hidden;
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(0.98);
   }
 }
 
@@ -508,11 +563,17 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   }
 }
 
+@keyframes skeletonPulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 .blurred::after {
   content: '';
   position: absolute;
   width: 100%;
   height: 100%;
-  backdrop-filter: blur(10px); /* apply the blur */
-  pointer-events: none; /* make the overlay click-through */
+  backdrop-filter: blur(10px);
+  pointer-events: none;
 }
