@@ -4,15 +4,22 @@
  */
 const CHANGED = 'nemora:pinned-playlists';
 
+/** The last known list, for menus that need an answer without waiting. */
+let known: string[] = [];
+
+export const isPinnedPlaylist = (playlistId: string) => known.includes(playlistId);
+
 export async function pinnedPlaylists(): Promise<string[]> {
   try {
-    return (await window.api.userData.getUserData())?.preferences?.pinnedPlaylists ?? [];
+    known = (await window.api.userData.getUserData())?.preferences?.pinnedPlaylists ?? [];
   } catch {
-    return [];
+    known = [];
   }
+  return known;
 }
 
 export async function setPinnedPlaylists(ids: string[]) {
+  known = ids;
   await window.api.userData.saveUserData('preferences.pinnedPlaylists', ids);
   window.dispatchEvent(new CustomEvent(CHANGED, { detail: ids }));
 }

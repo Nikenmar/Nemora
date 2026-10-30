@@ -1,4 +1,8 @@
 import { lazy, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
+import ContinueHero from './ContinueHero';
+import RediscoverShelf from './RediscoverShelf';
+import EmptyState from '../ui/EmptyState';
+import { SkeletonTiles } from '../ui/Skeleton';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import useResizeObserver from '../../hooks/useResizeObserver';
@@ -7,7 +11,6 @@ import roundTo from '../../../../common/roundTo';
 
 import MainContainer from '../MainContainer';
 import Button from '../Button';
-import Img from '../Img';
 import RecentlyAddedSongs from './RecentlyAddedSongs';
 import RecentlyPlayedSongs from './RecentlyPlayedSongs';
 import RecentlyPlayedArtists from './RecentlyPlayedArtists';
@@ -17,8 +20,6 @@ import MostLovedArtists from './MostLovedArtists';
 const ErrorPrompt = lazy(() => import('../ErrorPrompt'));
 const AddMusicFoldersPrompt = lazy(() => import('../MusicFoldersPage/AddMusicFoldersPrompt'));
 
-import NoSongsImage from '../../assets/images/svg/Empty Inbox _Monochromatic.svg';
-import DataFetchingImage from '../../assets/images/svg/Umbrella_Monochromatic.svg';
 
 interface HomePageReducer {
   latestSongs: (AudioInfo | null)[];
@@ -84,7 +85,7 @@ const HomePage = () => {
     mostLovedArtists: []
   });
 
-  const SONG_CARD_MIN_WIDTH = 280;
+  const SONG_CARD_MIN_WIDTH = 176;
   const ARTIST_WIDTH = 175;
 
   const recentlyAddedSongsContainerRef = useRef<HTMLDivElement>(null);
@@ -94,8 +95,8 @@ const HomePage = () => {
       const { width } = recentlyAddedSongsContainerDiamensions;
 
       return {
-        noOfRecentlyAddedSongCards: Math.floor(width / SONG_CARD_MIN_WIDTH) * 2 || 5,
-        noOfRecentandLovedSongCards: Math.floor(width / SONG_CARD_MIN_WIDTH) || 3,
+        noOfRecentlyAddedSongCards: Math.floor(width / SONG_CARD_MIN_WIDTH) || 5,
+        noOfRecentandLovedSongCards: Math.floor(width / SONG_CARD_MIN_WIDTH) || 5,
         noOfRecentandLovedArtists: Math.floor(width / ARTIST_WIDTH) || 5
       };
     }, [recentlyAddedSongsContainerDiamensions]);
@@ -361,7 +362,7 @@ const HomePage = () => {
 
   return (
     <MainContainer
-      className="home-page relative !h-full overflow-y-auto !pl-0 [scrollbar-gutter:stable]"
+      className="home-page relative !h-full overflow-y-auto [scrollbar-gutter:stable]"
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -374,10 +375,7 @@ const HomePage = () => {
         {recentlyAddedSongsContainerRef.current && (
           <>
             {content.latestSongs[0] !== null && (
-              <RecentlyAddedSongs
-                latestSongs={content.latestSongs as AudioInfo[]}
-                noOfVisibleSongs={noOfRecentlyAddedSongCards}
-              />
+              <ContinueHero lastPlayed={content.recentlyPlayedSongs[0]} />
             )}
             <RecentlyPlayedSongs
               recentlyPlayedSongs={content.recentlyPlayedSongs.slice(
@@ -386,13 +384,22 @@ const HomePage = () => {
               )}
               noOfVisibleSongs={noOfRecentandLovedSongCards}
             />
-            <RecentlyPlayedArtists
-              recentlyPlayedSongArtists={content.recentSongArtists}
-              noOfVisibleArtists={noOfRecentandLovedArtists}
-            />
+            {content.latestSongs[0] !== null && (
+              <RecentlyAddedSongs
+                latestSongs={content.latestSongs as AudioInfo[]}
+                noOfVisibleSongs={noOfRecentlyAddedSongCards}
+              />
+            )}
+            {content.latestSongs[0] !== null && (
+              <RediscoverShelf noOfVisibleSongs={noOfRecentandLovedSongCards} />
+            )}
             <MostLovedSongs
               mostLovedSongs={content.mostLovedSongs.slice(0, noOfRecentandLovedSongCards)}
               noOfVisibleSongs={noOfRecentandLovedSongCards}
+            />
+            <RecentlyPlayedArtists
+              recentlyPlayedSongArtists={content.recentSongArtists}
+              noOfVisibleArtists={noOfRecentandLovedArtists}
             />
             <MostLovedArtists
               mostLovedArtists={content.mostLovedArtists}
@@ -402,33 +409,34 @@ const HomePage = () => {
         )}
 
         {content.latestSongs[0] === null && (
-          <div className="no-songs-container appear-from-bottom flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
-            <Img src={NoSongsImage} className="mb-8 w-60" alt={t('homePage.noSongsAvailable')} />
-            <div>{t('homePage.empty')}</div>
-            <div className="flex items-center justify-between">
+          <EmptyState
+            className="no-songs-container h-full"
+            iconName="library_music"
+            title={t('homePage.empty')}
+            action={
               <Button
                 label={t('foldersPage.addFolder')}
                 iconName="create_new_folder"
-                iconClassName="ms-icon"
-                className="mt-4 !bg-accent px-8 text-lg !text-on-accent hover:border-accent "
+                variant="primary"
+                className="!mr-0"
                 clickHandler={addNewSongs}
               />
-            </div>
-          </div>
+            }
+          />
         )}
         {content.recentlyPlayedSongs.length === 0 && content.latestSongs.length === 0 && (
-          <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink-dim">
-            <Img src={DataFetchingImage} className="mb-8 w-48" alt={t('homePage.stayCalm')} />
-            <span> {t('homePage.loading')}</span>
+          <div className="no-songs-container w-full pr-4 pt-2">
+            <SkeletonTiles count={6} />
           </div>
         )}
         {content.latestSongs.length > 0 &&
           content.latestSongs[0] !== null &&
           content.recentlyPlayedSongs.length === 0 && (
-            <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-lg font-normal text-shade/60">
-              <span className="ms-icon mb-1 text-4xl">headphones</span>{' '}
-              <p className="text-sm">{t('homePage.listenMoreToShowMetrics')}</p>
-            </div>
+            <EmptyState
+              className="no-songs-container py-10"
+              iconName="headphones"
+              title={t('homePage.listenMoreToShowMetrics')}
+            />
           )}
       </>
     </MainContainer>

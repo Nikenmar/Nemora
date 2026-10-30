@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import HeroHeader from '../ui/HeroHeader';
 import calculateTimeFromSeconds from '../../utils/calculateTimeFromSeconds';
-import Img from '../Img';
 
 import MultipleArtworksCover from '../PlaylistsPage/MultipleArtworksCover';
 import DefaultPlaylistCover from '../../assets/images/webp/playlist_cover_default.webp';
@@ -29,56 +29,24 @@ const PlaylistInfoAndImgContainer = (props: Props) => {
   return (
     <>
       {playlist?.songs && (
-        <div className="playlist-img-and-info-container mb-8 flex flex-row items-center justify-start">
-          <div className="playlist-cover-container mt-2 overflow-hidden">
-            {preferences.enableArtworkFromSongCovers && playlist.songs.length > 1 ? (
-              <div className="relative h-60 w-60">
-                <MultipleArtworksCover songIds={playlist.songs} className="h-60 w-60" type={1} />
-                <Img
-                  src={playlist.artworkPaths.artworkPath}
-                  alt="Playlist Cover"
-                  loading="eager"
-                  className="!absolute bottom-4 right-4 h-16 w-16 !rounded-lg"
-                />
-              </div>
-            ) : (
-              <Img
-                src={
-                  playlist.artworkPaths ? playlist.artworkPaths.artworkPath : DefaultPlaylistCover
-                }
-                className="w-52 rounded-xl lg:w-48"
-                alt="Playlist Cover"
-              />
-            )}
-          </div>
-          <div className="playlist-info-container ml-8 text-ink">
-            <div className="font-semibold uppercase tracking-wider opacity-50">
-              {t('common.playlist_one')}
-            </div>
-            <div className="playlist-name mb-2 w-full overflow-hidden text-ellipsis whitespace-nowrap text-5xl text-echo">
-              {playlist.name}
-            </div>
-            <div className="playlist-no-of-songs w-full overflow-hidden text-ellipsis whitespace-nowrap text-base">
-              {t('common.songWithCount', { count: playlist.songs.length })}
-            </div>
-            {songs.length > 0 && (
-              <div className="playlist-total-duration">{totalPlaylistDuration}</div>
-            )}
-            <div className="playlist-created-date">
-              {t('playlistsPage.createdOn', {
-                val: new Date(playlist.createdDate),
-                formatParams: {
-                  val: {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }
-                }
-              })}
-            </div>
-          </div>
-        </div>
+        <HeroHeader
+          artwork={playlist.artworkPaths ? playlist.artworkPaths.artworkPath : DefaultPlaylistCover}
+          artworkNode={
+            preferences.enableArtworkFromSongCovers && playlist.songs.length > 1 ? (
+              <MultipleArtworksCover songIds={playlist.songs} className="h-full w-full" type={1} />
+            ) : undefined
+          }
+          kind={t('common.playlist_one')}
+          title={playlist.name}
+          meta={[
+            t('common.songWithCount', { count: playlist.songs.length }),
+            songs.length > 0 ? totalPlaylistDuration : undefined,
+            t('playlistsPage.createdOn', {
+              val: new Date(playlist.createdDate),
+              formatParams: { val: { year: 'numeric', month: 'long', day: 'numeric' } }
+            })
+          ]}
+        />
       )}
     </>
   );

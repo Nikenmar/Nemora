@@ -9,7 +9,6 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Img from '../Img';
 import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
 import SongArtist from './SongArtist';
-import Button from '../Button';
 
 const AddSongsToPlaylistsPrompt = lazy(() => import('./AddSongsToPlaylistsPrompt'));
 const BlacklistSongConfrimPrompt = lazy(() => import('./BlacklistSongConfirmPrompt'));
@@ -67,7 +66,6 @@ const SongCard = (props: SongCardProp) => {
   const {
     title,
     artworkPath,
-    index,
     isAFavorite,
     path,
     songId,
@@ -75,7 +73,6 @@ const SongCard = (props: SongCardProp) => {
     album,
     className,
     isBlacklisted,
-    palette,
     selectAllHandler
   } = props;
 
@@ -96,17 +93,6 @@ const SongCard = (props: SongCardProp) => {
     });
   }, [currentSongData, isCurrentSongPlaying, songId]);
 
-  const [h, s, l] = useMemo(() => {
-    const swatch = palette?.LightVibrant;
-    if (swatch?.hsl) {
-      const { hsl } = swatch;
-
-      return [`${hsl[0] * 360}`, `${hsl[1] * 100}%`, `${hsl[2] * 100}%`];
-    }
-    return ['0', '0%', '0%'];
-  }, [palette?.LightVibrant]);
-
-  const background = `linear-gradient(to top,hsl(${h} ${s} ${l} / 0.35) 0%, hsl(${h} ${s} ${l} / 0.15) 40%), linear-gradient(to top,rgba(0,0,0,0.8)0%,rgba(0,0,0,0.1) 60%)`;
 
   const handlePlayBtnClick = useCallback(() => {
     playSong(songId);
@@ -515,22 +501,27 @@ const SongCard = (props: SongCardProp) => {
     return <span className="text-xs font-normal">{t('common.unknownArtist')}</span>;
   }, [artists, t]);
 
+  const isCurrent = currentSongData.songId === songId;
+  const isNext =
+    typeof queue.currentSongIndex === 'number' &&
+    Array.isArray(queue.queue) &&
+    queue.queue.length > 0 &&
+    queue?.queue?.at(queue.currentSongIndex + 1) === songId;
+  const badge = isCurrent
+    ? t('song.playingNow')
+    : isNext
+      ? t('song.playingNext')
+      : isBlacklisted
+        ? t('song.blacklisted')
+        : undefined;
+  const isSelectable = isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs';
+
   return (
     <div
-      style={{
-        animationDelay: `${50 * (index + 1)}ms`
-      }}
-      className={`song song-card appear-from-bottom ${songId} ${
-        currentSongData.songId === songId && 'current-song'
-      } ${
+      className={`song song-card ${songId} ${isCurrent && 'current-song'} ${
         isSongPlaying && 'playing'
-      } group/songCard relative mb-2 mr-2 aspect-[2/1] min-w-[15rem] max-w-[24rem] overflow-hidden rounded-2xl border-[transparent] border-surface-2 shadow-xl transition-[border-color] ease-in-out ${
+      } group/songCard relative flex min-w-0 cursor-pointer flex-col gap-2 rounded-cover outline-none ${
         className || ''
-      } ${
-        isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs' && 'border-4'
-      } ${
-        isAMultipleSelection &&
-        '!border-echo'
       }`}
       data-song-id={songId}
       onDoubleClick={handlePlayBtnClick}
@@ -548,106 +539,80 @@ const SongCard = (props: SongCardProp) => {
       }}
       title={isBlacklisted ? `'${title}' is blacklisted.` : undefined}
     >
-      <div className="h-full w-full">
+      <div
+        className={`relative aspect-square w-full overflow-hidden rounded-cover bg-surface-2 ${
+          isAMultipleSelection ? 'ring-2 ring-echo ring-offset-2 ring-offset-canvas' : ''
+        }`}
+      >
         <Img
           src={artworkPath}
           loading="eager"
-          alt="Song cover"
-          className={`h-full w-full object-cover object-center transition-[filter] group-focus-within/songCard:brightness-90 group-hover/songCard:brightness-90 dark:brightness-90 ${
-            isBlacklisted && '!brightness-50 dark:!brightness-[.40]'
+          alt=""
+          className={`h-full w-full object-cover transition-[transform,filter] duration-300 ease-out group-hover/songCard:scale-[1.03] ${
+            isBlacklisted && 'brightness-50'
           }`}
           enableImgFadeIns={!isMultipleSelectionEnabled}
         />
+        {badge && (
+          <span className="absolute left-2 top-2 rounded-full bg-shade/60 px-2 py-0.5 text-micro font-medium text-on-media backdrop-blur-sm">
+            {badge}
+          </span>
+        )}
+        <button
+          type="button"
+          className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-shade/50 text-on-media outline-none backdrop-blur-sm transition-opacity duration-150 focus-visible:opacity-100 group-hover/songCard:opacity-100 ${
+            isSongAFavorite ? 'opacity-100' : 'opacity-0'
+          }`}
+          aria-label={isSongAFavorite ? t('song.likedThisSong') : t('song.dislikedThisSong')}
+          aria-pressed={isSongAFavorite}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLikeButtonClick();
+          }}
+        >
+          <span className={`ms-icon text-[16px] ${isSongAFavorite ? 'ms-icon-filled' : ''}`}>favorite</span>
+        </button>
+        {isSelectable ? (
+          <div className="absolute bottom-2 right-2">
+            <MultipleSelectionCheckbox id={songId} selectionType="songs" className="!mr-0" />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={`absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_6px_18px_rgb(0_0_0/0.4)] outline-none transition-[opacity,transform] duration-200 ease-out hover:scale-105 focus-visible:opacity-100 group-hover/songCard:translate-y-0 group-hover/songCard:opacity-100 ${
+              isSongPlaying ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'
+            }`}
+            aria-label={isSongPlaying ? t('player.pause', 'Pause') : t('player.play', 'Play')}
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePlayBtnClick();
+            }}
+          >
+            <span className="ms-icon ms-icon-filled text-[24px]">{isSongPlaying ? 'pause' : 'play_arrow'}</span>
+          </button>
+        )}
       </div>
-      <div
-        className="song-info-and-controls-container absolute top-0 flex h-full w-full flex-col justify-between px-4 py-4"
-        data-song-id={songId}
-        style={{ background }}
-      >
-        <div className="song-states-container flex items-center justify-between">
-          <div className="state-info flex">
-            {typeof queue.currentSongIndex === 'number' &&
-              Array.isArray(queue.queue) &&
-              queue.queue.length > 0 &&
-              queue?.queue?.at(queue.currentSongIndex + 1) === songId && (
-                <span className="mr-2 font-semibold uppercase !text-on-media opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
-                  {t('song.playingNext')}
-                </span>
-              )}
-            {currentSongData.songId === songId && (
-              <span className="mr-2 font-semibold uppercase !text-on-media opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
-                {t('song.playingNow')}
-              </span>
-            )}
-            {isBlacklisted &&
-              !(
-                typeof queue.currentSongIndex === 'number' &&
-                Array.isArray(queue.queue) &&
-                queue.queue.length > 0 &&
-                queue?.queue?.at(queue.currentSongIndex + 1) === songId &&
-                currentSongData.songId === songId
-              ) && (
-                <span className="mr-2 font-semibold uppercase !text-on-media opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
-                  {t('song.blacklisted')}
-                </span>
-              )}
-          </div>
-          <div className="state-icons flex">
-            <Button
-              className="order-2 !m-0 !rounded-none !border-0 bg-transparent !p-1 !text-inherit opacity-50 outline-1 outline-offset-1 transition-opacity hover:bg-transparent focus-visible:!outline group-focus-within/songCard:opacity-100 group-hover/songCard:opacity-100 dark:bg-transparent dark:hover:bg-transparent"
-              iconName="favorite"
-              iconClassName={`${
-                isSongAFavorite ? 'ms-icon ms-icon-filled' : 'ms-icon'
-              } !text-2xl !text-on-media !leading-none`}
-              tooltipLabel={isSongAFavorite ? t('song.likedThisSong') : undefined}
-              clickHandler={(e) => {
-                e.stopPropagation();
-                handleLikeButtonClick();
-              }}
-            />
-          </div>
+      <div className="song-info-container min-w-0 px-0.5">
+        <div
+          className={`song-title truncate text-body font-medium outline-none hover:underline focus-visible:underline ${
+            isCurrent ? 'text-echo' : 'text-ink'
+          }`}
+          title={title}
+          onClick={(e) => {
+            e.stopPropagation();
+            showSongInfoPage();
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && showSongInfoPage()}
+          tabIndex={0}
+        >
+          {title}
         </div>
-        <div className="song-info-and-play-btn-container flex w-full items-center justify-between">
-          <div className="song-info-container max-w-[75%] text-on-media">
-            <div
-              className="song-title cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-xl font-normal outline-1 outline-offset-1 transition-none hover:underline focus-visible:!outline"
-              title={title}
-              onClick={(e) => {
-                e.stopPropagation();
-                showSongInfoPage();
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && showSongInfoPage()}
-              tabIndex={0}
-            >
-              {title}
-            </div>
-            <div
-              className="song-artists w-full max-w-full truncate text-sm transition-none"
-              title={artists ? artists.map((x) => x.name).join(', ') : t('common.unknownArtist')}
-              data-song-id={songId}
-            >
-              {songArtistComponents}
-            </div>
-          </div>
-          <div className="play-btn-and-multiple-selection-checkbox-container">
-            {isMultipleSelectionEnabled ? (
-              multipleSelectionsData.selectionType === 'songs' && (
-                <MultipleSelectionCheckbox id={songId} selectionType="songs" className="!mr-1" />
-              )
-            ) : (
-              <Button
-                className={`!m-0 !rounded-none !border-0 bg-transparent !p-0 opacity-60 outline-1 outline-offset-1 transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent ${
-                  currentSongData.songId === songId && '!opacity-100'
-                } group-focus-within/songCard:opacity-100 group-hover/songCard:opacity-100`}
-                iconName={isSongPlaying ? 'pause_circle' : 'play_circle'}
-                iconClassName="!text-4xl !leading-none text-on-media transition-opacity"
-                clickHandler={(e) => {
-                  e.stopPropagation();
-                  handlePlayBtnClick();
-                }}
-              />
-            )}
-          </div>
+        <div
+          className="song-artists mt-0.5 truncate text-small text-ink-dim"
+          title={artists ? artists.map((x) => x.name).join(', ') : t('common.unknownArtist')}
+          data-song-id={songId}
+        >
+          {songArtistComponents}
         </div>
       </div>
     </div>

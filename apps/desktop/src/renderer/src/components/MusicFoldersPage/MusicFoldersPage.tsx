@@ -142,13 +142,13 @@ const MusicFoldersPage = () => {
     >
       <>
         {musicFolders && musicFolders.length > 0 && (
-          <div className="title-container mb-8 mt-2 flex items-center justify-between text-page font-semibold text-ink">
-            <div className="container flex">
-              {t('foldersPage.musicFolders')}
-              <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
+          <div className="title-container mb-5 mt-1 flex flex-col gap-3 pr-4 text-ink">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="text-page font-semibold text-ink">{t('foldersPage.musicFolders')}</h1>
+              <div className="other-stats-container flex items-center text-small text-ink-dim">
                 {isMultipleSelectionEnabled &&
                 multipleSelectionsData.multipleSelections.length > 0 ? (
-                  <div className="text-sm text-echo">
+                  <div className="text-small font-medium text-echo">
                     {t('common.selectionWithCount', {
                       count: multipleSelectionsData.multipleSelections.length
                     })}
@@ -165,23 +165,25 @@ const MusicFoldersPage = () => {
               </div>
             </div>
             {musicFolders.length > 0 && (
-              <div className="other-controls-container flex text-sm">
+              <div className="other-controls-container flex flex-wrap items-center gap-2">
                 <Button
-                  className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
+                  label={t('foldersPage.addFolder')}
+                  iconName="create_new_folder"
+                  variant="primary"
+                  className="!mr-0"
+                  pendingAnimationOnDisabled
+                  clickHandler={addNewFolder}
+                />
+                <Button
+                  className="select-btn !mr-0"
                   iconName={isMultipleSelectionEnabled ? 'remove_done' : 'checklist'}
+                  isActive={isMultipleSelectionEnabled}
                   clickHandler={() =>
                     toggleMultipleSelections(!isMultipleSelectionEnabled, 'folder')
                   }
                   tooltipLabel={t(
                     `common.${isMultipleSelectionEnabled ? 'unselectAll' : 'select'}`
                   )}
-                />
-                <Button
-                  label={t('foldersPage.addFolder')}
-                  iconName="create_new_folder"
-                  pendingAnimationOnDisabled
-                  iconClassName="ms-icon"
-                  clickHandler={addNewFolder}
                 />
                 <Dropdown
                   name="folderSortDropdown"

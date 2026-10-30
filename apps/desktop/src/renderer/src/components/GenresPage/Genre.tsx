@@ -1,12 +1,12 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import { useCallback, useContext, useMemo } from 'react';
+import { coverGlow } from '../../other/coverLight';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Img from '../Img';
 import DefaultGenreCover from '../../assets/images/webp/genre-cover-default.webp';
 import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
-import Button from '../Button';
 import { store } from '@renderer/store';
 import { useStore } from '@tanstack/react-store';
 
@@ -49,15 +49,8 @@ const Genre = (props: GenreProp) => {
     [changeCurrentActivePage, genreId]
   );
 
-  const backgroundColor = useMemo(() => {
-    const swatch = paletteData?.DarkVibrant;
-    if (swatch?.hsl) {
-      const { hsl } = swatch;
-
-      return `hsl(${hsl[0] * 360} ${hsl[1] * 100}% ${hsl[2] * 100}%)`;
-    }
-    return 'hsl(0 0% 0%)';
-  }, [paletteData?.DarkVibrant]);
+  // The cover's colour brought into the palette, as the cover light does (other/coverLight.ts).
+  const backgroundColor = useMemo(() => coverGlow(paletteData) ?? 'rgb(var(--surface-2))', [paletteData]);
 
   const playGenreSongs = useCallback(
     (isShuffle = false) => {
@@ -290,13 +283,11 @@ const Genre = (props: GenreProp) => {
 
   return (
     <div
-      className={`genre group relative mb-6 mr-10 flex h-36 w-72 cursor-pointer items-center gap-4 overflow-hidden rounded-2xl p-4 text-surface-2 transition-[border,border-color] ${className} ${
-        isMultipleSelectionEnabled &&
-        multipleSelectionsData.selectionType === 'genre' &&
-        'border-4 border-transparent'
-      } ${isAMultipleSelection && '!border-echo'}`}
+      className={`genre group relative mb-6 mr-6 flex h-32 w-72 cursor-pointer items-center gap-4 overflow-hidden rounded-panel p-4 text-on-media transition-shadow duration-150 ${className} ${
+        isAMultipleSelection ? 'ring-2 ring-echo ring-offset-2 ring-offset-canvas' : ''
+      }`}
       style={{
-        backgroundColor
+        backgroundImage: `linear-gradient(135deg, ${backgroundColor}, color-mix(in srgb, ${backgroundColor} 55%, black))`
       }}
       onClick={(e) => {
         if (e.getModifierState('Shift') === true && selectAllHandler) selectAllHandler(genreId);
@@ -310,21 +301,25 @@ const Genre = (props: GenreProp) => {
         updateContextMenuData(true, contextMenuItems, e.pageX, e.pageY, contextMenuItemData)
       }
     >
-      <div className="genre-artwork-container w-2/5 max-w-[100px]">
-        <Img
-          src={artworkPaths.artworkPath}
-          className="aspect-square rounded-md shadow-2xl"
-          alt="Artwork cover"
-          enableImgFadeIns={!isMultipleSelectionEnabled}
-        />
-      </div>
-      <div className="genre-info-container w-3/5 flex-grow-0">
-        <Button
-          className="genre-title !m-0 !block w-full truncate !rounded-none !border-0 bg-transparent !p-0 !text-left !text-2xl text-on-media outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
-          label={title}
-          clickHandler={goToGenreInfoPage}
-        />
-        <div className="genre-no-of-songs text-sm text-on-media/75">
+      <Img
+        src={artworkPaths.artworkPath}
+        className="aspect-square w-[5.5rem] shrink-0 rounded-cover object-cover shadow-[0_10px_24px_rgb(0_0_0/0.4)] transition-transform duration-300 ease-out group-hover:-rotate-2 group-hover:scale-[1.03]"
+        alt=""
+        enableImgFadeIns={!isMultipleSelectionEnabled}
+      />
+      <div className="genre-info-container min-w-0 flex-1">
+        <button
+          type="button"
+          className="genre-title block w-full truncate text-left text-[17px] font-semibold text-on-media outline-none hover:underline focus-visible:underline"
+          title={title}
+          onClick={(e) => {
+            e.stopPropagation();
+            goToGenreInfoPage();
+          }}
+        >
+          {title}
+        </button>
+        <div className="genre-no-of-songs mt-0.5 text-small text-on-media/70">
           {t(`common.songWithCount`, {
             count: songIds.length
           })}

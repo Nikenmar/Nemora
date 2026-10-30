@@ -7,14 +7,13 @@ import storage from '../../utils/localStorage';
 import Song from './Song';
 import Button from '../Button';
 import MainContainer from '../MainContainer';
-import Dropdown from '../Dropdown';
-import Img from '../Img';
+import TitleContainer from '../TitleContainer';
+import EmptyState from '../ui/EmptyState';
+import { SkeletonRows } from '../ui/Skeleton';
 import VirtualizedList from '../VirtualizedList';
 
 import { songSortOptions, songFilterOptions } from './SongOptions';
 
-import DataFetchingImage from '../../assets/images/svg/Road trip_Monochromatic.svg';
-import NoSongsImage from '../../assets/images/svg/Empty Inbox _Monochromatic.svg';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
@@ -68,7 +67,6 @@ const SongsPage = () => {
     playSong,
     updateCurrentlyActivePageData,
     toggleMultipleSelections,
-    updateContextMenuData,
     changePromptMenuData
   } = useContext(AppUpdateContext);
   const { t } = useTranslation();
@@ -195,149 +193,98 @@ const SongsPage = () => {
     >
       <>
         {content.songsData && content.songsData.length > 0 && (
-          <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
-            <div className="container flex">
-              {t('common.song_other')}{' '}
-              <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
-                {isMultipleSelectionEnabled &&
-                multipleSelectionsData.multipleSelections.length > 0 ? (
-                  <div className="text-sm text-echo">
-                    {t('common.selectionWithCount', {
-                      count: multipleSelectionsData.multipleSelections.length
-                    })}
-                  </div>
-                ) : (
-                  content.songsData &&
-                  content.songsData.length > 0 && (
-                    <span className="no-of-songs">
-                      {t('common.songWithCount', {
-                        count: content.songsData.length
-                      })}
-                    </span>
-                  )
-                )}
-              </div>
-            </div>
-            <div className="other-controls-container flex">
-              <Button
-                key={0}
-                className="more-options-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-                iconName="more_horiz"
-                clickHandler={(e) => {
-                  e.stopPropagation();
-                  const button = e.currentTarget;
-                  const { x, y } = button.getBoundingClientRect();
-                  updateContextMenuData(
-                    true,
-                    [
-                      {
-                        label: t('settingsPage.resyncLibrary'),
-                        iconName: 'sync',
-                        handlerFunction: () => window.api.audioLibraryControls.resyncSongsLibrary()
-                      }
-                    ],
-                    x + 10,
-                    y + 50
-                  );
-                }}
-                tooltipLabel={t('common.moreOptions')}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  updateContextMenuData(
-                    true,
-                    [
-                      {
-                        label: t('settingsPage.resyncLibrary'),
-                        iconName: 'sync',
-                        handlerFunction: () => window.api.audioLibraryControls.resyncSongsLibrary()
-                      }
-                    ],
-                    e.pageX,
-                    e.pageY
-                  );
-                }}
-              />
-              <Button
-                key={1}
-                className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-                iconName={isMultipleSelectionEnabled ? 'remove_done' : 'checklist'}
-                clickHandler={() => toggleMultipleSelections(!isMultipleSelectionEnabled, 'songs')}
-                tooltipLabel={t(
-                  `common.${
-                    isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs'
-                      ? 'unselectAll'
-                      : 'select'
-                  }`
-                )}
-              />
-              <Button
-                key={2}
-                tooltipLabel={t('common.playAll')}
-                className="play-all-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-                iconName="play_arrow"
-                clickHandler={() =>
+          <TitleContainer
+            title={t('common.song_other')}
+            otherItems={[
+              isMultipleSelectionEnabled && multipleSelectionsData.multipleSelections.length > 0 ? (
+                <span key="meta" className="text-small font-medium text-echo">
+                  {t('common.selectionWithCount', {
+                    count: multipleSelectionsData.multipleSelections.length
+                  })}
+                </span>
+              ) : (
+                <span key="meta" className="no-of-songs text-small text-ink-dim">
+                  {t('common.songWithCount', { count: content.songsData.length })}
+                </span>
+              )
+            ]}
+            buttons={[
+              {
+                label: t('common.playAll'),
+                iconName: 'play_arrow',
+                variant: 'primary',
+                className: 'play-all-btn',
+                clickHandler: () =>
                   createQueue(
-                    content.songsData
-                      .filter((song) => !song.isBlacklisted)
-                      .map((song) => song.songId),
+                    content.songsData.filter((song) => !song.isBlacklisted).map((song) => song.songId),
                     'songs',
                     false,
                     undefined,
                     true
                   )
-                }
-              />
-              <Button
-                key={3}
-                label={t('common.shuffleAndPlay')}
-                className="shuffle-and-play-all-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-                iconName="shuffle"
-                clickHandler={() =>
+              },
+              {
+                label: t('common.shuffleAndPlay'),
+                iconName: 'shuffle',
+                className: 'shuffle-and-play-all-btn',
+                clickHandler: () =>
                   createQueue(
-                    content.songsData
-                      .filter((song) => !song.isBlacklisted)
-                      .map((song) => song.songId),
+                    content.songsData.filter((song) => !song.isBlacklisted).map((song) => song.songId),
                     'songs',
                     true,
                     undefined,
                     true
                   )
-                }
-              />
-              <Dropdown
-                name="songsPageFilterDropdown"
-                type={`${t('common.filterBy')} :`}
-                value={content.filteringOrder}
-                options={songFilterOptions}
-                onChange={(e) => {
+              },
+              {
+                iconName: isMultipleSelectionEnabled ? 'remove_done' : 'checklist',
+                className: 'select-btn',
+                isActive: isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs',
+                tooltipLabel: t(
+                  `common.${
+                    isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs'
+                      ? 'unselectAll'
+                      : 'select'
+                  }`
+                ),
+                clickHandler: () => toggleMultipleSelections(!isMultipleSelectionEnabled, 'songs')
+              },
+              {
+                label: t('settingsPage.resyncLibrary'),
+                iconName: 'sync',
+                inOverflowMenu: true,
+                clickHandler: () => window.api.audioLibraryControls.resyncSongsLibrary()
+              }
+            ]}
+            dropdowns={[
+              {
+                name: 'songsPageFilterDropdown',
+                type: `${t('common.filterBy')} :`,
+                value: content.filteringOrder,
+                options: songFilterOptions,
+                onChange: (e) => {
                   updateCurrentlyActivePageData((currentPageData) => ({
                     ...currentPageData,
                     filteringOrder: e.currentTarget.value as SongFilterTypes
                   }));
-                  dispatch({
-                    type: 'FILTERING_ORDER',
-                    data: e.currentTarget.value
-                  });
-                }}
-              />
-              <Dropdown
-                name="songsPageSortDropdown"
-                type={`${t('common.sortBy')} :`}
-                value={content.sortingOrder}
-                options={songSortOptions}
-                onChange={(e) => {
+                  dispatch({ type: 'FILTERING_ORDER', data: e.currentTarget.value });
+                }
+              },
+              {
+                name: 'songsPageSortDropdown',
+                type: `${t('common.sortBy')} :`,
+                value: content.sortingOrder,
+                options: songSortOptions,
+                onChange: (e) => {
                   updateCurrentlyActivePageData((currentPageData) => ({
                     ...currentPageData,
                     sortingOrder: e.currentTarget.value as SongSortTypes
                   }));
-                  dispatch({
-                    type: 'SORTING_ORDER',
-                    data: e.currentTarget.value
-                  });
-                }}
-              />
-            </div>
-          </div>
+                  dispatch({ type: 'SORTING_ORDER', data: e.currentTarget.value });
+                }
+              }
+            ]}
+          />
         )}
         <div
           className="songs-container appear-from-bottom h-full flex-1 delay-100"
@@ -400,25 +347,25 @@ const SongsPage = () => {
           )}
         </div>
         {content.songsData && content.songsData.length === 0 && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
-            <Img src={DataFetchingImage} alt="" className="mb-8 w-60" />
-            <span>{t('songsPage.loading')}</span>
+          <div className="no-songs-container w-full pt-2">
+            <SkeletonRows count={10} />
           </div>
         )}
         {content.songsData === null && (
-          <div className="no-songs-container my-[8%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
-            <Img src={NoSongsImage} alt="" className="mb-8 w-60" />
-            <span>{t('songsPage.empty')}</span>
-            <div className="flex items-center justify-between">
+          <EmptyState
+            className="no-songs-container"
+            iconName="library_music"
+            title={t('songsPage.empty')}
+            action={
               <Button
                 label={t('foldersPage.addFolder')}
                 iconName="create_new_folder"
-                iconClassName="ms-icon"
-                className="mt-4 !bg-accent px-8 text-lg !text-on-accent hover:border-accent "
+                variant="primary"
+                className="!mr-0"
                 clickHandler={addNewSongs}
               />
-            </div>
-          </div>
+            }
+          />
         )}
       </>
     </MainContainer>

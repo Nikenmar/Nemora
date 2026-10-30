@@ -31,7 +31,6 @@ const DeleteSongsFromSystemConfrimPrompt = lazy(
 
 import SongArtist from './SongArtist';
 import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
-import Button from '../Button';
 
 import { appPreferences } from '../../../../../package.json';
 import { useStore } from '@tanstack/react-store';
@@ -573,25 +572,24 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           artworkPath: artworkPaths?.optimizedArtworkPath || DefaultSongCover
         };
 
+  const isCurrent = currentSongData.songId === songId;
+  const isSelectable = isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs';
+  const showIndex = isIndexingSongs || (trackNo && localStorageData.preferences.showTrackNumberAsSongIndex);
+
   return (
     <div
       style={style}
       data-index={index}
+      data-shot="song-row"
       {...provided?.draggableProps}
       {...provided?.dragHandleProps}
-      className={`${songId} group relative mb-2 mr-4 flex h-[3.25rem] w-[98%] overflow-hidden rounded-lg p-[0.2rem] px-2 outline-1 -outline-offset-2 transition-[background,color,opacity] ease-in-out focus-visible:!outline ${
-        currentSongData.songId === songId || isAMultipleSelection
-          ? bodyBackgroundImage
-            ? `bg-accent/70 text-on-accent shadow-lg backdrop-blur-md`
-            : 'bg-accent text-on-accent shadow-lg'
+      className={`${songId} group relative mb-0.5 mr-3 flex h-[50px] items-center gap-3.5 rounded-lg px-2.5 outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-echo ${
+        isAMultipleSelection
+          ? 'bg-accent-soft'
           : bodyBackgroundImage
-            ? `bg-surface-2/70 backdrop-blur-md hover:!bg-surface-2 `
-            : `odd:bg-surface-2/70 hover:!bg-surface-2 ${
-                (index + 1) % 2 === 1
-                  ? '!bg-surface-2/70'
-                  : '!bg-canvas'
-              }`
-      } ${!isAMultipleSelection && isBlacklisted && '!opacity-30'}`}
+            ? 'hover:bg-surface-2/70 hover:backdrop-blur-md'
+            : 'hover:bg-surface-2'
+      } ${!isAMultipleSelection && isBlacklisted && 'opacity-40'}`}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -612,105 +610,67 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
       }}
       ref={ref}
     >
-      <div
-        className={`song-cover-and-play-btn-container flex w-[clamp(6rem,15%,9rem)] shrink-0 items-center justify-center ${
-          !isIndexingSongs && '!w-[clamp(4rem,10%,6rem)]'
-        }`}
-      >
-        {isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs' ? (
-          <div className="relative mx-1 flex h-fit items-center rounded-lg bg-canvas p-1 text-echo ">
-            <MultipleSelectionCheckbox id={songId} selectionType="songs" />
-          </div>
-        ) : isBlacklisted ? (
-          <div
-            className={`relative mr-2 flex h-full items-center justify-center ${
-              index < 10
-                ? 'min-w-[1.75rem]'
-                : index < 100
-                  ? 'min-w-[2.5rem]'
-                  : index < 1000
-                    ? 'min-w-[3rem]'
-                    : 'min-w-[3.75rem]'
-            }`}
-            title={t('notifications.songBlacklisted', { title })}
-          >
-            <span
-              className={`ms-icon mx-2 text-2xl text-ink ${
-                currentSongData.songId === songId && ''
-              } `}
-            >
-              block
-            </span>
-          </div>
-        ) : isIndexingSongs ||
-          (trackNo && localStorageData.preferences.showTrackNumberAsSongIndex) ? (
-          <div
-            className={`relative mx-1 flex items-center justify-center rounded-2xl bg-canvas px-3 py-1 text-center text-echo group-even:bg-surface-2/75 group-hover:bg-canvas ${
-              index < 10
-                ? 'min-w-[1.75rem]'
-                : index < 100
-                  ? 'min-w-[2.5rem]'
-                  : index < 1000
-                    ? 'min-w-[3rem]'
-                    : 'min-w-[3.75rem]'
-            }`}
-          >
-            <span className="min-w-2 text-sm font-medium leading-tight">
-              {trackNo ?? index + 1}
-            </span>
-          </div>
-        ) : (
-          ''
-        )}
-        <div
-          className={`song-cover-container relative ml-2 mr-4 flex h-[90%] min-w-12 flex-row items-center justify-center overflow-hidden rounded-md ${
-            (isIndexingSongs || isMultipleSelectionEnabled || isBlacklisted) && 'sm:hidden'
+      {isSelectable ? (
+        <div className="flex w-6 shrink-0 items-center justify-center">
+          <MultipleSelectionCheckbox id={songId} selectionType="songs" />
+        </div>
+      ) : isBlacklisted ? (
+        <span
+          className="ms-icon w-6 shrink-0 text-center text-[18px] text-ink-dim"
+          title={t('notifications.songBlacklisted', { title })}
+        >
+          block
+        </span>
+      ) : showIndex ? (
+        <span className="w-7 shrink-0 text-right text-small tabular-nums text-ink-dim">
+          {trackNo ?? index + 1}
+        </span>
+      ) : null}
+      <div className="song-cover-and-play-btn-container relative h-[38px] w-[38px] shrink-0 overflow-hidden rounded-cover-sm">
+        <Img
+          src={artworkPaths?.optimizedArtworkPath || DefaultSongCover}
+          loading="eager"
+          alt=""
+          className="h-full w-full object-cover"
+          enableImgFadeIns={false}
+        />
+        <button
+          type="button"
+          className={`absolute inset-0 flex items-center justify-center bg-shade/45 text-on-media outline-none transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 ${
+            isSongPlaying ? 'opacity-100' : 'opacity-0'
           }`}
+          aria-label={isSongPlaying ? t('player.pause', 'Pause') : t('player.play', 'Play')}
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePlayBtnClick();
+          }}
         >
-          <div className="play-btn-container absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-            <Button
-              className="!m-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
-              iconClassName={`!text-3xl text-on-media text-opacity-0 !leading-none ${
-                currentSongData.songId === songId && 'text-opacity-100'
-              } group-focus-within:text-opacity-100 group-hover:text-opacity-100 ${
-                isSongPlaying && '!text-on-media/75'
-              }`}
-              clickHandler={handlePlayBtnClick}
-              iconName={isSongPlaying ? 'pause_circle' : 'play_circle'}
-            />
-          </div>
-          <Img
-            src={artworkPaths?.optimizedArtworkPath || DefaultSongCover}
-            loading="eager"
-            alt="Song cover"
-            className={`aspect-square max-h-full min-w-full object-contain py-[0.1rem] transition-[filter] duration-300 group-focus-within:brightness-50 group-hover:brightness-50 ${
-              isSongPlaying ? 'brightness-50' : ''
-            }`}
-            enableImgFadeIns={false}
-          />
-        </div>
+          <span className="ms-icon ms-icon-filled text-[22px]">{isSongPlaying ? 'pause' : 'play_arrow'}</span>
+        </button>
       </div>
-      <div
-        className={`song-info-container grid grow grid-cols-[35%_2fr_1fr_minmax(4rem,5rem)_minmax(4.5rem,6.5rem)] items-center gap-3 text-ink lg:grid-cols-[40%_1fr_minmax(4rem,5rem)_minmax(4.5rem,6.5rem)] lg:!gap-0 sm:grid-cols-[45%_1fr_minmax(4.5rem,6rem)] sm:gap-2 ${
-          (currentSongData.songId === songId || isAMultipleSelection) &&
-          ''
-        }`}
-      >
-        <div
-          className="song-title truncate text-base font-normal outline-1 outline-offset-1 transition-none focus-visible:!outline"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && goToSongInfoPage()}
-          title={title}
-        >
-          {title}
+      <div className="song-info-container grid min-w-0 flex-1 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_2.75rem_1.75rem_3rem] items-center gap-4 lg:grid-cols-[minmax(0,1fr)_1.75rem_3rem] sm:grid-cols-[minmax(0,1fr)_3rem]">
+        <div className="flex min-w-0 flex-col justify-center gap-0.5">
+          <div
+            className={`song-title flex min-w-0 items-center gap-1.5 text-body font-medium outline-none focus-visible:underline ${
+              isCurrent ? 'text-echo' : 'text-ink'
+            }`}
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && goToSongInfoPage()}
+            title={title}
+          >
+            {isCurrent && (
+              <span className={`ms-icon shrink-0 text-[15px] ${isSongPlaying ? 'ms-icon-filled' : ''}`} aria-hidden>
+                graphic_eq
+              </span>
+            )}
+            <span className="truncate">{title}</span>
+          </div>
+          <div className="song-artists min-w-0 truncate text-small text-ink-dim">{songArtists}</div>
         </div>
-        <div className="song-artists w-full truncate text-xs font-normal transition-none">
-          {songArtists}
-        </div>
-        <div className="song-album w-full truncate text-xs transition-none lg:hidden md:hidden sm:hidden">
+        <div className="song-album min-w-0 truncate text-small text-ink-dim lg:hidden">
           {album?.name ? (
             <span
-              className="cursor-pointer outline-1 -outline-offset-1 hover:underline focus-visible:!outline"
+              className="cursor-pointer outline-none hover:text-ink hover:underline focus-visible:underline"
               tabIndex={0}
               title={album.name}
               role="button"
@@ -723,36 +683,29 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             t('common.unknownAlbum')
           )}
         </div>
-        <div className="song-year flex items-center justify-center text-center text-xs transition-none sm:hidden">
+        <div className="song-year text-right text-small tabular-nums text-ink-faint lg:hidden">
           {window.api.properties.isInDevelopment && appPreferences.showSongIdInsteadOfSongYear
             ? songId
-            : (year ?? '----')}
+            : (year ?? '')}
         </div>
-        <div className="song-duration flex !w-full items-center justify-between pl-2 pr-4 text-center transition-none sm:pr-1">
-          <Button
-            className="!mr-0 mt-1 !rounded-none !border-0 bg-transparent !p-0 !text-inherit outline-1 outline-offset-1 focus-visible:!outline dark:bg-transparent"
-            iconName="favorite"
-            iconClassName={`${
-              isAFavorite ? 'ms-icon ms-icon-filled' : 'ms-icon'
-            } !leading-none !text-xl !font-light md:hidden ${
-              isAFavorite
-                ? currentSongData.songId === songId || isAMultipleSelection
-                  ? '!text-ink'
-                  : '!text-echo'
-                : currentSongData.songId === songId || isAMultipleSelection
-                  ? '!text-ink'
-                  : '!text-echo'
-            }`}
-            tooltipLabel={t(`song.${isAFavorite ? 'likedThisSong' : 'dislikedThisSong'}`)}
-            clickHandler={(e) => {
-              e.stopPropagation();
-              handleLikeButtonClick();
-            }}
-          />
-          <span className="">
-            {minutes ?? '--'}:{seconds ?? '--'}
-          </span>
-        </div>
+        <button
+          type="button"
+          className={`flex h-7 w-7 items-center justify-center rounded-full outline-none transition-[opacity,color] duration-150 hover:bg-line/60 focus-visible:opacity-100 sm:hidden ${
+            isAFavorite ? 'text-echo' : 'text-ink-dim opacity-0 group-hover:opacity-100'
+          }`}
+          data-tooltip={t(`song.${isAFavorite ? 'likedThisSong' : 'dislikedThisSong'}`)}
+          aria-label={t(`song.${isAFavorite ? 'likedThisSong' : 'dislikedThisSong'}`)}
+          aria-pressed={isAFavorite}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLikeButtonClick();
+          }}
+        >
+          <span className={`ms-icon text-[17px] ${isAFavorite ? 'ms-icon-filled' : ''}`}>favorite</span>
+        </button>
+        <span className="song-duration text-right text-small tabular-nums text-ink-dim">
+          {minutes ?? '--'}:{seconds ?? '--'}
+        </span>
       </div>
     </div>
   );

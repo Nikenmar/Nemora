@@ -132,13 +132,13 @@ const PlaylistsPage = () => {
       }}
     >
       <>
-        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
-          <div className="container flex">
-            {t('common.playlist_other')}{' '}
-            <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
+        <div className="title-container mb-5 mt-1 flex flex-col gap-3 pr-4 text-ink">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="text-page font-semibold text-ink">{t('common.playlist_other')}</h1>
+            <div className="other-stats-container flex items-center text-small text-ink-dim">
               {isMultipleSelectionEnabled &&
               multipleSelectionsData.multipleSelections.length > 0 ? (
-                <div className="text-sm text-echo">
+                <div className="text-small font-medium text-echo">
                   {t('common.selectionWithCount', {
                     count: multipleSelectionsData.multipleSelections.length
                   })}
@@ -153,10 +153,18 @@ const PlaylistsPage = () => {
             </div>
           </div>
           {playlists.length > 0 && (
-            <div className="other-control-container flex">
+            <div className="other-control-container flex flex-wrap items-center gap-2">
               <Button
-                className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
+                label={t(`playlistsPage.addPlaylist`)}
+                className="add-new-playlist-btn !mr-0"
+                iconName="add"
+                variant="primary"
+                clickHandler={createNewPlaylist}
+              />
+              <Button
+                className="select-btn !mr-0"
                 iconName={isMultipleSelectionEnabled ? 'remove_done' : 'checklist'}
+                isActive={isMultipleSelectionEnabled}
                 clickHandler={() =>
                   toggleMultipleSelections(!isMultipleSelectionEnabled, 'playlist')
                 }
@@ -164,7 +172,7 @@ const PlaylistsPage = () => {
               />
               <Button
                 label={t(`playlistsPage.importPlaylist`)}
-                className="import-playlist-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
+                className="import-playlist-btn !mr-0"
                 iconName="publish"
                 clickHandler={(_, setIsDisabled, setIsPending) => {
                   setIsDisabled(true);
@@ -178,12 +186,6 @@ const PlaylistsPage = () => {
                     })
                     .catch((err) => console.error(err));
                 }}
-              />
-              <Button
-                label={t(`playlistsPage.addPlaylist`)}
-                className="add-new-playlist-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-                iconName="add"
-                clickHandler={createNewPlaylist}
               />
               <Dropdown
                 name="playlistsSortDropdown"

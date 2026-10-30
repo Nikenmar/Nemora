@@ -49,7 +49,7 @@ const MostLovedSongs = (props: Props) => {
     <>
       {mostLovedSongComponents.length > 0 && (
         <SecondaryContainer
-          className="recently-played-songs-container appear-from-bottom flex h-fit max-h-full flex-col pb-8 pl-8"
+          className="recently-played-songs-container appear-from-bottom flex h-fit max-h-full flex-col pb-8"
           focusable
           onKeyDown={(e) => {
             if (e.ctrlKey && e.key === 'a') {
@@ -59,13 +59,14 @@ const MostLovedSongs = (props: Props) => {
           }}
         >
           <>
-            <div className="title-container mb-4 mt-1 flex items-center justify-between text-title font-semibold text-ink">
+            <div className="title-container mb-3 flex items-center justify-between pr-4 text-title font-semibold text-ink">
               {t('homePage.mostLovedSongs')}
               <Button
                 label={t('common.showAll')}
                 tooltipLabel={t('homePage.openFavoritesWithAllTimeMostListenedSortOption')}
-                iconName="apps"
-                className="show-all-btn text-sm font-normal"
+                variant="ghost"
+                size="sm"
+                className="show-all-btn !mr-0"
                 clickHandler={() =>
                   changeCurrentActivePage('PlaylistInfo', {
                     playlistId: 'Favorites',
@@ -76,9 +77,9 @@ const MostLovedSongs = (props: Props) => {
             </div>
             <div
               style={{
-                gridTemplateColumns: `repeat(${noOfVisibleSongs},1fr)`
+                gridTemplateColumns: `repeat(${noOfVisibleSongs},minmax(0,1fr))`
               }}
-              className="songs-container grid gap-2 pr-2"
+              className="songs-container grid gap-x-5 pr-4"
             >
               {mostLovedSongComponents}
             </div>

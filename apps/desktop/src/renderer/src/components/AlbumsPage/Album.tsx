@@ -5,7 +5,6 @@ import Img from '../Img';
 import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
 import SongArtist from '../SongsPage/SongArtist';
 import DefaultAlbumCover from '../../assets/images/webp/album_cover_default.webp';
-import Button from '../Button';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
@@ -311,17 +310,12 @@ export const Album = (props: AlbumProp) => {
     ]
   );
 
+  const isSelectable = isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'album';
+
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
-      // style={{ animationDelay: `${50 * (props.index + 1)}ms` }}
-      className={`album h-68 group mb-2 mr-6 flex w-48 flex-col justify-between overflow-hidden rounded-md p-4 ${
-        props.className ?? ''
-      } ${
-        isAMultipleSelection
-          ? 'bg-accent !text-on-accent '
-          : 'hover:bg-surface-2/50'
-      }`}
+      className={`album group mb-6 mr-5 flex w-[11.5rem] cursor-pointer flex-col gap-2 ${props.className ?? ''}`}
       onContextMenu={(e) =>
         updateContextMenuData(true, contextMenuItems, e.pageX, e.pageY, contextMenuItemData)
       }
@@ -335,56 +329,60 @@ export const Album = (props: AlbumProp) => {
         else showAlbumInfoPage();
       }}
     >
-      <div className="album-cover-and-play-btn-container relative h-[70%] cursor-pointer overflow-hidden">
-        {isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'album' ? (
+      <div
+        className={`album-cover-and-play-btn-container relative aspect-square w-full overflow-hidden rounded-cover bg-surface-2 ${
+          isAMultipleSelection ? 'ring-2 ring-echo ring-offset-2 ring-offset-canvas' : ''
+        }`}
+      >
+        <Img
+          src={props.artworkPaths.artworkPath}
+          fallbackSrc={DefaultAlbumCover}
+          loading="lazy"
+          alt=""
+          className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+          enableImgFadeIns={!isMultipleSelectionEnabled}
+        />
+        {isSelectable ? (
           <MultipleSelectionCheckbox
             id={props.albumId}
             selectionType="album"
-            className="absolute bottom-3 right-3 z-10"
+            className="absolute bottom-2 right-2 z-10"
           />
         ) : (
-          <Button
-            className="absolute bottom-[5%] right-[5%] z-[1] !m-0 !rounded-none !border-0 bg-transparent !p-0 !text-on-media opacity-0 outline-1 outline-offset-1 transition-opacity hover:bg-transparent hover:!opacity-100 focus-visible:!opacity-100 focus-visible:!outline group-focus-within:opacity-75 group-hover:opacity-75 dark:bg-transparent dark:hover:bg-transparent"
-            iconName="play_circle"
-            iconClassName="!text-5xl !leading-none"
-            clickHandler={(e) => {
+          <button
+            type="button"
+            className="absolute bottom-2 right-2 flex h-10 w-10 translate-y-1 items-center justify-center rounded-full bg-accent text-on-accent opacity-0 shadow-[0_6px_18px_rgb(0_0_0/0.4)] outline-none transition-[opacity,transform] duration-200 ease-out hover:scale-105 focus-visible:translate-y-0 focus-visible:opacity-100 group-hover:translate-y-0 group-hover:opacity-100"
+            aria-label={t('common.playAll')}
+            onClick={(e) => {
               e.stopPropagation();
               playAlbumSongs();
             }}
-          />
+          >
+            <span className="ms-icon ms-icon-filled text-[24px]">play_arrow</span>
+          </button>
         )}
-        <div className="album-cover-container relative h-full overflow-hidden rounded-lg before:invisible before:absolute before:h-full before:w-full before:bg-gradient-to-b before:from-shade/0 before:to-shade/50 before:opacity-0 before:transition-[visibility,opacity] before:duration-300 before:content-[''] group-focus-within:before:visible group-focus-within:before:opacity-100 group-hover:before:visible group-hover:before:opacity-100">
-          <Img
-            src={props.artworkPaths.artworkPath}
-            fallbackSrc={DefaultAlbumCover}
-            loading="lazy"
-            alt="Album Cover"
-            className="aspect-square h-full max-h-full w-full object-cover object-center"
-            enableImgFadeIns={!isMultipleSelectionEnabled}
-          />
-        </div>
       </div>
-      <div
-        className={`album-info-container mt-2 h-fit w-full pl-2 text-ink ${
-          isAMultipleSelection && '!text-ink'
-        }`}
-      >
-        <Button
-          className={`album-title pointer !m-0 !block w-full truncate !rounded-none !border-0 bg-transparent !p-0 !text-left text-xl outline-1 outline-offset-1 hover:bg-transparent hover:underline focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent ${
-            isAMultipleSelection ? '!text-ink' : ''
-          }`}
-          label={props.title}
-          clickHandler={showAlbumInfoPage}
-        />
+      <div className="album-info-container min-w-0 px-0.5">
+        <button
+          type="button"
+          className="album-title block w-full truncate text-left text-body font-medium text-ink outline-none hover:underline focus-visible:underline"
+          title={props.title}
+          onClick={(e) => {
+            e.stopPropagation();
+            showAlbumInfoPage();
+          }}
+        >
+          {props.title}
+        </button>
         {props.artists && (
           <div
-            className="album-artists flex w-full truncate text-sm hover:underline"
+            className="album-artists mt-0.5 flex w-full truncate text-small text-ink-dim"
             title={props.artists.map((artist) => artist.name).join(', ')}
           >
             {albumArtists}
           </div>
         )}
-        <div className="album-no-of-songs w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+        <div className="album-no-of-songs mt-0.5 truncate text-micro text-ink-faint">
           {t('common.songWithCount', { count: props.songs.length })}
         </div>
       </div>

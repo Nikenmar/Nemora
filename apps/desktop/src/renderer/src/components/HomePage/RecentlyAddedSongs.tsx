@@ -48,7 +48,7 @@ const RecentlyAddedSongs = forwardRef((props: Props, ref: ForwardedRef<HTMLDivEl
 
   return (
     <SecondaryContainer
-      className="recently-added-songs-container appear-from-bottom h-fit max-h-full w-full flex-col pb-8 pl-8"
+      className="recently-added-songs-container appear-from-bottom h-fit max-h-full w-full flex-col pb-8"
       focusable
       onKeyDown={(e) => {
         if (e.ctrlKey && e.key === 'a') {
@@ -60,13 +60,14 @@ const RecentlyAddedSongs = forwardRef((props: Props, ref: ForwardedRef<HTMLDivEl
     >
       {latestSongs.length > 0 && latestSongs[0] !== null && (
         <>
-          <div className="title-container my-4 flex items-center justify-between text-title font-semibold text-ink">
+          <div className="title-container mb-3 flex items-center justify-between pr-4 text-title font-semibold text-ink">
             {t('homePage.recentlyAddedSongs')}
             <Button
               label={t('common.showAll')}
               tooltipLabel={t('homePage.openSongsWithNewestSortOption')}
-              iconName="apps"
-              className="show-all-btn text-sm font-normal"
+              variant="ghost"
+              size="sm"
+              className="show-all-btn !mr-0"
               clickHandler={() =>
                 changeCurrentActivePage('Songs', {
                   sortingOrder: 'dateAddedAscending'
@@ -76,9 +77,9 @@ const RecentlyAddedSongs = forwardRef((props: Props, ref: ForwardedRef<HTMLDivEl
           </div>
           <div
             style={{
-              gridTemplateColumns: `repeat(${Math.floor(noOfVisibleSongs / 2)},1fr)`
+              gridTemplateColumns: `repeat(${noOfVisibleSongs},minmax(0,1fr))`
             }}
-            className="songs-container grid max-w-full grid-rows-2 gap-2 pr-2"
+            className="songs-container grid max-w-full gap-x-5 pr-4"
           >
             {latestSongComponents}
           </div>

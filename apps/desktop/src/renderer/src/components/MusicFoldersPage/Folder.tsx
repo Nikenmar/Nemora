@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 
-import Img from '../Img';
 import Button from '../Button';
 
 const RemoveFolderConfirmationPrompt = lazy(() => import('./RemoveFolderConfirmationPrompt'));
@@ -267,36 +266,38 @@ const Folder = (props: FolderProps) => {
       >
         <div className="folder-img-and-info-container flex items-center">
           {multipleSelectionsData.selectionType === 'folder' ? (
-            <div className="relative ml-1 mr-4 flex h-fit items-center rounded-lg bg-canvas p-1 text-echo ">
+            <div className="relative ml-1 mr-3 flex h-fit items-center">
               <MultipleSelectionCheckbox id={folderPath} selectionType="folder" />
             </div>
           ) : (
-            <div className="relative ml-1 mr-4 h-fit rounded-2xl bg-canvas px-3 text-echo group-even:bg-surface-2/75 group-hover:bg-canvas ">
+            <span className="ml-1 mr-3 w-6 text-right text-small tabular-nums text-ink-dim">
               {index + 1}
-            </div>
+            </span>
           )}
-          <Img src={FolderImg} loading="eager" className="w-8 self-center" />
-          <div className="folder-info ml-6 flex flex-col">
-            <span className="folder-name" title={`${prevDir}\${folderName}`}>
+          <span className="ms-icon flex h-9 w-9 items-center justify-center rounded-cover bg-surface-2 text-[20px] text-ink-dim">
+            folder
+          </span>
+          <div className="folder-info ml-3.5 flex min-w-0 flex-col">
+            <span className="folder-name truncate text-body font-medium text-ink" title={`${prevDir}\${folderName}`}>
               {folderName}
             </span>
-            <div className="flex items-center opacity-75">
+            <div className="flex items-center gap-1.5 text-small text-ink-dim">
               {subFolders.length > 0 && (
                 <>
-                  <span className="no-of-sub-folders text-xs font-thin">
+                  <span className="no-of-sub-folders">
                     {t('common.subFolderWithCount', {
                       count: subFolders.length
                     })}
                   </span>
-                  <span className="mx-1">&bull;</span>
+                  <span aria-hidden>·</span>
                 </>
               )}
-              <span className="no-of-songs mr-2 text-xs font-thin">
+              <span className="no-of-songs">
                 {t('common.songWithCount', { count: noOfSongs })}
               </span>
-              <span className="invisible text-xs font-thin opacity-0 transition-[visibility,opacity] group-hover:visible group-hover:opacity-100">
-                &bull;
-                <span className="folder-path ml-2">{prevDir}</span>
+              <span className="invisible truncate opacity-0 transition-[visibility,opacity] group-hover:visible group-hover:opacity-100">
+                <span aria-hidden>· </span>
+                <span className="folder-path">{prevDir}</span>
               </span>
             </div>
           </div>

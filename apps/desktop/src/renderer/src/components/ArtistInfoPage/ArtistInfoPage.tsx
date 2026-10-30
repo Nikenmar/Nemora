@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import HeroHeader from '../ui/HeroHeader';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import calculateTimeFromSeconds from '../../utils/calculateTimeFromSeconds';
@@ -289,17 +290,29 @@ const ArtistInfoPage = () => {
 
   return (
     <MainContainer
-      className="artist-info-page-container appear-from-bottom relative overflow-y-auto rounded-tl-lg pb-2 pl-2 pr-2 pt-8 [scrollbar-gutter:stable]"
+      className="artist-info-page-container appear-from-bottom relative overflow-y-auto [scrollbar-gutter:stable]"
       ref={songsContainerRef}
     >
-      <div className="artist-img-and-info-container relative mb-12 flex flex-row items-center pl-8 [&>*]:z-10">
-        <div className="artist-img-container relative mr-10 flex max-h-60 items-center justify-center lg:hidden">
+      <HeroHeader
+        artwork={artistData?.onlineArtworkPaths?.picture_medium ?? artistData?.artworkPaths?.artworkPath}
+        fallbackArtwork={artistData?.artworkPaths?.artworkPath}
+        isRound
+        kind={t('common.artist_one')}
+        title={artistData?.name || t('common.unknownArtist')}
+        meta={[
+          artistData?.songs
+            ? t('common.albumWithCount', { count: artistData?.albums?.length || 0 })
+            : undefined,
+          artistData?.songs ? t('common.songWithCount', { count: artistData.songs.length }) : undefined,
+          songs.length > 0 ? artistSongsDuration : undefined
+        ]}
+        artworkNode={
           <Img
             src={artistData?.onlineArtworkPaths?.picture_medium}
             fallbackSrc={artistData?.artworkPaths?.artworkPath}
-            className="!aspect-square h-60 w-[15rem] rounded-full object-cover"
+            className="h-full w-full object-cover"
             loading="eager"
-            alt="Album Cover"
+            alt=""
             onContextMenu={(e) =>
               (artistData?.onlineArtworkPaths?.picture_xl ||
                 artistData?.onlineArtworkPaths?.picture_medium) &&
@@ -310,7 +323,6 @@ const ArtistInfoPage = () => {
                     label: t('common.saveArtwork'),
                     class: 'save',
                     iconName: 'image',
-                    iconClassName: 'ms-icon',
                     handlerFunction: () => {
                       const artworkPath =
                         artistData?.onlineArtworkPaths?.picture_xl ||
@@ -326,72 +338,30 @@ const ArtistInfoPage = () => {
               )
             }
           />
-          <Button
-            className="absolute -bottom-5 !m-0 flex rounded-full !border-0 bg-canvas !p-3 text-echo shadow-xl outline-1 -outline-offset-[6px] hover:bg-canvas focus-visible:!outline "
-            tooltipLabel={t(
-              `artistInfoPage.${artistData?.isAFavorite ? `dislikeArtist` : `likeArtist`}`,
-              {
-                name: artistData?.name
-              }
-            )}
-            iconName="favorite"
-            iconClassName={`!text-4xl !leading-none ${
-              artistData?.isAFavorite
-                ? 'ms-icon ms-icon-filled'
-                : 'ms-icon'
-            }`}
-            clickHandler={() => {
-              if (artistData)
-                window.api.artistsData
-                  .toggleLikeArtists([artistData.artistId], !artistData.isAFavorite)
-                  .then(
-                    (res) =>
-                      res &&
-                      setArtistData((prevData) =>
-                        prevData
-                          ? {
-                              ...prevData,
-                              isAFavorite: !prevData.isAFavorite
-                            }
-                          : undefined
-                      )
-                  )
-                  .catch((err) => console.error(err));
-            }}
-          />
-        </div>
-        <div
-          className={`artist-info-container relative ${
-            bodyBackgroundImage
-              ? 'text-on-media'
-              : 'text-ink'
-          } [&>*]:z-10`}
-        >
-          <div
-            className="artist-name mb-2 text-5xl text-echo"
-            // style={
-            //   fontColor
-            //     ? {
-            //         color: fontColor
-            //       }
-            //     : undefined
-            // }
-          >
-            {artistData?.name || t('common.unknownArtist')}
-          </div>
-          {artistData?.songs && (
-            <div className="artist-no-of-songs">
-              {t('common.albumWithCount', {
-                count: artistData?.albums?.length || 0
-              })}{' '}
-              &bull; {t('common.songWithCount', { count: artistData.songs.length })}
-            </div>
-          )}
-          {songs.length > 0 && (
-            <div className="artist-total-songs-duration">{artistSongsDuration}</div>
-          )}
-        </div>
-      </div>
+        }
+      >
+        <Button
+          label={t(`artistInfoPage.${artistData?.isAFavorite ? `dislikeArtist` : `likeArtist`}`, {
+            name: artistData?.name
+          })}
+          iconName="favorite"
+          isActive={artistData?.isAFavorite}
+          className={`!mr-0 ${artistData?.isAFavorite ? '!text-echo' : ''}`}
+          clickHandler={() => {
+            if (artistData)
+              window.api.artistsData
+                .toggleLikeArtists([artistData.artistId], !artistData.isAFavorite)
+                .then(
+                  (res) =>
+                    res &&
+                    setArtistData((prevData) =>
+                      prevData ? { ...prevData, isAFavorite: !prevData.isAFavorite } : undefined
+                    )
+                )
+                .catch((err) => console.error(err));
+          }}
+        />
+      </HeroHeader>
 
       <SeparateArtistsSuggestion name={artistData?.name} artistId={artistData?.artistId} />
 

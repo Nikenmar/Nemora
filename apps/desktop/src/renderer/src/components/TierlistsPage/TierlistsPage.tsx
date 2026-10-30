@@ -66,10 +66,10 @@ const TierlistsPage = () => {
   return (
     <MainContainer className="tierlists-page appear-from-bottom !h-full overflow-hidden !pb-0 text-ink">
       <>
-        <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-page font-semibold text-ink">
-          <div className="container flex items-center">
-            {t('tierlistsPage.title')}
-            <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
+        <div className="title-container mb-5 mt-1 flex flex-col gap-3 pr-4 text-ink">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="text-page font-semibold text-ink">{t('tierlistsPage.title')}</h1>
+            <div className="other-stats-container flex items-center text-small text-ink-dim">
               {tierlists.length > 0 && (
                 <span className="no-of-tierlists">
                   {t('tierlistsPage.tierlistWithCount', { count: tierlists.length })}
@@ -77,11 +77,12 @@ const TierlistsPage = () => {
               )}
             </div>
           </div>
-          <div className="other-controls-container flex items-center">
+          <div className="other-controls-container flex flex-wrap items-center gap-2">
             <Button
               label={t('tierlistsPage.addTierlist')}
               iconName="add"
-              className="add-tierlist-btn text-sm md:text-lg"
+              variant="primary"
+              className="add-tierlist-btn !mr-0"
               clickHandler={openCreatePrompt}
             />
             {tierlists.length > 0 && (

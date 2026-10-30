@@ -5,7 +5,6 @@ import { useCallback, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import DefaultArtistCover from '../../assets/images/webp/artist_cover_default.webp';
-import Button from '../Button';
 import Img from '../Img';
 import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
 import { useStore } from '@tanstack/react-store';
@@ -295,10 +294,9 @@ export const Artist = (props: ArtistProp) => {
 
   return (
     <div
-      // style={{ animationDelay: `${50 * (props.index + 1)}ms` }}
-      className={`artist ${appearFromBottom && 'appear-from-bottom'} mr-2 flex h-44 w-40 cursor-pointer flex-col justify-between overflow-hidden rounded-lg p-4 hover:bg-surface-2/50 ${
+      className={`artist ${appearFromBottom && 'appear-from-bottom'} group mr-2 flex w-40 cursor-pointer flex-col items-center gap-2.5 rounded-panel p-3 transition-colors duration-150 hover:bg-surface-2/60 ${
         props.className
-      } ${isAMultipleSelection ? '!bg-accent' : ''}`}
+      } ${isAMultipleSelection ? '!bg-accent-soft' : ''}`}
       onContextMenu={(e) => {
         e.stopPropagation();
         updateContextMenuData(true, artistContextMenus, e.pageX, e.pageY, contextMenuItemData);
@@ -317,41 +315,38 @@ export const Artist = (props: ArtistProp) => {
         else goToArtistInfoPage();
       }}
     >
-      <div className="artist-img-container relative flex h-3/4 items-center justify-center">
-        {isAFavorite && (
-          <span
-            className={`ms-icon absolute -bottom-2 z-10 flex rounded-full bg-canvas p-2 text-2xl !text-echo shadow-lg ${
-              isAMultipleSelection && '!bg-accent'
-            }`}
-          >
-            favorite
-          </span>
-        )}
+      <div className="artist-img-container relative aspect-square w-full">
         <Img
           src={props?.onlineArtworkPaths?.picture_medium}
           fallbackSrc={props.artworkPaths.artworkPath}
-          alt="Default song cover"
-          className="aspect-square h-full rounded-full object-cover"
-          // enableImgFadeIns={!isMultipleSelectionEnabled}
+          alt=""
+          className="aspect-square h-full w-full rounded-full bg-surface-2 object-cover shadow-[0_8px_22px_rgb(0_0_0/0.3)]"
           enableImgFadeIns={false}
         />
+        {isAFavorite && (
+          <span className="ms-icon ms-icon-filled absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface-3 text-[15px] text-echo shadow-float">
+            favorite
+          </span>
+        )}
         {isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'artist' && (
           <MultipleSelectionCheckbox
             id={props.artistId}
             selectionType="artist"
-            className="absolute bottom-3 right-3 z-10"
+            className="absolute bottom-1 left-1 z-10"
           />
         )}
       </div>
-      <div className="artist-info-container max-h-1/5 relative">
-        <Button
-          className={`name-container !m-0 !block !w-full !max-w-full truncate !rounded-none !border-0 bg-transparent !p-0 text-center !text-lg outline-1 outline-offset-1 hover:bg-transparent hover:underline focus-visible:!outline lg:text-base dark:bg-transparent dark:hover:bg-transparent ${
-            isAMultipleSelection && '!text-ink'
-          }`}
-          label={props.name === '' ? 'Unknown Artist' : props.name}
-          clickHandler={goToArtistInfoPage}
-        />
-      </div>
+      <button
+        type="button"
+        className="name-container block w-full truncate text-center text-body font-medium text-ink outline-none hover:underline focus-visible:underline"
+        title={props.name === '' ? 'Unknown Artist' : props.name}
+        onClick={(e) => {
+          e.stopPropagation();
+          goToArtistInfoPage();
+        }}
+      >
+        {props.name === '' ? 'Unknown Artist' : props.name}
+      </button>
     </div>
   );
 };

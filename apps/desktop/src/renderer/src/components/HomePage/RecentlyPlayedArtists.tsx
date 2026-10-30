@@ -46,7 +46,7 @@ const RecentlyPlayedArtists = (props: Props) => {
     <>
       {recentlyPlayedSongArtists.length > 0 && (
         <SecondaryContainer
-          className="artists-list-container appear-from-bottom max-h-full flex-col pb-8 pl-8"
+          className="artists-list-container appear-from-bottom max-h-full flex-col pb-8"
           focusable
           onKeyDown={(e) => {
             if (e.ctrlKey && e.key === 'a') {
@@ -56,7 +56,7 @@ const RecentlyPlayedArtists = (props: Props) => {
           }}
         >
           <>
-            <div className="title-container mb-4 mt-1 text-title font-semibold text-ink">
+            <div className="title-container mb-3 flex items-center justify-between pr-4 text-title font-semibold text-ink">
               {t('homePage.recentArtists')}
             </div>
             <div

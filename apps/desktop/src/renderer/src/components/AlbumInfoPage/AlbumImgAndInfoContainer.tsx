@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
+import HeroHeader from '../ui/HeroHeader';
 import { useTranslation } from 'react-i18next';
 import calculateTimeFromSeconds from '../../utils/calculateTimeFromSeconds';
-import Img from '../Img';
 import SongArtist from '../SongsPage/SongArtist';
 
 type Props = { albumData: Album; songsData: SongData[] };
@@ -43,38 +43,21 @@ const AlbumImgAndInfoContainer = (props: Props) => {
   return (
     <>
       {albumData && (
-        <div className="album-img-and-info-container flex flex-row items-center pb-6">
-          <div className="album-cover-container mr-8">
-            {albumData.artworkPaths && (
-              <Img
-                src={albumData.artworkPaths.artworkPath}
-                className="w-52 rounded-xl"
-                loading="eager"
-                alt="Album Cover"
-              />
-            )}{' '}
-          </div>
-          {albumData.title && albumData.artists && albumData.artists.length > 0 && (
-            <div className="album-info-container max-w-[70%] text-ink">
-              <div className="font-semibold uppercase tracking-wider opacity-50">
-                {t(`common.album_one`)}
-              </div>
-              <div className="album-title h-fit w-full overflow-hidden text-ellipsis whitespace-nowrap py-2 text-5xl text-echo">
-                {albumData.title}
-              </div>
-              <div className="album-artists m-0 flex h-[unset] w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-xl">
-                {albumArtistComponents}
-              </div>
-              {songsData.length > 0 && (
-                <div className="album-songs-total-duration">{albumDuration}</div>
-              )}
-              <div className="album-no-of-songs w-full overflow-hidden text-ellipsis whitespace-nowrap text-base">
-                {t(`common.songWithCount`, { count: albumData.songs.length })}
-              </div>
-              {albumData.year && <div className="album-year">{albumData.year}</div>}
-            </div>
-          )}
-        </div>
+        <HeroHeader
+          artwork={albumData.artworkPaths?.artworkPath}
+          kind={t('common.album_one')}
+          title={albumData.title}
+          subtitle={
+            albumData.artists && albumData.artists.length > 0 ? (
+              <div className="album-artists flex min-w-0 cursor-pointer truncate">{albumArtistComponents}</div>
+            ) : undefined
+          }
+          meta={[
+            t('common.songWithCount', { count: albumData.songs?.length ?? 0 }),
+            songsData.length > 0 ? albumDuration : undefined,
+            albumData.year
+          ]}
+        />
       )}
     </>
   );
