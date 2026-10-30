@@ -30,7 +30,8 @@ mod platform {
     use windows::Foundation::{TimeSpan, TypedEventHandler};
     use windows::Media::{
         MediaPlaybackStatus, MediaPlaybackType, SystemMediaTransportControls, SystemMediaTransportControlsButton,
-        SystemMediaTransportControlsButtonPressedEventArgs, SystemMediaTransportControlsTimelineProperties,
+        SystemMediaTransportControlsButtonPressedEventArgs, SystemMediaTransportControlsDisplayUpdater,
+        SystemMediaTransportControlsTimelineProperties,
     };
     use windows::Storage::StorageFile;
     use windows::Storage::Streams::RandomAccessStreamReference;
@@ -102,34 +103,52 @@ mod platform {
         Some(target)
     }
 
+    fn set_thumbnail(
+        display: &SystemMediaTransportControlsDisplayUpdater,
+        cover: Option<PathBuf>,
+    ) -> windows::core::Result<()> {
+        match cover {
+            Some(path) => {
+                let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(path.as_os_str()))?.join()?;
+                display.SetThumbnail(&RandomAccessStreamReference::CreateFromFile(&file)?)
+            }
+            None => display.SetThumbnail(None::<&RandomAccessStreamReference>),
+        }
+    }
+
+    fn set_timeline(controls: &SystemMediaTransportControls, now: &NowPlaying) -> windows::core::Result<()> {
+        let timeline = SystemMediaTransportControlsTimelineProperties::new()?;
+        timeline.SetStartTime(span(0.0))?;
+        timeline.SetMinSeekTime(span(0.0))?;
+        timeline.SetEndTime(span(now.duration))?;
+        timeline.SetMaxSeekTime(span(now.duration))?;
+        timeline.SetPosition(span(now.position.min(now.duration)))?;
+        controls.UpdateTimelineProperties(&timeline)
+    }
+
+    /// The status and the text come first and do not wait on the rest: a cover Windows cannot open
+    /// or a timeline it refuses costs the picture or the progress bar, never the session itself.
     pub fn update(handle: &AppHandle, profile: &Path, now: &NowPlaying) -> windows::core::Result<()> {
         let controls = controls(handle)?;
+        controls.SetPlaybackStatus(if now.playing {
+            MediaPlaybackStatus::Playing
+        } else {
+            MediaPlaybackStatus::Paused
+        })?;
         let display = controls.DisplayUpdater()?;
         display.SetType(MediaPlaybackType::Music)?;
         let music = display.MusicProperties()?;
         music.SetTitle(&HSTRING::from(&now.title))?;
         music.SetArtist(&HSTRING::from(&now.artist))?;
         music.SetAlbumTitle(&HSTRING::from(&now.album))?;
-        match cover_file(profile, &now.artwork) {
-            Some(path) => {
-                let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(path.as_os_str()))?.join()?;
-                display.SetThumbnail(&RandomAccessStreamReference::CreateFromFile(&file)?)?;
-            }
-            None => display.SetThumbnail(None::<&RandomAccessStreamReference>)?,
+        if let Err(error) = set_thumbnail(&display, cover_file(profile, &now.artwork)) {
+            eprintln!("[nemora] media controls cover: {error}");
+            let _ = display.SetThumbnail(None::<&RandomAccessStreamReference>);
         }
         display.Update()?;
-        let timeline = SystemMediaTransportControlsTimelineProperties::new()?;
-        timeline.SetStartTime(span(0.0))?;
-        timeline.SetMinSeekTime(span(0.0))?;
-        timeline.SetEndTime(span(now.duration))?;
-        timeline.SetMaxSeekTime(span(now.duration))?;
-        timeline.SetPosition(span(now.position))?;
-        controls.UpdateTimelineProperties(&timeline)?;
-        controls.SetPlaybackStatus(if now.playing {
-            MediaPlaybackStatus::Playing
-        } else {
-            MediaPlaybackStatus::Paused
-        })?;
+        if let Err(error) = set_timeline(&controls, now) {
+            eprintln!("[nemora] media controls timeline: {error}");
+        }
         Ok(())
     }
 

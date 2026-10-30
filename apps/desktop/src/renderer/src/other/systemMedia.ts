@@ -10,14 +10,17 @@ export const updateSystemMedia = (
   state: { duration: number; position: number; playing: boolean },
   fallbacks: { artist: string; album: string }
 ) => {
+  // 0 when the length is unknown: the engine says so for a file that does not state it.
+  const duration = Number.isFinite(state.duration) && state.duration > 0 ? state.duration : 0;
+  const position = Number.isFinite(state.position) ? Math.max(state.position, 0) : 0;
   const now = song
     ? {
         title: song.title,
         artist: song.artists?.map((artist) => artist.name).join(', ') || fallbacks.artist,
         album: song.album?.name || fallbacks.album,
         artwork: song.artworkPath ?? '',
-        duration: Number.isFinite(state.duration) ? state.duration : 0,
-        position: Number.isFinite(state.position) ? state.position : 0,
+        duration,
+        position: duration > 0 ? Math.min(position, duration) : 0,
         playing: state.playing
       }
     : null;

@@ -1079,6 +1079,18 @@ export default function App() {
     let artworkPath: string | undefined;
 
     const updateMediaSessionMetaData = () => {
+      // Windows first: the engine plays, so these controls are the ones Windows sees, and nothing
+      // below may keep them from hearing of a change.
+      updateSystemMedia(
+        store.state.currentSongData,
+        {
+          duration: player.duration,
+          position: player.currentTime,
+          playing: !player.paused
+        },
+        { artist: t('common.unknownArtist'), album: t('common.unknownAlbum') }
+      );
+
       if (store.state.currentSongData.artwork !== undefined) {
         if (typeof store.state.currentSongData.artwork === 'object') {
           const blob = new Blob([store.state.currentSongData.artwork]);
@@ -1104,11 +1116,15 @@ export default function App() {
           }
         ]
       });
-      navigator.mediaSession.setPositionState({
-        duration: player.duration,
-        playbackRate: player.playbackRate,
-        position: player.currentTime
-      });
+      // The engine reports a duration of 0 when a file does not state its length, and
+      // setPositionState throws on an unknown duration or a position past it.
+      if (Number.isFinite(player.duration) && player.duration > 0)
+        navigator.mediaSession.setPositionState({
+          duration: player.duration,
+          playbackRate: player.playbackRate,
+          position: Math.min(player.currentTime, player.duration)
+        });
+      else navigator.mediaSession.setPositionState(undefined);
 
       navigator.mediaSession.setActionHandler('pause', () => toggleSongPlayback(false));
       navigator.mediaSession.setActionHandler('play', () => toggleSongPlayback(true));
@@ -1128,16 +1144,12 @@ export default function App() {
       navigator.mediaSession.playbackState = store.state.player.isCurrentSongPlaying
         ? 'playing'
         : 'paused';
-      updateSystemMedia(
-        store.state.currentSongData,
-        { duration: player.duration, position: player.currentTime, playing: !player.paused },
-        { artist: t('common.unknownArtist'), album: t('common.unknownAlbum') }
-      );
     };
 
     player.addEventListener('play', updateMediaSessionMetaData);
     player.addEventListener('pause', updateMediaSessionMetaData);
     player.addEventListener('seeked', updateMediaSessionMetaData);
+    player.addEventListener('durationchange', updateMediaSessionMetaData);
 
     return () => {
       if (artworkPath) URL.revokeObjectURL(artworkPath);
@@ -1157,6 +1169,7 @@ export default function App() {
       player.removeEventListener('play', updateMediaSessionMetaData);
       player.removeEventListener('pause', updateMediaSessionMetaData);
       player.removeEventListener('seeked', updateMediaSessionMetaData);
+      player.removeEventListener('durationchange', updateMediaSessionMetaData);
     };
   }, [handleSkipBackwardClick, handleSkipForwardClick, t, toggleSongPlayback]);
 
