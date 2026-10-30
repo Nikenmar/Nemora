@@ -63,7 +63,7 @@ const ContextMenu = memo(() => {
               <div
                 key={index}
                 role="separator"
-                className="context-menu-item-seperator float-right my-2 h-[1px] w-[95%] bg-[hsla(0deg,0%,57%,0.5)]"
+                className="context-menu-item-seperator mx-1.5 my-1 h-px bg-glass-border"
               />
             );
           return (
@@ -72,6 +72,7 @@ const ContextMenu = memo(() => {
               label={menuItem.label}
               iconName={menuItem.iconName}
               iconClassName={menuItem.iconClassName}
+              class={menuItem.class}
               handlerFunction={menuItem.handlerFunction}
               fileDrag={menuItem.fileDrag}
             />
@@ -82,10 +83,10 @@ const ContextMenu = memo(() => {
   return (
     <div
       className={`context-menu ${
-        isVisible ? 'scale-100 opacity-100' : 'invisible scale-75 opacity-0'
-      } ${
-        !data && 'pt-2'
-      } absolute z-50 h-fit w-fit min-w-[15rem] origin-top-left overflow-hidden overflow-y-auto rounded-lg bg-context-menu-background/90 pb-1 pt-1 text-font-color-black shadow-[10px_0px_53px_0px_rgba(0,0,0,0.22)] backdrop-blur-md transition-[opacity,transform,visibility,width,height] dark:bg-dark-context-menu-background/90 dark:text-font-color-white`}
+        isVisible
+          ? 'visible scale-100 opacity-100 duration-[140ms]'
+          : 'invisible scale-[0.96] opacity-0 duration-[90ms]'
+      } absolute z-50 h-fit max-h-[calc(100vh-3rem)] w-fit min-w-[14.5rem] max-w-[22rem] overflow-y-auto rounded-menu border border-glass-border bg-glass p-[5px] text-ink shadow-float backdrop-blur-[26px] backdrop-saturate-[1.7] transition-[opacity,transform,visibility] ease-out`}
       onClick={(e) => e.stopPropagation()}
       style={{
         top: dimensions.positionY,

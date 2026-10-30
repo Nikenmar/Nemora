@@ -261,6 +261,7 @@ body,
 }
 
 /* ? MATERIAL SYMBOLS: outline at weight 300; filled marks what is selected or on */
+.ms-icon,
 .material-icons-round,
 .material-icons-round-outlined,
 .material-icons-round.material-icons-round-outlined {
@@ -283,6 +284,8 @@ body,
     'wght' 300,
     'opsz' 24;
 }
+.ms-icon.ms-icon-filled,
+.icon-filled .ms-icon,
 .material-icons-round.icon-filled,
 .icon-filled .material-icons-round {
   font-variation-settings:
@@ -560,6 +563,12 @@ input[type='checkbox']:checked ~ .checkmark .icon {
 
   to {
     width: 100%;
+  }
+}
+
+@keyframes tooltipIn {
+  from {
+    opacity: 0;
   }
 }
 

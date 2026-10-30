@@ -13,6 +13,7 @@ import SensitiveActionConfirmPrompt from '../components/SensitiveActionConfirmPr
 
 const AppShortcutsPrompt = lazy(() => import('../components/SettingsPage/AppShortcutsPrompt'));
 const ReleaseNotesPrompt = lazy(() => import('../components/ReleaseNotesPrompt/ReleaseNotesPrompt'));
+const Showcase = lazy(() => import('../components/ui/Showcase'));
 
 export interface ShotsBridge {
   changeCurrentActivePage: (page: PageTitles, data?: PageData) => void;
@@ -36,6 +37,7 @@ export interface ShotsBridge {
 /** The prompts a shot can open by name: one of each kind the redesign restyles. */
 const PROMPTS: Record<string, () => [ReactNode, string?]> = {
   shortcuts: () => [<AppShortcutsPrompt key="shortcuts" />],
+  showcase: () => [<Showcase key="showcase" />, '!max-w-[70rem]'],
   releaseNotes: () => [<ReleaseNotesPrompt key="releaseNotes" />, 'release-notes px-8 py-4'],
   confirm: () => [
     <SensitiveActionConfirmPrompt

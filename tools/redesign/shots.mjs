@@ -44,6 +44,7 @@ const VIEW = { width: 1600, height: 900 };
  * bridge), `api` (window.api), `D` (ids found in the library) and the helpers below in scope.
  */
 const SHOTS = [
+  { id: '00-primitives', surface: 'Primitives showcase', setup: `S.prompt('showcase');`, settle: 1500 },
   { id: '01-shell', surface: 'Top bar, sidebar, player on Songs', setup: `S.go('Songs');` },
   { id: '04-context-menu', surface: 'Context menu on a song', setup: `S.go('Songs'); await wait(900); await contextMenuOn(['[data-shot="song-row"]', '[data-index="2"]']);` },
   { id: '05-dialog-shortcuts', surface: 'Dialog: shortcuts', setup: `S.prompt('shortcuts');`, settle: 1200 },

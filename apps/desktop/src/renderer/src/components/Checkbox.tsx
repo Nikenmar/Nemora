@@ -3,6 +3,8 @@
 import { type KeyboardEvent, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Icon from './ui/Icon';
+
 interface CheckboxProp {
   id: string;
   className?: string;
@@ -38,7 +40,7 @@ const Checkbox = memo((props: CheckboxProp) => {
   return (
     <label
       htmlFor={id}
-      className={`checkbox-and-labels-container ml-2 mt-4 flex !w-fit items-center outline-1 outline-offset-1 transition-opacity focus-visible:!outline ${
+      className={`checkbox-and-labels-container group ml-2 mt-4 flex !w-fit items-center rounded-md text-body text-ink outline-none transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo ${
         isDisabled && '!cursor-not-allowed opacity-50'
       } ${className}`}
       tabIndex={isDisabled ? -1 : 0}
@@ -55,19 +57,17 @@ const Checkbox = memo((props: CheckboxProp) => {
         onChange={(e) => checkedStateUpdateFunction(e.currentTarget.checked)}
       />
       <label
-        className={`checkmark flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border-2 border-font-color-highlight bg-[transparent] shadow-lg peer-checked:bg-font-color-highlight dark:border-dark-font-color-highlight dark:peer-checked:bg-dark-font-color-highlight ${
+        className={`checkmark flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[5px] border-[1.5px] border-ink-dim transition-[background-color,border-color] duration-150 group-hover:border-ink peer-checked:border-accent peer-checked:bg-accent ${
           isDisabled && '!cursor-not-allowed'
         }`}
         htmlFor={id}
       >
-        <span className="material-icons-round icon text-xl text-font-color-white opacity-0 dark:text-font-color-black">
-          check
-        </span>
+        <Icon name="check" filled size={14} className="icon text-on-accent opacity-0" />
       </label>
       {labelContent && (
         <label
           htmlFor={id}
-          className={`info ml-4 cursor-pointer ${isDisabled && '!cursor-not-allowed'}`}
+          className={`info ml-3 cursor-pointer ${isDisabled && '!cursor-not-allowed'}`}
         >
           {labelContent}
         </label>

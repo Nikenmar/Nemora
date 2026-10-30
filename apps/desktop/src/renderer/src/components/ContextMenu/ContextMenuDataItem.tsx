@@ -5,20 +5,20 @@ const ContextMenuDataItem = (props: { data: ContextMenuAdditionalData }) => {
     data: { title, artworkPath, subTitle, subTitle2, button, artworkClassName }
   } = props;
   return (
-    <div className="context-menu-data-item flex max-w-[18rem] items-center border-b-[1px] border-b-font-color-dimmed/50 px-3 py-2 font-light text-font-color-black dark:text-font-color-white">
+    <div className="context-menu-data-item mb-1 flex max-w-[20rem] items-center gap-2.5 border-b border-glass-border px-2 pb-2 pt-1.5 text-ink">
       <Img
-        className={`mr-2 aspect-square w-8 rounded-sm ${artworkClassName}`}
+        className={`aspect-square w-9 shrink-0 rounded-cover-sm object-cover ${artworkClassName}`}
         src={artworkPath}
         loading="eager"
         alt="Context menu data item artwork"
       />
       <div className="info-container flex flex-col justify-center overflow-hidden text-ellipsis whitespace-nowrap">
-        <p className="title-container truncate text-sm font-medium">{title}</p>
+        <p className="title-container truncate text-body font-medium">{title}</p>
         {(subTitle || subTitle2) && (
-          <div className="sub-titles-container flex opacity-80">
-            <span className="sub-title truncate text-[0.6rem] font-light">{subTitle}</span>
-            {subTitle && subTitle2 && <span className="mx-1 leading-[0.9]">&bull;</span>}
-            <span className="sub-title truncate text-[0.6rem] font-light">{subTitle2}</span>
+          <div className="sub-titles-container flex gap-1.5 text-small text-ink-dim">
+            <span className="sub-title truncate">{subTitle}</span>
+            {subTitle && subTitle2 && <span aria-hidden>·</span>}
+            <span className="sub-title truncate">{subTitle2}</span>
           </div>
         )}
       </div>

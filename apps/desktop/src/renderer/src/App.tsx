@@ -20,6 +20,7 @@ import { appPreferences } from '../../../package.json';
 import { registerBenchApp } from './other/bench';
 import { registerShots } from './other/shots';
 import { applyCoverLight } from './other/coverLight';
+import TooltipLayer from './components/ui/Tooltip';
 import { AppUpdateContext, type AppUpdateContextType } from './contexts/AppUpdateContext';
 // import { SongPositionContext } from './contexts/SongPositionContext';
 
@@ -2066,6 +2067,7 @@ export default function App() {
             )}
           </ErrorBoundary>
         )}
+        <TooltipLayer />
       </AppUpdateContext.Provider>
     </ErrorBoundary>
   );

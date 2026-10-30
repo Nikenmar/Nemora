@@ -1,4 +1,8 @@
-import { type ChangeEvent, useMemo } from 'react';
+import { type ChangeEvent, useContext, useMemo, useRef } from 'react';
+import { cn as twMerge } from './ui/cn';
+
+import { AppUpdateContext } from '../contexts/AppUpdateContext';
+import Icon from './ui/Icon';
 
 export interface DropdownOption<T extends string> {
   label: string;
@@ -13,41 +17,66 @@ export interface DropdownProp<T extends string> {
   value: T;
   onChange: (_e: ChangeEvent<HTMLSelectElement>) => void;
   isDisabled?: boolean;
+  /** What the choice is about (`Sort By :`); shown as the chip's tooltip. */
   type?: string;
+  /** The chip's icon; guessed from the name (sort, filter) when absent. */
+  iconName?: string;
 }
 
-function Dropdown<T extends string>(props: DropdownProp<T>) {
-  const { className, name, value, onChange, options, isDisabled = false, type = '' } = props;
+const guessIcon = (name: string) =>
+  /sort/i.test(name) ? 'swap_vert' : /filter/i.test(name) ? 'filter_list' : 'tune';
 
-  const optionComponents = useMemo(
-    () =>
-      options.map((option) => (
-        <option
-          key={option.value}
-          value={option.value}
-          disabled={option.isDisabled}
-          className="!bg-context-menu-background/90 !text-font-color-black dark:!bg-dark-context-menu-background/90 dark:!text-font-color-white"
-        >
-          {type} {option.label}
-        </option>
-      )),
-    [options, type]
-  );
+/**
+ * A choice among options, drawn as a chip that opens the app's glass menu. `onChange` receives an
+ * object shaped like a select's change event (`currentTarget.value`), as the native select did.
+ */
+function Dropdown<T extends string>(props: DropdownProp<T>) {
+  const { className, name, value, onChange, options, isDisabled = false, type = '', iconName } = props;
+  const { updateContextMenuData } = useContext(AppUpdateContext);
+  const ref = useRef<HTMLButtonElement>(null);
+
+  const selected = useMemo(() => options.find((option) => option.value === value), [options, value]);
+  const tooltip = `${type.replace(/\s*:\s*$/, '')}`.trim();
+
+  const open = () => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const items: ContextMenuItem[] = options
+      .filter((option) => !option.isDisabled)
+      .map((option) => ({
+        label: option.label,
+        iconName: option.value === value ? 'check' : '',
+        handlerFunction: () => {
+          const target = { value: option.value, name } as unknown as HTMLSelectElement;
+          onChange({ currentTarget: target, target } as ChangeEvent<HTMLSelectElement>);
+        }
+      }));
+    updateContextMenuData(true, items, rect.left, rect.bottom + 6);
+  };
 
   return (
-    <select
-      name={name}
+    <button
+      type="button"
+      ref={ref}
       id={name}
-      className={`dropdown ml-4 h-10 w-52 cursor-pointer appearance-none truncate rounded-lg border-[3px] border-background-color-2 bg-background-color-2/25 px-3 text-sm text-font-color-black outline-none backdrop-blur-sm transition-[border-color] ease-in-out hover:border-background-color-3 hover:bg-background-color-2/50 focus:!border-background-color-3 focus-visible:!border-font-color-highlight-2 focus-visible:bg-background-color-2/50 active:border-background-color-3 dark:border-dark-background-color-2 dark:bg-dark-background-color-2/25 dark:text-font-color-white dark:hover:border-dark-background-color-3 dark:hover:bg-dark-background-color-2/50 dark:focus:!border-dark-background-color-3 dark:focus-visible:!border-dark-font-color-highlight-2 dark:focus-visible:bg-dark-background-color-2/50 dark:active:border-dark-background-color-3 ${
-        isDisabled &&
-        `!cursor-not-allowed !border-font-color-dimmed/10 !text-opacity-50 !opacity-50 !brightness-90 !backdrop-blur-none !transition-none dark:!border-font-color-dimmed/40`
-      } ${className}`}
-      value={value}
-      onChange={onChange}
+      name={name}
       disabled={isDisabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        open();
+      }}
+      data-tooltip={tooltip || undefined}
+      aria-haspopup="menu"
+      className={twMerge(
+        'dropdown ml-2 inline-flex h-8 max-w-[14rem] shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-surface-2 pl-3 pr-2 text-[13px] font-medium text-ink outline-none transition-[background-color,transform] duration-150 ease-out hover:bg-line/70 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo',
+        isDisabled && '!cursor-not-allowed opacity-40 active:scale-100',
+        className
+      )}
     >
-      {optionComponents}
-    </select>
+      <Icon name={iconName ?? guessIcon(name)} size={16} className="text-ink-dim" />
+      <span className="truncate">{selected?.label ?? value}</span>
+      <Icon name="expand_more" size={18} className="text-ink-dim" />
+    </button>
   );
 }
 
