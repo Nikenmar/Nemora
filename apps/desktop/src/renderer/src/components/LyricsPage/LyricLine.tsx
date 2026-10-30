@@ -159,17 +159,17 @@ const LyricLine = (props: LyricProp) => {
             })
           : undefined
       }
-      className={`highlight duration-250 z-0 mb-5 flex w-fit select-none flex-col items-center justify-center text-balance text-center text-5xl font-medium text-font-color-black transition-[transform,color,filter] first:mt-8 last:mb-4 empty:mb-16 dark:text-font-color-white ${
+      className={`highlight z-0 mb-5 flex w-fit select-none flex-col items-center justify-center text-balance text-center text-[28px] font-semibold leading-[1.2] text-ink transition-[transform,color,filter] duration-300 ease-out first:mt-8 last:mb-4 empty:mb-16 ${
         syncedLyrics
-          ? `cursor-pointer blur-[1px] ${
+          ? `cursor-pointer ${
               isInRange
-                ? '!scale-100 font-medium text-font-color-highlight !text-opacity-90 !blur-0 dark:!text-dark-font-color-highlight [&>div>span]:!mr-3'
-                : 'scale-[.7] !text-opacity-20 hover:!text-opacity-75'
+                ? '!scale-100 !text-opacity-100 [&>div>span]:!mr-3'
+                : 'scale-[.86] !text-opacity-25 blur-[0.5px] hover:!text-opacity-60'
             }`
-          : '!text-4xl'
-      } ${playerType === 'mini' && '!mb-2 !text-2xl !text-font-color-white'} ${
+          : '!text-[24px]'
+      } ${playerType === 'mini' && '!mb-2 !text-xl !text-on-media'} ${
         playerType === 'full' &&
-        '!mb-6 origin-left !items-start !justify-start !text-left !text-7xl !text-font-color-white'
+        '!mb-6 origin-left !items-start !justify-start !text-left !text-[40px] !leading-[1.15] !text-on-media'
       }`}
       ref={lyricsRef}
       onClick={() =>
@@ -187,7 +187,7 @@ const LyricLine = (props: LyricProp) => {
               label: t('common.copy'),
               class: 'sync',
               iconName: 'content_copy',
-              iconClassName: 'material-icons-round-outlined',
+              iconClassName: 'ms-icon',
               handlerFunction: () =>
                 window.navigator.clipboard.writeText(
                   typeof lyric === 'string'
@@ -203,7 +203,7 @@ const LyricLine = (props: LyricProp) => {
     >
       {lyricStringLineSecondaryUpper && (
         <div
-          className={`flex flex-row flex-wrap ${playerType !== 'full' && 'items-center justify-center'} ${syncedLyrics && isInRange ? '!text-xl !text-font-color-black/50 dark:!text-font-color-white/50' : '!text-xl'}`}
+          className={`flex flex-row flex-wrap ${playerType !== 'full' && 'items-center justify-center'} ${syncedLyrics && isInRange ? '!text-xl !text-ink/50' : '!text-xl'}`}
         >
           {lyricStringLineSecondaryUpper}
         </div>

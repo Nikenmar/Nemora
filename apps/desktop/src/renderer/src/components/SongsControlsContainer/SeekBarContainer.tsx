@@ -18,18 +18,18 @@ const SeekBarContainer = () => {
     : calculateTime(currentSongData.duration);
 
   return (
-    <div className="seekbar-and-song-durations-container flex h-1/3 w-full max-w-xl flex-row items-center justify-between text-sm">
-      <div className="current-song-duration w-16 text-center font-light">
+    <div className="seekbar-and-song-durations-container flex w-full max-w-[36rem] flex-row items-center gap-2.5 text-micro tabular-nums text-ink-dim">
+      <div className="current-song-duration w-10 shrink-0 text-right">
         {currentSongPosition.minutes}:{currentSongPosition.seconds}
       </div>
-      <div className="seek-bar relative flex h-fit w-4/5 items-center rounded-md">
+      <div className="seek-bar relative flex h-fit min-w-0 flex-1 items-center">
         <SeekBarSlider
           id="seek-bar-slider"
           name="seek-bar-slider"
           onSeek={(currentPosition) => setSongPos(currentPosition)}
         />
       </div>
-      <div className="full-song-duration w-16 text-center text-sm font-light">
+      <div className="full-song-duration w-10 shrink-0 text-left">
         {preferences?.showSongRemainingTime ? '-' : ''}
         {songDuration.minutes}:{songDuration.seconds}
       </div>

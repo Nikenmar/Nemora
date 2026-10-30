@@ -13,19 +13,19 @@ const SongAdditionalInfoContainer = (props: Props) => {
   const [isDataVisible, setIsDataVisible] = useState(false);
 
   return (
-    <div className="other-cards appear-from-bottom mr-4 mt-4 w-full max-w-full rounded-xl bg-background-color-2/70 p-4 backdrop-blur-sm dark:bg-dark-background-color-2/70 dark:text-font-color-white">
+    <div className="other-cards appear-from-bottom mr-4 mt-4 w-full max-w-full rounded-xl bg-surface-2/70 p-4 backdrop-blur-sm ">
       <label
         htmlFor="songAdditionalInfo"
-        className="title-container flex cursor-pointer items-center justify-between font-medium text-font-color-highlight dark:text-dark-font-color-highlight"
+        className="title-container flex cursor-pointer items-center justify-between font-medium text-echo"
       >
         <div className="flex items-center">
-          <span className="material-icons-round-outlined mr-2 text-2xl">info</span>{' '}
+          <span className="ms-icon mr-2 text-2xl">info</span>{' '}
           {t('songInfoPage.additionalSongInfo')}
         </div>
         <div className="flex items-center">
           <Button
             id="songAdditionalInfo"
-            className="!m-0 !border-0 !p-0 outline-1 outline-offset-1 hover:bg-background-color-1/50 focus-visible:!outline hover:dark:bg-dark-background-color-1/50"
+            className="!m-0 !border-0 !p-0 outline-1 outline-offset-1 hover:bg-canvas/50 focus-visible:!outline"
             iconClassName="!leading-none !text-3xl"
             iconName={isDataVisible ? 'arrow_drop_up' : 'arrow_drop_down'}
             tooltipLabel={t(`common.${isDataVisible ? 'hideSuggestion' : 'showSuggestion'}`)}

@@ -156,13 +156,13 @@ const MusicFolderInfoPage = () => {
       }}
     >
       <>
-        <div className="title-container mb-8 mt-2 flex items-center justify-between pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-8 mt-2 flex items-center justify-between pr-4 text-page font-semibold text-ink">
           <div className="container flex">
             '{folderName}' {t('common.folder_one')}
-            <div className="other-stats-container ml-12 flex items-center text-xs text-font-color-black dark:text-font-color-white">
+            <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
               {isMultipleSelectionEnabled &&
               multipleSelectionsData.multipleSelections.length > 0 ? (
-                <div className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                <div className="text-sm text-echo">
                   {t('common.selectionWithCount', {
                     count: multipleSelectionsData.multipleSelections.length
                   })}

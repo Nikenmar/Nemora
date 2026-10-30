@@ -32,11 +32,11 @@ const DuelCard = (props: Props) => {
       role="button"
       tabIndex={isDisabled ? -1 : 0}
       aria-disabled={isDisabled}
-      className={`duel-card group relative flex w-56 cursor-pointer flex-col items-center rounded-xl border-2 bg-background-color-2/75 p-4 transition-colors hover:border-font-color-highlight/60 dark:bg-dark-background-color-2/75 dark:hover:border-dark-font-color-highlight/60 ${
+      className={`duel-card group relative flex w-56 cursor-pointer flex-col items-center rounded-xl border-2 bg-surface-2/75 p-4 transition-colors hover:border-echo/60 ${
         isDisabled ? 'cursor-default' : ''
       } ${
         showResult && isWinner
-          ? 'border-font-color-highlight dark:border-dark-font-color-highlight'
+          ? 'border-echo'
           : 'border-transparent'
       } ${showResult && !isWinner ? 'opacity-70' : ''}`}
       onClick={() => {
@@ -55,14 +55,14 @@ const DuelCard = (props: Props) => {
           type="button"
           tabIndex={-1}
           disabled={isDisabled}
-          className="preview-btn absolute bottom-2 right-2 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-background-color-1/80 text-font-color-black opacity-0 backdrop-blur-md transition-opacity hover:bg-background-color-1 group-hover:opacity-100 dark:bg-dark-background-color-1/80 dark:text-font-color-white dark:hover:bg-dark-background-color-1"
+          className="preview-btn absolute bottom-2 right-2 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-canvas/80 text-ink opacity-0 backdrop-blur-md transition-opacity hover:bg-canvas group-hover:opacity-100 "
           title={t('eloDuels.preview')}
           onClick={(e) => {
             e.stopPropagation();
             if (!isDisabled) onPreviewToggle();
           }}
         >
-          <span className="material-icons-round text-xl">
+          <span className="ms-icon text-xl">
             {isPreviewing ? 'pause' : 'play_arrow'}
           </span>
         </button>
@@ -85,7 +85,7 @@ const DuelCard = (props: Props) => {
         {showResult && delta !== undefined && (
           <span
             className={`text-lg font-semibold ${
-              delta >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+              delta >= 0 ? 'text-success' : 'text-danger'
             }`}
           >
             {delta >= 0 ? `+${Math.round(delta)}` : Math.round(delta)}

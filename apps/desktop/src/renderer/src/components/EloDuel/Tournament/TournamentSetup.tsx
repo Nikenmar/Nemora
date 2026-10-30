@@ -14,7 +14,7 @@ const TournamentSetup = ({ trackCount, isBusy, onStart }: TournamentSetupProps) 
   const { t } = useTranslation();
 
   return (
-    <section className="rounded-xl bg-background-color-2/60 p-5 dark:bg-dark-background-color-2/60">
+    <section className="rounded-xl bg-surface-2/60 p-5">
       <h3 className="text-lg font-medium">{t('duels.tournament.newTournament')}</h3>
       <p className="mt-1 text-sm opacity-70">{t('duels.tournament.description')}</p>
       <div className="mt-4 flex flex-wrap gap-3">

@@ -40,7 +40,7 @@ const RefreshRediscoverPrompt = () => {
 
   return (
     <>
-      <div className="title-container mb-4 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container mb-4 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {t('playlistsPage.refreshRediscoverTitle')}
       </div>
       <div className="description mb-2">{t('playlistsPage.refreshRediscoverHint')}</div>

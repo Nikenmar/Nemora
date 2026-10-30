@@ -299,8 +299,8 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
       style={{ height: SUGGESTION_ROW_HEIGHT }}
       className={`flex cursor-pointer items-center gap-3 px-3 transition-colors duration-100 motion-reduce:transition-none ${
         index === activeIndex
-          ? 'bg-font-color-highlight/12 dark:bg-dark-font-color-highlight/12'
-          : 'dark:hover:bg-dark-background-color-3/12 hover:bg-background-color-2/70'
+          ? 'bg-echo/12'
+          : 'hover:bg-surface-2/70'
       }`}
       onMouseEnter={() => setActiveIndex(index)}
       onMouseDown={(event) => {
@@ -316,8 +316,8 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           className="h-9 w-9 flex-shrink-0 rounded-md object-cover"
         />
       ) : (
-        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-seekbar-track-background-color dark:bg-dark-seekbar-track-background-color">
-          <span className="material-icons-round text-base !leading-none opacity-45">
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-line">
+          <span className="ms-icon text-base !leading-none opacity-45">
             music_note
           </span>
         </span>
@@ -337,16 +337,16 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         ref={inputBoxRef}
-        className={`flex flex-shrink-0 items-center gap-2 rounded-xl border-2 bg-background-color-2/60 px-3 transition-colors duration-200 focus-within:border-font-color-highlight motion-reduce:transition-none dark:bg-dark-background-color-2/60 dark:focus-within:border-dark-font-color-highlight ${
+        className={`flex flex-shrink-0 items-center gap-2 rounded-xl border-2 bg-surface-2/60 px-3 transition-colors duration-200 focus-within:border-echo motion-reduce:transition-none ${
           selectedCandidate
-            ? 'border-font-color-highlight/60 dark:border-dark-font-color-highlight/60'
+            ? 'border-echo/60'
             : 'border-transparent'
         }`}
       >
         <span
-          className={`material-icons-round text-xl !leading-none ${
+          className={`ms-icon text-xl !leading-none ${
             selectedCandidate
-              ? 'text-font-color-highlight dark:text-dark-font-color-highlight'
+              ? 'text-echo'
               : 'opacity-40'
           }`}
           aria-hidden="true"
@@ -389,7 +389,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
 
         {isBusy && (
           <span
-            className="material-icons-round animate-spin text-base !leading-none opacity-40 motion-reduce:animate-none"
+            className="ms-icon animate-spin text-base !leading-none opacity-40 motion-reduce:animate-none"
             aria-hidden="true"
           >
             progress_activity
@@ -402,9 +402,9 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
             onClick={clearSelection}
             aria-label={t('songGuessr.clearGuess')}
             title={t('songGuessr.clearGuess')}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full opacity-45 transition-opacity hover:bg-background-color-3 hover:opacity-100 motion-reduce:transition-none dark:hover:bg-dark-background-color-3/15"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full opacity-45 transition-opacity hover:bg-accent hover:opacity-100 motion-reduce:transition-none"
           >
-            <span className="material-icons-round text-base !leading-none">close</span>
+            <span className="ms-icon text-base !leading-none">close</span>
           </button>
         )}
       </div>
@@ -414,7 +414,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           type="button"
           onClick={submit}
           disabled={disabled || !selectedCandidate}
-          className="h-10 flex-1 rounded-xl border-[3px] border-font-color-highlight/60 bg-background-color-2/25 text-sm font-medium transition-[border-color,background-color,opacity] duration-200 ease-in-out focus-visible:!border-font-color-highlight-2 hover:enabled:border-font-color-highlight hover:enabled:bg-background-color-2/50 disabled:opacity-35 motion-reduce:transition-none dark:border-dark-font-color-highlight/60 dark:bg-dark-background-color-2/25 dark:focus-visible:!border-dark-font-color-highlight-2 dark:hover:enabled:border-dark-font-color-highlight dark:hover:enabled:bg-dark-background-color-2/50"
+          className="h-10 flex-1 rounded-xl border-[3px] border-echo/60 bg-surface-2/25 text-sm font-medium transition-[border-color,background-color,opacity] duration-200 ease-in-out focus-visible:!border-echo hover:enabled:border-echo hover:enabled:bg-surface-2/50 disabled:opacity-35 motion-reduce:transition-none "
         >
           {t('songGuessr.submitGuess')}
         </button>
@@ -423,9 +423,9 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           onClick={onSkip}
           disabled={disabled}
           title={t('songGuessr.skipHint', { count: attemptsLeft })}
-          className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-background-color-2 bg-background-color-2/25 px-4 text-sm font-medium transition-[border-color,background-color,opacity] duration-200 ease-in-out focus-visible:!border-font-color-highlight-2 hover:enabled:border-background-color-3 hover:enabled:bg-background-color-2/50 disabled:opacity-35 motion-reduce:transition-none dark:border-dark-background-color-2 dark:bg-dark-background-color-2/25 dark:focus-visible:!border-dark-font-color-highlight-2 dark:hover:enabled:border-dark-background-color-3 dark:hover:enabled:bg-dark-background-color-2/50"
+          className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-surface-2 bg-surface-2/25 px-4 text-sm font-medium transition-[border-color,background-color,opacity] duration-200 ease-in-out focus-visible:!border-echo hover:enabled:border-accent hover:enabled:bg-surface-2/50 disabled:opacity-35 motion-reduce:transition-none "
         >
-          <span className="material-icons-round text-base !leading-none" aria-hidden="true">
+          <span className="ms-icon text-base !leading-none" aria-hidden="true">
             skip_next
           </span>
           {t('songGuessr.skip')}
@@ -450,7 +450,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           role={hasSuggestions ? 'listbox' : undefined}
           aria-label={hasSuggestions ? t('songGuessr.guessInputLabel') : undefined}
           style={suggestionBox}
-          className="fixed z-10 overflow-hidden rounded-xl border border-background-color-3 bg-background-color-1 py-1 shadow-2xl dark:border-dark-background-color-3 dark:bg-dark-background-color-2"
+          className="fixed z-10 overflow-hidden rounded-xl border border-accent bg-canvas py-1 shadow-2xl "
         >
           {hasSuggestions ? (
             <Virtuoso

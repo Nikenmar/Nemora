@@ -24,7 +24,7 @@ const GenreImgAndInfoContainer = (props: Props) => {
   return (
     <>
       {genreData && genreData.genreId && (
-        <div className="genre-img-and-info-container flex flex-row items-center pb-8 text-font-color-black dark:text-font-color-white">
+        <div className="genre-img-and-info-container flex flex-row items-center pb-8 text-ink">
           <Img
             src={genreData.artworkPaths.artworkPath}
             className="mr-8 aspect-square max-w-[14rem] rounded-lg"
@@ -34,7 +34,7 @@ const GenreImgAndInfoContainer = (props: Props) => {
             <div className="font-semibold uppercase tracking-wider opacity-50">
               {t('common.genre_one')}
             </div>
-            <div className="genre-title h-fit max-w-[80%] overflow-hidden text-ellipsis whitespace-nowrap pb-2 text-6xl text-font-color-highlight dark:text-dark-font-color-highlight">
+            <div className="genre-title h-fit max-w-[80%] overflow-hidden text-ellipsis whitespace-nowrap pb-2 text-6xl text-echo">
               {genreData.name}
             </div>
             <div className="genre-no-of-songs">

@@ -33,12 +33,12 @@ const SongAlbumInput = (props: Props) => {
   return (
     <div className="tag-input flex min-w-[10rem] max-w-2xl flex-col">
       <label htmlFor="songAlbumNameId3Tag">{t('songTagsEditingPage.albumName')}</label>
-      <div className="mt-2 w-[90%] rounded-xl border-2 border-background-color-2 p-2 dark:border-dark-background-color-2">
-        <div className="album-names-container p-2 empty:py-2 empty:after:block empty:after:w-full empty:after:text-center empty:after:text-[#ccc] empty:after:content-['No_album_selected_for_this_song.'] dark:empty:after:text-[#ccc]">
+      <div className="mt-2 w-[90%] rounded-xl border-2 border-surface-2 p-2">
+        <div className="album-names-container p-2 empty:py-2 empty:after:block empty:after:w-full empty:after:text-center empty:after:text-ink-dim empty:after:content-['No_album_selected_for_this_song.']">
           {songAlbum && (
             <div
               key={songAlbum.title}
-              className="flex items-center justify-between rounded-lg bg-background-color-3 py-1 pl-2 pr-4 text-center text-font-color-black dark:bg-dark-background-color-3 dark:text-font-color-black"
+              className="flex items-center justify-between rounded-lg bg-accent py-1 pl-2 pr-4 text-center text-on-accent "
             >
               <div className="flex items-center">
                 <Img
@@ -73,7 +73,7 @@ const SongAlbumInput = (props: Props) => {
               </div>
               <Button
                 iconName="close"
-                iconClassName="leading-none dark:!text-font-color-black"
+                iconClassName="leading-none"
                 className="float-right !mr-0 !border-0 !p-1 outline-1 outline-offset-1 focus-visible:!outline"
                 clickHandler={() => {
                   updateSongInfo((prevData) => {
@@ -90,7 +90,7 @@ const SongAlbumInput = (props: Props) => {
         <input
           type="search"
           id="songAlbumNameId3Tag"
-          className="mt-4 w-full rounded-xl border-2 border-transparent bg-background-color-2 p-2 transition-colors focus:border-font-color-highlight dark:bg-dark-background-color-2 dark:focus:border-dark-font-color-highlight"
+          className="mt-4 w-full rounded-xl border-2 border-transparent bg-surface-2 p-2 transition-colors focus:border-echo "
           placeholder={t('songTagsEditingPage.searchForAlbums')}
           value={albumKeyword}
           onChange={(e) => {
@@ -100,7 +100,7 @@ const SongAlbumInput = (props: Props) => {
           onKeyDown={(e) => e.stopPropagation()}
         />
         {albumResults.length > 0 && (
-          <div className="album-results-container mt-4 max-h-60 overflow-y-auto rounded-xl border-2 border-background-color-2 dark:border-dark-background-color-2">
+          <div className="album-results-container mt-4 max-h-60 overflow-y-auto rounded-xl border-2 border-surface-2">
             {albumResults.map((x) => (
               <SongAlbumInputResult
                 key={x.albumId}
@@ -114,7 +114,7 @@ const SongAlbumInput = (props: Props) => {
         {albumKeyword.trim() && (
           <Button
             label={t('songTagsEditingPage.addNewAlbum', { name: albumKeyword })}
-            className="mt-4 !w-full !bg-background-color-2 hover:!bg-background-color-3 hover:text-font-color-black dark:!bg-dark-background-color-2 hover:dark:!bg-dark-background-color-3 hover:dark:text-font-color-black"
+            className="mt-4 !w-full !bg-surface-2 hover:!bg-accent hover:text-ink "
             clickHandler={() => {
               updateSongInfo((prevData) => {
                 if (

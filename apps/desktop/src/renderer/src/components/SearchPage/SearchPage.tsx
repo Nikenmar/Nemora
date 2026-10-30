@@ -147,9 +147,9 @@ const SearchPage = () => {
             shrank the field. The height is stated here instead, and everything
             else about the bar is exactly as it was.
           */}
-          <div className="search-bar-container flex h-[3.125rem] w-1/2 min-w-[25rem] max-w-xl items-center rounded-3xl bg-background-color-2 px-4 dark:bg-dark-background-color-2">
+          <div className="search-bar-container flex h-[3.125rem] w-1/2 min-w-[25rem] max-w-xl items-center rounded-3xl bg-surface-2 px-4">
             <span
-              className="material-icons-round-outlined mr-3 flex-shrink-0 text-xl !leading-none text-font-color-highlight dark:text-dark-font-color-highlight"
+              className="ms-icon mr-3 flex-shrink-0 text-xl !leading-none text-echo"
               aria-hidden="true"
             >
               search
@@ -161,7 +161,7 @@ const SearchPage = () => {
               id="searchBar"
               /* The webkit cancel button is unstyled browser chrome — a grey
                  cross that ignores the theme. Ours sits in its place. */
-              className="h-full w-full min-w-0 border-2 border-[transparent] bg-[transparent] text-font-color-black outline-none placeholder:text-font-color-highlight dark:text-font-color-white dark:placeholder:text-dark-font-color-highlight [&::-webkit-search-cancel-button]:hidden"
+              className="h-full w-full min-w-0 border-2 border-[transparent] bg-[transparent] text-ink outline-none placeholder:text-echo [&::-webkit-search-cancel-button]:hidden"
               aria-label="Search"
               placeholder={t('searchPage.searchForAnything')}
               value={searchInput}
@@ -193,14 +193,14 @@ const SearchPage = () => {
                 }}
                 aria-label={t('searchPage.clearSearch')}
                 title={t('searchPage.clearSearch')}
-                className="ml-2 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-font-color-highlight opacity-60 transition-[background-color,opacity] duration-200 hover:bg-background-color-3 hover:opacity-100 motion-reduce:transition-none dark:text-dark-font-color-highlight dark:hover:bg-dark-background-color-3/15"
+                className="ml-2 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-echo opacity-60 transition-[background-color,opacity] duration-200 hover:bg-accent hover:opacity-100 motion-reduce:transition-none "
               >
-                <span className="material-icons-round text-base !leading-none">close</span>
+                <span className="ms-icon text-base !leading-none">close</span>
               </button>
             )}
           </div>
           <span
-            className="material-icons-round-outlined ml-4 flex-shrink-0 cursor-help text-2xl text-font-color-highlight dark:text-dark-font-color-highlight"
+            className="ms-icon ml-4 flex-shrink-0 cursor-help text-2xl text-echo"
             title={t('searchPage.separateKeywords')}
           >
             help

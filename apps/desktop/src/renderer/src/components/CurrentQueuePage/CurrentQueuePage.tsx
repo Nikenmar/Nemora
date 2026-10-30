@@ -259,7 +259,7 @@ const CurrentQueuePage = () => {
       }}
     >
       <>
-        <div className="title-container mb-4 mt-2 flex items-center justify-between pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-4 mt-2 flex items-center justify-between pr-4 text-page font-semibold text-ink">
           {t('currentQueuePage.queue')}
           <div className="other-controls-container float-right flex">
             <Button
@@ -337,7 +337,7 @@ const CurrentQueuePage = () => {
           </div>
         </div>
         {currentQueue.length > 0 && (
-          <div className="queue-info-container mb-6 ml-8 flex items-center text-font-color-black dark:text-font-color-white">
+          <div className="queue-info-container mb-6 ml-8 flex items-center text-ink">
             <div className="cover-img-container mr-8">
               <Img
                 className={`h-20 w-20 rounded-md shadow-lg ${
@@ -476,7 +476,7 @@ const CurrentQueuePage = () => {
           )}
         </div>
         {currentQueue.length === 0 && (
-          <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-2xl text-[#ccc]">
+          <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-2xl text-ink-dim">
             <Img src={NoSongsImage} className="mb-8 w-60" alt="" /> {t('currentQueuePage.empty')}
           </div>
         )}

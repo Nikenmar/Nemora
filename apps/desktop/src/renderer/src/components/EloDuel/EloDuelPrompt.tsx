@@ -276,21 +276,21 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
 
   return (
     <>
-      <div className="title-container relative mb-6 mt-1 flex items-center justify-center px-12 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container relative mb-6 mt-1 flex items-center justify-center px-12 text-title font-semibold text-ink">
         {isTournamentOpen ? t('duels.tournament.title') : t('eloDuels.promptTitle')}
         <Button
           iconName={isTournamentOpen ? 'swords' : 'trophy'}
           tooltipLabel={
             isTournamentOpen ? t('duels.tournament.backToDuel') : t('duels.tournament.open')
           }
-          className="absolute left-0 top-0 !m-0 h-8 w-8 !rounded-md !border-0 !bg-transparent !p-0 opacity-65 hover:!bg-background-color-2 hover:opacity-100 dark:hover:!bg-dark-background-color-2"
+          className="absolute left-0 top-0 !m-0 h-8 w-8 !rounded-md !border-0 !bg-transparent !p-0 opacity-65 hover:!bg-surface-2 hover:opacity-100"
           clickHandler={() => setIsTournamentOpen((open) => !open)}
         />
         {onMinimize && (
           <Button
             iconName="minimize"
             tooltipLabel={t('eloDuels.minimize')}
-            className="absolute right-0 top-0 !m-0 h-8 w-8 !rounded-md !border-0 !bg-transparent !p-0 opacity-65 hover:!bg-background-color-2 hover:opacity-100 dark:hover:!bg-dark-background-color-2"
+            className="absolute right-0 top-0 !m-0 h-8 w-8 !rounded-md !border-0 !bg-transparent !p-0 opacity-65 hover:!bg-surface-2 hover:opacity-100"
             clickHandler={minimizePrompt}
           />
         )}
@@ -369,7 +369,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
                 iconName="balance"
                 tooltipLabel={t('eloDuels.tooCloseHint')}
                 isDisabled={phase !== 'voting'}
-                className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                className="skip-duel-btn !m-0 min-h-11 !bg-accent px-4 !text-on-accent hover:border-accent "
                 clickHandler={() => skipDuel('tooClose')}
               />
               <Button
@@ -377,7 +377,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
                 iconName="call_split"
                 tooltipLabel={t('eloDuels.tooDifferentHint')}
                 isDisabled={phase !== 'voting'}
-                className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                className="skip-duel-btn !m-0 min-h-11 !bg-accent px-4 !text-on-accent hover:border-accent "
                 clickHandler={() => skipDuel('tooDifferent')}
               />
               <Button
@@ -385,7 +385,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
                 iconName="help_outline"
                 tooltipLabel={t('eloDuels.cantDecideHint')}
                 isDisabled={phase !== 'voting'}
-                className="skip-duel-btn !m-0 min-h-11 !bg-background-color-3 px-4 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                className="skip-duel-btn !m-0 min-h-11 !bg-accent px-4 !text-on-accent hover:border-accent "
                 clickHandler={() => skipDuel('cantDecide')}
               />
             </div>
@@ -394,14 +394,14 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
             <Button
               label={t('eloDuels.nextDuel')}
               iconName="bolt"
-              className="next-duel-btn !bg-background-color-3 px-6 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+              className="next-duel-btn !bg-accent px-6 !text-on-accent hover:border-accent "
               clickHandler={advanceAfterResult}
             />
           )}
           {!onMinimize && (
             <Button
               label={t('eloDuels.close')}
-              className="close-duel-btn !bg-background-color-3 px-6 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+              className="close-duel-btn !bg-accent px-6 !text-on-accent hover:border-accent "
               clickHandler={closePrompt}
             />
           )}

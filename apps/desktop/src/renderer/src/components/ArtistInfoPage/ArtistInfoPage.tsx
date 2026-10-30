@@ -234,7 +234,7 @@ const ArtistInfoPage = () => {
               songs={album.songs}
               title={album.title}
               year={album.year}
-              className={bodyBackgroundImage ? '[&_:not(.icon)]:!text-font-color-white' : ''}
+              className={bodyBackgroundImage ? '[&_:not(.icon)]:!text-on-media' : ''}
               selectAllHandler={selectAllHandlerForAlbums}
             />
           );
@@ -310,7 +310,7 @@ const ArtistInfoPage = () => {
                     label: t('common.saveArtwork'),
                     class: 'save',
                     iconName: 'image',
-                    iconClassName: 'material-icons-round-outlined',
+                    iconClassName: 'ms-icon',
                     handlerFunction: () => {
                       const artworkPath =
                         artistData?.onlineArtworkPaths?.picture_xl ||
@@ -327,7 +327,7 @@ const ArtistInfoPage = () => {
             }
           />
           <Button
-            className="absolute -bottom-5 !m-0 flex rounded-full !border-0 bg-background-color-1 !p-3 text-font-color-highlight shadow-xl outline-1 -outline-offset-[6px] hover:bg-background-color-1 focus-visible:!outline dark:bg-dark-background-color-2 dark:hover:bg-dark-background-color-2"
+            className="absolute -bottom-5 !m-0 flex rounded-full !border-0 bg-canvas !p-3 text-echo shadow-xl outline-1 -outline-offset-[6px] hover:bg-canvas focus-visible:!outline "
             tooltipLabel={t(
               `artistInfoPage.${artistData?.isAFavorite ? `dislikeArtist` : `likeArtist`}`,
               {
@@ -337,8 +337,8 @@ const ArtistInfoPage = () => {
             iconName="favorite"
             iconClassName={`!text-4xl !leading-none ${
               artistData?.isAFavorite
-                ? 'material-icons-round'
-                : 'material-icons-round material-icons-round-outlined'
+                ? 'ms-icon ms-icon-filled'
+                : 'ms-icon'
             }`}
             clickHandler={() => {
               if (artistData)
@@ -363,12 +363,12 @@ const ArtistInfoPage = () => {
         <div
           className={`artist-info-container relative ${
             bodyBackgroundImage
-              ? 'text-font-color-white'
-              : 'text-font-color-black dark:text-font-color-white'
+              ? 'text-on-media'
+              : 'text-ink'
           } [&>*]:z-10`}
         >
           <div
-            className="artist-name mb-2 text-5xl text-font-color-highlight dark:text-dark-font-color-highlight"
+            className="artist-name mb-2 text-5xl text-echo"
             // style={
             //   fontColor
             //     ? {
@@ -412,23 +412,23 @@ const ArtistInfoPage = () => {
             <TitleContainer
               key="appearsInAlbums"
               title={t('artistInfoPage.appearsInAlbums')}
-              titleClassName="!text-2xl text-font-color-black dark:text-font-color-white"
+              titleClassName="!text-2xl text-ink"
               className={`title-container ${
                 bodyBackgroundImage
-                  ? 'text-font-color-white'
-                  : 'text-font-color-black dark:text-font-color-white'
+                  ? 'text-on-media'
+                  : 'text-ink'
               } mb-4 mt-1 text-2xl`}
               otherItems={[
                 isMultipleSelectionEnabled &&
                 multipleSelectionsData.selectionType === 'album' &&
                 multipleSelectionsData.multipleSelections.length > 0 ? (
-                  <p className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <p className="text-sm text-echo">
                     {t('common.selectionWithCount', {
                       count: multipleSelectionsData.multipleSelections.length
                     })}
                   </p>
                 ) : (
-                  <p className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <p className="text-sm text-echo">
                     {t('common.albumWithCount', { count: albums.length })}{' '}
                     {albums.length > noOfVisibleAlbums &&
                       !isAllAlbumsVisible &&
@@ -469,14 +469,14 @@ const ArtistInfoPage = () => {
             <TitleContainer
               key="appearsInSongs"
               title={t('artistInfoPage.appearsInSongs')}
-              titleClassName="!text-2xl text-font-color-black dark:text-font-color-white"
+              titleClassName="!text-2xl text-ink"
               className={`title-container ${
                 bodyBackgroundImage
-                  ? 'text-font-color-white'
-                  : 'text-font-color-black dark:text-font-color-white'
+                  ? 'text-on-media'
+                  : 'text-ink'
               } mb-4 mt-1 pr-4 text-2xl`}
               otherItems={[
-                <p className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                <p className="text-sm text-echo">
                   {isMultipleSelectionEnabled &&
                   multipleSelectionsData.selectionType === 'songs' &&
                   multipleSelectionsData.multipleSelections.length > 0
@@ -494,7 +494,7 @@ const ArtistInfoPage = () => {
                 {
                   tooltipLabel: t('common.moreOptions'),
                   className:
-                    'more-options-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0 !bg-background-color-1/40 dark:!bg-dark-background-color-1/40',
+                    'more-options-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0 !bg-canvas/40',
                   iconName: 'more_horiz',
                   clickHandler: (e) => {
                     e.stopPropagation();
@@ -549,7 +549,7 @@ const ArtistInfoPage = () => {
                   label: t('common.showAll'),
                   iconName: 'apps',
                   className:
-                    'show-all-btn text-sm font-normal !bg-background-color-1/40 dark:!bg-dark-background-color-1/40',
+                    'show-all-btn text-sm font-normal !bg-canvas/40',
                   clickHandler: () => setIsAllSongsVisible(true),
                   isVisible: songs.length > 5 && !isAllSongsVisible
                 }

@@ -127,7 +127,7 @@ const SongLyricsEditorInput = (props: Props) => {
               id: `fetchUnsyncedLyricsFailed`,
               duration: 5000,
               content: <span>Failed to fetch un-synced lyrics.</span>,
-              icon: <span className="material-icons-round icon">warning</span>
+              icon: <span className="ms-icon icon">warning</span>
             }
           ]);
           console.error(err);
@@ -217,32 +217,32 @@ const SongLyricsEditorInput = (props: Props) => {
         {/* <label htmlFor="song-lyrics-id3-tag">Lyrics</label> */}
         <div className="flex items-center">
           <Button
-            className={`mr-3 flex w-fit cursor-pointer list-none items-center !border-0 px-4 py-2 text-font-color-black outline-1 outline-offset-1 transition-[background,color] duration-200 focus-visible:!outline ${
+            className={`mr-3 flex w-fit cursor-pointer list-none items-center !border-0 px-4 py-2 text-ink outline-1 outline-offset-1 transition-[background,color] duration-200 focus-visible:!outline ${
               currentLyricsType === 'synced'
-                ? 'bg-background-color-3 dark:bg-dark-background-color-3 dark:!text-font-color-black'
-                : 'bg-background-color-2 hover:bg-background-color-3 dark:bg-dark-background-color-2 dark:text-font-color-white dark:hover:bg-dark-background-color-3 dark:hover:!text-font-color-black'
+                ? 'bg-accent '
+                : 'bg-surface-2 hover:bg-accent '
             }`}
             clickHandler={() => setCurrentLyricsType('synced')}
             label={t('common.syncedLyrics')}
             iconName="timer"
-            iconClassName="material-icons-round-outlined"
+            iconClassName="ms-icon"
           />
           <Button
-            className={`mr-3 flex w-fit cursor-pointer list-none items-center !border-0 px-4 py-2 text-font-color-black outline-1 outline-offset-1 transition-[background,color] duration-200 focus-visible:!outline ${
+            className={`mr-3 flex w-fit cursor-pointer list-none items-center !border-0 px-4 py-2 text-ink outline-1 outline-offset-1 transition-[background,color] duration-200 focus-visible:!outline ${
               currentLyricsType === 'unsynced'
-                ? 'bg-background-color-3 dark:bg-dark-background-color-3 dark:!text-font-color-black'
-                : 'bg-background-color-2 hover:bg-background-color-3 dark:bg-dark-background-color-2 dark:text-font-color-white dark:hover:bg-dark-background-color-3 dark:hover:!text-font-color-black'
+                ? 'bg-accent '
+                : 'bg-surface-2 hover:bg-accent '
             }`}
             clickHandler={() => setCurrentLyricsType('unsynced')}
             label={t('common.unsyncedLyrics')}
             iconName="timer_off"
-            iconClassName="material-icons-round-outlined"
+            iconClassName="ms-icon"
           />
         </div>
 
         <textarea
           id="song-lyrics-id3-tag"
-          className="mt-4 max-h-80 min-h-[12rem] rounded-2xl border-[0.15rem] border-background-color-2 bg-background-color-2 p-4 transition-colors focus:border-font-color-highlight dark:border-dark-background-color-2 dark:bg-dark-background-color-2 dark:focus:border-dark-font-color-highlight"
+          className="mt-4 max-h-80 min-h-[12rem] rounded-2xl border-[0.15rem] border-surface-2 bg-surface-2 p-4 transition-colors focus:border-echo "
           name="lyrics"
           placeholder={t('common.lyrics')}
           value={
@@ -269,9 +269,9 @@ const SongLyricsEditorInput = (props: Props) => {
         {currentLyricsType === 'synced' && (
           <div className="ml-2 mt-1 flex items-center">
             <span
-              className={`material-icons-round-outlined mr-2 cursor-pointer !text-lg ${
+              className={`ms-icon mr-2 cursor-pointer !text-lg ${
                 isSynchronizedLyricsEnhancedSynced &&
-                'text-font-color-highlight-2 dark:text-dark-font-color-highlight-2'
+                'text-echo'
               }`}
               title={
                 synchronizedLyrics
@@ -298,14 +298,14 @@ const SongLyricsEditorInput = (props: Props) => {
         )}
 
         {synchronizedLyrics && !isSynchronizedLyricsSynced && (
-          <p className="ml-2 mt-2 flex items-center text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-            <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
+          <p className="ml-2 mt-2 flex items-center text-sm font-medium text-echo">
+            <span className="ms-icon mr-2 text-xl">error</span>{' '}
             {t('songTagsEditingPage.avoidUnsyncedOnSyncedLyricsTab')}
           </p>
         )}
         {unsynchronizedLyrics && isUnsynchronizedLyricsSynced && (
-          <p className="ml-2 mt-2 flex text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-            <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
+          <p className="ml-2 mt-2 flex text-sm font-medium text-echo">
+            <span className="ms-icon mr-2 text-xl">error</span>{' '}
             {t('songTagsEditingPage.avoidSyncedOnUnsyncedLyricsTab')}
           </p>
         )}

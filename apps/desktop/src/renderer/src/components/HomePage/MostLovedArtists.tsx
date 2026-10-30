@@ -52,7 +52,7 @@ const MostLovedArtists = (props: Props) => {
           }}
         >
           <>
-            <div className="title-container mb-4 mt-1 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+            <div className="title-container mb-4 mt-1 text-title font-semibold text-ink">
               {t('homePage.mostLovedArtists')}
             </div>
             <div

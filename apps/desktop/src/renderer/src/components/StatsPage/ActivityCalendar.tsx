@@ -124,12 +124,12 @@ const ActivityCalendar = (props: Props) => {
 
   return (
     <div
-      className={`appear-from-bottom w-full max-w-full rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70 ${className ?? ''}`}
+      className={`appear-from-bottom w-full max-w-full rounded-md bg-surface-2/70 p-4 backdrop-blur-md ${className ?? ''}`}
     >
       <div className="flex w-full gap-2">
         {showWeekdays && (
           <div
-            className="shrink-0 pt-[18px] text-right text-[10px] leading-none text-font-color/50 dark:text-font-color-white/50"
+            className="shrink-0 pt-[18px] text-right text-[10px] leading-none text-ink/50"
             style={{ width: WEEKDAY_GUTTER_PX - 8 }}
           >
             {weekdayLabels.map((label, row) => (
@@ -146,7 +146,7 @@ const ActivityCalendar = (props: Props) => {
 
         <div ref={gridRef} className="min-w-0 grow">
           <div
-            className="grid text-[10px] leading-none text-font-color/60 dark:text-font-color-white/60"
+            className="grid text-[10px] leading-none text-ink/60"
             // Leftover width is split between both sides instead of piling up on the right.
             style={{ gridTemplateColumns, columnGap: GAP_PX, justifyContent: 'center' }}
           >
@@ -173,8 +173,8 @@ const ActivityCalendar = (props: Props) => {
                   key={day.date}
                   className={`rounded-[3px] transition-transform duration-150 hover:scale-125 ${
                     day.listens === 0
-                      ? 'bg-seekbar-track-background-color/30 dark:bg-dark-seekbar-track-background-color/40'
-                      : 'bg-font-color-highlight dark:bg-dark-font-color-highlight'
+                      ? 'bg-line/30'
+                      : 'bg-echo'
                   }`}
                   style={{
                     width: cellSize,
@@ -197,13 +197,13 @@ const ActivityCalendar = (props: Props) => {
         <span className="flex shrink-0 items-center gap-1">
           {t('statsPage.calendarLess')}
           <span
-            className="rounded-[3px] bg-seekbar-track-background-color/30 dark:bg-dark-seekbar-track-background-color/40"
+            className="rounded-[3px] bg-line/30"
             style={{ width: 10, height: 10 }}
           />
           {OPACITY_STEPS.map((opacity) => (
             <span
               key={opacity}
-              className="rounded-[3px] bg-font-color-highlight dark:bg-dark-font-color-highlight"
+              className="rounded-[3px] bg-echo"
               style={{ width: 10, height: 10, opacity }}
             />
           ))}

@@ -67,7 +67,7 @@ const TierlistCard = ({ tierlist }: TierlistCardProps) => {
 
   return (
     <div
-      className="tierlist-card group relative flex aspect-square w-48 cursor-pointer flex-col overflow-hidden rounded-xl bg-background-color-2/70 shadow-md ring-1 ring-black/5 transition-shadow hover:shadow-xl hover:ring-2 hover:ring-font-color-highlight dark:bg-dark-background-color-2/70 dark:ring-white/10 dark:hover:ring-dark-font-color-highlight"
+      className="tierlist-card group relative flex aspect-square w-48 cursor-pointer flex-col overflow-hidden rounded-xl bg-surface-2/70 shadow-md ring-1 ring-shade/5 transition-shadow hover:shadow-xl hover:ring-2 hover:ring-echo "
       role="button"
       tabIndex={0}
       onClick={openEditor}
@@ -92,12 +92,12 @@ const TierlistCard = ({ tierlist }: TierlistCardProps) => {
       </div>
       <div className="info flex grow flex-col justify-between p-3">
         <div
-          className="name truncate text-base font-medium text-font-color-black dark:text-font-color-white"
+          className="name truncate text-base font-medium text-ink"
           title={tierlist.name}
         >
           {tierlist.name}
         </div>
-        <div className="meta flex items-center justify-between text-xs text-font-color-black/60 dark:text-font-color-white/60">
+        <div className="meta flex items-center justify-between text-xs text-ink/60">
           <span>
             {t('common.playlistWithCount', { count: tierlist.sourcePlaylistIds?.length || 0 })}
           </span>
@@ -105,7 +105,7 @@ const TierlistCard = ({ tierlist }: TierlistCardProps) => {
         </div>
       </div>
       <Button
-        className="delete-btn invisible absolute right-2 top-2 !mr-0 aspect-square !rounded-full !border-none !bg-black/55 !p-1 !text-white opacity-0 backdrop-blur-sm transition-[background,opacity] hover:!bg-font-color-crimson hover:!text-white group-hover:visible group-hover:opacity-100"
+        className="delete-btn invisible absolute right-2 top-2 !mr-0 aspect-square !rounded-full !border-none !bg-shade/55 !p-1 !text-on-media opacity-0 backdrop-blur-sm transition-[background,opacity] hover:!bg-danger hover:!text-on-media group-hover:visible group-hover:opacity-100"
         iconName="delete"
         tooltipLabel={t('tierlistsPage.deleteTierlist')}
         clickHandler={(e) => {

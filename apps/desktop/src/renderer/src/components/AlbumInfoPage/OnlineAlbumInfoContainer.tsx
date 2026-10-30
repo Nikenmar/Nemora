@@ -39,11 +39,11 @@ const OnlineAlbumInfoContainer = (props: Props) => {
         <>
           <TitleContainer
             title={t('albumInfoPage.unavailableTracks')}
-            titleClassName="!text-2xl text-font-color-black !font-normal dark:text-font-color-white"
+            titleClassName="!text-2xl text-ink !font-normal"
             className={`title-container ${
               bodyBackgroundImage
-                ? 'text-font-color-white'
-                : 'text-font-color-black dark:text-font-color-white'
+                ? 'text-on-media'
+                : 'text-ink'
             } mb-4 mt-1 pr-4 text-2xl`}
           />
           <div className="my-2 flex flex-wrap">{unAvailableAlbumTrackComponents}</div>

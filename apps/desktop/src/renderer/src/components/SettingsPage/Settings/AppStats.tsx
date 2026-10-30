@@ -104,11 +104,11 @@ const AppStats = () => {
 
         return (
           <span
-            className="flex flex-col items-center border-[3px] border-b-0 border-r-0 border-t-0 border-background-color-2 py-4 text-lg first:border-l-0 dark:border-dark-background-color-2"
+            className="flex flex-col items-center border-[3px] border-b-0 border-r-0 border-t-0 border-surface-2 py-4 text-lg first:border-l-0"
             title={`${value} ${statKey}`}
             key={`${value}-${statKey}`}
           >
-            <span className="text-xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+            <span className="text-section font-semibold text-ink">
               {valueRounder(value)}
             </span>
             <span className="lowercase opacity-75">{keyName}</span>
@@ -119,7 +119,7 @@ const AppStats = () => {
   );
 
   return (
-    <div className="mx-auto my-8 grid max-w-4xl grid-cols-5 rounded-lg border-[3px] border-background-color-2 dark:border-dark-background-color-2">
+    <div className="mx-auto my-8 grid max-w-4xl grid-cols-5 rounded-lg border-[3px] border-surface-2">
       {statComponents}
     </div>
   );

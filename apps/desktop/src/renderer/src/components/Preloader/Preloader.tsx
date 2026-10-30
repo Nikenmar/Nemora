@@ -58,8 +58,12 @@ const Preloader = () => {
   if (isHidden) return null;
 
   return (
-    <div className="preloader visible absolute z-40 flex h-full w-full items-center justify-center bg-background-color-1 opacity-100 transition-[visibility,opacity] dark:bg-dark-background-color-1">
-      <Img src={AppIcon} className="h-20 w-20 rounded-lg !opacity-100 shadow-2xl" loading="eager" />
+    <div className="preloader visible absolute z-40 flex h-full w-full items-center justify-center bg-canvas opacity-100 transition-[visibility,opacity] duration-300">
+      <Img
+        src={AppIcon}
+        className="h-14 w-14 animate-[appearFromBottom_400ms_var(--ease-out)_forwards] rounded-[14px] opacity-0"
+        loading="eager"
+      />
     </div>
   );
 };

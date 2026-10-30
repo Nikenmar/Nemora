@@ -180,7 +180,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
               name={artist.name}
               className={`${
                 (currentSongData.songId === songId || isAMultipleSelection) &&
-                'dark:!text-font-color-black'
+                ''
               }`}
             />
           ];
@@ -363,10 +363,10 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           : t(`song.${isAFavorite ? 'unlikeSong' : 'likeSong'}`),
         iconName: `favorite`,
         iconClassName: isMultipleSelectionsEnabled
-          ? 'material-icons-round-outlined mr-4 text-xl'
+          ? 'ms-icon mr-4 text-xl'
           : isAFavorite
-            ? 'material-icons-round mr-4 text-xl'
-            : 'material-icons-round-outlined mr-4 text-xl',
+            ? 'ms-icon ms-icon-filled mr-4 text-xl'
+            : 'ms-icon mr-4 text-xl',
         handlerFunction: () => {
           window.api.playerControls
             .toggleLikeSongs(isMultipleSelectionsEnabled ? [...songIds] : [songId])
@@ -436,7 +436,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         label: t('common.info'),
         class: 'info',
         iconName: 'info',
-        iconClassName: 'material-icons-round-outlined',
+        iconClassName: 'ms-icon',
         handlerFunction: goToSongInfoPage,
         isDisabled: isMultipleSelectionsEnabled
       },
@@ -582,14 +582,14 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
       className={`${songId} group relative mb-2 mr-4 flex h-[3.25rem] w-[98%] overflow-hidden rounded-lg p-[0.2rem] px-2 outline-1 -outline-offset-2 transition-[background,color,opacity] ease-in-out focus-visible:!outline ${
         currentSongData.songId === songId || isAMultipleSelection
           ? bodyBackgroundImage
-            ? `bg-background-color-3/70 text-font-color-black shadow-lg backdrop-blur-md dark:bg-dark-background-color-3/70`
-            : 'bg-background-color-3 text-font-color-black shadow-lg dark:bg-dark-background-color-3'
+            ? `bg-accent/70 text-on-accent shadow-lg backdrop-blur-md`
+            : 'bg-accent text-on-accent shadow-lg'
           : bodyBackgroundImage
-            ? `bg-background-color-2/70 backdrop-blur-md hover:!bg-background-color-2 dark:bg-dark-background-color-2/70 dark:hover:!bg-dark-background-color-2`
-            : `odd:bg-background-color-2/70 hover:!bg-background-color-2 dark:odd:bg-dark-background-color-2/50 dark:hover:!bg-dark-background-color-2 ${
+            ? `bg-surface-2/70 backdrop-blur-md hover:!bg-surface-2 `
+            : `odd:bg-surface-2/70 hover:!bg-surface-2 ${
                 (index + 1) % 2 === 1
-                  ? '!bg-background-color-2/70 dark:!bg-dark-background-color-2/50'
-                  : '!bg-background-color-1 dark:!bg-dark-background-color-1'
+                  ? '!bg-surface-2/70'
+                  : '!bg-canvas'
               }`
       } ${!isAMultipleSelection && isBlacklisted && '!opacity-30'}`}
       onContextMenu={(e) => {
@@ -618,7 +618,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         }`}
       >
         {isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs' ? (
-          <div className="relative mx-1 flex h-fit items-center rounded-lg bg-background-color-1 p-1 text-font-color-highlight dark:bg-dark-background-color-1 dark:text-dark-background-color-3">
+          <div className="relative mx-1 flex h-fit items-center rounded-lg bg-canvas p-1 text-echo ">
             <MultipleSelectionCheckbox id={songId} selectionType="songs" />
           </div>
         ) : isBlacklisted ? (
@@ -635,8 +635,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             title={t('notifications.songBlacklisted', { title })}
           >
             <span
-              className={`material-icons-round mx-2 text-2xl text-font-color-black dark:text-font-color-white ${
-                currentSongData.songId === songId && 'dark:!text-font-color-black'
+              className={`ms-icon mx-2 text-2xl text-ink ${
+                currentSongData.songId === songId && ''
               } `}
             >
               block
@@ -645,7 +645,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         ) : isIndexingSongs ||
           (trackNo && localStorageData.preferences.showTrackNumberAsSongIndex) ? (
           <div
-            className={`relative mx-1 flex items-center justify-center rounded-2xl bg-background-color-1 px-3 py-1 text-center text-font-color-highlight group-even:bg-background-color-2/75 group-hover:bg-background-color-1 dark:bg-dark-background-color-1 dark:text-dark-background-color-3 dark:group-even:bg-dark-background-color-2/50 dark:group-hover:bg-dark-background-color-1 ${
+            className={`relative mx-1 flex items-center justify-center rounded-2xl bg-canvas px-3 py-1 text-center text-echo group-even:bg-surface-2/75 group-hover:bg-canvas ${
               index < 10
                 ? 'min-w-[1.75rem]'
                 : index < 100
@@ -670,10 +670,10 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           <div className="play-btn-container absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
             <Button
               className="!m-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
-              iconClassName={`!text-3xl text-font-color-white text-opacity-0 !leading-none ${
+              iconClassName={`!text-3xl text-on-media text-opacity-0 !leading-none ${
                 currentSongData.songId === songId && 'text-opacity-100'
               } group-focus-within:text-opacity-100 group-hover:text-opacity-100 ${
-                isSongPlaying && '!text-font-color-white/75'
+                isSongPlaying && '!text-on-media/75'
               }`}
               clickHandler={handlePlayBtnClick}
               iconName={isSongPlaying ? 'pause_circle' : 'play_circle'}
@@ -691,9 +691,9 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         </div>
       </div>
       <div
-        className={`song-info-container grid grow grid-cols-[35%_2fr_1fr_minmax(4rem,5rem)_minmax(4.5rem,6.5rem)] items-center gap-3 text-font-color-black lg:grid-cols-[40%_1fr_minmax(4rem,5rem)_minmax(4.5rem,6.5rem)] lg:!gap-0 sm:grid-cols-[45%_1fr_minmax(4.5rem,6rem)] sm:gap-2 dark:text-font-color-white ${
+        className={`song-info-container grid grow grid-cols-[35%_2fr_1fr_minmax(4rem,5rem)_minmax(4.5rem,6.5rem)] items-center gap-3 text-ink lg:grid-cols-[40%_1fr_minmax(4rem,5rem)_minmax(4.5rem,6.5rem)] lg:!gap-0 sm:grid-cols-[45%_1fr_minmax(4.5rem,6rem)] sm:gap-2 ${
           (currentSongData.songId === songId || isAMultipleSelection) &&
-          'dark:!text-font-color-black'
+          ''
         }`}
       >
         <div
@@ -733,15 +733,15 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             className="!mr-0 mt-1 !rounded-none !border-0 bg-transparent !p-0 !text-inherit outline-1 outline-offset-1 focus-visible:!outline dark:bg-transparent"
             iconName="favorite"
             iconClassName={`${
-              isAFavorite ? 'material-icons-round' : 'material-icons-round-outlined'
+              isAFavorite ? 'ms-icon ms-icon-filled' : 'ms-icon'
             } !leading-none !text-xl !font-light md:hidden ${
               isAFavorite
                 ? currentSongData.songId === songId || isAMultipleSelection
-                  ? '!text-font-color-black dark:!text-font-color-black'
-                  : '!text-font-color-highlight dark:!text-dark-background-color-3'
+                  ? '!text-ink'
+                  : '!text-echo'
                 : currentSongData.songId === songId || isAMultipleSelection
-                  ? '!text-font-color-black dark:!text-font-color-black'
-                  : '!text-font-color-highlight dark:!text-dark-background-color-3'
+                  ? '!text-ink'
+                  : '!text-echo'
             }`}
             tooltipLabel={t(`song.${isAFavorite ? 'likedThisSong' : 'dislikedThisSong'}`)}
             clickHandler={(e) => {

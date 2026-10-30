@@ -57,9 +57,9 @@ const PatternChart = ({ title, buckets, maxBarWidth, footer }: PatternChartProps
   const columns = { gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` };
 
   return (
-    <div className="appear-from-bottom flex w-full flex-col rounded-md bg-background-color-2/70 px-4 pb-3 pt-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+    <div className="appear-from-bottom flex w-full flex-col rounded-md bg-surface-2/70 px-4 pb-3 pt-4 backdrop-blur-md">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <h3 className="font-medium text-echo">
           {title}
         </h3>
         {total > 0 && (
@@ -79,11 +79,11 @@ const PatternChart = ({ title, buckets, maxBarWidth, footer }: PatternChartProps
               title={`${bucket.label} — ${t('songInfoPage.listensCount', { count: bucket.listens })}`}
             >
               <div
-                className="relative flex h-full w-full items-end overflow-hidden rounded-lg bg-seekbar-track-background-color/20 dark:bg-dark-seekbar-track-background-color/60"
+                className="relative flex h-full w-full items-end overflow-hidden rounded-lg bg-line/20"
                 style={{ maxWidth: `${barWidth}px` }}
               >
                 <div
-                  className="w-full rounded-lg bg-font-color-highlight transition-[height,opacity] duration-300 ease-in-out group-hover:!opacity-100 dark:bg-dark-font-color-highlight"
+                  className="w-full rounded-lg bg-echo transition-[height,opacity] duration-300 ease-in-out group-hover:!opacity-100"
                   style={{
                     /* A played hour must never read as an empty one, hence the 4% floor. */
                     height: bucket.listens === 0 ? '3px' : `${Math.max(4, share * 100)}%`,
@@ -91,7 +91,7 @@ const PatternChart = ({ title, buckets, maxBarWidth, footer }: PatternChartProps
                   }}
                 />
               </div>
-              <span className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-background-color-3 px-2 py-1 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-dark-background-color-3">
+              <span className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-accent px-2 py-1 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                 {bucket.listens}
               </span>
             </div>
@@ -157,9 +157,9 @@ const ListeningPatternCharts = ({ hourHistogram, weekdayHistogram, hourDataSince
     // side by side. Hours get the wide column: 24 buckets against 7.
     <div className="mt-3 grid grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)] items-stretch gap-3 md:grid-cols-1">
       {hourDataSince === null ? (
-        <div className="flex min-h-[16rem] flex-col items-center justify-center rounded-md bg-background-color-2/70 p-6 text-center backdrop-blur-md dark:bg-dark-background-color-2/70">
-          <span className="material-icons-round mb-2 text-4xl opacity-60">schedule</span>
-          <h3 className="font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="flex min-h-[16rem] flex-col items-center justify-center rounded-md bg-surface-2/70 p-6 text-center backdrop-blur-md">
+          <span className="ms-icon mb-2 text-4xl opacity-60">schedule</span>
+          <h3 className="font-medium text-echo">
             {t('statsPage.hourlyActivity')}
           </h3>
           <p className="mt-1 max-w-sm text-sm opacity-70">{t('statsPage.noHourlyData')}</p>

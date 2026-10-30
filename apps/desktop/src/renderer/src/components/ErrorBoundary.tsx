@@ -18,7 +18,7 @@ const ErrorBoundaryFallbackUi = (props: ErrorBoundaryStates) => {
   const { error, errorInfo } = props;
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center overflow-x-hidden text-font-color-black dark:text-font-color-white">
+    <div className="flex h-full w-full flex-col items-center justify-center overflow-x-hidden text-ink">
       <img src={BugImg} alt="App bug found." className="w-48" />
       <br />
       <h2>{t('common.somethingWentWrong')}</h2>
@@ -37,7 +37,7 @@ const ErrorBoundaryFallbackUi = (props: ErrorBoundaryStates) => {
         <summary className="cursor-pointer px-4 py-2 underline select-none">
           {t('common.details')}
         </summary>
-        <p className="mt-4 rounded-2xl bg-background-color-2 p-4 dark:bg-dark-background-color-2 select-text">
+        <p className="mt-4 rounded-2xl bg-surface-2 p-4 select-text">
           {error && error.toString()}
           <br />
           {errorInfo?.componentStack}
@@ -45,7 +45,7 @@ const ErrorBoundaryFallbackUi = (props: ErrorBoundaryStates) => {
       </details>
       <div className="buttons-container">
         <Button
-          className="!mr-0 mt-4 !bg-background-color-3 text-sm text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+          className="!mr-0 mt-4 !bg-accent text-sm text-on-accent hover:border-accent "
           label={t('common.restartApp')}
           iconName="restart_alt"
           clickHandler={() => window.api.appControls.restartRenderer('error')}

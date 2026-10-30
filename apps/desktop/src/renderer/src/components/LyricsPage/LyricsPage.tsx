@@ -206,7 +206,7 @@ const LyricsPage = () => {
               id: 'lyricsUpdateFailed',
               content: t('lyricsPage.noOnlineLyrics'),
               iconName: 'warning',
-              iconClassName: 'material-icons-round-outlined !text-xl'
+              iconClassName: 'ms-icon !text-xl'
             }
           ]);
         })
@@ -257,7 +257,7 @@ const LyricsPage = () => {
               id: 'offlineLyricsFetchFailed',
               content: t('lyricsPage.noOfflineLyrics'),
               iconName: 'warning',
-              iconClassName: 'material-icons-round-outlined !text-xl'
+              iconClassName: 'ms-icon !text-xl'
             }
           ]);
         })
@@ -334,7 +334,7 @@ const LyricsPage = () => {
               id: 'OnlineLyricsRefreshFailed',
               content: t('lyricsPage.onlineLyricsRefreshFailed'),
               iconName: 'warning',
-              iconClassName: 'material-icons-round-outlined !text-xl'
+              iconClassName: 'ms-icon !text-xl'
             }
           ]);
         })
@@ -398,7 +398,7 @@ const LyricsPage = () => {
         {isOnline || lyrics ? (
           lyrics && lyrics.lyrics.parsedLyrics.length > 0 ? (
             <>
-              <div className="title-container relative flex w-full items-center justify-between py-2 pl-8 pr-2 text-2xl text-font-color-highlight dark:text-dark-font-color-highlight">
+              <div className="title-container relative flex w-full items-center justify-between py-2 pl-8 pr-2 text-2xl text-echo">
                 <div className="flex max-w-[40%] items-center">
                   <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
                     {t(
@@ -412,7 +412,7 @@ const LyricsPage = () => {
                   </span>
                   {!lyrics.isOfflineLyricsAvailable && (
                     <span
-                      className="material-icons-round-outlined ml-4 cursor-pointer text-base"
+                      className="ms-icon ml-4 cursor-pointer text-base"
                       title="No offline lyrics found in the song."
                     >
                       help

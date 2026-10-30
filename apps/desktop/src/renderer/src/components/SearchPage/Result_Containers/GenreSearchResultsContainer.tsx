@@ -54,7 +54,7 @@ const GenreSearchResultsContainer = (props: Props) => {
 
   return (
     <SecondaryContainer
-      className={`secondary-container genres-list-container appear-from=bottom mt-4 text-font-color-black dark:text-font-color-white ${
+      className={`secondary-container genres-list-container appear-from=bottom mt-4 text-ink ${
         genreResults.length > 0 ? 'active relative' : 'invisible absolute'
       }`}
       focusable
@@ -66,7 +66,7 @@ const GenreSearchResultsContainer = (props: Props) => {
       }}
     >
       <>
-        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
           <div className="container flex">
             Genres
             <div className="other-stats-container ml-12 flex items-center text-xs">

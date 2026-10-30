@@ -88,7 +88,7 @@ const NewTierlistPrompt = () => {
       <input
         type="text"
         name="tierlistName"
-        className="tierlist-name-input mb-8 w-full max-w-md rounded-2xl border-[transparent] !bg-background-color-2 px-6 py-3 text-center text-lg text-font-color-black outline-none dark:!bg-dark-background-color-2 dark:text-font-color-white"
+        className="tierlist-name-input mb-8 w-full max-w-md rounded-2xl border-[transparent] !bg-surface-2 px-6 py-3 text-center text-lg text-ink outline-none "
         placeholder={t('tierlistsPage.tierlistName')}
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -116,16 +116,16 @@ const NewTierlistPrompt = () => {
                   onClick={() => setSelectedFolders((p) => toggle(p, folder.path))}
                   className={`flex h-16 w-56 items-center gap-3 rounded-xl px-3 text-left transition-[outline,background] ${
                     isSelected
-                      ? 'bg-font-color-highlight/20 outline outline-2 outline-font-color-highlight dark:bg-dark-font-color-highlight/20 dark:outline-dark-font-color-highlight'
-                      : 'bg-background-color-2/60 outline-1 hover:outline dark:bg-dark-background-color-2/60'
+                      ? 'bg-echo/20 outline outline-2 outline-echo '
+                      : 'bg-surface-2/60 outline-1 hover:outline'
                   }`}
                 >
-                  <span className="material-icons-round-outlined shrink-0 text-2xl opacity-80">
+                  <span className="ms-icon shrink-0 text-2xl opacity-80">
                     folder
                   </span>
                   <span className="truncate text-sm font-medium">{fname}</span>
                   {isSelected && (
-                    <span className="material-icons-round ml-auto text-base text-font-color-highlight dark:text-dark-font-color-highlight">
+                    <span className="ms-icon ml-auto text-base text-echo">
                       check_circle
                     </span>
                   )}
@@ -149,8 +149,8 @@ const NewTierlistPrompt = () => {
               onClick={() => toggleSelection(playlist.playlistId)}
               className={`flex h-16 w-56 items-center gap-3 rounded-xl px-3 text-left transition-[outline,background] ${
                 isSelected
-                  ? 'bg-font-color-highlight/20 outline outline-2 outline-font-color-highlight dark:bg-dark-font-color-highlight/20 dark:outline-dark-font-color-highlight'
-                  : 'bg-background-color-2/60 outline-1 hover:outline dark:bg-dark-background-color-2/60'
+                  ? 'bg-echo/20 outline outline-2 outline-echo '
+                  : 'bg-surface-2/60 outline-1 hover:outline'
               }`}
             >
               <Img
@@ -161,7 +161,7 @@ const NewTierlistPrompt = () => {
               />
               <span className="truncate text-sm font-medium">{playlist.name}</span>
               {isSelected && (
-                <span className="material-icons-round ml-auto text-base text-font-color-highlight dark:text-dark-font-color-highlight">
+                <span className="ms-icon ml-auto text-base text-echo">
                   check_circle
                 </span>
               )}
@@ -173,7 +173,7 @@ const NewTierlistPrompt = () => {
       <Button
         label={t('tierlistsPage.create')}
         iconName="add"
-        className="!mr-0 mt-8 cursor-pointer justify-center !bg-background-color-3 !px-8 !py-3 text-lg !text-font-color-black dark:!bg-dark-background-color-3 dark:text-font-color-black"
+        className="!mr-0 mt-8 cursor-pointer justify-center !bg-accent !px-8 !py-3 text-lg !text-on-accent "
         clickHandler={createTierlist}
       />
     </div>

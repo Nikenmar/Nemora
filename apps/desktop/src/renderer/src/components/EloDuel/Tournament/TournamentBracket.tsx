@@ -27,12 +27,12 @@ const TournamentBracket = ({ tournament, songs }: TournamentBracketProps) => {
   };
 
   return (
-    <section className="mt-5 rounded-xl bg-background-color-2/60 p-5 dark:bg-dark-background-color-2/60">
+    <section className="mt-5 rounded-xl bg-surface-2/60 p-5">
       <div className="flex items-center justify-between gap-4">
         <h3 className="text-lg font-medium">{t('duels.tournament.bracket')}</h3>
         {tournament.status === 'completed' && tournament.championSongId && (
-          <span className="flex items-center gap-2 text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-            <span className="material-icons-round text-lg">emoji_events</span>
+          <span className="flex items-center gap-2 text-sm font-medium text-echo">
+            <span className="ms-icon text-lg">emoji_events</span>
             {t('duels.tournament.champion', {
               title: labelFor(tournament.championSongId)
             })}
@@ -52,7 +52,7 @@ const TournamentBracket = ({ tournament, songs }: TournamentBracketProps) => {
               {matches.map((match) => (
                 <div
                   key={match.id}
-                  className="rounded-lg border border-background-color-3 bg-background-color-1/50 p-3 text-sm dark:border-dark-background-color-3 dark:bg-dark-background-color-1/50"
+                  className="rounded-lg border border-accent bg-canvas/50 p-3 text-sm "
                 >
                   {[match.songAId, match.songBId].map((songId, index) => {
                     const isWinner = songId !== undefined && songId === match.winnerSongId;
@@ -61,7 +61,7 @@ const TournamentBracket = ({ tournament, songs }: TournamentBracketProps) => {
                         key={`${match.id}-${index}`}
                         className={`flex items-center justify-between gap-2 py-1 ${
                           isWinner
-                            ? 'font-semibold text-font-color-highlight dark:text-dark-font-color-highlight'
+                            ? 'font-semibold text-echo'
                             : match.resolution
                               ? 'opacity-55'
                               : ''
@@ -71,13 +71,13 @@ const TournamentBracket = ({ tournament, songs }: TournamentBracketProps) => {
                           {labelFor(songId)}
                         </span>
                         {isWinner && (
-                          <span className="material-icons-round text-base">arrow_forward</span>
+                          <span className="ms-icon text-base">arrow_forward</span>
                         )}
                       </div>
                     );
                   })}
                   {match.resolution && (
-                    <div className="mt-1 border-t border-background-color-3 pt-2 text-xs opacity-60 dark:border-dark-background-color-3">
+                    <div className="mt-1 border-t border-accent pt-2 text-xs opacity-60">
                       {t(`duels.tournament.resolution.${match.resolution}`)}
                     </div>
                   )}

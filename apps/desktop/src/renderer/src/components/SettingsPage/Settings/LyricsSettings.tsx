@@ -60,11 +60,11 @@ const LyricsSettings = () => {
 
   return (
     <li className="main-container audio-playback-settings-container mb-16">
-      <div className="title-container mb-4 mt-1 flex items-center text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2">notes</span>
+      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2">notes</span>
         {t('settingsPage.lyrics')}
       </div>
-      <ul className="list-disc pl-6 marker:bg-font-color-highlight dark:marker:bg-dark-font-color-highlight">
+      <ul className="list-disc pl-6 marker:bg-echo">
         <li className="secondary-container enable-musixmatch-lyrics mb-4">
           <div className="description">
             {t('settingsPage.enableMusixmatchLyricsDescription')}
@@ -74,7 +74,7 @@ const LyricsSettings = () => {
                 components={{
                   Button: (
                     <Button
-                      className="!m-0 !inline !rounded-none !border-0 !bg-transparent !p-0 px-2 !text-font-color-highlight-2 outline-1 outline-offset-1 hover:underline focus-visible:!outline dark:!bg-transparent dark:!text-dark-font-color-highlight-2"
+                      className="!m-0 !inline !rounded-none !border-0 !bg-transparent !p-0 px-2 !text-echo outline-1 outline-offset-1 hover:underline focus-visible:!outline dark:!bg-transparent"
                       clickHandler={() => {
                         changePromptMenuData(true, <MusixmatchDisclaimerPrompt />);
                       }}
@@ -139,7 +139,7 @@ const LyricsSettings = () => {
               }}
             />
             <span
-              className="material-icons-round-outlined ml-4 cursor-pointer text-2xl text-font-color-highlight dark:text-dark-font-color-highlight"
+              className="ms-icon ml-4 cursor-pointer text-2xl text-echo"
               title={t('settingsPage.saveLyricsAutomaticallyInfo')}
             >
               help
@@ -179,7 +179,7 @@ const LyricsSettings = () => {
             {userData?.customLrcFilesSaveLocation && (
               <>
                 <span>{t('settingsPage.selectedCustomLocation')}: </span>
-                <span className="mr-4 text-font-color-highlight dark:text-dark-font-color-highlight">
+                <span className="mr-4 text-echo">
                   {userData.customLrcFilesSaveLocation}
                 </span>
               </>
@@ -189,7 +189,7 @@ const LyricsSettings = () => {
             <Button
               label={t('settingsPage.setCustomLocation')}
               iconName="location_on"
-              iconClassName="material-icons-round-outlined"
+              iconClassName="ms-icon"
               clickHandler={() =>
                 window.api.settingsHelpers
                   .getFolderLocation()

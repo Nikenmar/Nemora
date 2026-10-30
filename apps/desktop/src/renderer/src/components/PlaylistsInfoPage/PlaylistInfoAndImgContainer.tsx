@@ -51,11 +51,11 @@ const PlaylistInfoAndImgContainer = (props: Props) => {
               />
             )}
           </div>
-          <div className="playlist-info-container ml-8 text-font-color-black dark:text-font-color-white">
+          <div className="playlist-info-container ml-8 text-ink">
             <div className="font-semibold uppercase tracking-wider opacity-50">
               {t('common.playlist_one')}
             </div>
-            <div className="playlist-name mb-2 w-full overflow-hidden text-ellipsis whitespace-nowrap text-5xl text-font-color-highlight dark:text-dark-font-color-highlight">
+            <div className="playlist-name mb-2 w-full overflow-hidden text-ellipsis whitespace-nowrap text-5xl text-echo">
               {playlist.name}
             </div>
             <div className="playlist-no-of-songs w-full overflow-hidden text-ellipsis whitespace-nowrap text-base">

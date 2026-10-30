@@ -144,8 +144,8 @@ const LyricsContainer = (props: Props) => {
 
   return (
     <div
-      className={`mini-player-lyrics-container appear-from-bottom w-ful absolute top-0 flex h-full !max-h-screen w-full !max-w-full select-none flex-col items-start overflow-auto pb-[25%] pl-20 pr-[20%] pt-20 transition-[filter] delay-200 group-focus-within/fullScreenPlayer:blur-sm group-focus-within:brightness-50 group-hover/fullScreenPlayer:blur-sm group-hover/fullScreenPlayer:brightness-50 ${
-        !isCurrentSongPlaying ? 'blur-sm brightness-50' : ''
+      className={`mini-player-lyrics-container appear-from-bottom absolute inset-0 flex select-none flex-col items-start overflow-auto pb-[40vh] pr-[12%] pt-[18vh] [mask-image:linear-gradient(transparent,black_14%,black_80%,transparent)] [scrollbar-width:none] ${
+        !isCurrentSongPlaying ? 'opacity-60' : ''
       }`}
       id="miniPlayerLyricsContainer"
     >
@@ -156,15 +156,15 @@ const LyricsContainer = (props: Props) => {
         </>
       )}
       {isLyricsVisible && lyrics && !lyrics.lyrics.isSynced && (
-        <div className="flex h-full w-full flex-col justify-center text-2xl text-font-color-highlight opacity-50">
-          <span className="material-icons-round-outlined mb-2 text-5xl">brightness_alert</span>
+        <div className="flex h-full w-full flex-col justify-center text-2xl text-echo opacity-50">
+          <span className="ms-icon mb-2 text-5xl">brightness_alert</span>
           {t('lyricsPage.noSyncedLyrics')}
           <p className="mt-4 text-base">{t('lyricsPage.noSyncedLyricsDescription')}</p>
         </div>
       )}
       {isLyricsVisible && lyrics === undefined && (
-        <div className="flex h-full w-full flex-col justify-center text-2xl text-font-color-highlight opacity-50">
-          <span className="material-icons-round-outlined mb-2 text-5xl">brightness_alert</span>
+        <div className="flex h-full w-full flex-col justify-center text-2xl text-echo opacity-50">
+          <span className="ms-icon mb-2 text-5xl">brightness_alert</span>
           <p>{t('lyricsPage.noLyrics')}</p>
           <p className="mt-4 text-base">{t('lyricsPage.noLyricsDescription')}</p>
         </div>

@@ -15,7 +15,7 @@ const SensitiveActionConfirmPrompt = (props: SensitiveActionConfrimPromptProp) =
   const { title, confirmButton, content, closePromptOnButtonClick = true } = props;
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {title}
       </div>
       <div className="description">{content}</div>
@@ -23,7 +23,7 @@ const SensitiveActionConfirmPrompt = (props: SensitiveActionConfrimPromptProp) =
         <Button
           label={confirmButton.label}
           iconName={confirmButton.iconName}
-          className={`remove-song-from-library-btn danger-btn float-right mt-8 h-10 w-48 cursor-pointer rounded-lg !bg-font-color-crimson text-font-color-white outline-none ease-in-out hover:border-font-color-crimson dark:!bg-font-color-crimson dark:text-font-color-white dark:hover:border-font-color-crimson ${confirmButton.className}`}
+          className={`remove-song-from-library-btn danger-btn float-right mt-8 h-10 w-48 cursor-pointer rounded-lg !bg-danger text-on-media outline-none ease-in-out hover:border-danger ${confirmButton.className}`}
           clickHandler={(e, setIsDisabled, setIsPending) => {
             if (closePromptOnButtonClick) changePromptMenuData(false);
             return confirmButton.clickHandler(e, setIsDisabled, setIsPending);

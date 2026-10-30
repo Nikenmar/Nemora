@@ -563,7 +563,7 @@ export default function App() {
             id: 'playbackFailed',
             content: t('notifications.songCouldNotBePlayed', { title: title || songPath || '' }),
             iconName: 'error',
-            iconClassName: 'material-icons-round-outlined'
+            iconClassName: 'ms-icon'
           }
         ]);
       };
@@ -653,7 +653,7 @@ export default function App() {
             id: 'noSongToPlay',
             content: t('notifications.selectASongToPlay'),
             iconName: 'error',
-            iconClassName: 'material-icons-round-outlined'
+            iconClassName: 'ms-icon'
           }
         ]);
       return undefined;
@@ -756,9 +756,10 @@ export default function App() {
     []
   );
 
+  // Cover light is on unless the user switched it off (Settings > Appearance).
   const isImageBasedDynamicThemesEnabled = useStore(
     store,
-    (state) => state.localStorage.preferences.enableImageBasedDynamicThemes
+    (state) => !state.localStorage.preferences.isCoverLightDisabled
   );
 
   useEffect(() => {
@@ -1556,7 +1557,7 @@ export default function App() {
           {
             content: t('notifications.alreadyInPage'),
             iconName: 'info',
-            iconClassName: 'material-icons-round-outlined',
+            iconClassName: 'ms-icon',
             id: 'alreadyInCurrentPage',
             duration: 2500
           }
@@ -2011,12 +2012,12 @@ export default function App() {
         {playerType === 'normal' ? (
           <div
             className={`App select-none ${
-              isDarkMode ? 'dark bg-dark-background-color-1' : 'bg-background-color-1'
+              isDarkMode ? 'dark bg-canvas' : 'bg-canvas'
             } ${
               isReducedMotion
                 ? 'reduced-motion animate-none transition-none !delay-0 !duration-[0] [&.dialog-menu]:!backdrop-blur-none'
                 : ''
-            } grid !h-screen w-full grid-rows-[auto_1fr_auto] items-center overflow-y-hidden after:invisible after:absolute after:-z-10 after:grid after:h-full after:w-full after:place-items-center after:bg-[rgba(0,0,0,0)] after:text-4xl after:font-medium after:text-font-color-white after:content-["Drop_your_song_here"] dark:after:bg-[rgba(0,0,0,0)] dark:after:text-font-color-white [&.blurred_#title-bar]:opacity-40 [&.fullscreen_#window-controls-container]:hidden [&.song-drop]:after:visible [&.song-drop]:after:z-20 [&.song-drop]:after:border-4 [&.song-drop]:after:border-dashed [&.song-drop]:after:border-[#ccc] [&.song-drop]:after:bg-[rgba(0,0,0,0.7)] [&.song-drop]:after:transition-[background,visibility,color] dark:[&.song-drop]:after:border-[#ccc] dark:[&.song-drop]:after:bg-[rgba(0,0,0,0.7)]`}
+            } grid !h-screen w-full grid-rows-[auto_1fr_auto] items-center overflow-y-hidden after:invisible after:absolute after:-z-10 after:grid after:h-full after:w-full after:place-items-center after:bg-shade/0 after:text-4xl after:font-medium after:text-on-media after:content-["Drop_your_song_here"] [&.blurred_#title-bar]:opacity-40 [&.fullscreen_#window-controls-container]:hidden [&.song-drop]:after:visible [&.song-drop]:after:z-20 [&.song-drop]:after:border-4 [&.song-drop]:after:border-dashed [&.song-drop]:after:border-ink-dim [&.song-drop]:after:bg-shade/70 [&.song-drop]:after:transition-[background,visibility,color] `}
             ref={AppRef}
             onDragEnter={addSongDropPlaceholder}
             onDragLeave={removeSongDropPlaceholder}
@@ -2029,7 +2030,7 @@ export default function App() {
             <Preloader />
             {bodyBackgroundImage && (
               <div
-                className={`body-background-image-container absolute h-full w-full overflow-hidden !bg-dark-background-color-1 bg-center`}
+                className={`body-background-image-container absolute h-full w-full overflow-hidden !bg-canvas bg-center`}
               >
                 <Img
                   className={`w-full bg-cover opacity-100 blur-0 brightness-100 transition-[filter,opacity] duration-500 ${

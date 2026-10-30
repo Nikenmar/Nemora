@@ -30,7 +30,7 @@ const MusixmatchSettingsPrompt = () => {
 
   return (
     <div>
-      <div className="title-container mb-4 text-2xl font-medium uppercase text-font-color-black dark:text-font-color-white">
+      <div className="title-container mb-4 text-2xl font-medium uppercase text-ink">
         {t('musixmatchSettingsPrompt.title')}
       </div>
       <ul className="list-inside list-disc font-light">
@@ -50,7 +50,7 @@ const MusixmatchSettingsPrompt = () => {
       <div className="controls-container ml-2 flex items-center">
         <input
           type={showToken ? 'text' : 'password'}
-          className="mr-4 w-full max-w-[50%] rounded-xl bg-background-color-2 p-2 text-sm placeholder:text-font-color-dimmed dark:bg-dark-background-color-2 dark:placeholder:text-dark-font-color-dimmed"
+          className="mr-4 w-full max-w-[50%] rounded-xl bg-surface-2 p-2 text-sm placeholder:text-ink-dim "
           placeholder="Enter Musixmatch User Token"
           value={token}
           ref={inputRef}
@@ -103,16 +103,16 @@ const MusixmatchSettingsPrompt = () => {
 
       <br />
 
-      <ul className="ml-4 mt-4 list-disc text-sm font-medium text-font-color-crimson empty:mt-0">
+      <ul className="ml-4 mt-4 list-disc text-sm font-medium text-danger empty:mt-0">
         {successState === 'success' && (
-          <li className="flex text-green-500">
-            <span className="material-icons-round mr-2 text-xl">done</span>{' '}
+          <li className="flex text-success">
+            <span className="ms-icon mr-2 text-xl">done</span>{' '}
             {t('musixmatchSettingsPrompt.tokenUpdateSuccess')}
           </li>
         )}
         {successState === 'failure' && (
-          <li className="flex text-font-color-crimson">
-            <span className="material-icons-round mr-2 text-xl">error</span>{' '}
+          <li className="flex text-danger">
+            <span className="ms-icon mr-2 text-xl">error</span>{' '}
             {t('musixmatchSettingsPrompt.tokenUpdateFailed')}
           </li>
         )}
@@ -129,12 +129,12 @@ const MusixmatchSettingsPrompt = () => {
       </ul>
 
       {isSavedTokenAvailable && (
-        <div className="mt-2 text-green-500">
+        <div className="mt-2 text-success">
           <Trans
             i18nKey="musixmatchSettingsPrompt.savedTokenAvailableMessage"
             components={{
               Title: <p className="flex items-center font-semibold uppercase" />,
-              span: <span className="material-icons-round-outlined mr-2 text-xl">done</span>,
+              span: <span className="ms-icon mr-2 text-xl">done</span>,
               p: <p className="text-sm" />
             }}
           />

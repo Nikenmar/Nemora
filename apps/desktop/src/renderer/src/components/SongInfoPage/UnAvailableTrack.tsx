@@ -28,16 +28,16 @@ const UnAvailableTrack = (props: Props) => {
   return (
     <button
       type="button"
-      className="mb-2 mr-3 flex items-center rounded-3xl bg-background-color-2 px-4 py-1 last:mr-0 dark:bg-dark-background-color-2 dark:text-font-color-white"
+      className="mb-2 mr-3 flex items-center rounded-3xl bg-surface-2 px-4 py-1 last:mr-0 "
       title={t('artistInfoPage.viewInLastFm', { name: title })}
       onClick={handleButtonClick}
     >
-      <span className="material-icons-round-outlined mr-2 text-lg text-font-color-highlight dark:text-dark-font-color-highlight">
+      <span className="ms-icon mr-2 text-lg text-echo">
         open_in_new
       </span>
       <p className="text-sm">
         {index && (
-          <span className="index text-font-color-highlight dark:text-dark-font-color-highlight">
+          <span className="index text-echo">
             {index}.{' '}
           </span>
         )}
@@ -48,7 +48,7 @@ const UnAvailableTrack = (props: Props) => {
             values={{ val: artists }}
             components={{
               By: (
-                <span className="text-font-color-highlight dark:text-dark-font-color-highlight" />
+                <span className="text-echo" />
               ),
               span: <span />
             }}

@@ -1,32 +1,36 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex */
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
+import Icon from '../ui/Icon';
+import { cn } from '../ui/cn';
 
 interface SideBarItems {
   id: string;
-  parentClassName: string;
   icon: string;
   content: string;
   isActive: boolean;
   handleClick: (_id: string) => void;
 }
 
-const SideBarItem = (props: SideBarItems) => {
-  return (
-    <li
-      className={`${
-        props.parentClassName
-      } flex !h-12 w-[95%] !min-w-[3rem] cursor-pointer items-center rounded-r-3xl bg-[transparent] pl-4 text-xl font-medium text-font-color-black/70 outline-1 outline-offset-2 transition-[background] duration-300 hover:bg-background-color-1 focus-visible:!outline dark:text-font-color-white dark:hover:bg-dark-background-color-1 ${
-        props.isActive &&
-        '!bg-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black'
-      } flex-shrink-0 last:!mb-0 last:mt-auto nth-last-2:mb-8`}
+/** One sidebar link: a pill that turns blue with a filled icon while its page is open. */
+const SideBarItem = (props: SideBarItems) => (
+  <li>
+    <button
+      type="button"
+      className={cn(
+        `${props.id.toLowerCase()} flex h-[34px] w-full items-center gap-3 rounded-full px-3 text-left text-body font-medium text-ink outline-none transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-echo lg:justify-center lg:px-0`,
+        props.isActive && 'bg-accent text-on-accent hover:bg-accent'
+      )}
       onClick={() => props.handleClick(props.id)}
-      onKeyDown={(e) => e.key === 'Enter' && props.handleClick(props.id)}
-      tabIndex={0}
+      aria-current={props.isActive ? 'page' : undefined}
+      aria-label={props.content}
     >
-      <span className="material-icons-round icon mr-5 text-2xl !font-normal">{props.icon}</span>
-      <span>{props.content}</span>
-    </li>
-  );
-};
+      <Icon
+        name={props.icon}
+        filled={props.isActive}
+        size={20}
+        className={cn('shrink-0', props.isActive ? 'text-on-accent' : 'text-ink-dim')}
+      />
+      <span className="truncate lg:hidden">{props.content}</span>
+    </button>
+  </li>
+);
 
 export default SideBarItem;

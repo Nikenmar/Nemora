@@ -66,7 +66,7 @@ const ReleaseNotesPrompt = () => {
       });
 
       return (
-        <ul className="mb-12 mt-8 flex list-disc flex-col justify-center px-8 marker:text-font-color-highlight dark:marker:text-dark-font-color-highlight">
+        <ul className="mb-12 mt-8 flex list-disc flex-col justify-center px-8 marker:text-echo">
           {notes}
         </ul>
       );

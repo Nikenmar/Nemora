@@ -402,22 +402,22 @@ const HomePage = () => {
         )}
 
         {content.latestSongs[0] === null && (
-          <div className="no-songs-container appear-from-bottom flex h-full w-full flex-col items-center justify-center text-center text-xl text-font-color-black dark:text-font-color-white">
+          <div className="no-songs-container appear-from-bottom flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
             <Img src={NoSongsImage} className="mb-8 w-60" alt={t('homePage.noSongsAvailable')} />
             <div>{t('homePage.empty')}</div>
             <div className="flex items-center justify-between">
               <Button
                 label={t('foldersPage.addFolder')}
                 iconName="create_new_folder"
-                iconClassName="material-icons-round-outlined"
-                className="mt-4 !bg-background-color-3 px-8 text-lg !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                iconClassName="ms-icon"
+                className="mt-4 !bg-accent px-8 text-lg !text-on-accent hover:border-accent "
                 clickHandler={addNewSongs}
               />
             </div>
           </div>
         )}
         {content.recentlyPlayedSongs.length === 0 && content.latestSongs.length === 0 && (
-          <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-xl text-font-color-dimmed dark:text-dark-font-color-dimmed">
+          <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink-dim">
             <Img src={DataFetchingImage} className="mb-8 w-48" alt={t('homePage.stayCalm')} />
             <span> {t('homePage.loading')}</span>
           </div>
@@ -425,8 +425,8 @@ const HomePage = () => {
         {content.latestSongs.length > 0 &&
           content.latestSongs[0] !== null &&
           content.recentlyPlayedSongs.length === 0 && (
-            <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-lg font-normal text-black/60 dark:text-white/60">
-              <span className="material-icons-round-outlined mb-1 text-4xl">headphones</span>{' '}
+            <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-lg font-normal text-shade/60">
+              <span className="ms-icon mb-1 text-4xl">headphones</span>{' '}
               <p className="text-sm">{t('homePage.listenMoreToShowMetrics')}</p>
             </div>
           )}

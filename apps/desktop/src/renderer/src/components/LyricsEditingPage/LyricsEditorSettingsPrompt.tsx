@@ -16,11 +16,11 @@ const LyricsEditorSettingsPrompt = () => {
 
   return (
     <div>
-      <div className="title-container mb-4 flex items-center text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2 text-4xl">settings</span>{' '}
+      <div className="title-container mb-4 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2 text-4xl">settings</span>{' '}
         {t('lyricsEditorSettingsPrompt.lyricsEditorSettings')}
       </div>
-      <ul className="list-disc pl-6 marker:bg-font-color-highlight dark:marker:bg-dark-font-color-highlight">
+      <ul className="list-disc pl-6 marker:bg-echo">
         <li className="secondary-container show-remaining-song-duration mb-4">
           <p className="description">
             {t(
@@ -48,7 +48,7 @@ const LyricsEditorSettingsPrompt = () => {
           <input
             type="number"
             id="lyric-offset-input"
-            className="ml-2 mt-2 w-[90%] max-w-xs rounded-3xl border-[.15rem] border-background-color-2 bg-background-color-2 px-4 py-2 text-font-color-black transition-colors focus:border-font-color-highlight dark:border-dark-background-color-2 dark:bg-dark-background-color-2 dark:text-font-color-white dark:focus:border-dark-font-color-highlight"
+            className="ml-2 mt-2 w-[90%] max-w-xs rounded-3xl border-[.15rem] border-surface-2 bg-surface-2 px-4 py-2 text-ink transition-colors focus:border-echo "
             name="offset"
             placeholder={t('lyricsEditorSettingsPrompt.lyricOffsetInput')}
             value={offset}

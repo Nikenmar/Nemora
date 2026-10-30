@@ -334,29 +334,29 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
       {/* The disc stands in for the artwork we are not allowed to show yet. */}
       <div className="relative flex h-28 w-28 items-center justify-center">
         <div
-          className={`absolute inset-0 rounded-full bg-font-color-highlight/10 blur-2xl transition-opacity duration-500 dark:bg-dark-font-color-highlight/10 ${
+          className={`absolute inset-0 rounded-full bg-echo/10 blur-2xl transition-opacity duration-500 ${
             isPlaying ? 'opacity-100' : 'opacity-0'
           }`}
           aria-hidden="true"
         />
         <div
-          className={`absolute inset-0 rounded-full border border-background-color-3 bg-gradient-to-br from-background-color-2 to-background-color-3 shadow-lg dark:border-dark-background-color-3/20 dark:from-dark-background-color-2 dark:to-dark-background-color-1 ${
+          className={`absolute inset-0 rounded-full border border-accent bg-gradient-to-br from-surface-2 to-accent shadow-lg ${
             isPlaying ? 'animate-spin motion-reduce:animate-none' : ''
           }`}
           style={{ animationDuration: '9s' }}
           aria-hidden="true"
         >
           {/* Grooves: a light hairline in dark mode, a darker one on white. */}
-          <span className="dark:border-dark-background-color-3/12 absolute inset-4 rounded-full border border-background-color-3/70" />
-          <span className="dark:border-dark-background-color-3/8 absolute inset-8 rounded-full border border-background-color-3/50" />
-          <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background-color-1 dark:bg-dark-background-color-3/25" />
+          <span className="absolute inset-4 rounded-full border border-accent/70" />
+          <span className="absolute inset-8 rounded-full border border-accent/50" />
+          <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-canvas" />
         </div>
 
         <div className="relative flex h-10 items-end gap-1" aria-hidden="true">
           {EQUALIZER_BARS.map((bar) => (
             <span
               key={bar}
-              className="w-1.5 rounded-full bg-font-color-highlight transition-[height] duration-100 ease-out dark:bg-dark-font-color-highlight"
+              className="w-1.5 rounded-full bg-echo transition-[height] duration-100 ease-out"
               style={{ height: `${getBarScale(bar, position, isPlaying) * 100}%` }}
             />
           ))}
@@ -371,8 +371,8 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
               key={rung}
               className={`h-1 flex-1 rounded-full transition-colors duration-300 motion-reduce:transition-none ${
                 rung <= snippetLength
-                  ? 'bg-font-color-highlight dark:bg-dark-font-color-highlight'
-                  : 'bg-seekbar-track-background-color dark:bg-dark-seekbar-track-background-color'
+                  ? 'bg-echo'
+                  : 'bg-line'
               }`}
             />
           ))}
@@ -384,7 +384,7 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           broken. Here the playhead always crosses the whole width.
         */}
         <div
-          className="relative h-2.5 w-full overflow-hidden rounded-full bg-seekbar-track-background-color dark:bg-dark-seekbar-track-background-color"
+          className="relative h-2.5 w-full overflow-hidden rounded-full bg-line"
           role="progressbar"
           aria-label={t('songGuessr.snippetProgress')}
           aria-valuemin={0}
@@ -393,13 +393,13 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           aria-valuetext={t('songGuessr.seconds', { seconds: position.toFixed(1) })}
         >
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-font-color-highlight dark:bg-dark-font-color-highlight"
+            className="absolute inset-y-0 left-0 rounded-full bg-echo"
             style={{ width: `${playedPercentage}%` }}
           />
         </div>
 
         <div className="mt-2 flex items-center justify-between text-xs">
-          <span className="font-semibold tabular-nums text-font-color-highlight dark:text-dark-font-color-highlight">
+          <span className="font-semibold tabular-nums text-echo">
             {position.toFixed(1)}s / {snippetLength}s
           </span>
           {isAnalyzing ? (
@@ -417,13 +417,13 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
         onClick={requestPlay}
         aria-label={buttonLabel}
         title={buttonLabel}
-        className="group mt-5 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-font-color-highlight/60 bg-background-color-2/25 text-font-color-highlight transition-[border-color,background-color,transform] duration-200 ease-in-out hover:scale-105 hover:border-font-color-highlight hover:bg-background-color-2/50 focus-visible:!border-font-color-highlight-2 active:scale-95 motion-reduce:transition-none dark:border-dark-font-color-highlight/60 dark:bg-dark-background-color-2/25 dark:text-dark-font-color-highlight dark:hover:border-dark-font-color-highlight dark:hover:bg-dark-background-color-2/50 dark:focus-visible:!border-dark-font-color-highlight-2"
+        className="group mt-5 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-echo/60 bg-surface-2/25 text-echo transition-[border-color,background-color,transform] duration-200 ease-in-out hover:scale-105 hover:border-echo hover:bg-surface-2/50 focus-visible:!border-echo active:scale-95 motion-reduce:transition-none "
       >
         {/* Spinning while it loads, seeks or waits out the silence analysis:
             the button has to say "not yet", or the bar sitting at 0.0s while
             nothing is audible reads as a broken snippet. */}
         <span
-          className={`material-icons-round text-3xl !leading-none ${
+          className={`ms-icon text-3xl !leading-none ${
             isPreparing ? 'animate-spin motion-reduce:animate-none' : ''
           }`}
         >
@@ -447,13 +447,13 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           onClick={() => toggleMutedState(!isMuted)}
           aria-label={t('songGuessr.muteUnmute')}
           title={t('songGuessr.muteUnmute')}
-          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,opacity] duration-200 hover:bg-background-color-2 motion-reduce:transition-none dark:hover:bg-dark-background-color-3/15 ${
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,opacity] duration-200 hover:bg-surface-2 motion-reduce:transition-none ${
             isMuted
-              ? 'text-font-color-highlight opacity-100 dark:text-dark-font-color-highlight'
+              ? 'text-echo opacity-100'
               : 'opacity-55 hover:opacity-100'
           }`}
         >
-          <span className="material-icons-round text-lg !leading-none">
+          <span className="ms-icon text-lg !leading-none">
             {isMuted ? 'volume_off' : volume > 50 ? 'volume_up' : 'volume_down_alt'}
           </span>
         </button>

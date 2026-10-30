@@ -195,13 +195,13 @@ const SongsPage = () => {
     >
       <>
         {content.songsData && content.songsData.length > 0 && (
-          <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+          <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
             <div className="container flex">
               {t('common.song_other')}{' '}
-              <div className="other-stats-container ml-12 flex items-center text-xs text-font-color-black dark:text-font-color-white">
+              <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
                 {isMultipleSelectionEnabled &&
                 multipleSelectionsData.multipleSelections.length > 0 ? (
-                  <div className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <div className="text-sm text-echo">
                     {t('common.selectionWithCount', {
                       count: multipleSelectionsData.multipleSelections.length
                     })}
@@ -400,21 +400,21 @@ const SongsPage = () => {
           )}
         </div>
         {content.songsData && content.songsData.length === 0 && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-font-color-black dark:text-font-color-white">
+          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
             <Img src={DataFetchingImage} alt="" className="mb-8 w-60" />
             <span>{t('songsPage.loading')}</span>
           </div>
         )}
         {content.songsData === null && (
-          <div className="no-songs-container my-[8%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-font-color-black dark:text-font-color-white">
+          <div className="no-songs-container my-[8%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
             <Img src={NoSongsImage} alt="" className="mb-8 w-60" />
             <span>{t('songsPage.empty')}</span>
             <div className="flex items-center justify-between">
               <Button
                 label={t('foldersPage.addFolder')}
                 iconName="create_new_folder"
-                iconClassName="material-icons-round-outlined"
-                className="mt-4 !bg-background-color-3 px-8 text-lg !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                iconClassName="ms-icon"
+                className="mt-4 !bg-accent px-8 text-lg !text-on-accent hover:border-accent "
                 clickHandler={addNewSongs}
               />
             </div>

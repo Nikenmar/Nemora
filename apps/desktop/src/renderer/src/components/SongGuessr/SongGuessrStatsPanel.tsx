@@ -22,7 +22,7 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
 
   return (
     <section
-      className="rounded-2xl bg-background-color-2/45 px-5 py-3 dark:bg-dark-background-color-2/45"
+      className="rounded-2xl bg-surface-2/45 px-5 py-3"
       aria-label={t('songGuessr.statsTitle')}
     >
       <div className="grid grid-cols-4 gap-2">
@@ -59,8 +59,8 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
                            read as a stray tint against the rest of the app. */
                         className={`flex h-full min-w-[1.25rem] items-center justify-end rounded-[0.25rem] px-1.5 text-[0.6rem] font-semibold transition-all duration-500 ease-out motion-reduce:transition-none ${
                           isHighlighted
-                            ? 'bg-seekbar-background-color text-background-color-1 dark:bg-dark-seekbar-background-color dark:text-dark-background-color-1'
-                            : 'bg-seekbar-background-color/35 dark:bg-dark-seekbar-background-color/35'
+                            ? 'bg-echo text-canvas '
+                            : 'bg-echo/35'
                         }`}
                         style={{ width: `${(count / peak) * 100}%` }}
                       >
@@ -69,7 +69,7 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
                     ) : (
                       // An empty bucket gets a hairline, not a bar — a filled
                       // pill next to a 0 reads as data that is not there.
-                      <div className="h-px w-full bg-seekbar-track-background-color dark:bg-dark-seekbar-track-background-color" />
+                      <div className="h-px w-full bg-line" />
                     )}
                   </div>
                 </div>

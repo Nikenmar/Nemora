@@ -148,8 +148,8 @@ const StorageSettings = () => {
 
   return (
     <li className="main-container storage-settings-container mb-16">
-      <div className="title-container mb-4 mt-1 flex items-center text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2">hard_drive</span>
+      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2">hard_drive</span>
         {t('settingsPage.storage')}
       </div>
       <p>{t('settingsPage.storageDescription')}</p>
@@ -168,7 +168,7 @@ const StorageSettings = () => {
             </div>
 
             <div
-              className="mt-2 flex h-4 overflow-hidden rounded-md bg-background-color-2 dark:bg-dark-background-color-2/75"
+              className="mt-2 flex h-4 overflow-hidden rounded-md bg-surface-2"
               style={appStorageBarCssProperties}
               title={t('settingsPage.freeSpace')}
             >
@@ -228,7 +228,7 @@ const StorageSettings = () => {
             </div>
 
             <div
-              className="mt-2 flex h-4 overflow-hidden rounded-md bg-background-color-2 dark:bg-dark-background-color-2/75"
+              className="mt-2 flex h-4 overflow-hidden rounded-md bg-surface-2"
               style={appDataStorageBarCssProperties}
             >
               <div
@@ -264,7 +264,7 @@ const StorageSettings = () => {
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#ffbe76]" />
               {t('settingsPage.otherAppFiles')} :{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {
                   parseByteSizes(
                     storageMetrics.rootSizes.size -
@@ -277,77 +277,77 @@ const StorageSettings = () => {
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#4834d4]" />
               {t('settingsPage.internalAppFiles')} :{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appFolderSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#55efc4]" />
               {t('settingsPage.artworkCache')} :{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.artworkCacheSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#00b894]" />
               {t('settingsPage.tempArtworkCache')} :{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.tempArtworkCacheSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#00cec9]" />
               {t('settingsPage.songsData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.songDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#0984e3]" />
               {t('settingsPage.artistsData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.artistDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#6c5ce7]" />
               {t('settingsPage.albumsData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.albumDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#fdcb6e]" />
               {t('settingsPage.playlistsData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.playlistDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#badc58]" />
               {t('settingsPage.palettesData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.paletteDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#e17055]" />
               {t('settingsPage.genresData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.genreDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#d63031]" />
               {t('settingsPage.userData')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.userDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[#e84393]" />
               {t('settingsPage.appLogs')}{' '}
-              <span className="ml-2 text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="ml-2 text-echo">
                 {parseByteSizes(storageMetrics?.appDataSizes.logSize)?.size}
               </span>
             </li>
@@ -379,7 +379,7 @@ const StorageSettings = () => {
 
       {storageMetrics === undefined && (
         <div className="flex flex-col items-center justify-center pt-12">
-          <span className="material-icons-round-outlined mr-2 text-4xl opacity-50">hard_drive</span>
+          <span className="ms-icon mr-2 text-4xl opacity-50">hard_drive</span>
           <p className="mt-4 opacity-50">{t('settingsPage.generateStorageMetricsAgain')}</p>
           <p className="mt-1 px-8 text-center text-sm font-light opacity-50">
             {t('settingsPage.storageMetricsGenerationDisclaimer')}
@@ -404,7 +404,7 @@ const StorageSettings = () => {
 
       {storageMetrics === null && (
         <div className="flex flex-col items-center justify-center pt-12 opacity-50">
-          <span className="material-icons-round text-4xl">running_with_errors</span>
+          <span className="ms-icon text-4xl">running_with_errors</span>
           <p className="mt-4">{t('settingsPage.storageMetricsGenerationError')}</p>
           <Button
             className="!mr-0 mt-4 !rounded-none !border-0 !p-0 !text-xs uppercase outline-1 outline-offset-2 hover:underline focus-visible:!outline"

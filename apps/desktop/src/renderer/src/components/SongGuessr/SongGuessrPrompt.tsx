@@ -334,24 +334,24 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
          focus here when the panel opens before the guess box exists. */
       tabIndex={-1}
       {...{ [SONG_GUESSR_PANEL_ATTRIBUTE]: '' }}
-      className="flex h-full min-h-0 w-full flex-col text-font-color-black outline-none dark:text-font-color-white"
+      className="flex h-full min-h-0 w-full flex-col text-ink outline-none"
     >
       {/*
         Fixed height, and the streak sits inline as a chip rather than on a
         second line: anything that changes the header's height would shift the
         whole game below it mid-round.
       */}
-      <header className="flex h-[4.25rem] flex-shrink-0 items-center gap-3 border-b border-background-color-2 px-6 dark:border-dark-background-color-3">
+      <header className="flex h-[4.25rem] flex-shrink-0 items-center gap-3 border-b border-surface-2 px-6">
         {/*
           The icon class sets `display: inline-block`, so the flex centering has
           to live on a wrapper — putting both on one element knocks the glyph
           out of its badge.
         */}
         <span
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-font-color-highlight/15 dark:bg-dark-font-color-highlight/15"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-echo/15"
           aria-hidden="true"
         >
-          <span className="material-icons-round text-xl text-font-color-highlight dark:text-dark-font-color-highlight">
+          <span className="ms-icon text-xl text-echo">
             graphic_eq
           </span>
         </span>
@@ -368,9 +368,9 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
             onClick={minimizePrompt}
             aria-label={t('songGuessr.minimize')}
             title={t('songGuessr.minimize')}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl opacity-55 transition-[background-color,opacity] duration-200 hover:bg-background-color-2 hover:opacity-100 motion-reduce:transition-none dark:hover:bg-dark-background-color-3/15"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl opacity-55 transition-[background-color,opacity] duration-200 hover:bg-surface-2 hover:opacity-100 motion-reduce:transition-none"
           >
-            <span className="material-icons-round text-xl !leading-none">minimize</span>
+            <span className="ms-icon text-xl !leading-none">minimize</span>
           </button>
         )}
 
@@ -379,9 +379,9 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
           onClick={closePrompt}
           aria-label={t('songGuessr.close')}
           title={t('songGuessr.close')}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl opacity-55 transition-[background-color,opacity] duration-200 hover:bg-background-color-2 hover:opacity-100 motion-reduce:transition-none dark:hover:bg-dark-background-color-3/15"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl opacity-55 transition-[background-color,opacity] duration-200 hover:bg-surface-2 hover:opacity-100 motion-reduce:transition-none"
         >
-          <span className="material-icons-round text-xl !leading-none">close</span>
+          <span className="ms-icon text-xl !leading-none">close</span>
         </button>
       </header>
 
@@ -396,7 +396,7 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
         {phase === 'loading' && (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
             <span
-              className="material-icons-round mb-3 animate-spin text-3xl text-font-color-highlight motion-reduce:animate-none dark:text-dark-font-color-highlight"
+              className="ms-icon mb-3 animate-spin text-3xl text-echo motion-reduce:animate-none"
               aria-hidden="true"
             >
               progress_activity
@@ -408,10 +408,10 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
         {phase === 'empty' && (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 text-center">
             <span
-              className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-background-color-2/60 dark:bg-dark-background-color-2/60"
+              className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-2/60"
               aria-hidden="true"
             >
-              <span className="material-icons-round text-3xl opacity-50">library_music</span>
+              <span className="ms-icon text-3xl opacity-50">library_music</span>
             </span>
             <h2 className="text-lg font-semibold">{t('songGuessr.noRound')}</h2>
             <p className="mt-2 max-w-sm text-sm opacity-60">
@@ -424,9 +424,9 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
             <button
               type="button"
               onClick={() => void startRound(persistedStateRef.current)}
-              className="mt-5 flex h-10 items-center gap-1.5 rounded-xl bg-background-color-2/80 px-4 text-sm font-medium transition-colors duration-200 hover:bg-background-color-3 motion-reduce:transition-none dark:bg-dark-background-color-2/80 dark:hover:bg-dark-background-color-3/15"
+              className="mt-5 flex h-10 items-center gap-1.5 rounded-xl bg-surface-2/80 px-4 text-sm font-medium transition-colors duration-200 hover:bg-accent motion-reduce:transition-none "
             >
-              <span className="material-icons-round text-base !leading-none" aria-hidden="true">
+              <span className="ms-icon text-base !leading-none" aria-hidden="true">
                 refresh
               </span>
               {t('songGuessr.tryAgain')}
@@ -460,10 +460,10 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
               <div className="flex flex-1 justify-end">
                 {stats.currentStreak > 0 && (
                   <span
-                    className="flex items-center gap-0.5 rounded-full bg-font-color-highlight/15 py-0.5 pl-1 pr-2 text-xs font-semibold text-font-color-highlight dark:bg-dark-font-color-highlight/15 dark:text-dark-font-color-highlight"
+                    className="flex items-center gap-0.5 rounded-full bg-echo/15 py-0.5 pl-1 pr-2 text-xs font-semibold text-echo "
                     title={t('songGuessr.streakChip', { count: stats.currentStreak })}
                   >
-                    <span className="material-icons-round text-sm !leading-none" aria-hidden="true">
+                    <span className="ms-icon text-sm !leading-none" aria-hidden="true">
                       local_fire_department
                     </span>
                     {stats.currentStreak}

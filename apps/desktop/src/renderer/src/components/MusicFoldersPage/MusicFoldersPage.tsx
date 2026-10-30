@@ -142,13 +142,13 @@ const MusicFoldersPage = () => {
     >
       <>
         {musicFolders && musicFolders.length > 0 && (
-          <div className="title-container mb-8 mt-2 flex items-center justify-between text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+          <div className="title-container mb-8 mt-2 flex items-center justify-between text-page font-semibold text-ink">
             <div className="container flex">
               {t('foldersPage.musicFolders')}
-              <div className="other-stats-container ml-12 flex items-center text-xs text-font-color-black dark:text-font-color-white">
+              <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
                 {isMultipleSelectionEnabled &&
                 multipleSelectionsData.multipleSelections.length > 0 ? (
-                  <div className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <div className="text-sm text-echo">
                     {t('common.selectionWithCount', {
                       count: multipleSelectionsData.multipleSelections.length
                     })}
@@ -180,7 +180,7 @@ const MusicFoldersPage = () => {
                   label={t('foldersPage.addFolder')}
                   iconName="create_new_folder"
                   pendingAnimationOnDisabled
-                  iconClassName="material-icons-round-outlined"
+                  iconClassName="ms-icon"
                   clickHandler={addNewFolder}
                 />
                 <Dropdown
@@ -210,7 +210,7 @@ const MusicFoldersPage = () => {
         </div>
 
         {musicFolders.length === 0 && (
-          <div className="no-folders-container flex h-full flex-col items-center justify-center text-lg text-font-color-black dark:text-font-color-white">
+          <div className="no-folders-container flex h-full flex-col items-center justify-center text-lg text-ink">
             <Img src={NoFoldersImage} className="w-60" />
             <br />
             <p> {t('foldersPage.empty')}</p>
@@ -218,10 +218,10 @@ const MusicFoldersPage = () => {
             <div className="flex items-center justify-between">
               <Button
                 label={t('foldersPage.addFolder')}
-                className="mt-4 !bg-background-color-3 px-8 text-lg !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:text-font-color-black dark:hover:border-background-color-3"
+                className="mt-4 !bg-accent px-8 text-lg !text-on-accent hover:border-accent "
                 iconName="create_new_folder"
                 pendingAnimationOnDisabled
-                iconClassName="material-icons-round-outlined"
+                iconClassName="ms-icon"
                 clickHandler={addNewFolder}
               />
             </div>

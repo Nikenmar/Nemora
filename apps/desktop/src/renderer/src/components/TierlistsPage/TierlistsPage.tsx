@@ -64,12 +64,12 @@ const TierlistsPage = () => {
   );
 
   return (
-    <MainContainer className="tierlists-page appear-from-bottom !h-full overflow-hidden !pb-0 text-font-color-black dark:text-font-color-white">
+    <MainContainer className="tierlists-page appear-from-bottom !h-full overflow-hidden !pb-0 text-ink">
       <>
-        <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-page font-semibold text-ink">
           <div className="container flex items-center">
             {t('tierlistsPage.title')}
-            <div className="other-stats-container ml-12 flex items-center text-xs text-font-color-black dark:text-font-color-white">
+            <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
               {tierlists.length > 0 && (
                 <span className="no-of-tierlists">
                   {t('tierlistsPage.tierlistWithCount', { count: tierlists.length })}
@@ -108,7 +108,7 @@ const TierlistsPage = () => {
             <Button
               label={t('tierlistsPage.addTierlist')}
               iconName="add"
-              className="mt-6 !bg-background-color-3 !px-8 !py-3 !text-font-color-black dark:!bg-dark-background-color-3"
+              className="mt-6 !bg-accent !px-8 !py-3 !text-on-accent"
               clickHandler={openCreatePrompt}
             />
           </div>

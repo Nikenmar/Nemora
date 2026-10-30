@@ -17,16 +17,16 @@
 
 //   return (
 //     <div
-//       className={`throttling-indicator group mr-1 flex cursor-pointer items-center justify-center rounded-md bg-background-color-2 px-3 py-1 text-center transition-[background] dark:bg-dark-background-color-2 ${
+//       className={`throttling-indicator group mr-1 flex cursor-pointer items-center justify-center rounded-md bg-surface-2 px-3 py-1 text-center transition-[background] ${
 //         !isAppThrottling &&
 //         'invisible hidden !transition-[visibility] delay-[2500ms] duration-150'
 //       }`}
 //       title="App is skipping some render cycles to improve performance. Do not edit lyrics when this icon is visible."
 //     >
 //       <span
-//         className={`material-icons-round-outlined py-[2px] leading-none group-hover:text-font-color-highlight dark:group-hover:text-dark-font-color-highlight ${
+//         className={`ms-icon py-[2px] leading-none group-hover:text-echo ${
 //           !isAppThrottling &&
-//           'invisible text-font-color-highlight opacity-0 transition-[opacity,visibility] delay-[2500ms] duration-200 dark:text-dark-font-color-highlight'
+//           'invisible text-echo opacity-0 transition-[opacity,visibility] delay-[2500ms] duration-200'
 //         }`}
 //       >
 //         hourglass_empty

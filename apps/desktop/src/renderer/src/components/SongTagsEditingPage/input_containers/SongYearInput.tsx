@@ -18,7 +18,7 @@ const SongYearInput = (props: Props) => {
         maxLength={4}
         minLength={4}
         id="song-year-id3-tag"
-        className="mr-2 mt-2 w-[90%] rounded-3xl border-[.15rem] border-background-color-2 bg-background-color-2 px-4 py-3 text-font-color-black transition-colors focus:border-font-color-highlight dark:border-dark-background-color-2 dark:bg-dark-background-color-2 dark:text-font-color-white dark:focus:border-dark-font-color-highlight"
+        className="mr-2 mt-2 w-[90%] rounded-3xl border-[.15rem] border-surface-2 bg-surface-2 px-4 py-3 text-ink transition-colors focus:border-echo "
         name="song-year"
         placeholder={t('common.releasedYear')}
         value={songYear ?? ''}

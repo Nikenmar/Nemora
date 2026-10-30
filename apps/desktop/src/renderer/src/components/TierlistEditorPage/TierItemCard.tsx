@@ -83,10 +83,10 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
           onCardContextMenu?.(e, song.songId);
         }}
         title={caption}
-        className={`tier-item group/item relative flex w-24 shrink-0 cursor-grab flex-col overflow-hidden rounded-lg border bg-background-color-1 shadow-[0_2px_8px_rgba(0,0,0,0.28)] transition-shadow [contain-intrinsic-size:96px_138px] [content-visibility:auto] hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)] dark:bg-dark-background-color-1 ${
+        className={`tier-item group/item relative flex w-24 shrink-0 cursor-grab flex-col overflow-hidden rounded-lg border bg-canvas shadow-[0_2px_8px_rgba(0,0,0,0.28)] transition-shadow [contain-intrinsic-size:96px_138px] [content-visibility:auto] hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)] ${
           isCurrent
-            ? 'border-font-color-highlight ring-1 ring-font-color-highlight dark:border-dark-font-color-highlight dark:ring-dark-font-color-highlight'
-            : 'border-black/10 dark:border-white/10'
+            ? 'border-echo ring-1 ring-echo '
+            : 'border-shade/10'
         } ${className}`}
       >
         <Img
@@ -101,10 +101,10 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
           <button
             type="button"
             // .tier-play-btn is excluded from SortableJS dragging via `filter`.
-            className={`tier-play-btn absolute right-1 top-1 flex items-center justify-center leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)] transition-[opacity,color,transform] hover:scale-110 hover:text-font-color-highlight ${
+            className={`tier-play-btn absolute right-1 top-1 flex items-center justify-center leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)] transition-[opacity,color,transform] hover:scale-110 hover:text-echo ${
               isCurrent
-                ? 'visible text-font-color-highlight opacity-100 dark:text-dark-font-color-highlight'
-                : 'invisible text-font-color-white opacity-0 group-hover/item:visible group-hover/item:opacity-100'
+                ? 'visible text-echo opacity-100'
+                : 'invisible text-on-media opacity-0 group-hover/item:visible group-hover/item:opacity-100'
             }`}
             title={t('tierlistsPage.playTrack')}
             onClick={(e) => {
@@ -112,13 +112,13 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
               onPlay?.(song.songId);
             }}
           >
-            <span className="material-icons-round text-2xl leading-none">
+            <span className="ms-icon text-2xl leading-none">
               {playState === 'playing' ? 'pause_circle' : 'play_circle'}
             </span>
           </button>
         )}
         <span
-          className={`caption flex h-[42px] items-center justify-center overflow-hidden border-t border-black/10 bg-background-color-2 text-center text-font-color-black dark:border-white/10 dark:bg-dark-background-color-2 dark:text-font-color-white ${getCaptionClass(caption)}`}
+          className={`caption flex h-[42px] items-center justify-center overflow-hidden border-t border-shade/10 bg-surface-2 text-center text-ink ${getCaptionClass(caption)}`}
         >
           {caption}
         </span>

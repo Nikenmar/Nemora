@@ -106,7 +106,7 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
 
   return (
     <section
-      className="mb-4 flex flex-shrink-0 flex-wrap items-end gap-2 rounded-xl bg-background-color-2/35 px-3 py-2.5 dark:bg-dark-background-color-2/35"
+      className="mb-4 flex flex-shrink-0 flex-wrap items-end gap-2 rounded-xl bg-surface-2/35 px-3 py-2.5"
       aria-label={t('songGuessr.sourceLabel')}
     >
       <label className="flex min-w-32 flex-1 flex-col gap-1 text-xs font-medium">
@@ -158,9 +158,9 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
               ? t('songGuessr.randomArtist')
               : t('songGuessr.randomAlbum')
           }
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border-2 border-background-color-2 bg-background-color-2/25 opacity-70 transition-[border-color,background-color,opacity] duration-200 focus-visible:!border-font-color-highlight-2 hover:enabled:border-background-color-3 hover:enabled:bg-background-color-2/60 hover:enabled:opacity-100 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none dark:border-dark-background-color-2 dark:bg-dark-background-color-2/25 dark:focus-visible:!border-dark-font-color-highlight-2 dark:hover:enabled:border-dark-background-color-3 dark:hover:enabled:bg-dark-background-color-2/60"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border-2 border-surface-2 bg-surface-2/25 opacity-70 transition-[border-color,background-color,opacity] duration-200 focus-visible:!border-echo hover:enabled:border-accent hover:enabled:bg-surface-2/60 hover:enabled:opacity-100 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none "
         >
-          <span className="material-icons-round text-lg !leading-none" aria-hidden="true">
+          <span className="ms-icon text-lg !leading-none" aria-hidden="true">
             shuffle
           </span>
         </button>

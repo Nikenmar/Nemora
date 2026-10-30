@@ -99,13 +99,13 @@ const AlbumsPage = () => {
     >
       <>
         {albumsData.length > 0 && (
-          <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+          <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
             <div className="container flex">
               {t('common.album_other')}{' '}
-              <div className="other-stats-container ml-12 flex items-center text-xs text-font-color-black dark:text-font-color-white">
+              <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
                 {isMultipleSelectionEnabled &&
                 multipleSelectionsData.multipleSelections.length > 0 ? (
-                  <div className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <div className="text-sm text-echo">
                     {t('common.selectionWithCount', {
                       count: multipleSelectionsData.multipleSelections.length
                     })}
@@ -165,7 +165,7 @@ const AlbumsPage = () => {
           )}
         </div>
         {/* {albumsData && albumsData.length === 0 && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-2xl text-[#ccc]">
+          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-2xl text-ink-dim">
             <Img
               src={FetchingDataImage}
               alt="No songs available."
@@ -175,7 +175,7 @@ const AlbumsPage = () => {
           </div>
         )} */}
         {albumsData && albumsData.length === 0 && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-font-color-black dark:text-font-color-white">
+          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
             <Img src={NoAlbumsImage} alt="No songs available." className="mb-8 w-60" />
             <div>{t('albumsPage.empty')}</div>
           </div>

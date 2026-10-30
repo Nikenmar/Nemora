@@ -172,7 +172,7 @@ const Folder = (props: FolderProps) => {
       {
         label: 'Remove Folder',
         iconName: 'delete',
-        iconClassName: 'material-icons-round-outlined',
+        iconClassName: 'ms-icon',
         handlerFunction: () =>
           changePromptMenuData(
             true,
@@ -237,14 +237,14 @@ const Folder = (props: FolderProps) => {
     <div className={`mb-2 flex w-full flex-col justify-between ${className}`}>
       <div
         role="button"
-        className={`group flex w-full cursor-pointer items-center justify-between rounded-md px-4 py-2 outline-1 -outline-offset-2 transition-colors focus-visible:!outline dark:text-font-color-white ${
+        className={`group flex w-full cursor-pointer items-center justify-between rounded-md px-4 py-2 outline-1 -outline-offset-2 transition-colors focus-visible:!outline ${
           isAMultipleSelection
-            ? '!bg-background-color-3/90 !text-font-color-black dark:!bg-dark-background-color-3/90 dark:!text-font-color-black'
-            : 'hover:!bg-background-color-2 dark:hover:!bg-dark-background-color-2'
+            ? '!bg-accent/90 !text-on-accent '
+            : 'hover:!bg-surface-2'
         } ${isBlacklisted && '!opacity-50'} ${
           (index + 1) % 2 === 1
-            ? 'bg-background-color-2/50 dark:bg-dark-background-color-2/40'
-            : '!bg-background-color-1 dark:!bg-dark-background-color-1'
+            ? 'bg-surface-2/50'
+            : '!bg-canvas'
         }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -267,11 +267,11 @@ const Folder = (props: FolderProps) => {
       >
         <div className="folder-img-and-info-container flex items-center">
           {multipleSelectionsData.selectionType === 'folder' ? (
-            <div className="relative ml-1 mr-4 flex h-fit items-center rounded-lg bg-background-color-1 p-1 text-font-color-highlight dark:bg-dark-background-color-1 dark:text-dark-background-color-3">
+            <div className="relative ml-1 mr-4 flex h-fit items-center rounded-lg bg-canvas p-1 text-echo ">
               <MultipleSelectionCheckbox id={folderPath} selectionType="folder" />
             </div>
           ) : (
-            <div className="relative ml-1 mr-4 h-fit rounded-2xl bg-background-color-1 px-3 text-font-color-highlight group-even:bg-background-color-2/75 group-hover:bg-background-color-1 dark:bg-dark-background-color-1 dark:text-dark-background-color-3 dark:group-even:bg-dark-background-color-2/50 dark:group-hover:bg-dark-background-color-1">
+            <div className="relative ml-1 mr-4 h-fit rounded-2xl bg-canvas px-3 text-echo group-even:bg-surface-2/75 group-hover:bg-canvas ">
               {index + 1}
             </div>
           )}
@@ -304,7 +304,7 @@ const Folder = (props: FolderProps) => {
         <div className="folder-states-container flex">
           {isBlacklisted && (
             <span
-              className="material-icons-round-outlined text-2xl"
+              className="ms-icon text-2xl"
               title="This folder is blacklisted."
             >
               block
@@ -312,7 +312,7 @@ const Folder = (props: FolderProps) => {
           )}
           {subFolders.length > 0 && (
             <Button
-              className="ml-4 !rounded-full !border-none !p-1 group-hover:bg-background-color-1 dark:group-hover:bg-dark-background-color-1"
+              className="ml-4 !rounded-full !border-none !p-1 group-hover:bg-canvas"
               iconClassName="!text-2xl !leading-none"
               iconName={isSubFoldersVisible ? 'arrow_drop_up' : 'arrow_drop_down'}
               clickHandler={(e) => {
@@ -324,7 +324,7 @@ const Folder = (props: FolderProps) => {
         </div>
       </div>
       {subFolders.length > 0 && isSubFoldersVisible && (
-        <div className="ml-4 mt-4 border-l-[3px] border-background-color-2 pl-4 dark:border-dark-background-color-2/50">
+        <div className="ml-4 mt-4 border-l-[3px] border-surface-2 pl-4">
           {subFoldersComponents}
         </div>
       )}

@@ -16,7 +16,7 @@ const BlacklistFolderConfrimPrompt = (props: { folderPaths: string[]; folderName
   const [isDoNotShowAgain, setIsDoNotShowAgain] = useState(false);
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         Confirm Blacklisting{' '}
         {folderPaths.length === 1 && folderName ? (
           <>&apos;{folderName}&apos; folder</>
@@ -32,13 +32,13 @@ const BlacklistFolderConfrimPrompt = (props: { folderPaths: string[]; folderName
 
         <div className="mt-4">
           {t('blacklistFolderConfirmPrompt.effectTitle')}
-          <ul className="list-inside list-disc pl-4 marker:text-font-color-highlight dark:marker:text-dark-font-color-highlight">
+          <ul className="list-inside list-disc pl-4 marker:text-echo">
             <li>
               <Trans
                 i18nKey="blacklistFolderConfirmPrompt.effect1"
                 components={{
                   span: (
-                    <span className="material-icons-round text-font-color-highlight dark:text-dark-font-color-highlight" />
+                    <span className="ms-icon text-echo" />
                   )
                 }}
               />
@@ -48,13 +48,13 @@ const BlacklistFolderConfrimPrompt = (props: { folderPaths: string[]; folderName
         </div>
         <div className="mt-4">
           {t('blacklistFolderConfirmPrompt.effectTitle2')}
-          <ul className="list-inside list-disc pl-4 marker:text-font-color-highlight dark:marker:text-dark-font-color-highlight">
+          <ul className="list-inside list-disc pl-4 marker:text-echo">
             <li>
               <Trans
                 i18nKey="blacklistSongConfirmPrompt.effect1"
                 components={{
                   span: (
-                    <span className="material-icons-round text-font-color-highlight dark:text-dark-font-color-highlight">
+                    <span className="ms-icon text-echo">
                       block
                     </span>
                   )
@@ -66,7 +66,7 @@ const BlacklistFolderConfrimPrompt = (props: { folderPaths: string[]; folderName
                 i18nKey="blacklistSongConfirmPrompt.effect2"
                 components={{
                   span: (
-                    <span className="text-font-color-highlight dark:text-dark-font-color-highlight" />
+                    <span className="text-echo" />
                   )
                 }}
               />
@@ -76,7 +76,7 @@ const BlacklistFolderConfrimPrompt = (props: { folderPaths: string[]; folderName
                 i18nKey="blacklistSongConfirmPrompt.effect3"
                 components={{
                   span: (
-                    <span className="text-font-color-highlight dark:text-dark-font-color-highlight" />
+                    <span className="text-echo" />
                   )
                 }}
               />
@@ -96,7 +96,7 @@ const BlacklistFolderConfrimPrompt = (props: { folderPaths: string[]; folderName
       <div className="buttons-container flex items-center justify-end">
         <Button
           label={`Blacklist Folder${folderPaths.length !== 1 ? 's' : ''}`}
-          className="blacklist-folders-btn mt-4 !bg-background-color-3 px-8 text-lg text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+          className="blacklist-folders-btn mt-4 !bg-accent px-8 text-lg text-on-accent hover:border-accent "
           clickHandler={() => {
             return window.api.folderData.blacklistFolders(folderPaths).then(() => {
               addNewNotifications([

@@ -18,8 +18,8 @@ const ErrorPrompt = (props: ErrorPromptProps) => {
   return (
     <>
       <div className="alert-icon-container">
-        <div className="title-container mb-4 mt-1 flex items-center text-3xl font-medium uppercase text-font-color-crimson dark:text-font-color-crimson">
-          <span className="material-icons-round icon mr-4 text-4xl">warning</span>
+        <div className="title-container mb-4 mt-1 flex items-center text-3xl font-medium uppercase text-danger">
+          <span className="ms-icon icon mr-4 text-4xl">warning</span>
           <span className="font-semibold">{t('errorPrompt.title')}</span>
         </div>
       </div>
@@ -47,7 +47,7 @@ const ErrorPrompt = (props: ErrorPromptProps) => {
         <Button
           label={t('common.restartApp')}
           iconName="sync"
-          className="mt-6 w-fit !bg-background-color-3 !text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:text-font-color-black dark:hover:border-background-color-3"
+          className="mt-6 w-fit !bg-accent !text-on-accent hover:border-accent "
           clickHandler={() => window.api.appControls.restartRenderer(reason)}
         />
       </div>

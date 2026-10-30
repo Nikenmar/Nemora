@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { store } from '@renderer/store';
 import { peekFirstAliveDuelPair } from '../../utils/duelQueue';
 import EloDuelPrompt from './EloDuelPrompt';
+import Icon from '../ui/Icon';
 
 const EloDuelDock = () => {
   const { t } = useTranslation();
@@ -69,44 +70,38 @@ const EloDuelDock = () => {
 
   return (
     <>
-      {/* The bottom-pinning `mt-auto` now sits on the SongGuessr dock above;
-          two auto margins would split the free space and separate the pair. */}
-      <li className="flex min-h-0 w-full flex-shrink-0 items-center pl-2">
+      <span className="flex">
         {showDock && (
           <button
             type="button"
-            className="group flex h-9 items-center gap-2 rounded-full bg-background-color-2 px-3 text-sm font-medium text-font-color-black shadow-md transition-[background-color,transform,opacity] duration-200 ease-out hover:-translate-y-0.5 hover:bg-background-color-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-font-color-highlight-2 active:translate-y-0 motion-reduce:transition-none dark:bg-dark-background-color-2 dark:text-font-color-white dark:hover:bg-dark-background-color-3 dark:focus-visible:outline-dark-font-color-highlight-2"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo"
+            data-shot="duel-dock"
             onClick={maximizeDuel}
             aria-label={dockLabel}
             aria-expanded="false"
-            title={dockLabel}
+            data-tooltip={dockLabel}
           >
-            <span
-              className={`material-icons-round text-lg !leading-none text-font-color-highlight dark:text-dark-font-color-highlight ${
-                isLoading ? 'animate-spin' : ''
-              }`}
-              aria-hidden="true"
-            >
-              {isLoading ? 'progress_activity' : 'swords'}
-            </span>
-            <span className="leading-none">{t('eloDuels.dockName')}</span>
+            <Icon name={isLoading ? 'progress_activity' : 'swords'} size={20} className={isLoading ? 'animate-spin' : ''} />
             {pendingDuels > 0 && (
               <span
-                className="flex min-w-5 items-center justify-center rounded-full bg-font-color-highlight px-1.5 py-0.5 text-[0.7rem] font-semibold leading-none text-background-color-1 dark:bg-dark-font-color-highlight dark:text-dark-background-color-1"
+                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-on-accent"
                 aria-live="polite"
               >
                 {visibleCount}
               </span>
             )}
+            {activePair && pendingDuels === 0 && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-echo" aria-hidden />
+            )}
           </button>
         )}
-      </li>
+      </span>
 
       {activePair &&
         createPortal(
           <dialog
             ref={dialogRef}
-            className="fixed left-1/2 top-1/2 m-0 max-h-[calc(100vh-4rem)] w-[min(62rem,92vw)] min-w-0 -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-background-color-1 p-0 text-font-color-black shadow-xl backdrop:bg-[hsla(228deg,7%,14%,0.75)] dark:bg-dark-background-color-1 dark:text-font-color-white"
+            className="fixed left-1/2 top-1/2 m-0 max-h-[calc(100vh-4rem)] w-[min(62rem,92vw)] min-w-0 -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-canvas p-0 text-ink shadow-xl backdrop:bg-canvas/75 "
             aria-label={t('eloDuels.promptTitle')}
             onCancel={(event) => {
               event.preventDefault();

@@ -410,6 +410,7 @@ declare global {
     | 'windowState'
     | 'recentSearches'
     | 'preferences.isMiniPlayerAlwaysOnTop'
+    | 'preferences.pinnedPlaylists'
     | 'preferences.autoLaunchApp'
     | 'preferences.isMusixmatchLyricsEnabled'
     | 'preferences.hideWindowOnClose'
@@ -452,6 +453,8 @@ declare global {
       enableDiscordRPC: boolean;
       enableObsWidget: boolean;
       saveVerboseLogs: boolean;
+      /** Playlist ids pinned to the sidebar, in their order there. */
+      pinnedPlaylists?: string[];
     };
     windowPositions: {
       mainWindow?: WindowCordinates;
@@ -525,6 +528,8 @@ declare global {
     showTrackNumberAsSongIndex: boolean;
     allowToPreventScreenSleeping: boolean;
     enableImageBasedDynamicThemes: boolean;
+    /** The cover light (the playing cover's colour under the page and the player) is off. */
+    isCoverLightDisabled?: boolean;
     autoTranslateLyrics: boolean;
     autoConvertLyrics: boolean;
     /** Smart Shuffle intensity, 0..1 (0 = pure random, 0.6 = default 60/40, 1 = fully smart). */

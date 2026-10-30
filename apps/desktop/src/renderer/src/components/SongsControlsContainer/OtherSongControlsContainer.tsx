@@ -32,14 +32,14 @@ const OtherSongControlsContainer = () => {
           {
             label: t('settingsPage.appShortcuts'),
             iconName: 'trail_length_short',
-            iconClassName: 'material-icons-round-outlined mr-2',
+            iconClassName: 'ms-icon mr-2',
             handlerFunction: () => changePromptMenuData(true, <AppShortcutsPrompt />)
           },
           { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
           {
             label: t('settingsPage.equalizer'),
             iconName: 'graphic_eq',
-            iconClassName: 'material-icons-round-outlined mr-2',
+            iconClassName: 'ms-icon mr-2',
             handlerFunction: () =>
               changeCurrentActivePage('Settings', {
                 scrollToId: '#equalizer'
@@ -48,7 +48,7 @@ const OtherSongControlsContainer = () => {
           {
             label: t('player.adjustPlaybackSpeed'),
             iconName: 'avg_pace',
-            iconClassName: 'material-icons-round-outlined mr-2',
+            iconClassName: 'ms-icon mr-2',
             handlerFunction: () =>
               changeCurrentActivePage('Settings', {
                 scrollToId: '#playbackRateInterval'
@@ -58,20 +58,20 @@ const OtherSongControlsContainer = () => {
           {
             label: t('player.showCurrentQueue'),
             iconName: 'table_rows',
-            iconClassName: 'material-icons-round-outlined mr-2',
+            iconClassName: 'ms-icon mr-2',
             handlerFunction: () => changeCurrentActivePage('CurrentQueue')
           },
           { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
           {
             label: t('player.showMiniPlayer'),
             iconName: 'pip',
-            iconClassName: 'material-icons-round-outlined mr-2',
+            iconClassName: 'ms-icon mr-2',
             handlerFunction: () => updatePlayerType('mini')
           },
           {
             label: t('player.openInFullScreen'),
             iconName: 'fullscreen',
-            iconClassName: 'material-icons-round-outlined mr-2',
+            iconClassName: 'ms-icon mr-2',
             handlerFunction: () => updatePlayerType('full')
           }
         ],
@@ -82,73 +82,55 @@ const OtherSongControlsContainer = () => {
     [changeCurrentActivePage, changePromptMenuData, t, updateContextMenuData, updatePlayerType]
   );
 
+  const look = (isOn = false) => `!m-0 !h-8 !w-8 ${isOn ? '!text-echo hover:!text-echo' : ''}`;
+
   return (
-    <div className="other-controls-container flex items-center justify-end">
+    <div className="other-controls-container flex min-w-0 items-center justify-end gap-1 pr-4">
       <Button
-        className={`queue-btn !mr-6 !rounded-none !border-0 bg-transparent !p-0 text-font-color-black text-opacity-60 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline lg:hidden dark:bg-transparent dark:text-font-color-white dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-          currentlyActivePage.pageTitle === 'CurrentQueue' && 'after:opacity-100'
-        }`}
+        className={`queue-btn lg:hidden ${look(currentlyActivePage.pageTitle === 'CurrentQueue')}`}
         tooltipLabel={t('player.currentQueue')}
-        iconName="table_rows"
-        iconClassName={`text-xl text-font-color-black opacity-60 transition-opacity hover:opacity-80 dark:text-font-color-white ${
-          currentlyActivePage.pageTitle === 'CurrentQueue'
-            ? '!text-font-color-highlight font-medium !opacity-90 dark:!text-dark-font-color-highlight material-icons-round'
-            : 'material-icons-round-outlined'
-        } `}
+        iconName="queue_music"
+        isActive={currentlyActivePage.pageTitle === 'CurrentQueue'}
         clickHandler={() =>
           currentlyActivePage.pageTitle === 'CurrentQueue'
             ? changeCurrentActivePage('Home')
             : changeCurrentActivePage('CurrentQueue')
         }
       />
-
       <Button
-        className="mini-player-btn !mr-6 !rounded-none !border-0 bg-transparent !p-0 text-font-color-black text-opacity-60 outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline lg:hidden dark:bg-transparent dark:text-font-color-white dark:hover:bg-transparent"
+        className={`mini-player-btn lg:hidden ${look()}`}
         clickHandler={() => updatePlayerType('mini')}
         tooltipLabel={t('player.openInMiniPlayer')}
         iconName="pip"
-        iconClassName="material-icons-round-outlined icon cursor-pointer text-xl text-font-color-black opacity-60 transition-opacity hover:opacity-80 dark:text-font-color-white"
       />
-
       <Button
-        className="full-screen-player-btn !mr-6 !rounded-none !border-0 bg-transparent !p-0 text-font-color-black text-opacity-60 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline lg:hidden dark:bg-transparent dark:text-font-color-white dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent"
+        className={`full-screen-player-btn lg:hidden ${look()}`}
         tooltipLabel={t('player.openInFullScreen')}
-        iconName="fullscreen"
-        iconClassName="material-icons-round-outlined text-xl text-font-color-black opacity-60 transition-opacity hover:opacity-80 dark:text-font-color-white"
+        iconName="open_in_full"
         clickHandler={() => updatePlayerType('full')}
       />
-
       <Button
-        className={`volume-btn !mr-2 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-          isMuted && 'after:opacity-100'
-        }`}
+        className={`volume-btn ml-1 ${look(isMuted)}`}
         tooltipLabel={t('player.muteUnmute')}
-        iconName={isMuted ? 'volume_off' : volume > 50 ? 'volume_up' : 'volume_down_alt'}
-        iconClassName={`material-icons-round text-xl text-font-color-black opacity-60 transition-opacity hover:opacity-80 dark:text-font-color-white ${
-          isMuted && '!text-font-color-highlight !opacity-100 dark:!text-dark-font-color-highlight'
-        }`}
+        iconName={isMuted ? 'volume_off' : volume > 50 ? 'volume_up' : 'volume_down'}
+        isActive={isMuted}
         clickHandler={() => toggleMutedState(!isMuted)}
       />
-
-      <div className="volume-slider-container mr-4 min-w-[9rem] max-w-[12rem] lg:mr-4">
+      <div className="volume-slider-container w-[7.5rem] min-w-[5rem] shrink">
         <VolumeSlider name="player-volume-slider" id="volumeSlider" />
       </div>
-      <div className="other-settings-btn mr-4 flex cursor-pointer items-center justify-center text-font-color-black text-opacity-60 dark:text-font-color-white">
-        <span
-          title={t('player.otherSettings')}
-          className="material-icons-round icon cursor-pointer text-xl text-font-color-black opacity-60 transition-opacity hover:opacity-80 dark:text-font-color-white"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const element = e.currentTarget;
-            const coords = element.getBoundingClientRect();
-            openOtherSettingsContextMenu(coords.x, coords.y);
-          }}
-          onContextMenu={(e) => openOtherSettingsContextMenu(e.pageX, e.pageY)}
-        >
-          more_horiz
-        </span>
-      </div>
+      <Button
+        className={`other-settings-btn ml-1 ${look()}`}
+        tooltipLabel={t('player.otherSettings')}
+        iconName="more_horiz"
+        clickHandler={(e) => {
+          e.preventDefault();
+          e.stopPropagation?.();
+          const coords = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          openOtherSettingsContextMenu(coords.x, coords.y);
+        }}
+        onContextMenu={(e) => openOtherSettingsContextMenu(e.pageX, e.pageY)}
+      />
     </div>
   );
 };

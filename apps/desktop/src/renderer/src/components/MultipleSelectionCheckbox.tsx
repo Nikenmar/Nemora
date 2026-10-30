@@ -31,7 +31,7 @@ const MultipleSelectionCheckbox = (props: Props) => {
       checkedStateUpdateFunction={(state) =>
         updateMultipleSelections(id, selectionType, state ? 'remove' : 'add')
       }
-      className={`[&>.checkmark]:peer-checked:!shadow-lg [&>.checkmark]:dark:peer-checked:!border-font-color-highlight [&>.checkmark]:dark:peer-checked:!bg-font-color-highlight [&>.checkmark]:dark:peer-checked:!text-font-color-highlight ${
+      className={`[&>.checkmark]:peer-checked:!shadow-lg ${
         multipleSelectionsData.isEnabled ? '' : 'hidden'
       } !m-0 ${className}`}
     />

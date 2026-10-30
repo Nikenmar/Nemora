@@ -53,11 +53,11 @@ const AudioPlaybackSettings = () => {
 
   return (
     <li className="main-container audio-playback-settings-container mb-16">
-      <div className="title-container mb-4 mt-1 flex items-center text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2">slow_motion_video</span>
+      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2">slow_motion_video</span>
         {t('settingsPage.audioPlayback')}
       </div>
-      <ul className="list-disc pl-6 marker:bg-font-color-highlight dark:marker:bg-dark-font-color-highlight">
+      <ul className="list-disc pl-6 marker:bg-echo">
         <li className="secondary-container show-remaining-song-duration mb-4">
           <div className="description">
             {t('settingsPage.showRemainingSongDurationDescription')}
@@ -76,7 +76,7 @@ const AudioPlaybackSettings = () => {
           <div className="description">{t('settingsPage.tierShuffleIntensityDescription')}</div>
           <div className="mt-6 flex items-center">
             <div className="flex w-1/2 min-w-[120px] flex-col items-center justify-center">
-              <span className="text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="text-echo">
                 {Math.round(tierShuffleIntensity * 100)}% {t('settingsPage.tierShuffleSmart')} /{' '}
                 {100 - Math.round(tierShuffleIntensity * 100)}%{' '}
                 {t('settingsPage.tierShuffleRandom')}
@@ -85,7 +85,7 @@ const AudioPlaybackSettings = () => {
                 <span className="text-sm">0</span>
                 <input
                   type="range"
-                  className="seek-bar-slider thumb-visible relative float-left mx-4 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-font-color-highlight before:transition-[width,background] before:content-[''] focus-visible:!outline dark:before:bg-font-color-highlight dark:hover:before:bg-dark-font-color-highlight"
+                  className="seek-bar-slider thumb-visible relative float-left mx-4 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-echo before:transition-[width,background] before:content-[''] focus-visible:!outline "
                   min={0}
                   step={0.05}
                   max={1}
@@ -108,7 +108,7 @@ const AudioPlaybackSettings = () => {
           <div className="description">{t('settingsPage.changePlaybackRate')}</div>
           <div className="mt-6 flex items-center">
             <div className="flex w-1/2 min-w-[120px] flex-col items-center justify-center">
-              <span className="text-font-color-highlight dark:text-dark-font-color-highlight">
+              <span className="text-echo">
                 {t('settingsPage.playbackRate')}: {playbackRateInterval} x
               </span>
               <div className="flex w-full items-center pl-2">
@@ -117,7 +117,7 @@ const AudioPlaybackSettings = () => {
                   type="range"
                   name="seek-bar-slider"
                   id="seek-bar-slider"
-                  className="seek-bar-slider thumb-visible relative float-left mx-4 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-font-color-highlight before:transition-[width,background] before:content-[''] hover:before:bg-font-color-highlight focus-visible:!outline dark:before:bg-font-color-highlight dark:hover:before:bg-dark-font-color-highlight"
+                  className="seek-bar-slider thumb-visible relative float-left mx-4 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-echo before:transition-[width,background] before:content-[''] hover:before:bg-echo focus-visible:!outline "
                   min={0.25}
                   step={0.05}
                   max={4.0}

@@ -9,10 +9,10 @@ const StatTile = (props: Props) => {
 
   return (
     <span
-      className="flex min-h-[130px] flex-col items-center justify-center rounded-lg border-[3px] border-background-color-2 py-4 text-lg dark:border-dark-background-color-2"
+      className="flex min-h-[130px] flex-col items-center justify-center rounded-lg border-[3px] border-surface-2 py-4 text-lg"
       title={title ?? `${value} ${label}`}
     >
-      <span className="text-xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <span className="text-section font-semibold text-ink">
         {value}
       </span>
       <span className="px-2 text-center lowercase opacity-75">{label}</span>

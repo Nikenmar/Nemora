@@ -33,9 +33,9 @@ const SongArtwork = (props: Props) => {
         <Button
           key={0}
           tooltipLabel={t('songTagsEditingPage.editArtwork')}
-          className="artwork-update-btn mr-0 aspect-square rounded-full border-none !bg-[hsla(0,0%,0%,0.5)] outline-1 outline-offset-1 !transition-[background] hover:!bg-[hsla(0,0%,0%,0.8)] focus-visible:!outline dark:!bg-[hsla(0,0%,0%,0.5)] dark:hover:!bg-[hsla(0,0%,0%,0.8)]"
+          className="artwork-update-btn mr-0 aspect-square rounded-full border-none !bg-shade/50 outline-1 outline-offset-1 !transition-[background] hover:!bg-shade/80 focus-visible:!outline "
           iconName="edit"
-          iconClassName="text-font-color-white dark:text-font-color-white mr-0"
+          iconClassName="text-on-media mr-0"
           clickHandler={() =>
             window.api.songUpdates
               .getImgFileLocation()
@@ -53,9 +53,9 @@ const SongArtwork = (props: Props) => {
           <Button
             key={1}
             tooltipLabel={t('songTagsEditingPage.removeArtwork')}
-            className="artwork-delete-btn !mr-0 aspect-square rounded-full border-none !bg-[hsla(0,0%,0%,0.5)] outline-1 outline-offset-1 !transition-[background] hover:!bg-[hsla(0,0%,0%,0.8)] focus-visible:!outline dark:!bg-[hsla(0,0%,0%,0.5)] dark:hover:!bg-[hsla(0,0%,0%,0.8)]"
+            className="artwork-delete-btn !mr-0 aspect-square rounded-full border-none !bg-shade/50 outline-1 outline-offset-1 !transition-[background] hover:!bg-shade/80 focus-visible:!outline "
             iconName="delete"
-            iconClassName="text-font-color-white dark:text-font-color-white mr-0"
+            iconClassName="text-on-media mr-0"
             clickHandler={() =>
               updateSongInfo((prevData) => ({
                 ...prevData,

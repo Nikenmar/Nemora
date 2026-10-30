@@ -79,9 +79,7 @@ const Notification = (props: AppNotification) => {
     if (iconName)
       return (
         <span
-          className={`animate-dur text-xl text-font-color-highlight dark:text-dark-font-color-highlight ${
-            iconClassName ?? 'material-icons-round'
-          }`}
+          className={`text-[18px] text-echo ${iconClassName ?? 'ms-icon'}`}
         >
           {iconName}
         </span>
@@ -91,13 +89,13 @@ const Notification = (props: AppNotification) => {
 
   return (
     <div
-      className="notification appear-from-bottom group relative mt-2 flex h-fit max-h-32 min-h-[50px] w-fit max-w-md justify-between rounded-full bg-context-menu-background/90 text-sm font-light text-font-color-black shadow-[5px_25px_50px_0px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-[opacity,transform,visibility] ease-in-out first-of-type:mt-2 dark:bg-dark-context-menu-background/90 dark:text-font-color-white"
+      className="notification appear-from-bottom group relative mt-2 flex h-fit max-h-32 min-h-[44px] w-fit min-w-[16rem] max-w-md justify-between overflow-hidden rounded-menu border border-glass-border bg-surface-3 text-body text-ink shadow-float transition-[opacity,transform,visibility] ease-out first-of-type:mt-2"
       id="notificationPanelsContainer"
       ref={notificationRef}
       style={notificationPanelStyles}
     >
       <div
-        className={`progress-bar-container absolute h-full w-full overflow-hidden rounded-full before:absolute before:h-full before:w-0 before:rounded-sm before:bg-font-color-highlight/25 before:opacity-0 before:transition-[opacity,width] before:content-[''] dark:before:bg-dark-font-color-highlight/25 ${
+        className={`progress-bar-container absolute bottom-0 left-0 h-[2px] w-full overflow-hidden before:absolute before:h-full before:w-0 before:bg-echo before:opacity-0 before:transition-[opacity,width] before:content-[''] ${
           type === 'WITH_PROGRESS_BAR' &&
           progressBarData &&
           progressBarData.total !== progressBarData.value &&
@@ -105,13 +103,14 @@ const Notification = (props: AppNotification) => {
         } ${
           type !== 'WITH_PROGRESS_BAR' ||
           (type === 'WITH_PROGRESS_BAR' && progressBarData.total === progressBarData.value)
-            ? `before:!animate-[widthFillAnimation_var(--notification-duration)_ease-in-out] before:!opacity-40 dark:before:!opacity-15`
+            ? `before:!animate-[widthFillAnimation_var(--notification-duration)_linear] before:!opacity-30`
             : 'before:!animate-none'
         }`}
       />
-      <div className="close-button-container invisible absolute top-1/2 flex -translate-x-10 -translate-y-1/2 flex-col items-center justify-center overflow-hidden opacity-0 transition-[transform,visibility,opacity] delay-200 group-hover:visible group-hover:-translate-x-14 group-hover:opacity-100">
+      <div className="close-button-container absolute right-1.5 top-1.5 z-[1] opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100">
         <span
-          className="material-icons-round icon relative my-2 ml-2 mr-8 rounded-full bg-context-menu-background/90 p-2 text-xl shadow-md hover:text-[crimson] dark:bg-dark-context-menu-background/90 dark:hover:bg-dark-context-menu-background/90 dark:hover:text-[crimson]"
+          className="ms-icon icon flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[16px] text-ink-dim hover:bg-surface-2 hover:text-ink"
+          aria-label="Dismiss"
           onClick={removeNotification}
           onKeyDown={removeNotification}
           role="button"
@@ -121,15 +120,15 @@ const Notification = (props: AppNotification) => {
         </span>
       </div>
       <div
-        className={`notification-info-and-buttons-container flex w-full flex-col px-5 py-3 ${
-          !(Array.isArray(buttons) && buttons.length > 0) && 'items-center justify-center'
+        className={`notification-info-and-buttons-container flex w-full flex-col py-2.5 pl-3.5 pr-9 ${
+          !(Array.isArray(buttons) && buttons.length > 0) && 'justify-center'
         }`}
       >
-        <div className="notification-info-container flex flex-row items-center gap-4">
+        <div className="notification-info-container flex flex-row items-center gap-3">
           <div className="icon-container relative flex h-6 w-fit items-center justify-center [&>img]:aspect-square [&>img]:h-4">
             {notificationIcon}
           </div>
-          <div className="message-container text overflow-hidden text-ellipsis py-1 leading-none">
+          <div className="message-container overflow-hidden text-ellipsis py-0.5 leading-snug">
             {content}
           </div>
         </div>
@@ -141,7 +140,8 @@ const Notification = (props: AppNotification) => {
                 label={button.label}
                 iconName={button.iconName}
                 iconClassName={button.iconClassName}
-                className={`mb-1 ml-4 mr-0 mt-2 border-2 px-2 py-1 font-medium text-background-color-3 dark:border-background-color-2 dark:text-background-color-2 ${button.className}`}
+                size="sm"
+                className={`mb-0.5 ml-2 mr-0 mt-2 ${button.className}`}
                 clickHandler={(e, setIsDisabled, setIsPending) => {
                   removeNotification();
                   button.clickHandler(e, setIsDisabled, setIsPending);

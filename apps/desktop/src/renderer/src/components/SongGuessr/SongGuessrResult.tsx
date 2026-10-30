@@ -14,11 +14,11 @@ type SongGuessrResultProps = {
 
 const getSquareClassName = (attempt: SongGuessrAttempt) => {
   if (attempt.kind === 'correct')
-    return 'bg-font-color-highlight dark:bg-dark-font-color-highlight';
-  if (attempt.kind === 'wrong') return 'bg-font-color-crimson';
+    return 'bg-echo';
+  if (attempt.kind === 'wrong') return 'bg-danger';
   // Skips use the track tone, which stays dark in the dark theme — otherwise a
   // skipped square reads as brightly as a solved one.
-  return 'bg-seekbar-track-background-color dark:bg-dark-seekbar-track-background-color';
+  return 'bg-line';
 };
 
 const SongGuessrResult = (props: SongGuessrResultProps) => {
@@ -47,7 +47,7 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
         the stats panel ran past the bottom of a fixed-height dialog; side by
         side the whole result fits with nothing to scroll.
       */}
-      <div className="flex flex-col bg-background-color-1/95 px-5 py-5 dark:bg-dark-background-color-1/95">
+      <div className="flex flex-col bg-canvas/95 px-5 py-5">
         <div className="flex items-center gap-4">
           <Img
             src={answer.artworkPaths.artworkPath}
@@ -59,11 +59,11 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
             <span
               className={`mb-1.5 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${
                 won
-                  ? 'bg-font-color-highlight/15 text-font-color-highlight dark:bg-dark-font-color-highlight/15 dark:text-dark-font-color-highlight'
-                  : 'bg-font-color-crimson/15 text-font-color-crimson'
+                  ? 'bg-echo/15 text-echo '
+                  : 'bg-danger/15 text-danger'
               }`}
             >
-              <span className="material-icons-round text-xs !leading-none" aria-hidden="true">
+              <span className="ms-icon text-xs !leading-none" aria-hidden="true">
                 {won ? 'celebration' : 'sentiment_dissatisfied'}
               </span>
               {won
@@ -103,10 +103,10 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
           <button
             type="button"
             onClick={onNextRound}
-            className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-font-color-highlight/60 bg-background-color-2/25 px-5 text-sm font-medium transition-[border-color,background-color] duration-200 ease-in-out hover:border-font-color-highlight hover:bg-background-color-2/50 focus-visible:!border-font-color-highlight-2 motion-reduce:transition-none dark:border-dark-font-color-highlight/60 dark:bg-dark-background-color-2/25 dark:hover:border-dark-font-color-highlight dark:hover:bg-dark-background-color-2/50 dark:focus-visible:!border-dark-font-color-highlight-2"
+            className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-echo/60 bg-surface-2/25 px-5 text-sm font-medium transition-[border-color,background-color] duration-200 ease-in-out hover:border-echo hover:bg-surface-2/50 focus-visible:!border-echo motion-reduce:transition-none "
           >
             <span
-              className="material-icons-round text-base !leading-none text-font-color-highlight dark:text-dark-font-color-highlight"
+              className="ms-icon text-base !leading-none text-echo"
               aria-hidden="true"
             >
               refresh
@@ -117,9 +117,9 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
           <button
             type="button"
             onClick={onPlayInNora}
-            className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-background-color-2 bg-background-color-2/25 px-4 text-sm font-medium transition-[border-color,background-color] duration-200 ease-in-out hover:border-background-color-3 hover:bg-background-color-2/50 focus-visible:!border-font-color-highlight-2 motion-reduce:transition-none dark:border-dark-background-color-2 dark:bg-dark-background-color-2/25 dark:hover:border-dark-background-color-3 dark:hover:bg-dark-background-color-2/50 dark:focus-visible:!border-dark-font-color-highlight-2"
+            className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-surface-2 bg-surface-2/25 px-4 text-sm font-medium transition-[border-color,background-color] duration-200 ease-in-out hover:border-accent hover:bg-surface-2/50 focus-visible:!border-echo motion-reduce:transition-none "
           >
-            <span className="material-icons-round text-base !leading-none" aria-hidden="true">
+            <span className="ms-icon text-base !leading-none" aria-hidden="true">
               play_arrow
             </span>
             {t('songGuessr.playInNora')}
@@ -128,11 +128,11 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
           <button
             type="button"
             onClick={onCopy}
-            className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-background-color-2 bg-background-color-2/25 px-4 text-sm font-medium transition-[border-color,background-color] duration-200 ease-in-out hover:border-background-color-3 hover:bg-background-color-2/50 focus-visible:!border-font-color-highlight-2 motion-reduce:transition-none dark:border-dark-background-color-2 dark:bg-dark-background-color-2/25 dark:hover:border-dark-background-color-3 dark:hover:bg-dark-background-color-2/50 dark:focus-visible:!border-dark-font-color-highlight-2"
+            className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-surface-2 bg-surface-2/25 px-4 text-sm font-medium transition-[border-color,background-color] duration-200 ease-in-out hover:border-accent hover:bg-surface-2/50 focus-visible:!border-echo motion-reduce:transition-none "
           >
             <span
-              className={`material-icons-round text-base !leading-none ${
-                copied ? 'text-font-color-highlight dark:text-dark-font-color-highlight' : ''
+              className={`ms-icon text-base !leading-none ${
+                copied ? 'text-echo' : ''
               }`}
               aria-hidden="true"
             >

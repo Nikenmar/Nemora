@@ -286,10 +286,10 @@ const SongCard = (props: SongCardProp) => {
           : t(`song.${isSongAFavorite ? 'unlikeSong' : 'likeSong'}`),
         iconName: `favorite`,
         iconClassName: isMultipleSelectionsEnabled
-          ? 'material-icons-round-outlined mr-4 text-xl'
+          ? 'ms-icon mr-4 text-xl'
           : isSongAFavorite
-            ? 'material-icons-round mr-4 text-xl'
-            : 'material-icons-round-outlined mr-4 text-xl',
+            ? 'ms-icon ms-icon-filled mr-4 text-xl'
+            : 'ms-icon mr-4 text-xl',
         handlerFunction: () => {
           window.api.playerControls
             .toggleLikeSongs(isMultipleSelectionsEnabled ? [...songIds] : [songId])
@@ -497,7 +497,7 @@ const SongCard = (props: SongCardProp) => {
               key={artist.artistId}
               artistId={artist.artistId}
               name={artist.name}
-              className="!text-font-color-white/80 dark:!text-font-color-white/80"
+              className="!text-on-media/80"
             />
           ];
 
@@ -524,13 +524,13 @@ const SongCard = (props: SongCardProp) => {
         currentSongData.songId === songId && 'current-song'
       } ${
         isSongPlaying && 'playing'
-      } group/songCard relative mb-2 mr-2 aspect-[2/1] min-w-[15rem] max-w-[24rem] overflow-hidden rounded-2xl border-[transparent] border-background-color-2 shadow-xl transition-[border-color] ease-in-out dark:border-dark-background-color-2 ${
+      } group/songCard relative mb-2 mr-2 aspect-[2/1] min-w-[15rem] max-w-[24rem] overflow-hidden rounded-2xl border-[transparent] border-surface-2 shadow-xl transition-[border-color] ease-in-out ${
         className || ''
       } ${
         isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs' && 'border-4'
       } ${
         isAMultipleSelection &&
-        '!border-font-color-highlight dark:!border-dark-font-color-highlight'
+        '!border-echo'
       }`}
       data-song-id={songId}
       onDoubleClick={handlePlayBtnClick}
@@ -570,12 +570,12 @@ const SongCard = (props: SongCardProp) => {
               Array.isArray(queue.queue) &&
               queue.queue.length > 0 &&
               queue?.queue?.at(queue.currentSongIndex + 1) === songId && (
-                <span className="mr-2 font-semibold uppercase !text-font-color-white opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
+                <span className="mr-2 font-semibold uppercase !text-on-media opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
                   {t('song.playingNext')}
                 </span>
               )}
             {currentSongData.songId === songId && (
-              <span className="mr-2 font-semibold uppercase !text-font-color-white opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
+              <span className="mr-2 font-semibold uppercase !text-on-media opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
                 {t('song.playingNow')}
               </span>
             )}
@@ -587,7 +587,7 @@ const SongCard = (props: SongCardProp) => {
                 queue?.queue?.at(queue.currentSongIndex + 1) === songId &&
                 currentSongData.songId === songId
               ) && (
-                <span className="mr-2 font-semibold uppercase !text-font-color-white opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
+                <span className="mr-2 font-semibold uppercase !text-on-media opacity-50 transition-opacity last:mr-0 group-hover/songCard:opacity-90">
                   {t('song.blacklisted')}
                 </span>
               )}
@@ -597,8 +597,8 @@ const SongCard = (props: SongCardProp) => {
               className="order-2 !m-0 !rounded-none !border-0 bg-transparent !p-1 !text-inherit opacity-50 outline-1 outline-offset-1 transition-opacity hover:bg-transparent focus-visible:!outline group-focus-within/songCard:opacity-100 group-hover/songCard:opacity-100 dark:bg-transparent dark:hover:bg-transparent"
               iconName="favorite"
               iconClassName={`${
-                isSongAFavorite ? 'material-icons-round' : 'material-icons-round-outlined'
-              } !text-2xl !text-font-color-white !leading-none`}
+                isSongAFavorite ? 'ms-icon ms-icon-filled' : 'ms-icon'
+              } !text-2xl !text-on-media !leading-none`}
               tooltipLabel={isSongAFavorite ? t('song.likedThisSong') : undefined}
               clickHandler={(e) => {
                 e.stopPropagation();
@@ -608,7 +608,7 @@ const SongCard = (props: SongCardProp) => {
           </div>
         </div>
         <div className="song-info-and-play-btn-container flex w-full items-center justify-between">
-          <div className="song-info-container max-w-[75%] text-font-color-white dark:text-font-color-white">
+          <div className="song-info-container max-w-[75%] text-on-media">
             <div
               className="song-title cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-xl font-normal outline-1 outline-offset-1 transition-none hover:underline focus-visible:!outline"
               title={title}
@@ -640,7 +640,7 @@ const SongCard = (props: SongCardProp) => {
                   currentSongData.songId === songId && '!opacity-100'
                 } group-focus-within/songCard:opacity-100 group-hover/songCard:opacity-100`}
                 iconName={isSongPlaying ? 'pause_circle' : 'play_circle'}
-                iconClassName="!text-4xl !leading-none text-font-color-white transition-opacity"
+                iconClassName="!text-4xl !leading-none text-on-media transition-opacity"
                 clickHandler={(e) => {
                   e.stopPropagation();
                   handlePlayBtnClick();

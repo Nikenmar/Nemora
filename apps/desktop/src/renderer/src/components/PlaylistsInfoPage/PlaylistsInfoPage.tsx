@@ -358,8 +358,8 @@ const PlaylistInfoPage = () => {
         }}
       />
       {playlistSongs.length === 0 && (
-        <div className="no-songs-container appear-from-bottom relative flex h-full flex-grow flex-col items-center justify-center text-center text-lg font-light text-font-color-black !opacity-80 dark:text-font-color-white">
-          <span className="material-icons-round-outlined mb-4 text-5xl">brightness_empty</span>
+        <div className="no-songs-container appear-from-bottom relative flex h-full flex-grow flex-col items-center justify-center text-center text-lg font-light text-ink !opacity-80">
+          <span className="ms-icon mb-4 text-5xl">brightness_empty</span>
           {t('playlist.empty')}
         </div>
       )}

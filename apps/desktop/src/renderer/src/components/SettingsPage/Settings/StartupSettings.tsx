@@ -13,11 +13,11 @@ const StartupSettings = () => {
 
   return (
     <li className="main-container startup-settings-container mb-16">
-      <div className="title-container mb-4 mt-1 flex items-center text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2">restart_alt</span>
+      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2">restart_alt</span>
         {t('settingsPage.startupAndWindowCustomization')}
       </div>
-      <ul className="list-disc pl-6 marker:bg-background-color-3 dark:marker:bg-background-color-3">
+      <ul className="list-disc pl-6 marker:bg-accent">
         <li className="auto-launch-at-startup-checkbox-container mb-4">
           <div className="description">{t('settingsPage.autoLaunchAtStartDescription')}</div>
           <Checkbox

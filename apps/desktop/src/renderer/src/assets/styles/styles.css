@@ -86,6 +86,9 @@
   --danger-soft: 241 223 224;
   --success: 0 136 68;
   --warning: 183 119 0;
+  /* Constant in both themes: text and shade over cover art and video-like backdrops. */
+  --on-media: 255 255 255;
+  --shade: 0 0 0;
   --glass: 255 255 255;
   --glass-alpha: 0.62;
   --glass-hover: 0 0 0 / 0.06;

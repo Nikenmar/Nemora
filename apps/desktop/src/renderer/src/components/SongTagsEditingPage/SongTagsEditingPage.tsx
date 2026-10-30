@@ -338,7 +338,7 @@ function SongTagsEditingPage() {
             id: `songDataUpdateFailed`,
             content: t('notifications.songDataUpdateFailed'),
             iconName: 'warning',
-            iconClassName: 'material-icons-round-outlined icon'
+            iconClassName: 'ms-icon icon'
           }
         ]);
         console.error(err);
@@ -401,25 +401,25 @@ function SongTagsEditingPage() {
       <>
         {(songId || songPath) && isMetadataEditingSupported && (
           <>
-            <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+            <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
               {t('songTagsEditingPage.songMetadataEditor')}{' '}
               {!isKnownSource && (
                 <span
-                  className="material-icons-round-outlined ml-6 cursor-help text-xl hover:underline"
+                  className="ms-icon ml-6 cursor-help text-xl hover:underline"
                   title="You are editing a song outside the library."
                 >
                   error
                 </span>
               )}
             </div>
-            <div className="song-information-container bl-4 mb-12 flex text-font-color-black dark:text-font-color-white">
+            <div className="song-information-container bl-4 mb-12 flex text-ink">
               <SongArtwork artworkPath={songInfo.artworkPath} updateSongInfo={updateSongInfo} />
               <div className="song-info-container flex w-[70%] flex-col justify-center">
                 <div className="song-title mb-2 text-4xl">
                   {songInfo.title || songNameFromPath}
                   {!isKnownSource && (
                     <span
-                      className="material-icons-round-outlined ml-6 cursor-help text-2xl text-font-color-highlight hover:underline dark:text-dark-font-color-highlight"
+                      className="ms-icon ml-6 cursor-help text-2xl text-echo hover:underline"
                       title="You are editing a song outside the library."
                     >
                       error
@@ -443,7 +443,7 @@ function SongTagsEditingPage() {
                 />
               </div>
             </div>
-            <div className="inputs-container grid grid-flow-row grid-cols-2 content-around gap-8 text-font-color-black dark:text-font-color-white">
+            <div className="inputs-container grid grid-flow-row grid-cols-2 content-around gap-8 text-ink">
               <SongNameInput songTitle={songInfo.title} updateSongInfo={updateSongInfo} />
               <SongYearInput songYear={songInfo.releasedYear} updateSongInfo={updateSongInfo} />
               {/* ? SONG ARTSITS */}
@@ -486,7 +486,7 @@ function SongTagsEditingPage() {
                 songTrackNumber={songInfo.trackNumber}
                 updateSongInfo={updateSongInfo}
               />
-              <hr className="horizontal-rule col-span-2 h-[0.1rem] w-[95%] border-0 bg-background-color-2 dark:bg-dark-background-color-2" />
+              <hr className="horizontal-rule col-span-2 h-[0.1rem] w-[95%] border-0 bg-surface-2" />
               {/* SONG LYRICS EDITOR */}
               <SongLyricsEditorInput
                 songTitle={songInfo.title}
@@ -500,7 +500,7 @@ function SongTagsEditingPage() {
                 isLyricsSavingPending={songInfo.isLyricsSavePending}
                 updateSongInfo={updateSongInfo}
               />
-              <hr className="horizontal-rule col-span-2 h-[0.1rem] w-[95%] border-0 bg-background-color-2 dark:bg-dark-background-color-2" />
+              <hr className="horizontal-rule col-span-2 h-[0.1rem] w-[95%] border-0 bg-surface-2" />
             </div>
 
             <div className="id3-control-buttons-container mt-4 flex p-4">
@@ -508,7 +508,7 @@ function SongTagsEditingPage() {
                 key={0}
                 label={t('songTagsEditingPage.saveTags')}
                 iconName="save"
-                iconClassName="material-icons-round-outlined"
+                iconClassName="ms-icon"
                 isDisabled={!areThereDataChanges}
                 className="update-song-tags-btn"
                 clickHandler={saveTags}
@@ -523,14 +523,14 @@ function SongTagsEditingPage() {
               />
             </div>
             {isEditingCurrentlyPlayingSong && areThereDataChanges && (
-              <p className="appear-from-bottom mb-2 ml-2 flex items-center text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-                <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
+              <p className="appear-from-bottom mb-2 ml-2 flex items-center text-sm font-medium text-echo">
+                <span className="ms-icon mr-2 text-xl">error</span>{' '}
                 {t('songTagsEditingPage.updateAddedToBeSavedLater')}
               </p>
             )}
             {isMetadataUpdatesPending && (
-              <p className="appear-from-bottom mb-2 ml-2 flex items-center text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-                <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
+              <p className="appear-from-bottom mb-2 ml-2 flex items-center text-sm font-medium text-echo">
+                <span className="ms-icon mr-2 text-xl">error</span>{' '}
                 {t('songTagsEditingPage.pendingUpdateAvailable')}
               </p>
             )}
@@ -538,8 +538,8 @@ function SongTagsEditingPage() {
         )}
 
         {!isMetadataEditingSupported && (
-          <div className="flex !h-full flex-col items-center justify-center dark:text-white/80">
-            <span className="material-icons-round-outlined text-6xl">campaign</span>
+          <div className="flex !h-full flex-col items-center justify-center">
+            <span className="ms-icon text-6xl">campaign</span>
             <p className="mt-2 text-2xl">{t('songTagsEditingPage.saveTagsNotSupportedTitle')}</p>
             <p
               className="mt-4 cursor-pointer text-xs font-light opacity-50"
@@ -553,12 +553,12 @@ function SongTagsEditingPage() {
                 P1: <p className="mt-2 px-8 font-light" />,
                 P2: <p className="px-8 font-light" />,
                 Format: (
-                  <span className="font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <span className="font-medium text-echo">
                     {pathExt}
                   </span>
                 ),
                 SupportedFormat: (
-                  <span className="font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                  <span className="font-medium text-echo">
                     mp3
                   </span>
                 )

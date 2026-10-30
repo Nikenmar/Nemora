@@ -150,12 +150,12 @@ const LyricsContainer = (props: Props) => {
         </>
       )}
       {isLyricsVisible && lyrics && !lyrics.lyrics.isSynced && (
-        <div className="flex h-full w-full items-center justify-center text-font-color-white opacity-75">
+        <div className="flex h-full w-full items-center justify-center text-on-media opacity-75">
           {t('lyricsPage.noSyncedLyrics')}
         </div>
       )}
       {isLyricsVisible && lyrics === undefined && (
-        <div className="flex h-full w-full items-center justify-center text-font-color-white">
+        <div className="flex h-full w-full items-center justify-center text-on-media">
           {t('lyricsPage.noLyrics')}
         </div>
       )}

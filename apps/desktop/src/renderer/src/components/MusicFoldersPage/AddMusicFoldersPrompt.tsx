@@ -152,8 +152,8 @@ const AddMusicFoldersPrompt = (props: Props) => {
   const isAddFolderButtonDisabled = selectedNoOfParentFolders === 0;
   return (
     <div className="">
-      <div className="title-container mb-4 flex items-center text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2 text-4xl">create_new_folder</span>{' '}
+      <div className="title-container mb-4 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2 text-4xl">create_new_folder</span>{' '}
         {t('addMusicFoldersPrompt.title')}
       </div>
       <div className="mt-8">
@@ -162,14 +162,14 @@ const AddMusicFoldersPrompt = (props: Props) => {
         ) : (
           <div className="flex flex-col items-center justify-center pt-8">
             <div className="flex w-4/5 flex-col items-center justify-center text-center text-sm opacity-80">
-              <span className="material-icons-round-outlined mb-4 text-5xl">folder_open</span>
+              <span className="ms-icon mb-4 text-5xl">folder_open</span>
               <p>{t('addMusicFoldersPrompt.emptyMessage1')}</p>
               <p>{t('addMusicFoldersPrompt.emptyMessage2')}</p>
             </div>
             <Button
               label={t('addMusicFoldersPrompt.chooseFolders')}
               iconName="folder"
-              iconClassName="material-icons-round-outlined"
+              iconClassName="ms-icon"
               className="!mr-0 mt-4"
               clickHandler={getFolderInfo}
             />
@@ -178,7 +178,7 @@ const AddMusicFoldersPrompt = (props: Props) => {
       </div>
       {folders.length > 0 && (
         <div className="mt-10 flex items-center justify-end">
-          <div className="folder-info-container mr-8 text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+          <div className="folder-info-container mr-8 text-sm text-echo">
             <span>
               {t('folder.selectedParentFolderCount', {
                 count: selectedNoOfParentFolders
@@ -201,7 +201,7 @@ const AddMusicFoldersPrompt = (props: Props) => {
             <Button
               label={t('addMusicFoldersPrompt.addSelectedFolders')}
               iconName="done"
-              className="!bg-background-color-3 !text-font-color-black"
+              className="!bg-accent !text-on-accent"
               clickHandler={(_, setIsDisabled, setIsPending) => {
                 const validFolders = removeUnselectedFolders(folders);
                 console.log(validFolders);

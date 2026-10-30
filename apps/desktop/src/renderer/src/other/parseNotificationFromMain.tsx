@@ -20,7 +20,7 @@ interface AppNotificationConfig extends Partial<AppNotification> {
 }
 
 const defaultButtonStyles =
-  '!bg-background-color-3 dark:!bg-dark-background-color-3 !text-font-color-black dark:!text-font-color-black !font-light';
+  '!bg-accent !text-on-accent !font-light';
 
 const notificationsFromMainConfig: AppNotificationConfig[] = [
   {
@@ -68,17 +68,17 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
       'SONG_REPARSE_FAILED'
     ],
     iconName: 'error',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: ['LOADING'],
     iconName: 'downloading',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: ['LYRICS_TRANSLATION_SUCCESS', 'LYRICS_TRANSLATION_FAILED'],
     iconName: 'translate',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: [
@@ -93,12 +93,12 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
       'LYRICS_TRANSLATION_TO_SAME_SOURCE_LANGUAGE'
     ],
     iconName: 'info',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: ['DESTINATION_NOT_SELECTED'],
     iconName: 'wrong_location',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: ['APP_THEME_CHANGE'],
@@ -111,12 +111,12 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
   {
     trigger: ['MUSIC_FOLDER_DELETED', 'EMPTY_MUSIC_FOLDER_DELETED', 'SONG_DELETED'],
     iconName: 'delete',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: ['PARSE_SUCCESSFUL'],
     iconName: 'file_download',
-    iconClassName: 'material-icons-round-outlined',
+    iconClassName: 'ms-icon',
     update({ data }) {
       if (data) this.id ??= data?.songId as string | undefined;
       return this;
@@ -125,7 +125,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
   {
     trigger: ['RESYNC_SUCCESSFUL'],
     iconName: 'check',
-    iconClassName: 'material-icons-round-outlined'
+    iconClassName: 'ms-icon'
   },
   {
     trigger: ['PARSE_FAILED'],
@@ -143,7 +143,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
     trigger: ['PLAYBACK_FROM_UNKNOWN_SOURCE'],
     duration: 15000,
     iconName: 'error',
-    iconClassName: 'material-icons-round-outlined',
+    iconClassName: 'ms-icon',
     validate({ data }) {
       if (data) return data && 'path' in data;
       return false;
@@ -155,7 +155,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
     update({ messageCode }) {
       this.iconClassName =
         messageCode === 'ARTIST_DISLIKE'
-          ? 'material-icons-round-outlined text-font-color-crimson dark:text-font-color-crimson'
+          ? 'ms-icon text-danger'
           : '';
 
       return this;
@@ -171,7 +171,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
     update({ messageCode }) {
       this.iconClassName =
         messageCode === 'SONG_DISLIKE'
-          ? 'material-icons-round-outlined text-font-color-crimson dark:text-font-color-crimson'
+          ? 'ms-icon text-danger'
           : '';
       return this;
     }
@@ -183,7 +183,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
       'ARTWORK_GENERATING_PROCESS_UPDATE'
     ],
     duration: 10000,
-    iconClassName: 'material-icons-round-outlined',
+    iconClassName: 'ms-icon',
     type: 'WITH_PROGRESS_BAR',
     validate({ data }) {
       if (data) return 'total' in data && 'value' in data;
@@ -205,7 +205,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
     trigger: ['APPDATA_EXPORT_STARTED'],
     iconName: 'publish',
     duration: 10000,
-    iconClassName: 'material-icons-round-outlined',
+    iconClassName: 'ms-icon',
     type: 'WITH_PROGRESS_BAR',
     validate({ data }) {
       if (data) return 'total' in data && 'value' in data;
@@ -224,7 +224,7 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
     trigger: ['SONG_PALETTE_GENERATING_PROCESS_UPDATE', 'GENRE_PALETTE_GENERATING_PROCESS_UPDATE'],
     duration: 10000,
     iconName: 'magic_button',
-    iconClassName: 'material-icons-round-outlined',
+    iconClassName: 'ms-icon',
     type: 'WITH_PROGRESS_BAR',
     validate({ data }) {
       if (data) return 'total' in data && 'value' in data;

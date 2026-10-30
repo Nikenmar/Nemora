@@ -16,11 +16,11 @@ const getDotClassName = (attempt: SongGuessrAttempt | undefined) => {
   // `background-color-3`, they are genuinely dark in the dark theme, so a
   // pending dot cannot be mistaken for a filled one.
   if (!attempt)
-    return 'bg-seekbar-track-background-color dark:bg-dark-seekbar-track-background-color';
+    return 'bg-line';
   if (attempt.kind === 'correct')
-    return 'bg-font-color-highlight dark:bg-dark-font-color-highlight';
-  if (attempt.kind === 'wrong') return 'bg-font-color-crimson';
-  return 'border-2 border-seekbar-track-background-color bg-transparent dark:border-dark-seekbar-track-background-color';
+    return 'bg-echo';
+  if (attempt.kind === 'wrong') return 'bg-danger';
+  return 'border-2 border-line bg-transparent';
 };
 
 const getAttemptIcon = (attempt: SongGuessrAttempt) => {
@@ -55,16 +55,16 @@ const SongGuessrAttemptList = (props: SongGuessrAttemptListProps) => {
               key={index}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-1 text-xs ${
                 isCorrect
-                  ? 'bg-font-color-highlight/10 dark:bg-dark-font-color-highlight/10'
-                  : 'bg-background-color-2/50 dark:bg-dark-background-color-2/50'
+                  ? 'bg-echo/10'
+                  : 'bg-surface-2/50'
               }`}
             >
               <span
-                className={`material-icons-round text-base !leading-none ${
+                className={`ms-icon text-base !leading-none ${
                   isCorrect
-                    ? 'text-font-color-highlight dark:text-dark-font-color-highlight'
+                    ? 'text-echo'
                     : attempt.kind === 'wrong'
-                      ? 'text-font-color-crimson'
+                      ? 'text-danger'
                       : 'opacity-40'
                 }`}
                 aria-hidden="true"

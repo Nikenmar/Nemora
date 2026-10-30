@@ -92,7 +92,7 @@ const MostRelevantSearchResultsContainer = (props: Props) => {
                       })}
                     </span>
                   ),
-                  icon: <span className="material-icons-round">shortcut</span>
+                  icon: <span className="ms-icon">shortcut</span>
                 }
               ]);
             }
@@ -117,7 +117,7 @@ const MostRelevantSearchResultsContainer = (props: Props) => {
                     )
                   }
                 ]
-                // <span className="material-icons-round icon">playlist_add</span>
+                // <span className="ms-icon icon">playlist_add</span>
               );
             }
           },
@@ -382,7 +382,7 @@ const MostRelevantSearchResultsContainer = (props: Props) => {
       }`}
     >
       <>
-        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
           {t('searchPage.mostRelevant')}
         </div>
         <div

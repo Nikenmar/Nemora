@@ -8,14 +8,20 @@ import NetworkIndicator from './indicators/NetworkIndicator';
 import ChangeThemeBtn from './special_controls/ChangeThemeBtn';
 import NavigationControlsContainer from './NavigationControlsContainer';
 import WindowControlsContainer from './WindowControlsContainer';
+import TitleBarSearch from './TitleBarSearch';
 
 import LightModeLogo from '../../assets/images/webp/logo_light_mode.webp';
 import GoToMainPlayerBtn from './special_controls/GoToMainPlayerBtn';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
+import { cn } from '../ui/cn';
 
 const appReleasePhase = getVersionInfoFromString(version)?.releasePhase || 'stable';
 
+/**
+ * The bar over the whole window: the mark and back/forward over the sidebar, the search field in the
+ * middle, indicators and the window buttons on the right. The window drags by it (styles.css).
+ */
 const TitleBar = memo(() => {
   const bodyBackgroundImage = useStore(store, (state) => state.bodyBackgroundImage);
   const playerType = useStore(store, (state) => state.playerType);
@@ -23,40 +29,28 @@ const TitleBar = memo(() => {
   return (
     <header
       id="title-bar"
-      className={`relative top-0 z-40 flex h-10 w-full items-center justify-between overflow-hidden bg-transparent text-font-color-black transition-opacity dark:text-font-color-white ${
-        bodyBackgroundImage &&
-        'bg-background-color-1/50 !text-font-color-white backdrop-blur-md dark:bg-dark-background-color-1/70'
-      }`}
+      className={cn(
+        'relative top-0 z-40 grid h-10 w-full shrink-0 grid-cols-[216px_minmax(0,1fr)_auto] items-center overflow-hidden bg-surface-1 text-ink',
+        playerType === 'full' && 'bg-transparent',
+        bodyBackgroundImage && 'bg-canvas/60 backdrop-blur-md'
+      )}
     >
-      <div className="logo-and-app-name-and-navigation-controls-container ml-2 flex h-full w-fit items-center gap-12">
-        <div className="logo-and-app-name-container flex items-center">
-          <span className="logo-container">
-            <Img
-              className="mr-2 h-7 rounded-md p-1 shadow-md"
-              src={LightModeLogo}
-              alt="Nemora Logo"
-            />
-          </span>
-          <span className="app-name-container">
-            <span>
-              Nemora
-              <sup
-                className={`app-version ml-1 cursor-pointer text-[0.6rem] font-semibold uppercase text-font-color-highlight dark:text-dark-font-color-highlight ${
-                  bodyBackgroundImage && '!text-dark-font-color-highlight'
-                } `}
-                title={`v${version}`}
-              >
-                {appReleasePhase}
-              </sup>
-            </span>
-          </span>
-        </div>
-        {playerType !== 'full' && <NavigationControlsContainer />}
+      <div className="logo-and-app-name-container flex h-full items-center gap-2.5 pl-4">
+        <Img className="h-[18px] w-[18px] rounded-[5px]" src={LightModeLogo} alt="" />
+        <span
+          className="app-version text-[13px] font-semibold"
+          data-tooltip={`Nemora ${version} (${appReleasePhase})`}
+        >
+          Nemora
+        </span>
       </div>
-      <div className="window-controls-and-special-controls-and-indicators-container flex h-full flex-row">
-        <div className="special-controls-and-indicators-container mr-2 flex items-center justify-between py-1">
+      <div className="flex min-w-0 items-center gap-3 pl-3">
+        {playerType !== 'full' && <NavigationControlsContainer disableHomeButton />}
+        {playerType !== 'full' && <TitleBarSearch />}
+      </div>
+      <div className="window-controls-and-special-controls-and-indicators-container flex h-full flex-row items-center">
+        <div className="special-controls-and-indicators-container mr-1 flex items-center gap-1 text-ink-dim">
           <div className="indicators-container flex flex-row">
-            {/* <ThrottlingIndicator /> */}
             <NetworkIndicator />
           </div>
           <div className="special-controls-container flex flex-row">

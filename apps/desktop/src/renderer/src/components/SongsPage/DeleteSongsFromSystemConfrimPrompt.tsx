@@ -36,7 +36,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
 
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-black dark:text-font-color-white">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-ink">
         {t('deleteSongFromSystemConfirmPrompt.title', {
           count: songsData.length,
           title: songsData[0]?.title
@@ -67,7 +67,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
       <div className="buttons-container flex items-center justify-end">
         <Button
           label={t('deleteSongFromSystemConfirmPrompt.deleteSong')}
-          className="delete-song-confirm-btn danger-btn float-right mt-6 h-10 w-48 cursor-pointer rounded-lg !bg-font-color-crimson font-medium text-font-color-white outline-none ease-in-out hover:border-font-color-crimson dark:!bg-font-color-crimson dark:text-font-color-white dark:hover:border-font-color-crimson"
+          className="delete-song-confirm-btn danger-btn float-right mt-6 h-10 w-48 cursor-pointer rounded-lg !bg-danger font-medium text-on-media outline-none ease-in-out hover:border-danger "
           clickHandler={() => {
             return window.api.audioLibraryControls
               .deleteSongsFromSystem(
@@ -94,7 +94,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
                           )}
                         </span>
                       ),
-                      icon: <span className="material-icons-round icon">done_all</span>
+                      icon: <span className="ms-icon icon">done_all</span>
                     }
                   ]);
                 } else {
@@ -104,7 +104,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
                       duration: 5000,
                       content: res.message ?? 'Some songs could not be deleted.',
                       iconName: 'warning',
-                      iconClassName: 'material-icons-round-outlined icon'
+                      iconClassName: 'ms-icon icon'
                     }
                   ]);
                 }
@@ -118,7 +118,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
                     content:
                       error instanceof Error ? error.message : 'Some songs could not be deleted.',
                     iconName: 'warning',
-                    iconClassName: 'material-icons-round-outlined icon'
+                    iconClassName: 'ms-icon icon'
                   }
                 ]);
               });

@@ -47,7 +47,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
             src={artist.onlineArtworkPaths?.picture_small}
             fallbackSrc={artist.artworkPath}
             loading="eager"
-            className={`absolute aspect-square w-6 rounded-full border-2 border-background-color-1 dark:border-dark-background-color-1 ${
+            className={`absolute aspect-square w-6 rounded-full border-2 border-canvas ${
               index === 0 ? 'z-2' : '-translate-x-2'
             }`}
             onClick={() => {
@@ -185,7 +185,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
         label: t('common.saveArtwork'),
         class: 'edit',
         iconName: 'image',
-        iconClassName: 'material-icons-round-outlined',
+        iconClassName: 'ms-icon',
         handlerFunction: () =>
           artworkPath &&
           window.api.songUpdates.saveArtworkToSystem(
@@ -218,7 +218,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
                     id: `${title}Blacklisted`,
                     duration: 5000,
                     content: t('notifications.songBlacklisted', { title }),
-                    icon: <span className="material-icons-round">block</span>
+                    icon: <span className="ms-icon">block</span>
                   }
                 ])
               )
@@ -253,17 +253,17 @@ const CurrentlyPlayingSongInfoContainer = () => {
   ]);
 
   return (
-    <div className="current-playing-song-info-container grid w-full max-w-full grid-cols-[6rem_minmax(0,1fr)] items-center gap-2 lg:grid-cols-[minmax(0,1fr)]">
+    <div className="current-playing-song-info-container flex min-w-0 items-center gap-3 pl-4">
       <div
-        className="song-cover-container relativeflex aspect-square h-full items-center justify-center overflow-hidden p-2 lg:hidden"
+        className="song-cover-container relative h-12 w-12 shrink-0 lg:hidden"
         id="currentSongCover"
       >
         {/* ${
                !currentSongData.artworkPath &&
-               `before:absolute before:h-[85%] before:w-[85%] before:rounded-md before:bg-background-color-2 before:bg-dark-background-color-2 before:content-[''] after:absolute after:h-5 after:w-5 after:animate-spin-ease after:rounded-full after:border-2 after:border-[transparent] after:border-t-font-color-black after:content-[''] dark:after:border-t-font-color-white`
+               `before:absolute before:h-[85%] before:w-[85%] before:rounded-md before:bg-surface-2 before:bg-surface-2 before:content-[''] after:absolute after:h-5 after:w-5 after:animate-spin-ease after:rounded-full after:border-2 after:border-[transparent] after:border-t-ink after:content-['']`
              } */}
         <Img
-          className="aspect-square h-full max-w-full rounded-lg object-cover object-center shadow-xl"
+          className="h-12 w-12 rounded-cover-sm object-cover object-center shadow-[0_4px_14px_rgb(0_0_0/0.35)]"
           src={currentSongData.artworkPath}
           fallbackSrc={DefaultSongCover}
           alt="Default song cover"
@@ -279,11 +279,11 @@ const CurrentlyPlayingSongInfoContainer = () => {
           }}
         />
       </div>
-      <div className="song-info-container relative flex h-full w-full flex-col items-start justify-center drop-shadow-lg lg:ml-4 lg:w-full">
+      <div className="song-info-container relative flex min-w-0 flex-1 flex-col items-start justify-center gap-0.5">
         {currentSongData.title && (
           <div className="song-title flex w-full items-center">
             <div
-              className={`w-fit max-w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-medium text-font-color-highlight outline-1 outline-offset-1 focus-visible:!outline ${
+              className={`w-fit max-w-full cursor-pointer truncate text-[14px] font-semibold leading-5 text-ink outline-none focus-visible:outline-2 focus-visible:outline-echo ${
                 currentSongData.isKnownSource && 'hover:underline'
               }`}
               id="currentSongTitle"
@@ -306,7 +306,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
             </div>
             {!currentSongData.isKnownSource && (
               <span
-                className="material-icons-round-outlined ml-2 cursor-pointer text-xl font-light text-font-color-highlight hover:underline dark:text-dark-font-color-highlight"
+                className="ms-icon ml-1.5 cursor-help text-[16px] text-warning"
                 title="You are playing from an unknown source. Some features are disabled."
               >
                 error
@@ -330,7 +330,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
                   {songArtistsImages}
                 </span>
               )}
-            <span className="flex w-3/4 grow-0 text-xs text-font-color-black/90 dark:text-font-color-white/90">
+            <span className="flex min-w-0 truncate text-small text-ink-dim">
               {songArtists}
             </span>
           </div>

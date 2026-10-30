@@ -71,8 +71,8 @@ const ImportStatsPrompt = () => {
     <label
       key={mode}
       htmlFor={inputId}
-      className={`mb-2 flex cursor-pointer flex-col rounded-md bg-background-color-2/75 px-4 py-3 outline-2 outline-offset-1 focus-within:!outline hover:bg-background-color-2 dark:bg-dark-background-color-2/75 dark:hover:bg-dark-background-color-2 ${
-        mergeMode === mode && '!bg-background-color-3 dark:!bg-dark-background-color-3'
+      className={`mb-2 flex cursor-pointer flex-col rounded-md bg-surface-2/75 px-4 py-3 outline-2 outline-offset-1 focus-within:!outline hover:bg-surface-2 ${
+        mergeMode === mode && '!bg-accent'
       }`}
     >
       <input
@@ -91,7 +91,7 @@ const ImportStatsPrompt = () => {
 
   return (
     <>
-      <div className="title-container mb-6 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container mb-6 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {t('statsImport.title')}
       </div>
 
@@ -115,7 +115,7 @@ const ImportStatsPrompt = () => {
             <Button
               label={t('statsImport.pickFile')}
               iconName="upload_file"
-              className="import-stats-file-btn !bg-background-color-3 px-6 text-sm !text-font-color-black hover:border-background-color-3 md:text-base dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+              className="import-stats-file-btn !bg-accent px-6 text-sm !text-on-accent hover:border-accent md:text-base "
               clickHandler={() => runImport('file', mergeMode)}
             />
           </div>
@@ -130,7 +130,7 @@ const ImportStatsPrompt = () => {
         <>
           <div className="description mb-6">
             {report.success ? (
-              <ul className="list-inside list-disc pl-4 marker:text-font-color-highlight dark:marker:text-dark-font-color-highlight">
+              <ul className="list-inside list-disc pl-4 marker:text-echo">
                 <li>{t('statsImport.reportMatched', { count: report.matchedSongs })}</li>
                 <li>{t('statsImport.reportUnmatched', { count: report.unmatchedSongs })}</li>
                 <li>{t('statsImport.reportMerged', { count: report.mergedListens })}</li>
@@ -166,13 +166,13 @@ const ImportStatsPrompt = () => {
               <Button
                 label={t('statsImport.importAsSameOrigin')}
                 iconName="upload"
-                className="import-stats-same-origin-btn !bg-background-color-3 px-6 text-sm !text-font-color-black hover:border-background-color-3 md:text-base dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+                className="import-stats-same-origin-btn !bg-accent px-6 text-sm !text-on-accent hover:border-accent md:text-base "
                 clickHandler={() => runImport(lastSource, 'sameOrigin')}
               />
             )}
             <Button
               label={t('eloDuels.close')}
-              className="import-stats-close-btn !bg-background-color-3 px-8 text-sm !text-font-color-black hover:border-background-color-3 md:text-base dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+              className="import-stats-close-btn !bg-accent px-8 text-sm !text-on-accent hover:border-accent md:text-base "
               clickHandler={() => changePromptMenuData(false)}
             />
           </div>

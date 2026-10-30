@@ -55,7 +55,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
       aria-modal="true"
       aria-label={t('statsPage.recap.title', { period: periodLabel })}
       tabIndex={-1}
-      className="fixed inset-0 z-[100] flex select-none flex-col overflow-hidden bg-background-color-2 text-font-color-black outline-none dark:bg-dark-background-color-2 dark:text-font-color-white"
+      className="fixed inset-0 z-[100] flex select-none flex-col overflow-hidden bg-surface-2 text-ink outline-none "
     >
       <button
         type="button"
@@ -71,8 +71,8 @@ const Recap = ({ slides, period, onClose }: Props) => {
             key={`${item.kind}-${slideIndex}`}
             className={`h-1 grow rounded-full ${
               slideIndex <= index
-                ? 'bg-font-color-highlight dark:bg-dark-font-color-highlight'
-                : 'bg-font-color-black/15 dark:bg-font-color-white/15'
+                ? 'bg-echo'
+                : 'bg-ink/15'
             }`}
           />
         ))}
@@ -82,7 +82,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
         <span className="text-sm font-medium opacity-60">{periodLabel}</span>
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-background-color-1/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-font-color-highlight dark:hover:bg-dark-background-color-1/50 dark:focus-visible:outline-dark-font-color-highlight"
+          className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-canvas/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-echo "
           aria-label={t('statsPage.recap.close')}
           title={t('statsPage.recap.close')}
           onClick={(event) => {
@@ -90,7 +90,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
             onClose();
           }}
         >
-          <span className="material-icons-round" aria-hidden="true">
+          <span className="ms-icon" aria-hidden="true">
             close
           </span>
         </button>
@@ -107,7 +107,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
         <button
           type="button"
           disabled={index === 0}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-background-color-1/45 disabled:invisible dark:bg-dark-background-color-1/45"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-canvas/45 disabled:invisible"
           aria-label={t('statsPage.recap.previous')}
           title={t('statsPage.recap.previous')}
           onClick={(event) => {
@@ -115,7 +115,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
             previous();
           }}
         >
-          <span className="material-icons-round" aria-hidden="true">
+          <span className="ms-icon" aria-hidden="true">
             arrow_back
           </span>
         </button>
@@ -125,7 +125,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
         <button
           type="button"
           disabled={index >= slides.length - 1}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-background-color-1/45 disabled:invisible dark:bg-dark-background-color-1/45"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-canvas/45 disabled:invisible"
           aria-label={t('statsPage.recap.next')}
           title={t('statsPage.recap.next')}
           onClick={(event) => {
@@ -133,7 +133,7 @@ const Recap = ({ slides, period, onClose }: Props) => {
             next();
           }}
         >
-          <span className="material-icons-round" aria-hidden="true">
+          <span className="ms-icon" aria-hidden="true">
             arrow_forward
           </span>
         </button>

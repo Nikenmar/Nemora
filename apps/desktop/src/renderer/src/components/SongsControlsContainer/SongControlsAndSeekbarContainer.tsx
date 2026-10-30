@@ -2,6 +2,7 @@ import { useCallback, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Button from '../Button';
+import Icon from '../ui/Icon';
 import SeekBarContainer from './SeekBarContainer';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
@@ -36,101 +37,76 @@ const SongControlsAndSeekbarContainer = () => {
     }
   }, [isShuffling, toggleTierShuffle, updateQueueData]);
 
+  const toggleLook = (isOn: boolean) =>
+    `!m-0 !h-8 !w-8 ${isOn ? '!text-echo hover:!text-echo' : ''}`;
+
   return (
-    <div className="song-controls-and-seekbar-container flex flex-col items-center justify-center py-2">
-      <div className="controls-container flex w-2/3 max-w-sm items-center justify-around px-2 lg:w-4/5 lg:p-0 [&>div.active_span.icon]:!text-font-color-highlight [&>div.active_span.icon]:opacity-100 dark:[&>div.active_span.icon]:!text-dark-font-color-highlight">
+    <div className="song-controls-and-seekbar-container flex min-w-0 flex-col items-center justify-center gap-1.5 py-2">
+      <div className="controls-container flex items-center gap-1.5">
         <Button
-          className={`like-btn !mr-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-            isAFavorite && 'active after:opacity-100'
-          } ${!isKnownSource && '!cursor-none brightness-50'}`}
+          className={`like-btn ${toggleLook(isAFavorite)} ${!isKnownSource && '!cursor-not-allowed opacity-40'}`}
           tooltipLabel={isKnownSource ? t('player.likeDislike') : t('player.likeDislikeDisabled')}
           iconName="favorite"
-          iconClassName={`${
-            isAFavorite
-              ? 'material-icons-round !text-font-color-highlight dark:!text-dark-font-color-highlight !opacity-100'
-              : 'material-icons-round-outlined'
-          } icon cursor-pointer !text-2xl leading-none text-font-color-black opacity-60 transition-opacity hover:opacity-80 dark:text-font-color-white`}
+          isActive={isAFavorite}
           clickHandler={() => isKnownSource && toggleIsFavorite(!isAFavorite)}
         />
-
         <Button
-          className={`tier-shuffle-btn !m-0 flex items-center justify-center !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-            isTierShuffling && 'active after:opacity-100'
-          }`}
+          className={`tier-shuffle-btn ${toggleLook(isTierShuffling)}`}
           tooltipLabel={t('player.tierShuffle')}
           iconName="auto_fix"
-          iconClassName={`material-icons-round icon !text-2xl opacity-60 transition-opacity hover:opacity-80 ${
-            isTierShuffling &&
-            '!text-font-color-highlight dark:!text-dark-font-color-highlight !opacity-100'
-          }`}
+          isActive={isTierShuffling}
           clickHandler={() => toggleTierShuffle()}
         />
-
         <Button
-          className={`shuffle-btn !m-0 flex items-center justify-center !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-            isShuffling && 'active after:opacity-100'
-          }`}
+          className={`shuffle-btn ${toggleLook(isShuffling)}`}
           tooltipLabel={t('player.shuffle')}
           iconName="shuffle"
-          iconClassName={`material-icons-round icon !text-2xl opacity-60 transition-opacity hover:opacity-80 ${
-            isShuffling &&
-            '!text-font-color-highlight dark:!text-dark-font-color-highlight !opacity-100'
-          }`}
+          isActive={isShuffling}
           clickHandler={handleQueueShuffle}
         />
-
         <Button
-          className="skip-back-btn !m-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
+          className="skip-back-btn !m-0 !h-9 !w-9 !text-ink hover:!bg-transparent hover:opacity-80"
           tooltipLabel={t('player.prevSong')}
           iconName="skip_previous"
-          iconClassName="material-icons-round !text-2xl opacity-60 transition-opacity hover:opacity-80"
+          isActive
+          size="lg"
           clickHandler={handleSkipBackwardClick}
         />
-
-        <Button
-          className={`play-pause-btn relative !m-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent ${
-            isPlayerStalled &&
-            `after:absolute after:h-5 after:w-5 after:animate-spin-ease after:rounded-full after:border-2 after:border-[transparent] after:border-t-font-color-black after:content-[''] dark:after:border-t-font-color-white`
+        <button
+          type="button"
+          className={`play-pause-btn relative mx-1 flex h-9 w-9 items-center justify-center rounded-full bg-ink text-canvas outline-none transition-transform duration-150 ease-out hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo ${
+            isPlayerStalled ? 'cursor-progress' : ''
           }`}
-          tooltipLabel={t('player.playPause')}
-          iconName={isCurrentSongPlaying ? 'pause_circle' : 'play_circle'}
-          iconClassName={`material-icons-round !text-5xl opacity-80 transition-opacity hover:opacity-80 ${
-            isPlayerStalled && '!opacity-10'
-          }`}
-          clickHandler={() => !isPlayerStalled && toggleSongPlayback()}
-        />
-
+          aria-label={t('player.playPause')}
+          data-tooltip={t('player.playPause')}
+          onClick={() => !isPlayerStalled && toggleSongPlayback()}
+        >
+          {isPlayerStalled ? (
+            <span className="h-4 w-4 animate-spin-ease rounded-full border-2 border-canvas border-t-transparent" aria-hidden />
+          ) : (
+            <Icon name={isCurrentSongPlaying ? 'pause' : 'play_arrow'} filled size={24} />
+          )}
+        </button>
         <Button
-          className="skip-forward-btn !m-0 flex !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
+          className="skip-forward-btn !m-0 !h-9 !w-9 !text-ink hover:!bg-transparent hover:opacity-80"
           tooltipLabel={t('player.nextSong')}
           iconName="skip_next"
-          iconClassName="material-icons-round !text-2xl opacity-60 transition-opacity hover:opacity-80"
+          isActive
+          size="lg"
           clickHandler={() => handleSkipForwardClick('USER_SKIP')}
         />
-
         <Button
-          className={`repeat-btn !m-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-            isRepeating !== 'false' && 'active after:opacity-100'
-          }`}
+          className={`repeat-btn ${toggleLook(isRepeating !== 'false')}`}
           tooltipLabel={t('player.repeat')}
           iconName={isRepeating === 'false' || isRepeating === 'repeat' ? 'repeat' : 'repeat_one'}
-          iconClassName={`material-icons-round !text-2xl opacity-60 transition-opacity hover:opacity-80 ${
-            isRepeating !== 'false' &&
-            '!text-font-color-highlight dark:!text-dark-font-color-highlight !opacity-100'
-          }`}
+          isActive={isRepeating !== 'false'}
           clickHandler={() => toggleRepeat()}
         />
-
         <Button
-          className={`lyrics-btn !m-0 !rounded-none !border-0 bg-transparent !p-0 outline-1 outline-offset-1 after:absolute after:h-1 after:w-1 after:translate-y-4 after:rounded-full after:bg-font-color-highlight after:opacity-0 after:transition-opacity hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:after:bg-dark-font-color-highlight dark:hover:bg-transparent ${
-            currentlyActivePage.pageTitle === 'Lyrics' && 'active after:opacity-100'
-          }`}
+          className={`lyrics-btn ${toggleLook(currentlyActivePage.pageTitle === 'Lyrics')}`}
           tooltipLabel={t('player.lyrics')}
-          iconName="notes"
-          iconClassName={`material-icons-round !text-2xl opacity-60 transition-opacity hover:opacity-80 ${
-            currentlyActivePage.pageTitle === 'Lyrics' &&
-            '!text-font-color-highlight dark:!text-dark-font-color-highlight !opacity-100'
-          }`}
+          iconName="lyrics"
+          isActive={currentlyActivePage.pageTitle === 'Lyrics'}
           clickHandler={() =>
             currentlyActivePage.pageTitle === 'Lyrics'
               ? changeCurrentActivePage('Home')

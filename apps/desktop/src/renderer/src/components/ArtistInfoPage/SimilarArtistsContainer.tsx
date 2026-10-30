@@ -63,11 +63,11 @@ const SimilarArtistsContainer = (props: Props) => {
         <>
           <TitleContainer
             title={t('artistInfoPage.similarArtistsInLibrary')}
-            titleClassName="!text-2xl text-font-color-black dark:text-font-color-white"
+            titleClassName="!text-2xl text-ink"
             className={`title-container ${
               bodyBackgroundImage
-                ? 'text-font-color-white'
-                : 'text-font-color-black dark:text-font-color-white'
+                ? 'text-on-media'
+                : 'text-ink'
             } mb-4 mt-1 pr-4 text-2xl`}
           />
           <div className="my-2 flex flex-wrap">{availArtistComponents}</div>
@@ -77,11 +77,11 @@ const SimilarArtistsContainer = (props: Props) => {
         <>
           <TitleContainer
             title={t('artistInfoPage.otherSimilarArtists')}
-            titleClassName="!text-2xl text-font-color-black !font-normal dark:text-font-color-white"
+            titleClassName="!text-2xl text-ink !font-normal"
             className={`title-container ${
               bodyBackgroundImage
-                ? 'text-font-color-white'
-                : 'text-font-color-black dark:text-font-color-white'
+                ? 'text-on-media'
+                : 'text-ink'
             } mb-4 mt-1 pr-4 text-2xl`}
           />
           <div className="flex flex-wrap">{unAvailArtistComponents}</div>

@@ -16,20 +16,20 @@ const BlacklistSongConfrimPrompt = (props: { songIds: string[]; title?: string }
   const [isDoNotShowAgain, setIsDoNotShowAgain] = useState(false);
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {t('blacklistSongConfirmPrompt.title', { count: songIds.length })}
       </div>
       <div className="description">
         {t('blacklistSongConfirmPrompt.message', { count: songIds.length })}
         <div className="mt-4">
           {t('blacklistSongConfirmPrompt.effectTitle')}
-          <ul className="list-inside list-disc pl-4 marker:text-font-color-highlight dark:marker:text-dark-font-color-highlight">
+          <ul className="list-inside list-disc pl-4 marker:text-echo">
             <li>
               <Trans
                 i18nKey="blacklistSongConfirmPrompt.effect1"
                 components={{
                   span: (
-                    <span className="material-icons-round text-font-color-highlight dark:text-dark-font-color-highlight">
+                    <span className="ms-icon text-echo">
                       block
                     </span>
                   )
@@ -41,7 +41,7 @@ const BlacklistSongConfrimPrompt = (props: { songIds: string[]; title?: string }
                 i18nKey="blacklistSongConfirmPrompt.effect2"
                 components={{
                   span: (
-                    <span className="text-font-color-highlight dark:text-dark-font-color-highlight" />
+                    <span className="text-echo" />
                   )
                 }}
               />
@@ -51,7 +51,7 @@ const BlacklistSongConfrimPrompt = (props: { songIds: string[]; title?: string }
                 i18nKey="blacklistSongConfirmPrompt.effect3"
                 components={{
                   span: (
-                    <span className="text-font-color-highlight dark:text-dark-font-color-highlight" />
+                    <span className="text-echo" />
                   )
                 }}
               />
@@ -71,7 +71,7 @@ const BlacklistSongConfrimPrompt = (props: { songIds: string[]; title?: string }
       <div className="buttons-container flex items-center justify-end">
         <Button
           label={t('song.blacklistSong', { count: songIds.length })}
-          className="blacklist-song-btn mt-4 !bg-background-color-3 px-8 text-lg text-font-color-black hover:border-background-color-3 dark:!bg-dark-background-color-3 dark:!text-font-color-black dark:hover:border-background-color-3"
+          className="blacklist-song-btn mt-4 !bg-accent px-8 text-lg text-on-accent hover:border-accent "
           clickHandler={() =>
             window.api.audioLibraryControls
               .blacklistSongs(songIds)

@@ -132,13 +132,13 @@ const PlaylistsPage = () => {
       }}
     >
       <>
-        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
           <div className="container flex">
             {t('common.playlist_other')}{' '}
-            <div className="other-stats-container ml-12 flex items-center text-xs text-font-color-black dark:text-font-color-white">
+            <div className="other-stats-container ml-12 flex items-center text-xs text-ink">
               {isMultipleSelectionEnabled &&
               multipleSelectionsData.multipleSelections.length > 0 ? (
-                <div className="text-sm text-font-color-highlight dark:text-dark-font-color-highlight">
+                <div className="text-sm text-echo">
                   {t('common.selectionWithCount', {
                     count: multipleSelectionsData.multipleSelections.length
                   })}

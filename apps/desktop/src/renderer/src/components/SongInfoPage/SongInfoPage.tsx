@@ -109,7 +109,7 @@ const SongInfoPage = () => {
               key={artist.artistId}
               artistId={artist.artistId}
               name={artist.name}
-              className={`ml-1 !text-base first:!ml-0 ${bodyBackgroundImage && '!text-white'}`}
+              className={`ml-1 !text-base first:!ml-0 ${bodyBackgroundImage && '!text-on-media'}`}
             />
           ];
 
@@ -196,7 +196,7 @@ const SongInfoPage = () => {
                       label: t('common.saveArtwork'),
                       class: 'edit',
                       iconName: 'image',
-                      iconClassName: 'material-icons-round-outlined',
+                      iconClassName: 'ms-icon',
                       handlerFunction: () =>
                         window.api.songUpdates.saveArtworkToSystem(
                           songInfo.artworkPaths.artworkPath,
@@ -213,16 +213,16 @@ const SongInfoPage = () => {
           <div
             className={`song-info flex max-w-[70%] flex-col justify-center ${
               bodyBackgroundImage
-                ? '!text-font-color-white dark:!text-font-color-white'
-                : 'text-font-color-black dark:text-font-color-white'
+                ? '!text-on-media'
+                : 'text-ink'
             }`}
           >
             <div className="font-semibold uppercase opacity-50 dark:font-medium">
               {t('common.song_one')}
             </div>
             <div
-              className={`title info-type-1 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-5xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight ${
-                bodyBackgroundImage && '!text-dark-font-color-highlight'
+              className={`title info-type-1 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-hero font-semibold text-ink ${
+                bodyBackgroundImage && '!text-echo'
               }`}
               title={songInfo.title}
             >
@@ -234,7 +234,7 @@ const SongInfoPage = () => {
             <Button
               className={`info-type-2 !mr-0 mb-5 !w-fit truncate !border-0 !p-0 ${
                 songInfo.album && 'hover:underline'
-              } ${bodyBackgroundImage && '!text-white'}`}
+              } ${bodyBackgroundImage && '!text-on-media'}`}
               label={songInfo.album ? songInfo.album.name : t('common.unknownAlbum')}
               clickHandler={() => {
                 if (songInfo.album) {
@@ -301,8 +301,8 @@ const SongInfoPage = () => {
                     <span
                       className={`${
                         songInfo.isAFavorite
-                          ? 'material-icons-round'
-                          : 'material-icons-round-outlined'
+                          ? 'ms-icon ms-icon-filled'
+                          : 'ms-icon'
                       } icon ${songInfo.isAFavorite && 'liked'} text-[3.5rem] font-semibold`}
                     >
                       favorite

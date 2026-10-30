@@ -43,18 +43,18 @@ const SongArtistsInput = (props: Props) => {
   return (
     <div className="tag-input flex min-w-[10rem] max-w-2xl flex-col">
       <label htmlFor="song-artists-id3-tag">{t('songTagsEditingPage.songArtists')}</label>
-      <div className="mt-2 w-[90%] rounded-xl border-2 border-background-color-2 p-2 dark:border-dark-background-color-2">
-        <div className="artists-container flex flex-wrap p-2 empty:py-2 empty:after:h-full empty:after:w-full empty:after:text-center empty:after:text-[#ccc] empty:after:content-['No_artists_selected_for_this_song.'] dark:empty:after:text-[#ccc]">
+      <div className="mt-2 w-[90%] rounded-xl border-2 border-surface-2 p-2">
+        <div className="artists-container flex flex-wrap p-2 empty:py-2 empty:after:h-full empty:after:w-full empty:after:text-center empty:after:text-ink-dim empty:after:content-['No_artists_selected_for_this_song.']">
           {songArtists &&
             songArtists.map((artist) => (
               <span
                 key={artist.name}
-                className="group mb-2 mr-2 flex w-fit items-center rounded-2xl bg-background-color-3 px-3 py-1 text-center text-font-color-black dark:bg-dark-background-color-3 dark:text-font-color-black"
+                className="group mb-2 mr-2 flex w-fit items-center rounded-2xl bg-accent px-3 py-1 text-center text-on-accent "
               >
                 <Button
                   iconName="close"
-                  className="material-icons-round mr-2 !border-0 !p-[.125rem] opacity-0 outline-1 outline-offset-1 transition-[visibility,opacity] focus-visible:!outline group-focus-within:opacity-100 group-hover:opacity-100"
-                  iconClassName="leading-none dark:!text-font-color-black"
+                  className="ms-icon mr-2 !border-0 !p-[.125rem] opacity-0 outline-1 outline-offset-1 transition-[visibility,opacity] focus-visible:!outline group-focus-within:opacity-100 group-hover:opacity-100"
+                  iconClassName="leading-none"
                   clickHandler={() => {
                     updateSongInfo((prevData) => {
                       return {
@@ -77,7 +77,7 @@ const SongArtistsInput = (props: Props) => {
         <input
           type="search"
           id="song-artists-id3-tag"
-          className="mt-4 w-full rounded-xl border-2 border-transparent bg-background-color-2 p-2 transition-colors focus:border-font-color-highlight dark:bg-dark-background-color-2 dark:focus:border-dark-font-color-highlight"
+          className="mt-4 w-full rounded-xl border-2 border-transparent bg-surface-2 p-2 transition-colors focus:border-echo "
           placeholder={t('songTagsEditingPage.searchForArtists')}
           value={artistKeyword}
           onChange={(e) => {
@@ -87,7 +87,7 @@ const SongArtistsInput = (props: Props) => {
           onKeyDown={(e) => e.stopPropagation()}
         />
         {artistResults.length > 0 && (
-          <div className="artists-results-container mt-4 max-h-60 overflow-y-auto rounded-xl border-2 border-background-color-2 dark:border-dark-background-color-2">
+          <div className="artists-results-container mt-4 max-h-60 overflow-y-auto rounded-xl border-2 border-surface-2">
             {artistResultComponents}
           </div>
         )}
@@ -96,7 +96,7 @@ const SongArtistsInput = (props: Props) => {
             label={t('songTagsEditingPage.addNewArtist', {
               name: artistKeyword
             })}
-            className="mt-4 !w-full !bg-background-color-2 hover:!bg-background-color-3 hover:text-font-color-black dark:!bg-dark-background-color-2 hover:dark:!bg-dark-background-color-3 hover:dark:text-font-color-black"
+            className="mt-4 !w-full !bg-surface-2 hover:!bg-accent hover:text-ink "
             clickHandler={() => {
               updateSongInfo((prevData) => {
                 const artists =

@@ -49,7 +49,7 @@ const SeparateArtistsSuggestion = (props: Props) => {
         return (
           <>
             <span
-              className="text-font-color-highlight dark:text-dark-font-color-highlight"
+              className="text-echo"
               key={artist}
             >
               {artist}
@@ -115,30 +115,30 @@ const SeparateArtistsSuggestion = (props: Props) => {
     <>
       {separatedArtistsNames.length > 1 && !isIgnored && (
         <div
-          className={`appear-from-bottom mx-auto mb-6 w-[90%] rounded-lg p-4 text-black shadow-md transition-[width,height] dark:text-white ${
+          className={`appear-from-bottom mx-auto mb-6 w-[90%] rounded-lg p-4 text-shade shadow-md transition-[width,height] ${
             bodyBackgroundImage
-              ? 'bg-background-color-2/75 backdrop-blur-sm dark:bg-dark-background-color-2/75'
-              : 'bg-background-color-2 dark:bg-dark-background-color-2'
+              ? 'bg-surface-2/75 backdrop-blur-sm'
+              : 'bg-surface-2'
           } `}
         >
           <label
             htmlFor="toggleSuggestionBox"
-            className="title-container flex cursor-pointer items-center justify-between font-medium text-font-color-highlight dark:text-dark-font-color-highlight"
+            className="title-container flex cursor-pointer items-center justify-between font-medium text-echo"
           >
             <div className="flex items-center">
-              <span className="material-icons-round-outlined mr-2 text-2xl">help</span>{' '}
+              <span className="ms-icon mr-2 text-2xl">help</span>{' '}
               {t('common.suggestion')}{' '}
             </div>
             <div className="flex items-center">
               <span
-                className="material-icons-round-outlined mr-4 text-xl"
+                className="ms-icon mr-4 text-xl"
                 title="This feature is still in the experimental state."
               >
                 science
               </span>
               <Button
                 id="toggleSuggestionBox"
-                className="!m-0 !border-0 !p-0 outline-1 outline-offset-1 hover:bg-background-color-1/50 focus-visible:!outline hover:dark:bg-dark-background-color-1/50"
+                className="!m-0 !border-0 !p-0 outline-1 outline-offset-1 hover:bg-canvas/50 focus-visible:!outline"
                 iconClassName="!leading-none !text-3xl"
                 iconName={isMessageVisible ? 'arrow_drop_up' : 'arrow_drop_down'}
                 tooltipLabel={`common.${isMessageVisible ? 'hideSuggestion' : 'showSuggestion'}`}
@@ -162,9 +162,9 @@ const SeparateArtistsSuggestion = (props: Props) => {
               />
               <div className="mt-3 flex items-center">
                 <Button
-                  className="!border-0 bg-background-color-1/50 !px-4 !py-2 outline-1 transition-colors hover:bg-background-color-1 hover:!text-font-color-highlight focus-visible:!outline dark:bg-dark-background-color-1/50 dark:hover:bg-dark-background-color-1 dark:hover:!text-dark-font-color-highlight"
+                  className="!border-0 bg-canvas/50 !px-4 !py-2 outline-1 transition-colors hover:bg-canvas hover:!text-echo focus-visible:!outline "
                   iconName="verified"
-                  iconClassName="material-icons-round-outlined"
+                  iconClassName="ms-icon"
                   label={t('separateArtistsSuggestion.separateAsArtists', {
                     count: separatedArtistsNames.length
                   })}
@@ -173,9 +173,9 @@ const SeparateArtistsSuggestion = (props: Props) => {
                   }
                 />
                 <Button
-                  className="!mr-0 !border-0 bg-background-color-1/50 !px-4 !py-2 outline-1 transition-colors hover:bg-background-color-1 hover:!text-font-color-highlight focus-visible:!outline dark:bg-dark-background-color-1/50 dark:hover:bg-dark-background-color-1 dark:hover:!text-dark-font-color-highlight"
+                  className="!mr-0 !border-0 bg-canvas/50 !px-4 !py-2 outline-1 transition-colors hover:bg-canvas hover:!text-echo focus-visible:!outline "
                   iconName="do_not_disturb_on"
-                  iconClassName="material-icons-round-outlined"
+                  iconClassName="ms-icon"
                   label="Ignore"
                   clickHandler={() => {
                     storage.ignoredSeparateArtists.setIgnoredSeparateArtists([artistId]);
@@ -184,7 +184,7 @@ const SeparateArtistsSuggestion = (props: Props) => {
                       {
                         id: 'suggestionIgnored',
                         iconName: 'do_not_disturb_on',
-                        iconClassName: 'material-icons-round-outlined',
+                        iconClassName: 'ms-icon',
                         duration: 5000,
                         content: t('notifications.suggestionIgnored')
                       }
@@ -192,7 +192,7 @@ const SeparateArtistsSuggestion = (props: Props) => {
                   }}
                 />
                 <span
-                  className="material-icons-round-outlined ml-4 cursor-pointer text-xl opacity-80 transition-opacity hover:opacity-100"
+                  className="ms-icon ml-4 cursor-pointer text-xl opacity-80 transition-opacity hover:opacity-100"
                   title="Keep in mind that seperating artists will update the library as well as metadata in songs linked these artists."
                 >
                   info

@@ -194,12 +194,12 @@ const LyricsEditorSavePrompt = (props: Props) => {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="title-container mb-4 flex w-full items-center text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2 text-4xl">save</span>{' '}
+      <div className="title-container mb-4 flex w-full items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2 text-4xl">save</span>{' '}
         {t('lyricsEditorSavePrompt.saveEditedLyrics')}
       </div>
       <textarea
-        className="h-[40vh] max-h-full min-h-[10rem] w-full overflow-y-auto rounded-lg bg-background-color-2 p-4 dark:bg-dark-background-color-2"
+        className="h-[40vh] max-h-full min-h-[10rem] w-full overflow-y-auto rounded-lg bg-surface-2 p-4"
         value={parsedLyrics?.lyrics.unparsedLyrics}
         readOnly
       />
@@ -207,13 +207,13 @@ const LyricsEditorSavePrompt = (props: Props) => {
         <Button
           label={t('lyricsEditorSavePrompt.copyLyrics')}
           iconName="content_copy"
-          iconClassName="material-icons-round-outlined"
+          iconClassName="ms-icon"
           clickHandler={copyLyrics}
         />
         <Button
           label={t('lyricsEditorSavePrompt.saveLyricsToSong')}
           iconName="save"
-          iconClassName="material-icons-round-outlined"
+          iconClassName="ms-icon"
           clickHandler={saveLyricsToSong}
           isDisabled={isSaveLyricsBtnDisabled}
           tooltipLabel={

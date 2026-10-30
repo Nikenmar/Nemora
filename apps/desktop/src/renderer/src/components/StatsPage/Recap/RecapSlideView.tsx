@@ -25,7 +25,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'listening':
       return (
         <div className="flex max-w-4xl flex-col items-center text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">headphones</span>
+          <span className="ms-icon mb-5 text-7xl opacity-30">headphones</span>
           <p className="mb-3 text-xl opacity-70">{t('statsPage.recap.listeningEyebrow')}</p>
           <p className="text-7xl font-semibold tracking-tight sm:text-8xl">
             {number(slide.totalListens)}
@@ -51,7 +51,7 @@ const RecapSlideView = ({ slide }: Props) => {
             {slide.songs.map((song, index) => (
               <li
                 key={song.songId}
-                className="flex items-center gap-4 rounded-xl bg-background-color-1/55 px-5 py-3 dark:bg-dark-background-color-1/55"
+                className="flex items-center gap-4 rounded-xl bg-canvas/55 px-5 py-3"
               >
                 <span className="w-8 text-right text-2xl font-semibold opacity-45">
                   {index + 1}
@@ -74,7 +74,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'topArtist':
       return (
         <div className="max-w-4xl text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">person</span>
+          <span className="ms-icon mb-5 text-7xl opacity-30">person</span>
           <p className="text-xl opacity-70">{t('statsPage.recap.topArtist')}</p>
           <p className="mt-4 text-6xl font-semibold tracking-tight sm:text-7xl">{slide.artist}</p>
           <p className="mt-6 text-xl">{t('statsPage.recap.plays', { count: slide.listens })}</p>
@@ -90,7 +90,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'mostActiveDay':
       return (
         <div className="max-w-4xl text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">calendar_month</span>
+          <span className="ms-icon mb-5 text-7xl opacity-30">calendar_month</span>
           <p className="text-xl opacity-70">{t('statsPage.recap.bestDay')}</p>
           <p className="mt-4 text-5xl font-semibold tracking-tight sm:text-6xl">
             {date(slide.date)}
@@ -107,7 +107,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'discovery':
       return (
         <div className="max-w-4xl text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">auto_awesome</span>
+          <span className="ms-icon mb-5 text-7xl opacity-30">auto_awesome</span>
           <p className="text-xl opacity-70">{t('statsPage.recap.discovery')}</p>
           <p className="mt-4 text-6xl font-semibold tracking-tight sm:text-7xl">
             {slide.song.title}
@@ -124,7 +124,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'longestStreak':
       return (
         <div className="max-w-4xl text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">
+          <span className="ms-icon mb-5 text-7xl opacity-30">
             local_fire_department
           </span>
           <p className="text-xl opacity-70">{t('statsPage.recap.streak')}</p>
@@ -143,7 +143,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'tierlist':
       return (
         <div className="max-w-4xl text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">leaderboard</span>
+          <span className="ms-icon mb-5 text-7xl opacity-30">leaderboard</span>
           <p className="text-xl opacity-70">{t('statsPage.recap.tierlist')}</p>
           <p className="mt-4 text-6xl font-semibold tracking-tight sm:text-7xl">
             {slide.song.title}
@@ -160,7 +160,7 @@ const RecapSlideView = ({ slide }: Props) => {
     case 'eloClimber':
       return (
         <div className="max-w-4xl text-center">
-          <span className="material-icons-round mb-5 text-7xl opacity-30">trending_up</span>
+          <span className="ms-icon mb-5 text-7xl opacity-30">trending_up</span>
           <p className="text-xl opacity-70">{t('statsPage.recap.climber')}</p>
           <p className="mt-4 text-6xl font-semibold tracking-tight sm:text-7xl">
             {slide.song.title}

@@ -27,8 +27,8 @@ const TournamentDuel = ({
   if (!songA || !songB) return null;
 
   return (
-    <section className="rounded-xl bg-background-color-2/60 p-5 dark:bg-dark-background-color-2/60">
-      <h3 className="mb-5 text-center text-xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+    <section className="rounded-xl bg-surface-2/60 p-5">
+      <h3 className="mb-5 text-center text-section font-semibold text-ink">
         {t('duels.tournament.currentMatch', {
           round: match.round + 1,
           match: match.position + 1

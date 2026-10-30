@@ -50,13 +50,13 @@ const Biography = (props: Props) => {
 
   return (
     <div
-      className={`"bio-container appear-from-bottom relative z-10 m-4 rounded-lg p-4 text-font-color-black shadow-md dark:text-font-color-white ${
+      className={`"bio-container appear-from-bottom relative z-10 m-4 rounded-lg p-4 text-ink shadow-md ${
         bodyBackgroundImage
-          ? `bg-background-color-2/70 backdrop-blur-md dark:bg-dark-background-color-2/70`
-          : `bg-background-color-2 dark:bg-dark-background-color-2`
+          ? `bg-surface-2/70 backdrop-blur-md`
+          : `bg-surface-2`
       }`}
     >
-      <h3 className="mb-2 text-xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <h3 className="mb-2 text-section font-semibold text-ink">
         <Trans
           i18nKey="biography.aboutName"
           components={{

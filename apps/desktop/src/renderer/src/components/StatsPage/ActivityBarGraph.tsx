@@ -32,7 +32,7 @@ const ActivityBarGraph = (props: Props) => {
 
   return (
     <div
-      className={`appear-from-bottom flex h-64 w-full max-w-full flex-col overflow-hidden rounded-md bg-background-color-2/70 px-4 pb-2 pt-4 backdrop-blur-md dark:bg-dark-background-color-2/70 ${className ?? ''}`}
+      className={`appear-from-bottom flex h-64 w-full max-w-full flex-col overflow-hidden rounded-md bg-surface-2/70 px-4 pb-2 pt-4 backdrop-blur-md ${className ?? ''}`}
     >
       <div
         ref={containerRef}
@@ -46,9 +46,9 @@ const ActivityBarGraph = (props: Props) => {
             key={datum.id}
             className="relative flex h-full min-w-0 flex-col items-center justify-end"
           >
-            <div className="flex h-full items-end rounded-2xl bg-seekbar-track-background-color/20 dark:bg-dark-seekbar-track-background-color">
+            <div className="flex h-full items-end rounded-2xl bg-line/20">
               <div
-                className="order-1 w-[10px] rounded-2xl bg-font-color-highlight transition-[height] delay-200 duration-300 ease-in-out dark:bg-dark-font-color-highlight"
+                className="order-1 w-[10px] rounded-2xl bg-echo transition-[height] delay-200 duration-300 ease-in-out"
                 style={{
                   height: datum.listens === 0 ? '10px' : `${(datum.listens / maxListens) * 90}%`,
                   transitionDelay: `${index * 30 + 200}`
@@ -56,7 +56,7 @@ const ActivityBarGraph = (props: Props) => {
                 title={t('songInfoPage.listensCount', { count: datum.listens })}
               />
             </div>
-            <div className="order-2 flex w-full grow-0 flex-col pt-1 text-font-color dark:text-font-color-white">
+            <div className="order-2 flex w-full grow-0 flex-col pt-1 text-ink">
               <span className="font-thin">{datum.listens}</span>
               <span className="w-full truncate px-1 text-xs">{datum.label}</span>
             </div>

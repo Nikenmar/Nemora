@@ -40,6 +40,8 @@ export const theme = {
       'danger-soft': 'rgb(var(--danger-soft) / <alpha-value>)',
       success: 'rgb(var(--success) / <alpha-value>)',
       warning: 'rgb(var(--warning) / <alpha-value>)',
+      'on-media': 'rgb(var(--on-media) / <alpha-value>)',
+      shade: 'rgb(var(--shade) / <alpha-value>)',
       glass: 'rgb(var(--glass) / var(--glass-alpha))',
       'glass-hover': 'rgb(var(--glass-hover))',
       'glass-border': 'rgb(var(--glass-border))',

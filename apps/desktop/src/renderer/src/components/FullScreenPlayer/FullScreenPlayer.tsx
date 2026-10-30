@@ -23,7 +23,7 @@ const FullScreenPlayer = () =>
     const preferences = useStore(store, (state) => state.localStorage.preferences);
     const isOnBatteryPower = useStore(store, (state) => state.isOnBatteryPower);
 
-    const [isLyricsVisible, setIsLyricsVisible] = useState(false);
+    const [isLyricsVisible, setIsLyricsVisible] = useState(true);
     const [isLyricsAvailable, setIsLyricsAvailable] = useState(false);
     const [songPos, setSongPos] = useState(0);
 
@@ -51,47 +51,54 @@ const FullScreenPlayer = () =>
       return currentSongData.artworkPath;
     }, [currentSongData?.artists, currentSongData?.artworkPath]);
 
+    const isLyricsShown = isLyricsVisible && isLyricsAvailable;
+
     return (
       <div
-        className={`full-screen-player dark relative !bg-dark-background-color-1 ${!isCurrentSongPlaying && 'paused'} ${
+        className={`full-screen-player dark relative ${!isCurrentSongPlaying && 'paused'} ${
           preferences?.isReducedMotion ? 'reduced-motion' : ''
-        } grid !h-screen w-full grid-rows-[auto_1fr] overflow-y-hidden`}
+        } grid !h-screen w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-shade text-on-media`}
       >
-        <div className="background-cover-img-container absolute left-0 top-0 h-full w-full">
+        <div className="background-cover-img-container absolute inset-0 overflow-hidden" aria-hidden>
           <Img
             src={imgPath}
             fallbackSrc={DefaultSongCover}
             loading="eager"
-            alt="Song Cover"
-            className={`h-full w-full object-cover shadow-lg blur-none !brightness-[.25] transition-[filter] delay-100 duration-200 ease-in-out ${isLyricsVisible ? '!blur-[2rem]' : '!blur-[2rem]'}`}
+            alt=""
+            className="h-full w-full scale-125 object-cover blur-[64px] saturate-[1.25]"
           />
-          {/* <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-black/50 to-black/5"></div> */}
+          <div className="absolute inset-0 bg-gradient-to-r from-shade/55 to-shade/85" />
         </div>
         <TitleBar />
         <div
-          className={`flex max-w-full flex-col justify-end ${isMouseActive && 'group/fullScreenPlayer'}`}
+          className={`relative grid min-h-0 items-center gap-16 px-16 pb-12 ${
+            isLyricsShown
+              ? 'grid-cols-[minmax(0,24rem)_minmax(0,1fr)]'
+              : 'grid-cols-1 justify-items-center'
+          } ${isMouseActive && 'group/fullScreenPlayer'}`}
           ref={fullScreenPlayerContainerRef}
         >
-          <LyricsContainer
-            isLyricsVisible={isLyricsVisible}
-            setIsLyricsAvailable={setIsLyricsAvailable}
-          />
           <SongInfoContainer
             songPos={songPos}
             isLyricsVisible={isLyricsVisible}
             setIsLyricsVisible={setIsLyricsVisible}
             isLyricsAvailable={isLyricsAvailable}
             isMouseActive={isMouseActive}
+            seekBar={
+              <SeekBarSlider
+                name="full-screen-player-seek-slider"
+                id="fullScreenPlayerSeekSlider"
+                onSeek={(currentPosition) => setSongPos(currentPosition)}
+                className="full-screen-player-seek-slider before:!bg-on-media"
+              />
+            }
           />
-          <SeekBarSlider
-            name="full-screen-player-seek-slider"
-            id="fullScreenPlayerSeekSlider"
-            sliderOpacity={0.25}
-            onSeek={(currentPosition) => setSongPos(currentPosition)}
-            className={`full-screen-player-seek-slider absolute h-fit w-full appearance-none bg-background-color-3/25 outline-none outline-1 outline-offset-1 transition-[width,height,transform] delay-200 ease-in-out before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-background-color-3 before:backdrop-blur-lg before:transition-[width,height,transform] before:delay-200 before:ease-in-out before:content-[''] hover:before:h-3 focus-visible:!outline group-hover/fullScreenPlayer:-translate-y-8 group-hover/fullScreenPlayer:scale-x-95 ${
-              isMouseActive && 'peer-hover/songInfoContainer:before:h-3'
-            } ${!isCurrentSongPlaying && isLyricsVisible && '!-translate-y-8 !scale-x-95'}`}
-          />
+          <div className={isLyricsShown ? 'relative h-full min-h-0' : 'hidden'}>
+            <LyricsContainer
+              isLyricsVisible={isLyricsVisible}
+              setIsLyricsAvailable={setIsLyricsAvailable}
+            />
+          </div>
         </div>
       </div>
     );

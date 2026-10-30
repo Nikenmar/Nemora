@@ -30,14 +30,14 @@ const ConfirmDeleteTierlistPrompt = ({ tierlist }: ConfirmDeleteTierlistProps) =
 
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-black dark:text-font-color-white">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-ink">
         {t('tierlistsPage.deleteTierlist')} — {tierlist.name}
       </div>
       <div className="description">{t('tierlistsPage.confirmDeleteMessage')}</div>
       <div className="buttons-container mt-8 flex w-full justify-end">
         <Button
           label={t('tierlistsPage.deleteTierlist')}
-          className="delete-tierlist-btn danger-btn float-right h-10 w-48 cursor-pointer rounded-lg border-[transparent] !bg-font-color-crimson text-font-color-white outline-none ease-in-out hover:border-font-color-crimson dark:!bg-font-color-crimson dark:text-font-color-white"
+          className="delete-tierlist-btn danger-btn float-right h-10 w-48 cursor-pointer rounded-lg border-[transparent] !bg-danger text-on-media outline-none ease-in-out hover:border-danger "
           clickHandler={deleteTierlist}
         />
       </div>

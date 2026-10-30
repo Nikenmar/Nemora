@@ -159,7 +159,7 @@ const TierlistEditorPage = () => {
         ? {
             label: t('tierlistsPage.deleteFromSystem'),
             iconName: 'delete_forever',
-            class: '!text-font-color-crimson',
+            class: '!text-danger',
             handlerFunction: () =>
               changePromptMenuData(true, <DeleteSongsFromSystemConfrimPrompt songIds={[songId]} />)
           }
@@ -645,7 +645,7 @@ const TierlistEditorPage = () => {
   const influencesShuffle = !!tierlist.influencesShuffle;
 
   return (
-    <MainContainer className="tierlist-editor flex !h-full flex-col overflow-hidden !pb-0 text-font-color-black dark:text-font-color-white">
+    <MainContainer className="tierlist-editor flex !h-full flex-col overflow-hidden !pb-0 text-ink">
       <>
         <div className="header mb-4 flex items-center justify-between pr-4">
           <div className="flex items-center gap-2">
@@ -655,7 +655,7 @@ const TierlistEditorPage = () => {
               tooltipLabel={t('tierlistsPage.title')}
               clickHandler={() => changeCurrentActivePage('Tierlists')}
             />
-            <span className="truncate text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+            <span className="truncate text-page font-semibold text-ink">
               {tierlist.name}
             </span>
           </div>
@@ -681,7 +681,7 @@ const TierlistEditorPage = () => {
                   : 'tierlistsPage.influencesShuffleOff'
               )}
               iconName="auto_fix"
-              className={`text-sm ${influencesShuffle ? '!text-font-color-highlight dark:!text-dark-font-color-highlight' : ''}`}
+              className={`text-sm ${influencesShuffle ? '!text-echo' : ''}`}
               clickHandler={toggleInfluencesShuffle}
             />
             <Button
@@ -725,12 +725,12 @@ const TierlistEditorPage = () => {
           {/* The tier board (this is what gets exported to PNG) */}
           <div
             ref={exportRef}
-            className="tiers flex flex-col gap-[3px] rounded-lg bg-background-color-2 p-[3px] dark:bg-dark-background-color-2"
+            className="tiers flex flex-col gap-[3px] rounded-lg bg-surface-2 p-[3px]"
           >
             {tierlist.tiers.map((tier, tierIndex) => (
               <div
                 key={tier.tierId}
-                className="tier grid min-h-[96px] grid-cols-[90px_minmax(0,1fr)] overflow-hidden rounded-md bg-background-color-1 dark:bg-dark-background-color-1"
+                className="tier grid min-h-[96px] grid-cols-[90px_minmax(0,1fr)] overflow-hidden rounded-md bg-canvas"
               >
                 <div
                   className="tier-label group/label relative flex flex-col items-center justify-center px-1.5 text-center"
@@ -751,7 +751,7 @@ const TierlistEditorPage = () => {
                     title={t('tierlistsPage.removeTier')}
                     className="invisible absolute right-0.5 top-0.5 opacity-70 hover:opacity-100 group-hover/label:visible"
                   >
-                    <span className="material-icons-round-outlined text-[16px]">close</span>
+                    <span className="ms-icon text-[16px]">close</span>
                   </button>
                 </div>
                 <ReactSortable
@@ -770,7 +770,7 @@ const TierlistEditorPage = () => {
                   onEnd={handleDragEnd}
                   list={board.tiers[tier.tierId] ?? []}
                   setList={handleSetList(tier.tierId)}
-                  className="tier-dropzone flex min-h-[96px] flex-wrap content-start items-start gap-[7px] bg-background-color-1 p-[7px] dark:bg-dark-background-color-1"
+                  className="tier-dropzone flex min-h-[96px] flex-wrap content-start items-start gap-[7px] bg-canvas p-[7px]"
                 >
                   {(board.tiers[tier.tierId] ?? []).map((item) => (
                     <TierItemCard
@@ -819,7 +819,7 @@ const TierlistEditorPage = () => {
               onEnd={handleDragEnd}
               list={board.pool}
               setList={handleSetList(POOL_ID)}
-              className="pool-dropzone flex min-h-[110px] flex-wrap content-start items-start justify-center gap-[7px] rounded-lg border border-dashed border-black/15 bg-background-color-2/60 p-[7px] dark:border-white/15 dark:bg-dark-background-color-2/40"
+              className="pool-dropzone flex min-h-[110px] flex-wrap content-start items-start justify-center gap-[7px] rounded-lg border border-dashed border-shade/15 bg-surface-2/60 p-[7px] "
             >
               {board.pool.map((item) => (
                 <TierItemCard

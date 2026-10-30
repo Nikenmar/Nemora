@@ -166,7 +166,7 @@ export const Album = (props: AlbumProp) => {
               artistId={artist.artistId}
               name={artist.name}
               className={
-                isAMultipleSelection ? '!text-font-color-black dark:!text-font-color-black' : ''
+                isAMultipleSelection ? '!text-ink' : ''
               }
             />
           ];
@@ -319,8 +319,8 @@ export const Album = (props: AlbumProp) => {
         props.className ?? ''
       } ${
         isAMultipleSelection
-          ? 'bg-background-color-3 !text-font-color-black dark:bg-dark-background-color-3 dark:!text-font-color-black'
-          : 'hover:bg-background-color-2/50 dark:hover:bg-dark-background-color-2/50'
+          ? 'bg-accent !text-on-accent '
+          : 'hover:bg-surface-2/50'
       }`}
       onContextMenu={(e) =>
         updateContextMenuData(true, contextMenuItems, e.pageX, e.pageY, contextMenuItemData)
@@ -344,7 +344,7 @@ export const Album = (props: AlbumProp) => {
           />
         ) : (
           <Button
-            className="absolute bottom-[5%] right-[5%] z-[1] !m-0 !rounded-none !border-0 bg-transparent !p-0 !text-font-color-white opacity-0 outline-1 outline-offset-1 transition-opacity hover:bg-transparent hover:!opacity-100 focus-visible:!opacity-100 focus-visible:!outline group-focus-within:opacity-75 group-hover:opacity-75 dark:bg-transparent dark:hover:bg-transparent"
+            className="absolute bottom-[5%] right-[5%] z-[1] !m-0 !rounded-none !border-0 bg-transparent !p-0 !text-on-media opacity-0 outline-1 outline-offset-1 transition-opacity hover:bg-transparent hover:!opacity-100 focus-visible:!opacity-100 focus-visible:!outline group-focus-within:opacity-75 group-hover:opacity-75 dark:bg-transparent dark:hover:bg-transparent"
             iconName="play_circle"
             iconClassName="!text-5xl !leading-none"
             clickHandler={(e) => {
@@ -353,7 +353,7 @@ export const Album = (props: AlbumProp) => {
             }}
           />
         )}
-        <div className="album-cover-container relative h-full overflow-hidden rounded-lg before:invisible before:absolute before:h-full before:w-full before:bg-gradient-to-b before:from-[hsla(0,0%,0%,0%)] before:to-[hsla(0,0%,0%,50%)] before:opacity-0 before:transition-[visibility,opacity] before:duration-300 before:content-[''] group-focus-within:before:visible group-focus-within:before:opacity-100 group-hover:before:visible group-hover:before:opacity-100">
+        <div className="album-cover-container relative h-full overflow-hidden rounded-lg before:invisible before:absolute before:h-full before:w-full before:bg-gradient-to-b before:from-shade/0 before:to-shade/50 before:opacity-0 before:transition-[visibility,opacity] before:duration-300 before:content-[''] group-focus-within:before:visible group-focus-within:before:opacity-100 group-hover:before:visible group-hover:before:opacity-100">
           <Img
             src={props.artworkPaths.artworkPath}
             fallbackSrc={DefaultAlbumCover}
@@ -365,13 +365,13 @@ export const Album = (props: AlbumProp) => {
         </div>
       </div>
       <div
-        className={`album-info-container mt-2 h-fit w-full pl-2 text-font-color-black dark:text-font-color-white ${
-          isAMultipleSelection && '!text-font-color-black dark:!text-font-color-black'
+        className={`album-info-container mt-2 h-fit w-full pl-2 text-ink ${
+          isAMultipleSelection && '!text-ink'
         }`}
       >
         <Button
           className={`album-title pointer !m-0 !block w-full truncate !rounded-none !border-0 bg-transparent !p-0 !text-left text-xl outline-1 outline-offset-1 hover:bg-transparent hover:underline focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent ${
-            isAMultipleSelection ? '!text-font-color-black dark:!text-font-color-black' : ''
+            isAMultipleSelection ? '!text-ink' : ''
           }`}
           label={props.title}
           clickHandler={showAlbumInfoPage}

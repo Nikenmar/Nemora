@@ -308,7 +308,7 @@ const LyricsEditingPage = () => {
       {
         label: t('common.help'),
         iconName: 'help',
-        iconClassName: 'material-icons-round-outlined',
+        iconClassName: 'ms-icon',
         handlerFunction: () => changePromptMenuData(true, <LyricsEditorHelpPrompt />)
       },
       {
@@ -319,7 +319,7 @@ const LyricsEditingPage = () => {
       {
         label: t('lyricsEditingPage.resetLyrics'),
         iconName: 'restart_alt',
-        iconClassName: 'material-icons-round-outlined',
+        iconClassName: 'ms-icon',
         handlerFunction: () => {
           changePromptMenuData(
             true,
@@ -331,7 +331,7 @@ const LyricsEditingPage = () => {
                   components={{
                     br: <br />,
                     p: <p />,
-                    span: <span className="font-medium text-font-color-crimson" />
+                    span: <span className="font-medium text-danger" />
                   }}
                 />
               }
@@ -362,7 +362,7 @@ const LyricsEditingPage = () => {
 
   return (
     <MainContainer
-      className="appear-from-bottom relative !h-full overflow-hidden !pb-0 text-font-color-black dark:text-font-color-white"
+      className="appear-from-bottom relative !h-full overflow-hidden !pb-0 text-ink"
       onKeyDown={handleShortcuts}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
@@ -371,11 +371,11 @@ const LyricsEditingPage = () => {
       autoFocus
     >
       {!isTheEditingSongTheCurrSong && (
-        <div className="absolute z-10 flex h-full w-full flex-col items-center justify-center bg-background-color-1/25 pr-8 dark:bg-dark-background-color-1/25">
-          <span className="material-icons-round-outlined text-5xl text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="absolute z-10 flex h-full w-full flex-col items-center justify-center bg-canvas/25 pr-8">
+          <span className="ms-icon text-5xl text-echo">
             error
           </span>
-          <p className="mt-2 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+          <p className="mt-2 text-page font-semibold text-ink">
             {t('lyricsEditingPage.incorrectSongTitle')}
           </p>
           <p>{t('lyricsEditingPage.incorrectSongMessage', { title: songTitle })}</p>
@@ -387,10 +387,10 @@ const LyricsEditingPage = () => {
           />
         </div>
       )}
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
         <div className="gap-4s container grid grid-cols-[clamp(5rem,1fr,10rem)_1fr] items-center">
           {t('lyricsEditingPage.lyricsEditor')}{' '}
-          <div className="other-stats-container truncate text-xs text-font-color-black dark:text-font-color-white">
+          <div className="other-stats-container truncate text-xs text-ink">
             <span>
               {t('lyricsEditingPage.playbackSpeed')} : {playback.playbackRate}x
             </span>
@@ -419,7 +419,7 @@ const LyricsEditingPage = () => {
             label={t('lyricsEditingPage.saveLyrics')}
             className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
             iconName="save_as"
-            iconClassName="material-icons-round-outlined"
+            iconClassName="ms-icon"
             isDisabled={!isTheEditingSongTheCurrSong}
             clickHandler={() =>
               changePromptMenuData(
@@ -436,7 +436,7 @@ const LyricsEditingPage = () => {
             label={t(`lyricsEditingPage.${isPlaying ? 'stopAndEditLyrics' : 'playLyrics'}`)}
             className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
             iconName={isPlaying ? 'edit' : 'play_arrow'}
-            iconClassName="material-icons-round"
+            iconClassName="ms-icon"
             isDisabled={!isTheEditingSongTheCurrSong}
             clickHandler={() => setIsPlaying((prevState) => !prevState)}
           />
@@ -444,7 +444,7 @@ const LyricsEditingPage = () => {
             label={t('lyricsEditingPage.configure')}
             className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
             iconName="settings"
-            iconClassName="material-icons-round-outlined"
+            iconClassName="ms-icon"
             isDisabled={!isTheEditingSongTheCurrSong}
             clickHandler={() => changePromptMenuData(true, <LyricsEditorSettingsPrompt />)}
           />

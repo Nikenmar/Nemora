@@ -52,7 +52,7 @@ const DuplicateArtistsSuggestion = (props: Props) => {
         return (
           <>
             <Button
-              className={`!m-0 !inline-flex !border-0 !p-0 !text-font-color-highlight dark:!text-dark-font-color-highlight ${
+              className={`!m-0 !inline-flex !border-0 !p-0 !text-echo ${
                 artistId !== artist.artistId ? 'hover:underline' : '!cursor-default'
               }`}
               label={artist.name}
@@ -131,30 +131,30 @@ const DuplicateArtistsSuggestion = (props: Props) => {
     <>
       {duplicateArtists.length > 1 && isVisible && (
         <div
-          className={`appear-from-bottom mx-auto mb-6 w-[90%] rounded-lg p-4 text-black shadow-md transition-[height] dark:text-white ${
+          className={`appear-from-bottom mx-auto mb-6 w-[90%] rounded-lg p-4 text-shade shadow-md transition-[height] ${
             bodyBackgroundImage
-              ? 'bg-background-color-2/75 backdrop-blur-sm dark:bg-dark-background-color-2/75'
-              : 'bg-background-color-2 dark:bg-dark-background-color-2'
+              ? 'bg-surface-2/75 backdrop-blur-sm'
+              : 'bg-surface-2'
           } `}
         >
           <label
             htmlFor="toggleSuggestionBox"
-            className="title-container flex cursor-pointer items-center justify-between font-medium text-font-color-highlight dark:text-dark-font-color-highlight"
+            className="title-container flex cursor-pointer items-center justify-between font-medium text-echo"
           >
             <div className="flex items-center">
-              <span className="material-icons-round-outlined mr-2 text-2xl">help</span>{' '}
+              <span className="ms-icon mr-2 text-2xl">help</span>{' '}
               {t('common.suggestion')}
             </div>
             <div className="flex items-center">
               <span
-                className="material-icons-round-outlined mr-4 text-xl"
+                className="ms-icon mr-4 text-xl"
                 title="This feature is still in the experimental state."
               >
                 science
               </span>
               <Button
                 id="toggleSuggestionBox"
-                className="!m-0 !border-0 !p-0 outline-1 outline-offset-1 hover:bg-background-color-1/50 focus-visible:!outline hover:dark:bg-dark-background-color-1/50"
+                className="!m-0 !border-0 !p-0 outline-1 outline-offset-1 hover:bg-canvas/50 focus-visible:!outline"
                 iconClassName="!leading-none !text-3xl"
                 iconName={isMessageVisible ? 'arrow_drop_up' : 'arrow_drop_down'}
                 tooltipLabel={`common.${isMessageVisible ? 'hideSuggestion' : 'showSuggestion'}`}
@@ -179,9 +179,9 @@ const DuplicateArtistsSuggestion = (props: Props) => {
                 {duplicateArtists.map((artist) => (
                   <Button
                     key={artist.name}
-                    className="!border-0 bg-background-color-1/50 !px-4 !py-2 outline-1 transition-colors hover:bg-background-color-1 hover:!text-font-color-highlight focus-visible:!outline dark:bg-dark-background-color-1/50 dark:hover:bg-dark-background-color-1 dark:hover:!text-dark-font-color-highlight"
+                    className="!border-0 bg-canvas/50 !px-4 !py-2 outline-1 transition-colors hover:bg-canvas hover:!text-echo focus-visible:!outline "
                     iconName="verified"
-                    iconClassName="material-icons-round-outlined"
+                    iconClassName="ms-icon"
                     label={t('duplicateArtistsSuggestion.linkToArtist', {
                       name: artist.name
                     })}
@@ -191,9 +191,9 @@ const DuplicateArtistsSuggestion = (props: Props) => {
                   />
                 ))}
                 <Button
-                  className="!mr-0 !border-0 bg-background-color-1/50 !px-4 !py-2 outline-1 transition-colors hover:bg-background-color-1 hover:!text-font-color-highlight focus-visible:!outline dark:bg-dark-background-color-1/50 dark:hover:bg-dark-background-color-1 dark:hover:!text-dark-font-color-highlight"
+                  className="!mr-0 !border-0 bg-canvas/50 !px-4 !py-2 outline-1 transition-colors hover:bg-canvas hover:!text-echo focus-visible:!outline "
                   iconName="do_not_disturb_on"
-                  iconClassName="material-icons-round-outlined"
+                  iconClassName="ms-icon"
                   label={t('common.ignore')}
                   clickHandler={() => {
                     storage.ignoredDuplicates.setIgnoredDuplicates('artists', [artistId]);
@@ -201,7 +201,7 @@ const DuplicateArtistsSuggestion = (props: Props) => {
                     addNewNotifications([
                       {
                         id: 'suggestionIgnored',
-                        iconClassName: '!material-icons-round-outlined',
+                        iconClassName: 'ms-icon',
                         iconName: 'do_not_disturb_on',
                         duration: 5000,
                         content: t('notifications.suggestionIgnored')
@@ -210,7 +210,7 @@ const DuplicateArtistsSuggestion = (props: Props) => {
                   }}
                 />
                 <span
-                  className="material-icons-round-outlined ml-4 cursor-pointer text-xl opacity-80 transition-opacity hover:opacity-100"
+                  className="ms-icon ml-4 cursor-pointer text-xl opacity-80 transition-opacity hover:opacity-100"
                   title="Keep in mind that linking artists will update the library as well as metadata in songs linked these artists."
                 >
                   info

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Icon from '../ui/Icon';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useStore } from '@tanstack/react-store';
@@ -60,26 +61,24 @@ const SongGuessrDock = () => {
         duel dock, which sent only that button down and left this one stranded
         under Stats.
       */}
-      <li className="mt-auto flex min-h-0 w-full flex-shrink-0 items-center pl-2">
+      <span className="flex">
         {!isExpanded && (
           <button
             type="button"
-            className="group flex h-9 min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-full bg-background-color-2 px-3 text-sm font-medium text-font-color-black shadow-md transition-[background-color,transform,opacity] duration-200 ease-out hover:-translate-y-0.5 hover:bg-background-color-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-font-color-highlight-2 active:translate-y-0 motion-reduce:transition-none dark:bg-dark-background-color-2 dark:text-font-color-white dark:hover:bg-dark-background-color-3 dark:focus-visible:outline-dark-font-color-highlight-2"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo"
+            data-shot="songguessr-dock"
             onClick={maximizeSongGuessr}
             aria-label={dockLabel}
             aria-expanded={isExpanded}
-            title={dockLabel}
+            data-tooltip={dockLabel}
           >
-            <span
-              className="material-icons-round flex-shrink-0 text-lg !leading-none text-font-color-highlight dark:text-dark-font-color-highlight"
-              aria-hidden="true"
-            >
-              graphic_eq
-            </span>
-            <span className="min-w-0 truncate leading-none">{dockLabel}</span>
+            <Icon name="graphic_eq" size={20} />
+            {hasStarted && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-echo" aria-hidden />
+            )}
           </button>
         )}
-      </li>
+      </span>
 
       {hasStarted &&
         createPortal(
@@ -111,7 +110,7 @@ const SongGuessrDock = () => {
               fall back to the light palette. Tailwind's `dark:` variants are
               unaffected — that class sits on body.
             */
-            className={`fixed inset-0 m-auto flex h-[min(48rem,calc(100vh-3rem))] w-[min(34rem,94vw)] min-w-0 flex-col overflow-hidden rounded-2xl bg-background-color-1 p-0 text-font-color-black shadow-2xl backdrop:bg-[hsla(228deg,7%,14%,0.75)] dark:bg-dark-background-color-1 dark:text-font-color-white [&:not([open])]:hidden ${
+            className={`fixed inset-0 m-auto flex h-[min(48rem,calc(100vh-3rem))] w-[min(34rem,94vw)] min-w-0 flex-col overflow-hidden rounded-2xl bg-canvas p-0 text-ink shadow-2xl backdrop:bg-canvas/75 [&:not([open])]:hidden ${
               isDarkMode ? 'dark' : ''
             }`}
             aria-label={t('songGuessr.promptTitle')}

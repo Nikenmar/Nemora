@@ -23,8 +23,8 @@ const PromptMenuNavigationControlsContainer = () => {
     <div className="navigation-controls-container flex w-fit items-center justify-between gap-2">
       <Button
         iconName="arrow_back"
-        iconClassName="material-icons-round-outlined !text-xl"
-        className={`previousPageBtn !mr-0 flex h-fit !rounded-md !border-0 !px-2 !py-1 outline-1 outline-offset-1 !transition-[background,transform,visibility,opacity] hover:bg-background-color-2 hover:text-font-color-highlight dark:hover:bg-dark-background-color-2 dark:hover:text-dark-font-color-highlight ${
+        iconClassName="ms-icon !text-xl"
+        className={`previousPageBtn !mr-0 flex h-fit !rounded-md !border-0 !px-2 !py-1 outline-1 outline-offset-1 !transition-[background,transform,visibility,opacity] hover:bg-surface-2 hover:text-echo ${
           promptActiveIndex > 1
             ? 'available visible translate-x-0 opacity-100 focus-visible:!outline'
             : 'invisible -translate-x-8 opacity-0'
@@ -35,8 +35,8 @@ const PromptMenuNavigationControlsContainer = () => {
 
       <Button
         iconName="arrow_forward"
-        iconClassName="material-icons-round-outlined !text-xl"
-        className={`forwardPageBtn !mr-0 flex h-fit !rounded-md !border-0 !px-2 !py-1 outline-1 outline-offset-1 !transition-[background,transform,visibility,opacity] hover:bg-background-color-2 hover:text-font-color-highlight dark:hover:bg-dark-background-color-2 dark:hover:text-dark-font-color-highlight ${
+        iconClassName="ms-icon !text-xl"
+        className={`forwardPageBtn !mr-0 flex h-fit !rounded-md !border-0 !px-2 !py-1 outline-1 outline-offset-1 !transition-[background,transform,visibility,opacity] hover:bg-surface-2 hover:text-echo ${
           noOfPrompts !== 0 && promptActiveIndex < noOfPrompts
             ? 'available visible translate-x-0 opacity-100 focus-visible:!outline'
             : 'invisible translate-x-8 opacity-0'

@@ -15,7 +15,7 @@ const SongTrackNumberInput = (props: Props) => {
       <input
         type="number"
         id="song-track-number-id3-tag"
-        className="mr-2 mt-2 w-[90%] rounded-3xl border-[.15rem] border-background-color-2 bg-background-color-2 px-4 py-3 text-font-color-black transition-colors focus:border-font-color-highlight dark:border-dark-background-color-2 dark:bg-dark-background-color-2 dark:text-font-color-white dark:focus:border-dark-font-color-highlight"
+        className="mr-2 mt-2 w-[90%] rounded-3xl border-[.15rem] border-surface-2 bg-surface-2 px-4 py-3 text-ink transition-colors focus:border-echo "
         name="song-track-number"
         placeholder={t('common.albumTrackNo')}
         value={songTrackNumber ?? ''}

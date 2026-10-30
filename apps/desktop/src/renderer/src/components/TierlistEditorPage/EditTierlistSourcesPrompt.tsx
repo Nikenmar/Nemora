@@ -53,8 +53,8 @@ const EditTierlistSourcesPrompt = ({ tierlist, onSaved }: EditTierlistSourcesPro
   const itemClass = (isSelected: boolean) =>
     `flex h-16 w-56 items-center gap-3 rounded-xl px-3 text-left transition-[outline,background] ${
       isSelected
-        ? 'bg-font-color-highlight/20 outline outline-2 outline-font-color-highlight dark:bg-dark-font-color-highlight/20 dark:outline-dark-font-color-highlight'
-        : 'bg-background-color-2/60 outline-1 hover:outline dark:bg-dark-background-color-2/60'
+        ? 'bg-echo/20 outline outline-2 outline-echo '
+        : 'bg-surface-2/60 outline-1 hover:outline'
     }`;
 
   return (
@@ -80,12 +80,12 @@ const EditTierlistSourcesPrompt = ({ tierlist, onSaved }: EditTierlistSourcesPro
                   onClick={() => setSelectedFolders((p) => toggle(p, folder.path))}
                   className={itemClass(isSelected)}
                 >
-                  <span className="material-icons-round-outlined shrink-0 text-2xl opacity-80">
+                  <span className="ms-icon shrink-0 text-2xl opacity-80">
                     folder
                   </span>
                   <span className="truncate text-sm font-medium">{name}</span>
                   {isSelected && (
-                    <span className="material-icons-round ml-auto text-base text-font-color-highlight dark:text-dark-font-color-highlight">
+                    <span className="ms-icon ml-auto text-base text-echo">
                       check_circle
                     </span>
                   )}
@@ -117,7 +117,7 @@ const EditTierlistSourcesPrompt = ({ tierlist, onSaved }: EditTierlistSourcesPro
               />
               <span className="truncate text-sm font-medium">{playlist.name}</span>
               {isSelected && (
-                <span className="material-icons-round ml-auto text-base text-font-color-highlight dark:text-dark-font-color-highlight">
+                <span className="ms-icon ml-auto text-base text-echo">
                   check_circle
                 </span>
               )}
@@ -129,7 +129,7 @@ const EditTierlistSourcesPrompt = ({ tierlist, onSaved }: EditTierlistSourcesPro
       <Button
         label={t('tierlistsPage.create')}
         iconName="check"
-        className="!mr-0 mt-8 cursor-pointer justify-center !bg-background-color-3 !px-8 !py-3 text-lg !text-font-color-black dark:!bg-dark-background-color-3 dark:text-font-color-black"
+        className="!mr-0 mt-8 cursor-pointer justify-center !bg-accent !px-8 !py-3 text-lg !text-on-accent "
         clickHandler={save}
       />
     </div>

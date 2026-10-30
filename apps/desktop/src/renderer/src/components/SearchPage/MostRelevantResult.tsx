@@ -68,7 +68,7 @@ export const MostRelevantResult = (props: MostRelevantResultProp) => {
 
   return (
     <div
-      className={`result appear-from-bottom group most-relevant-${resultType.toLowerCase()} active mr-4 grid h-40 w-fit min-w-[20rem] max-w-md cursor-pointer grid-cols-[10rem_1fr] items-center rounded-lg bg-background-color-2 py-3 pl-3 pr-4 hover:bg-background-color-3 dark:bg-dark-background-color-2 dark:hover:bg-dark-background-color-3`}
+      className={`result appear-from-bottom group most-relevant-${resultType.toLowerCase()} active mr-4 grid h-40 w-fit min-w-[20rem] max-w-md cursor-pointer grid-cols-[10rem_1fr] items-center rounded-lg bg-surface-2 py-3 pl-3 pr-4 hover:bg-accent `}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -88,7 +88,7 @@ export const MostRelevantResult = (props: MostRelevantResultProp) => {
           <Button
             className="absolute z-10 !m-0 !rounded-none !border-0 !p-0 opacity-75 outline-1 outline-offset-1 transition-opacity hover:opacity-100 focus-visible:!outline group-hover:opacity-100"
             iconName="play_circle"
-            iconClassName="!text-4xl !leading-none text-font-color-white"
+            iconClassName="!text-4xl !leading-none text-on-media"
             clickHandler={(e) => {
               e.stopPropagation();
               playSong(id);
@@ -102,7 +102,7 @@ export const MostRelevantResult = (props: MostRelevantResultProp) => {
           className={`max-h-full ${resultType === 'artist' ? 'rounded-full' : 'rounded-md'}`}
         />
       </div>
-      <div className="result-info-container max-w-[50%] text-font-color-black group-hover:text-font-color-black dark:text-font-color-white dark:group-hover:text-font-color-black">
+      <div className="result-info-container max-w-[50%] text-ink group-hover:text-ink ">
         <div className="title overflow-hidden text-ellipsis whitespace-nowrap text-2xl">
           {title}
         </div>
@@ -116,7 +116,7 @@ export const MostRelevantResult = (props: MostRelevantResultProp) => {
             {infoType2}
           </div>
         )}
-        <div className="result-type mt-3 w-fit -translate-x-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-2xl bg-background-color-3 px-3 py-1 font-medium uppercase text-font-color-black group-hover:bg-background-color-1 group-hover:text-font-color-black dark:bg-dark-background-color-3 dark:text-font-color-black dark:group-hover:bg-dark-background-color-1 dark:group-hover:text-font-color-white">
+        <div className="result-type mt-3 w-fit -translate-x-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-2xl bg-accent px-3 py-1 font-medium uppercase text-on-accent group-hover:bg-canvas group-hover:text-ink ">
           {t(`common.${resultType}_one`)}
         </div>
       </div>

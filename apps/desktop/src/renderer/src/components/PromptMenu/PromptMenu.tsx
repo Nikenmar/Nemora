@@ -86,10 +86,10 @@ const PromptMenu = () => {
 
   return (
     <dialog
-      className={`dialog-menu relative left-1/2 top-1/2 h-fit max-h-[80%] min-h-[300px] w-[80%] min-w-[800px] max-w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-background-color-1 pb-10 shadow-[rgba(100,100,111,0.2)_0px_7px_29px_0px] transition-[transform,visibility,opacity] ease-in-out open:backdrop:transition-[background,backdrop-filter] dark:bg-dark-background-color-1 ${
+      className={`dialog-menu relative left-1/2 top-1/2 flex h-fit [&:not([open])]:hidden max-h-[86%] w-[min(56rem,92vw)] min-w-[30rem] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-3 pb-6 text-ink shadow-float open:backdrop:transition-[background-color] ${
         promptMenuData.isVisible
-          ? 'open:animate-dialog-appear-ease-in-out open:backdrop:bg-[hsla(228deg,7%,14%,0.75)] open:backdrop:dark:bg-[hsla(228deg,7%,14%,0.75)]'
-          : 'animate-dialog-dissappear-ease-in-out backdrop:bg-[hsla(228deg,7%,14%,0)] backdrop:dark:bg-[hsla(228deg,7%,14%,0)]'
+          ? 'open:animate-dialog-appear-ease-in-out open:backdrop:bg-scrim'
+          : 'animate-dialog-dissappear-ease-in-out backdrop:bg-transparent'
       } `}
       id="prompt-menu"
       onClick={(e) => {
@@ -97,14 +97,13 @@ const PromptMenu = () => {
       }}
       ref={promptMenuRef}
     >
-      <div className="my-4 flex w-full items-center justify-between px-6">
+      <div className="flex w-full shrink-0 items-center justify-between px-4 pb-1 pt-3">
         <PromptMenuNavigationControlsContainer />
         <Button
           key={0}
-          className="prompt-menu-close-btn previousPageBtn !m-0 flex h-fit !rounded-md !border-0 !p-0 !px-2 !py-1 outline-1 outline-offset-1 !transition-[background,transform,visibility,opacity] hover:bg-background-color-2 hover:text-font-color-highlight dark:hover:bg-dark-background-color-2 dark:hover:text-dark-font-color-highlight"
+          className="prompt-menu-close-btn !m-0"
           iconName="close"
           tooltipLabel={t('titleBar.close')}
-          iconClassName="!leading-none !text-xl"
           clickHandler={(e) => {
             e.stopPropagation();
             changePromptMenuData(false);
@@ -112,7 +111,7 @@ const PromptMenu = () => {
         />
       </div>
       <MainContainer
-        className={`prompt-menu-inner relative max-h-full px-8 pb-2 text-font-color-black dark:text-font-color-white ${
+        className={`prompt-menu-inner relative max-h-full overflow-y-auto !pl-7 !pr-7 !pt-1 pb-2 text-body text-ink ${
           promptMenuData.className ?? ''
         }`}
       >

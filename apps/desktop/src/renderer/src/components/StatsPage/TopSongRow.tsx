@@ -37,7 +37,7 @@ const TopSongRow = (props: Props) => {
         </span>
       </div>
       <span
-        className="shrink-0 font-medium text-font-color-highlight dark:text-dark-font-color-highlight"
+        className="shrink-0 font-medium text-echo"
         title={countTitle}
       >
         {count}

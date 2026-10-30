@@ -60,21 +60,21 @@ const ThemeSettings = () => {
 
   return theme ? (
     <li className="main-container appearance-settings-container mb-16">
-      <div className="title-container mb-4 mt-1 flex items-center text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2">dark_mode</span>
+      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2">dark_mode</span>
         {t('settingsPage.appearance')}
       </div>
-      <ul className="list-disc pl-6 marker:bg-font-color-highlight dark:marker:bg-dark-font-color-highlight">
+      <ul className="list-disc pl-6 marker:bg-echo">
         <li>
           <div className="description">{t('settingsPage.changeTheme')}</div>
           <div className="theme-change-radio-btns flex max-w-3xl items-center justify-between pl-4 pt-4">
             <label
               htmlFor="lightThemeRadioBtn"
               tabIndex={0}
-              className={`theme-change-radio-btn mb-2 flex cursor-pointer flex-col items-center rounded-md bg-background-color-2/75 p-6 outline-2 outline-offset-1 focus-within:!outline hover:bg-background-color-2 dark:bg-dark-background-color-2/75 dark:hover:bg-dark-background-color-2 ${
+              className={`theme-change-radio-btn mb-2 flex cursor-pointer flex-col items-center rounded-md bg-surface-2/75 p-6 outline-2 outline-offset-1 focus-within:!outline hover:bg-surface-2 ${
                 !theme.useSystemTheme &&
                 !theme.isDarkMode &&
-                '!bg-background-color-3 dark:!bg-dark-background-color-3'
+                '!bg-accent'
               }`}
               onKeyDown={focusInput}
             >
@@ -88,7 +88,7 @@ const ThemeSettings = () => {
                 onClick={() => window.api.theme.changeAppTheme('light')}
               />
               <Img loading="eager" src={HomeImgLight} className="h-24 w-40 shadow-md" />
-              <span className="mt-4 peer-checked:!text-font-color-black dark:peer-checked:!text-font-color-black">
+              <span className="mt-4 peer-checked:!text-ink">
                 {t('settingsPage.lightTheme')}
               </span>
             </label>
@@ -96,10 +96,10 @@ const ThemeSettings = () => {
             <label
               htmlFor="darkThemeRadioBtn"
               tabIndex={0}
-              className={`theme-change-radio-btn mb-2 flex cursor-pointer flex-col items-center rounded-md bg-background-color-2/75 p-6 outline-2 outline-offset-1 focus-within:!outline hover:bg-background-color-2 dark:bg-dark-background-color-2/75 dark:hover:bg-dark-background-color-2 ${
+              className={`theme-change-radio-btn mb-2 flex cursor-pointer flex-col items-center rounded-md bg-surface-2/75 p-6 outline-2 outline-offset-1 focus-within:!outline hover:bg-surface-2 ${
                 !theme.useSystemTheme &&
                 theme.isDarkMode &&
-                '!bg-background-color-3 dark:!bg-dark-background-color-3'
+                '!bg-accent'
               }`}
               onKeyDown={focusInput}
             >
@@ -113,7 +113,7 @@ const ThemeSettings = () => {
                 onClick={() => window.api.theme.changeAppTheme('dark')}
               />
               <Img loading="eager" src={HomeImgDark} className="h-24 w-40 shadow-md" />
-              <span className="mt-4 peer-checked:!text-font-color-black dark:peer-checked:!text-font-color-black">
+              <span className="mt-4 peer-checked:!text-ink">
                 {t('settingsPage.darkTheme')}
               </span>
             </label>
@@ -121,8 +121,8 @@ const ThemeSettings = () => {
             <label
               htmlFor="systemThemeRadioBtn"
               tabIndex={0}
-              className={`theme-change-radio-btn hover:bg-background-color mb-2 flex cursor-pointer flex-col items-center rounded-md bg-background-color-2/75 p-6 outline-2 outline-offset-1 focus-within:!outline dark:bg-dark-background-color-2/75 dark:hover:bg-dark-background-color-2 ${
-                theme.useSystemTheme && '!bg-background-color-3 dark:!bg-dark-background-color-3'
+              className={`theme-change-radio-btn hover:bg-background-color mb-2 flex cursor-pointer flex-col items-center rounded-md bg-surface-2/75 p-6 outline-2 outline-offset-1 focus-within:!outline ${
+                theme.useSystemTheme && '!bg-accent'
               } `}
               onKeyDown={focusInput}
             >
@@ -136,7 +136,7 @@ const ThemeSettings = () => {
                 onClick={() => window.api.theme.changeAppTheme('system')}
               />
               <Img loading="eager" src={HomeImgLightDark} className="h-24 w-40 shadow-md" />
-              <span className="mt-4 peer-checked:!text-font-color-black dark:peer-checked:!text-font-color-black">
+              <span className="mt-4 peer-checked:!text-ink">
                 {t('settingsPage.systemTheme')}
               </span>
             </label>

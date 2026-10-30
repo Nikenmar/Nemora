@@ -72,7 +72,7 @@ const TournamentPanel = ({
   return (
     <div className="duel-tournament">
       <div className="mb-5 flex items-center gap-3">
-        <span className="material-icons-round text-3xl text-font-color-highlight dark:text-dark-font-color-highlight">
+        <span className="ms-icon text-3xl text-echo">
           account_tree
         </span>
         <div>
@@ -84,7 +84,7 @@ const TournamentPanel = ({
       {error && (
         <div
           role="alert"
-          className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+          className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger"
         >
           {error}
         </div>

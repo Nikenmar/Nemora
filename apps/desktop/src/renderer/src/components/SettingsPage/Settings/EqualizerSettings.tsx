@@ -101,8 +101,8 @@ const EqualizerSettings = () => {
 
   return (
     <li className="main-container equalizer-settings-container mb-12">
-      <div className="title-container mb-4 mt-1 flex items-center text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-        <span className="material-icons-round-outlined mr-2">graphic_eq</span>
+      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+        <span className="ms-icon mr-2">graphic_eq</span>
         {t('settingsPage.equalizer')}
       </div>
       <div className="pl-6">
@@ -138,7 +138,7 @@ const EqualizerSettings = () => {
           id="equalizer"
           className="equalizer relative mx-auto mt-4 flex max-w-6xl items-center justify-around px-8"
         >
-          <span className="zero-line absolute mb-8 ml-12 !h-[.125rem] !w-[85%] bg-background-color-2 opacity-75 dark:bg-dark-background-color-2" />
+          <span className="zero-line absolute mb-8 ml-12 !h-[.125rem] !w-[85%] bg-surface-2 opacity-75" />
           <div className="section flex !h-full flex-col px-2 py-4 text-xs opacity-80">
             <span className="mb-20">+12dB</span>
             <span className="">0dB</span>

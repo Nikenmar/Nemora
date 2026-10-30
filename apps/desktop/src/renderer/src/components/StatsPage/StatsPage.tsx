@@ -249,9 +249,9 @@ const StatsPage = () => {
       isYearRange);
 
   return (
-    <MainContainer className="stats-page appear-from-bottom !h-full overflow-hidden !pb-0 text-font-color-black dark:text-font-color-white">
+    <MainContainer className="stats-page appear-from-bottom !h-full overflow-hidden !pb-0 text-ink">
       <>
-        <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-3xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-page font-semibold text-ink">
           <div className="container flex items-center">{t('statsPage.title')}</div>
           <div className="other-controls-container flex items-center">
             <Button
@@ -326,7 +326,7 @@ const StatsPage = () => {
             </div>
 
             <section className="mb-6">
-              <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+              <h2 className="mb-2 text-lg font-medium text-echo">
                 {t('statsPage.listeningActivity')}
               </h2>
               <ActivityBarGraph key={stats.timeRange} data={activityData} />
@@ -338,7 +338,7 @@ const StatsPage = () => {
             </section>
 
             <section className="mb-6">
-              <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+              <h2 className="mb-2 text-lg font-medium text-echo">
                 {yearRangeLabel(t('statsPage.listeningCalendar'), stats.scopes.calendar)}
               </h2>
               <div className="grid grid-cols-3 gap-3">
@@ -364,10 +364,10 @@ const StatsPage = () => {
 
             <div className="mb-6 grid gap-6 lg:grid-cols-3">
               <section>
-                <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                <h2 className="mb-2 text-lg font-medium text-echo">
                   {t('statsPage.topSongs')}
                 </h2>
-                <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                   <ul>
                     {stats.topSongs.map((song, index) => (
                       <TopSongRow
@@ -382,10 +382,10 @@ const StatsPage = () => {
                 </div>
               </section>
               <section>
-                <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                <h2 className="mb-2 text-lg font-medium text-echo">
                   {t('statsPage.topArtists')}
                 </h2>
-                <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                   <ul>
                     {stats.topArtists.map((artist, index) => (
                       <TopNameRow
@@ -398,10 +398,10 @@ const StatsPage = () => {
                 </div>
               </section>
               <section>
-                <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                <h2 className="mb-2 text-lg font-medium text-echo">
                   {t('statsPage.topAlbums')}
                 </h2>
-                <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                   <ul>
                     {stats.topAlbums.map((album, index) => (
                       <TopNameRow key={album.name} rank={index + 1} entry={album} />
@@ -413,10 +413,10 @@ const StatsPage = () => {
 
             <div className="mb-6 grid gap-6 lg:grid-cols-2">
               <section>
-                <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                <h2 className="mb-2 text-lg font-medium text-echo">
                   {t('statsPage.topGenres')}
                 </h2>
-                <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                   <ul>
                     {stats.topGenres.map((genre, index) => (
                       <TopNameRow key={genre.name} rank={index + 1} entry={genre} />
@@ -425,10 +425,10 @@ const StatsPage = () => {
                 </div>
               </section>
               <section>
-                <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                <h2 className="mb-2 text-lg font-medium text-echo">
                   {yearRangeLabel(t('statsPage.mostSkipped'), stats.scopes.mostSkipped)}
                 </h2>
-                <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                   <ul>
                     {stats.mostSkipped.map((song, index) => (
                       <TopSongRow
@@ -453,11 +453,11 @@ const StatsPage = () => {
 
             {stats.elo.totalDuels > 0 && (
               <section className="mb-6">
-                <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+                <h2 className="mb-2 text-lg font-medium text-echo">
                   {yearRangeLabel(t('eloDuels.sectionTitle'), stats.scopes.elo)}
                 </h2>
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                  <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                     <div className="mb-2 text-sm opacity-75">
                       {t('eloDuels.totalDuels')}: {stats.elo.totalDuels}
                     </div>
@@ -479,7 +479,7 @@ const StatsPage = () => {
                       ))}
                     </ul>
                   </div>
-                  <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+                  <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
                     <h3 className="mb-1 font-medium">{t('eloDuels.recentDuels')}</h3>
                     <ul>
                       {stats.elo.recentDuels.map((duel) => (
@@ -509,8 +509,8 @@ const StatsPage = () => {
                             <span
                               className={
                                 duel.deltaA >= 0
-                                  ? 'text-green-600 dark:text-green-400'
-                                  : 'text-red-600 dark:text-red-400'
+                                  ? 'text-success'
+                                  : 'text-danger'
                               }
                             >
                               {duel.deltaA >= 0
@@ -521,8 +521,8 @@ const StatsPage = () => {
                             <span
                               className={
                                 duel.deltaB >= 0
-                                  ? 'text-green-600 dark:text-green-400'
-                                  : 'text-red-600 dark:text-red-400'
+                                  ? 'text-success'
+                                  : 'text-danger'
                               }
                             >
                               {duel.deltaB >= 0

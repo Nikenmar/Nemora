@@ -74,7 +74,7 @@ const SongSearchResultsContainer = (props: Props) => {
     >
       <>
         <div
-          className={`title-container mb-8 mt-1 flex items-center pr-4 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight ${
+          className={`title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink ${
             songResults.length > 0 ? 'visible opacity-100' : 'invisible opacity-0'
           }`}
         >

@@ -236,7 +236,7 @@ const Genre = (props: GenreProp) => {
       {
         label: t(`common.info`),
         iconName: 'info',
-        iconClassName: 'material-icons-round-outlined',
+        iconClassName: 'ms-icon',
         handlerFunction: goToGenreInfoPage,
         isDisabled: isMultipleSelectionsEnabled
       }
@@ -290,11 +290,11 @@ const Genre = (props: GenreProp) => {
 
   return (
     <div
-      className={`genre group relative mb-6 mr-10 flex h-36 w-72 cursor-pointer items-center gap-4 overflow-hidden rounded-2xl p-4 text-background-color-2 transition-[border,border-color] dark:text-dark-background-color-2 ${className} ${
+      className={`genre group relative mb-6 mr-10 flex h-36 w-72 cursor-pointer items-center gap-4 overflow-hidden rounded-2xl p-4 text-surface-2 transition-[border,border-color] ${className} ${
         isMultipleSelectionEnabled &&
         multipleSelectionsData.selectionType === 'genre' &&
         'border-4 border-transparent'
-      } ${isAMultipleSelection && '!border-font-color-highlight dark:!border-dark-font-color-highlight'}`}
+      } ${isAMultipleSelection && '!border-echo'}`}
       style={{
         backgroundColor
       }}
@@ -320,11 +320,11 @@ const Genre = (props: GenreProp) => {
       </div>
       <div className="genre-info-container w-3/5 flex-grow-0">
         <Button
-          className="genre-title !m-0 !block w-full truncate !rounded-none !border-0 bg-transparent !p-0 !text-left !text-2xl text-font-color-white outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:text-font-color-white dark:hover:bg-transparent"
+          className="genre-title !m-0 !block w-full truncate !rounded-none !border-0 bg-transparent !p-0 !text-left !text-2xl text-on-media outline-1 outline-offset-1 hover:bg-transparent focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
           label={title}
           clickHandler={goToGenreInfoPage}
         />
-        <div className="genre-no-of-songs text-sm text-font-color-white/75 dark:text-font-color-white/75">
+        <div className="genre-no-of-songs text-sm text-on-media/75">
           {t(`common.songWithCount`, {
             count: songIds.length
           })}

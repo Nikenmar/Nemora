@@ -37,7 +37,7 @@ const SongGuessrStatsSection = ({ stats, onTitleClick }: SongGuessrStatsSectionP
 
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-lg font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+      <h2 className="mb-2 text-lg font-medium text-echo">
         {t('songGuessr.sectionTitle')}
       </h2>
 
@@ -66,12 +66,12 @@ const SongGuessrStatsSection = ({ stats, onTitleClick }: SongGuessrStatsSectionP
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+        <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
           <h3 className="mb-2 font-medium">{t('songGuessr.distribution')}</h3>
           <SongGuessrStatsPanel stats={stats} />
         </div>
 
-        <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+        <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
           <h3 className="mb-1 font-medium">{t('songGuessr.recentRounds')}</h3>
           <ul>
             {recentRounds.map((round) => (
@@ -82,10 +82,10 @@ const SongGuessrStatsSection = ({ stats, onTitleClick }: SongGuessrStatsSectionP
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span
-                    className={`material-icons-round text-base !leading-none ${
+                    className={`ms-icon text-base !leading-none ${
                       round.won
-                        ? 'text-font-color-highlight dark:text-dark-font-color-highlight'
-                        : 'text-font-color-crimson'
+                        ? 'text-echo'
+                        : 'text-danger'
                     }`}
                     aria-hidden="true"
                   >
@@ -110,7 +110,7 @@ const SongGuessrStatsSection = ({ stats, onTitleClick }: SongGuessrStatsSectionP
           </ul>
         </div>
 
-        <div className="rounded-md bg-background-color-2/70 p-4 backdrop-blur-md dark:bg-dark-background-color-2/70">
+        <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
           <h3 className="mb-1 font-medium">{t('songGuessr.mostMissed')}</h3>
           {/* Says what it is counting: the history window is capped, so this is
               not an all-time tally and must not read like one. */}

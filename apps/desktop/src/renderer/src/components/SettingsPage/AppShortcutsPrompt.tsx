@@ -194,7 +194,7 @@ const AppShortcutsPrompt = () => {
           const shortcutKeyComponents = keys.map((key, index) => (
             <>
               <ShortcutButton shortcutKey={key} key={index} />
-              {index !== keys.length - 1 && <span className="mx-2 text-font-color-dimmed">+</span>}
+              {index !== keys.length - 1 && <span className="mx-2 text-ink-dim">+</span>}
             </>
           ));
 
@@ -208,7 +208,7 @@ const AppShortcutsPrompt = () => {
 
         return (
           <li key={categoryIndex} className="shortcut-category mt-8">
-            <div className="shortcut-category-title text-2xl text-font-color-highlight dark:text-dark-font-color-highlight">
+            <div className="shortcut-category-title text-2xl text-echo">
               {shortcutCategoryTitle}
             </div>
             <div className="shortcuts-container ml-4 flex flex-row flex-wrap justify-between">

@@ -61,12 +61,12 @@ const SongAlbumArtistsInput = (props: Props) => {
       return songAlbumArtists.map((artist) => (
         <span
           key={artist.name}
-          className="group mb-2 mr-2 flex w-fit items-center rounded-2xl bg-background-color-3 px-3 py-1 text-center text-font-color-black dark:bg-dark-background-color-3 dark:text-font-color-black"
+          className="group mb-2 mr-2 flex w-fit items-center rounded-2xl bg-accent px-3 py-1 text-center text-on-accent "
         >
           <Button
             iconName="close"
-            className="material-icons-round mr-2 !border-0 !p-[.125rem] opacity-0 outline-1 outline-offset-1 transition-[visibility,opacity] focus-visible:!outline group-focus-within:opacity-100 group-hover:opacity-100"
-            iconClassName="leading-none dark:!text-font-color-black"
+            className="ms-icon mr-2 !border-0 !p-[.125rem] opacity-0 outline-1 outline-offset-1 transition-[visibility,opacity] focus-visible:!outline group-focus-within:opacity-100 group-hover:opacity-100"
+            iconClassName="leading-none"
             clickHandler={() => {
               updateSongInfo((prevData) => {
                 return {
@@ -91,12 +91,12 @@ const SongAlbumArtistsInput = (props: Props) => {
   return (
     <div className="tag-input flex min-w-[10rem] max-w-2xl flex-col">
       <label htmlFor="song-album-artists-id3-tag">{t('common.albumArtists')}</label>
-      <div className="mt-2 w-[90%] rounded-xl border-2 border-background-color-2 p-2 dark:border-dark-background-color-2">
-        <div className="artists-container flex flex-wrap p-2 empty:py-2 empty:after:h-full empty:after:w-full empty:after:text-center empty:after:text-[#ccc] empty:after:content-['No_artists_selected_for_this_song.'] dark:empty:after:text-[#ccc]">
+      <div className="mt-2 w-[90%] rounded-xl border-2 border-surface-2 p-2">
+        <div className="artists-container flex flex-wrap p-2 empty:py-2 empty:after:h-full empty:after:w-full empty:after:text-center empty:after:text-ink-dim empty:after:content-['No_artists_selected_for_this_song.']">
           {albumArtistComponents}
           {albumArtistComponents.length === 0 && songAlbum && songAlbum?.albumId && (
-            <p className="appear-from-bottom mb-2 ml-2 flex items-center text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-              <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
+            <p className="appear-from-bottom mb-2 ml-2 flex items-center text-sm font-medium text-echo">
+              <span className="ms-icon mr-2 text-xl">error</span>{' '}
               {t('songTagsEditingPage.albumArtistNotMentioned', {
                 title: songAlbum.title,
                 artists: songAlbum.artists?.join(', ')
@@ -109,8 +109,8 @@ const SongAlbumArtistsInput = (props: Props) => {
             !songAlbum.artists.every((artist) =>
               songAlbumArtists.some((albumArtist) => albumArtist.name === artist)
             ) && (
-              <p className="appear-from-bottom ml-2 mt-2 flex items-center text-sm font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
-                <span className="material-icons-round-outlined mr-2 text-xl">error</span>{' '}
+              <p className="appear-from-bottom ml-2 mt-2 flex items-center text-sm font-medium text-echo">
+                <span className="ms-icon mr-2 text-xl">error</span>{' '}
                 {t('songTagsEditingPage.songAlbumArtistMismatch', {
                   albumTitle: songAlbum.title,
                   albumArtists: songAlbum.artists?.join(', '),
@@ -124,7 +124,7 @@ const SongAlbumArtistsInput = (props: Props) => {
         <input
           type="search"
           id="song-album-artists-id3-tag"
-          className="mt-4 w-full rounded-xl border-2 border-transparent bg-background-color-2 p-2 transition-colors focus:border-font-color-highlight dark:bg-dark-background-color-2 dark:focus:border-dark-font-color-highlight"
+          className="mt-4 w-full rounded-xl border-2 border-transparent bg-surface-2 p-2 transition-colors focus:border-echo "
           placeholder={t('songTagsEditingPage.searchForArtists')}
           value={albumArtistKeyword}
           onChange={(e) => {
@@ -134,7 +134,7 @@ const SongAlbumArtistsInput = (props: Props) => {
           onKeyDown={(e) => e.stopPropagation()}
         />
         {artistResults.length > 0 && (
-          <div className="artists-results-container mt-4 max-h-60 overflow-y-auto rounded-xl border-2 border-background-color-2 dark:border-dark-background-color-2">
+          <div className="artists-results-container mt-4 max-h-60 overflow-y-auto rounded-xl border-2 border-surface-2">
             {albumArtistResultComponents}
           </div>
         )}
@@ -143,7 +143,7 @@ const SongAlbumArtistsInput = (props: Props) => {
             label={t('songTagsEditingPage.addNewArtist', {
               name: albumArtistKeyword
             })}
-            className="mt-4 !w-full !bg-background-color-2 hover:!bg-background-color-3 hover:text-font-color-black dark:!bg-dark-background-color-2 hover:dark:!bg-dark-background-color-3 hover:dark:text-font-color-black"
+            className="mt-4 !w-full !bg-surface-2 hover:!bg-accent hover:text-ink "
             clickHandler={() => {
               updateSongInfo((prevData) => {
                 const albumArtists =

@@ -66,7 +66,7 @@ const AlbumSearchResultsContainer = (props: Props) => {
       }}
     >
       <>
-        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-2xl font-medium text-font-color-highlight dark:text-dark-font-color-highlight">
+        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
           <div className="container flex">
             Albums{' '}
             <div className="other-stats-container ml-12 flex items-center text-xs">

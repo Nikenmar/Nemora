@@ -49,7 +49,7 @@ const MainContainer = forwardRef((props: MainContainerProp, ref: ForwardedRef<HT
     <ErrorBoundary>
       <div
         className={`main-container ${
-          noDefaultStyles ? '' : 'flex h-fit max-h-full w-full flex-col pb-8 pl-8'
+          noDefaultStyles ? '' : 'flex h-fit max-h-full w-full flex-col pb-8 pl-[26px] pr-4 pt-4'
         } ${className}`}
         style={style ?? {}}
         onContextMenu={onContextMenu}
