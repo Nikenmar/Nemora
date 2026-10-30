@@ -18,6 +18,7 @@ import { appPreferences } from '../../../package.json';
 
 // ? CONTEXTS
 import { registerBenchApp } from './other/bench';
+import { registerShots } from './other/shots';
 import { AppUpdateContext, type AppUpdateContextType } from './contexts/AppUpdateContext';
 // import { SongPositionContext } from './contexts/SongPositionContext';
 
@@ -1756,6 +1757,35 @@ export default function App() {
       dispatch({ type: 'UPDATE_MUTED_STATE' });
     }
   }, []);
+
+  useEffect(
+    () =>
+      registerShots({
+        changeCurrentActivePage,
+        changePromptMenuData,
+        updatePlayerType,
+        addNewNotifications,
+        toggleMutedState,
+        playSong,
+        createQueue,
+        updateSongPosition,
+        togglePlay: toggleSongPlayback,
+        currentPage: () =>
+          store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex]
+            .pageTitle
+      }),
+    [
+      changeCurrentActivePage,
+      changePromptMenuData,
+      updatePlayerType,
+      addNewNotifications,
+      toggleMutedState,
+      playSong,
+      createQueue,
+      updateSongPosition,
+      toggleSongPlayback
+    ]
+  );
 
   const manageKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
