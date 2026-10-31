@@ -47,7 +47,10 @@
         /* The black theme's tokens (styles.css). `--echo` follows the accent the user chose: the
            renderer sends it with every state. */
         --ink: 239 240 243;
-        --ink-dim: 148 150 160;
+        /* Not the app's ink-dim grey: over a stream the background is anything at all, and a mid
+           grey disappears on half of it. The second line is a light, opaque tint instead, set back
+           from the title by weight and size rather than by contrast. */
+        --ink-soft: 214 217 225;
         --echo: 99 151 241;
         /* The player bar's block, measured in its own pixels, at 1rem = 12 of them: its 48px
            cover is 4rem here. Everything is in rem, so one root font-size is the only knob the
@@ -116,8 +119,20 @@
         gap: 0.1667rem;
         margin-left: var(--gap);
         min-width: 0;
-        /* Over video the text carries its own shadow: a stream can be any colour at all. */
-        filter: drop-shadow(0 0.125rem 0.3125rem rgb(0 0 0 / 0.75));
+        /* Over video the text carries its own edge: a crisp dark outline in eight directions that
+           holds light text on a white or busy frame, then a soft glow that lifts it off a dark one.
+           In rem, so it thickens with the scale. text-shadow, not a stroke: every Chromium OBS has
+           shipped draws it. */
+        text-shadow:
+          0.1rem 0 0 rgb(0 0 0 / 0.85),
+          -0.1rem 0 0 rgb(0 0 0 / 0.85),
+          0 0.1rem 0 rgb(0 0 0 / 0.85),
+          0 -0.1rem 0 rgb(0 0 0 / 0.85),
+          0.0707rem 0.0707rem 0 rgb(0 0 0 / 0.85),
+          -0.0707rem 0.0707rem 0 rgb(0 0 0 / 0.85),
+          0.0707rem -0.0707rem 0 rgb(0 0 0 / 0.85),
+          -0.0707rem -0.0707rem 0 rgb(0 0 0 / 0.85),
+          0 0 0.4rem rgb(0 0 0 / 0.6);
       }
 
       /* 14px semibold, leading 20px: the player's title. */
@@ -141,12 +156,13 @@
         align-items: center;
       }
 
-      /* text-small, ink-dim. */
+      /* text-small, in the soft light tint. */
       .artists {
         max-width: 100%;
         font-size: 1rem;
+        font-weight: 500;
         line-height: 1.3333rem;
-        color: rgb(var(--ink-dim));
+        color: rgb(var(--ink-soft));
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -157,7 +173,7 @@
         max-width: 100%;
         font-size: 0.9583rem;
         line-height: 1.1667rem;
-        color: rgb(var(--ink-dim));
+        color: rgb(var(--ink-soft));
         overflow: hidden;
         text-overflow: ellipsis;
         /* `pre`, not `nowrap`: the line is built from separate spans, and the
