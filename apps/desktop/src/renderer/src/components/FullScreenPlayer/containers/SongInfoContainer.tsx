@@ -25,6 +25,9 @@ type Props = {
 
 const SongInfoContainer = (props: Props) => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
+  // the store compares selections shallowly, so the whole object never shows the change.
+  const isCurrentSongAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
   const isCurrentSongPlaying = useStore(store, (state) => state.player.isCurrentSongPlaying);
   const isMuted = useStore(store, (state) => state.player.volume.isMuted);
   const volume = useStore(store, (state) => state.player.volume.value);
@@ -152,14 +155,14 @@ const SongInfoContainer = (props: Props) => {
       </div>
       <div className="song-controls-container flex items-center justify-center gap-3">
         <Button
-          className={`favorite-btn ${glass} ${currentSongData.isAFavorite ? '!text-echo' : ''}`}
-          isActive={currentSongData.isAFavorite}
+          className={`favorite-btn ${glass} ${isCurrentSongAFavorite ? '!text-echo' : ''}`}
+          isActive={isCurrentSongAFavorite}
           isDisabled={!currentSongData.isKnownSource}
           tooltipLabel={
             currentSongData.isKnownSource ? t('player.likeDislike') : t('player.likeDislikeDisabled')
           }
           clickHandler={() =>
-            currentSongData.isKnownSource && toggleIsFavorite(!currentSongData.isAFavorite)
+            currentSongData.isKnownSource && toggleIsFavorite(!isCurrentSongAFavorite)
           }
           iconName="favorite"
         />

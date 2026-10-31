@@ -62,6 +62,9 @@ interface SongProp {
 
 const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
+  // the store compares selections shallowly, so the whole object never shows the change.
+  const isCurrentSongAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
   const queue = useStore(store, (state) => state.localStorage.queue);
   const isCurrentSongPlaying = useStore(store, (state) => state.player.isCurrentSongPlaying);
   const localStorageData = useStore(store, (state) => state.localStorage);
@@ -115,10 +118,10 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
   useEffect(() => {
     setIsSongPlaying(() => currentSongData?.songId === songId && isCurrentSongPlaying);
     setIsAFavorite((prevState) => {
-      if (currentSongData?.songId === songId) return currentSongData.isAFavorite;
+      if (currentSongData?.songId === songId) return isCurrentSongAFavorite;
       return prevState;
     });
-  }, [currentSongData.songId, currentSongData.isAFavorite, isCurrentSongPlaying, songId]);
+  }, [currentSongData.songId, isCurrentSongAFavorite, isCurrentSongPlaying, songId]);
 
   const handlePlayBtnClick = useCallback(() => {
     if (onPlayClick) return onPlayClick(songId);

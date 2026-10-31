@@ -21,6 +21,9 @@ const DeleteSongsFromSystemConfrimPrompt = lazy(
 
 const CurrentlyPlayingSongInfoContainer = () => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
+  // the store compares selections shallowly, so a selection of the whole object never sees it change.
+  const isAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
   const preferences = useStore(store, (state) => state.localStorage.preferences);
 
   const {
@@ -344,16 +347,14 @@ const CurrentlyPlayingSongInfoContainer = () => {
       {currentSongData.title && (
         <Button
           className={`like-btn !m-0 !h-8 !w-8 shrink-0 ${
-            currentSongData.isAFavorite ? '!text-echo hover:!text-echo' : ''
+            isAFavorite ? '!text-echo hover:!text-echo' : ''
           } ${!currentSongData.isKnownSource && '!cursor-not-allowed opacity-40'}`}
           tooltipLabel={
             currentSongData.isKnownSource ? t('player.likeDislike') : t('player.likeDislikeDisabled')
           }
           iconName="favorite"
-          isActive={currentSongData.isAFavorite}
-          clickHandler={() =>
-            currentSongData.isKnownSource && toggleIsFavorite(!currentSongData.isAFavorite)
-          }
+          isActive={isAFavorite}
+          clickHandler={() => currentSongData.isKnownSource && toggleIsFavorite(!isAFavorite)}
         />
       )}
     </div>

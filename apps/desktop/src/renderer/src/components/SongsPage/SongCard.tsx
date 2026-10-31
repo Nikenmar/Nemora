@@ -37,6 +37,9 @@ interface SongCardProp {
 
 const SongCard = (props: SongCardProp) => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
+  // the store compares selections shallowly, so the whole object never shows the change.
+  const isCurrentSongAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
   const queue = useStore(store, (state) => state.localStorage.queue);
   const doNotShowBlacklistSongConfirm = useStore(
     store,
@@ -88,10 +91,10 @@ const SongCard = (props: SongCardProp) => {
       return false;
     });
     setIsSongAFavorite((prevState) => {
-      if (currentSongData?.songId === songId) return currentSongData.isAFavorite;
+      if (currentSongData?.songId === songId) return isCurrentSongAFavorite;
       return prevState;
     });
-  }, [currentSongData, isCurrentSongPlaying, songId]);
+  }, [currentSongData, isCurrentSongAFavorite, isCurrentSongPlaying, songId]);
 
 
   const handlePlayBtnClick = useCallback(() => {
