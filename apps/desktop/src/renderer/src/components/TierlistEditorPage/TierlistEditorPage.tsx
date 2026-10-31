@@ -867,7 +867,7 @@ const TierlistEditorPage = () => {
                       }
                       onPlay={handlePlay}
                       onCardContextMenu={openCardMenu}
-                      isShuffleExcluded={shuffleExcluded.has(item.id)}
+                      isShuffleExcluded={isExclusionMode && shuffleExcluded.has(item.id)}
                       onToggleShuffleExcluded={isExclusionMode ? toggleShuffleExcluded : undefined}
                     />
                   ))}
@@ -918,7 +918,7 @@ const TierlistEditorPage = () => {
                   }
                   onPlay={handlePlay}
                   onCardContextMenu={openCardMenu}
-                  isShuffleExcluded={shuffleExcluded.has(item.id)}
+                  isShuffleExcluded={isExclusionMode && shuffleExcluded.has(item.id)}
                   onToggleShuffleExcluded={isExclusionMode ? toggleShuffleExcluded : undefined}
                 />
               ))}

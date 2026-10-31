@@ -45,7 +45,7 @@ interface TierItemCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onPlay
   thumbSrc?: string;
   /** 'playing'/'paused' when this card is the current track, else 'none'. */
   playState?: 'none' | 'playing' | 'paused';
-  /** Kept out of Smart Shuffle: a mark in the corner and a dimmed cover. */
+  /** Kept out of Smart Shuffle, shown only while choosing them: a mark and a dimmed cover. */
   isShuffleExcluded?: boolean;
   /** Set while the editor's exclusion mode is on: a click on the card keeps it out or lets it in. */
   onToggleShuffleExcluded?: (_songId: string) => void;
