@@ -50,6 +50,21 @@ const SeekBarSlider = (props: Props) => {
     }
   }, []);
 
+  // A new song starts at 0 on the bar at once. Without this the bar kept the last song's position
+  // until the next report, up to a second and a half while the new one loads (a paused player
+  // reports once a second, and the bar reads every 500 ms), drawn over the new song's length.
+  // Not on the first song: that one is the restored session, and its position comes as reported.
+  const shownSongIdRef = useRef(currentSongData.songId);
+  useEffect(() => {
+    if (shownSongIdRef.current && shownSongIdRef.current !== currentSongData.songId) {
+      lowResponseSongPositionRef.current = 0;
+      setSongPos(0);
+      if (onSeek) onSeek(0);
+    }
+    shownSongIdRef.current = currentSongData.songId;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSongData.songId]);
+
   useEffect(() => {
     document.addEventListener('player/positionChange', handleSongPositionChange);
 

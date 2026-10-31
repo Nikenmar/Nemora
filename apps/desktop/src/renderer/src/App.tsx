@@ -792,6 +792,9 @@ export default function App() {
               storage.playback.setCurrentSongOptions('songId', songData.songId);
 
               player.src = `${songData.path}?ts=${Date.now()}`;
+              // Everything that follows the position (bar, lyrics) starts the new song at 0 now,
+              // not at the next report.
+              document.dispatchEvent(new CustomEvent('player/positionChange', { detail: 0 }));
 
               const trackChangeEvent = new CustomEvent('player/trackchange', {
                 detail: songId
