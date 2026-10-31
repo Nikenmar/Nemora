@@ -1,15 +1,43 @@
 {
   "latestVersion": {
-    "version": "2.0.1-stable",
-    "releaseDate": "2026-10-19T20:00:00.000Z",
+    "version": "3.0.0-stable",
+    "releaseDate": "2026-10-31T12:00:00.000Z",
     "notes": {
-      "new": [],
-      "fixed": [
+      "new": [
         {
-          "note": "Song lists no longer show track numbers in front of songs"
+          "note": "A new look: one calm frame around the library, black and light themes, and eight accent colours"
         },
         {
-          "note": "Newest and Oldest sorting were swapped; Recently Added shows the newest songs again"
+          "note": "Moving between pages, covers and players is animated, and follows Reduce motion"
+        },
+        {
+          "note": "Smart Shuffle tells you why a song comes next, and you can steer it for the session"
+        },
+        {
+          "note": "Songs you skip early twice come up less often for a while (Skip-aware, on by default)"
+        },
+        {
+          "note": "Taste map in Stats: your library laid out by how you listen; pick an area and play it"
+        },
+        {
+          "note": "Visuals in Appearance: breathing cover light, live equalizer, ambient full screen and bars under the cover, all off until you switch them on"
+        },
+        {
+          "note": "Song Guessr and Duels are redesigned"
+        },
+        {
+          "note": "Tierlists export through a Save dialog, and songs can be kept out of Smart Shuffle without leaving a tierlist"
+        }
+      ],
+      "fixed": [
+        {
+          "note": "Smart Shuffle weighed the whole library's queues as plain random; it leans on your tiers and artists again"
+        },
+        {
+          "note": "The seek bar no longer jumps after a track change"
+        },
+        {
+          "note": "The heart in the player fills when you like the playing song"
         }
       ],
       "knownIssues": [
@@ -20,6 +48,54 @@
     }
   },
   "versions": [
+    {
+      "version": "3.0.0-stable",
+      "releaseDate": "2026-10-31T12:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "A new look: one calm frame around the library, black and light themes, and eight accent colours"
+          },
+          {
+            "note": "Moving between pages, covers and players is animated, and follows Reduce motion"
+          },
+          {
+            "note": "Smart Shuffle tells you why a song comes next, and you can steer it for the session"
+          },
+          {
+            "note": "Songs you skip early twice come up less often for a while (Skip-aware, on by default)"
+          },
+          {
+            "note": "Taste map in Stats: your library laid out by how you listen; pick an area and play it"
+          },
+          {
+            "note": "Visuals in Appearance: breathing cover light, live equalizer, ambient full screen and bars under the cover, all off until you switch them on"
+          },
+          {
+            "note": "Song Guessr and Duels are redesigned"
+          },
+          {
+            "note": "Tierlists export through a Save dialog, and songs can be kept out of Smart Shuffle without leaving a tierlist"
+          }
+        ],
+        "fixed": [
+          {
+            "note": "Smart Shuffle weighed the whole library's queues as plain random; it leans on your tiers and artists again"
+          },
+          {
+            "note": "The seek bar no longer jumps after a track change"
+          },
+          {
+            "note": "The heart in the player fills when you like the playing song"
+          }
+        ],
+        "knownIssues": [
+          {
+            "note": "Going back to 1.x is not supported, though its files are left untouched"
+          }
+        ]
+      }
+    },
     {
       "version": "2.0.1-stable",
       "releaseDate": "2026-10-19T20:00:00.000Z",
