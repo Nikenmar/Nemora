@@ -25,6 +25,7 @@ mod tags_cmd;
 mod taskbar;
 mod user_data;
 mod view;
+mod visuals;
 mod watch;
 mod widget_server;
 #[allow(unsafe_op_in_unsafe_fn)]
@@ -169,6 +170,7 @@ pub fn run() {
             commands::favorites_toggle,
             commands::play_record,
             engine::engine_load,
+            visuals::track_visuals,
             engine::engine_queue_next,
             engine::engine_play,
             engine::engine_pause,
@@ -230,6 +232,7 @@ pub fn run() {
         .manage(shellops::ScreenSleepState::default())
         .manage(watch::FolderWatch::default())
         .manage(engine::Engine::default())
+        .manage(visuals::Visuals::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;
             let profile = bench::profile().unwrap_or_else(|| {

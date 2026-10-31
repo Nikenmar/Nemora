@@ -10,5 +10,6 @@ pub mod source;
 pub mod stretch;
 #[cfg(test)]
 mod transparency;
+pub mod visuals;
 
 pub use player::{Event, Player};

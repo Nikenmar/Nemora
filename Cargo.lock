@@ -2889,6 +2889,7 @@ version = "2.1.0-stable"
 dependencies = [
  "cc",
  "cpal",
+ "realfft",
  "rubato",
  "symphonia",
  "thiserror 2.0.21",
