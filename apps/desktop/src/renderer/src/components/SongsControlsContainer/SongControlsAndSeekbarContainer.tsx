@@ -49,8 +49,12 @@ const SongControlsAndSeekbarContainer = () => {
   const toggleLook = (isOn: boolean) =>
     `!m-0 !h-8 !w-8 ${isOn ? "!text-echo hover:!text-echo" : ""}`;
 
+  // Three equal gaps in the 76 px bar: 12 above play, 12 between play and the seek track, 12 below
+  // it (36 + 4 + 3 x 12 = 76). The seek row is 24 px with its 4 px track in the middle, so it sits
+  // 2 px under play. Fixed offsets, not centring: centring the row and the seek row as one block
+  // put the gaps at 8, 16 and 12.
   return (
-    <div className="song-controls-and-seekbar-container flex min-w-0 flex-col items-center justify-center gap-1.5 pt-1.5">
+    <div className="song-controls-and-seekbar-container flex min-w-0 flex-col items-center justify-start gap-0.5 self-stretch pt-3">
       {/* Three controls a side, mirrored in size, in equal columns: play sits exactly over the middle
           of the seek bar whatever the icons' widths. */}
       <div className="controls-container grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
