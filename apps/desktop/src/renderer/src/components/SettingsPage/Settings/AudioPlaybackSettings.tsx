@@ -76,7 +76,7 @@ const AudioPlaybackSettings = () => {
           <div className="description">{t('settingsPage.tierShuffleIntensityDescription')}</div>
           <div className="mt-6 flex items-center">
             <div className="flex w-1/2 min-w-[120px] flex-col items-center justify-center">
-              <span className="text-echo">
+              <span className="font-medium tabular-nums text-ink">
                 {Math.round(tierShuffleIntensity * 100)}% {t('settingsPage.tierShuffleSmart')} /{' '}
                 {100 - Math.round(tierShuffleIntensity * 100)}%{' '}
                 {t('settingsPage.tierShuffleRandom')}
@@ -108,7 +108,7 @@ const AudioPlaybackSettings = () => {
           <div className="description">{t('settingsPage.changePlaybackRate')}</div>
           <div className="mt-6 flex items-center">
             <div className="flex w-1/2 min-w-[120px] flex-col items-center justify-center">
-              <span className="text-echo">
+              <span className="font-medium tabular-nums text-ink">
                 {t('settingsPage.playbackRate')}: {playbackRateInterval} x
               </span>
               <div className="flex w-full items-center pl-2">

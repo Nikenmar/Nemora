@@ -10,7 +10,7 @@ const TopNameRow = (props: Props) => {
     <li className="flex items-center gap-3 py-1">
       <span className="w-6 shrink-0 text-right font-medium opacity-60">{rank}</span>
       <span className="min-w-0 grow truncate">{entry.name}</span>
-      <span className="shrink-0 font-medium text-echo">
+      <span className="shrink-0 font-medium tabular-nums text-ink-dim">
         {entry.listens}
       </span>
     </li>

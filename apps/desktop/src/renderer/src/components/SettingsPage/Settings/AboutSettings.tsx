@@ -359,7 +359,7 @@ const AboutSettings = () => {
             />
 
             <div className="mt-6 border-t border-surface-2 pt-4">
-              <div className="mb-1 text-xs font-medium text-echo opacity-90">
+              <div className="mb-1 text-xs font-medium text-ink-dim">
                 {t('settingsPage.origins')}
               </div>
               <p className="max-w-prose text-xs font-light leading-relaxed text-ink opacity-80">

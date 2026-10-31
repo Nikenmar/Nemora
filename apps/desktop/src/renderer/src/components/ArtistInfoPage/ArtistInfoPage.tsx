@@ -398,7 +398,7 @@ const ArtistInfoPage = () => {
                     })}
                   </p>
                 ) : (
-                  <p className="text-sm text-echo">
+                  <p className="text-sm opacity-70">
                     {t('common.albumWithCount', { count: albums.length })}{' '}
                     {albums.length > noOfVisibleAlbums &&
                       !isAllAlbumsVisible &&
@@ -446,7 +446,7 @@ const ArtistInfoPage = () => {
                   : 'text-ink'
               } mb-4 mt-1 pr-4 text-2xl`}
               otherItems={[
-                <p className="text-sm text-echo">
+                <p className="text-sm opacity-70">
                   {isMultipleSelectionEnabled &&
                   multipleSelectionsData.selectionType === 'songs' &&
                   multipleSelectionsData.multipleSelections.length > 0

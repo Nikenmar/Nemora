@@ -2006,6 +2006,11 @@ export default function App() {
     else document.body.classList.remove('dark');
   }, [isDarkMode]);
 
+  // On body too, so tooltips, portalled dialogs and every player type stop moving with the app.
+  useEffect(() => {
+    document.body.classList.toggle('reduced-motion', !!isReducedMotion);
+  }, [isReducedMotion]);
+
   return (
     <ErrorBoundary>
       <AppUpdateContext.Provider value={appUpdateContextValues}>

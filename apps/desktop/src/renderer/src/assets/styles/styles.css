@@ -238,7 +238,7 @@ body,
 }
 
 /* ? REDUCED MOTION: the app's own switch and the system's */
-:is(.App.reduced-motion, .mini-player.reduced-motion) * {
+:is(body.reduced-motion, .App.reduced-motion, .mini-player.reduced-motion) * {
   animation-duration: 0ms !important;
   transition-duration: 0ms !important;
 }

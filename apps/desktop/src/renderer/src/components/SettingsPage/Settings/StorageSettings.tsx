@@ -264,7 +264,7 @@ const StorageSettings = () => {
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_258)]" />
               {t('settingsPage.otherAppFiles')} :{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {
                   parseByteSizes(
                     storageMetrics.rootSizes.size -
@@ -277,77 +277,77 @@ const StorageSettings = () => {
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_228)]" />
               {t('settingsPage.internalAppFiles')} :{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appFolderSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_288)]" />
               {t('settingsPage.artworkCache')} :{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.artworkCacheSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_318)]" />
               {t('settingsPage.tempArtworkCache')} :{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.tempArtworkCacheSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_348)]" />
               {t('settingsPage.songsData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.songDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_18)]" />
               {t('settingsPage.artistsData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.artistDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_48)]" />
               {t('settingsPage.albumsData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.albumDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_78)]" />
               {t('settingsPage.playlistsData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.playlistDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_108)]" />
               {t('settingsPage.palettesData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.paletteDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_138)]" />
               {t('settingsPage.genresData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.genreDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_198)]" />
               {t('settingsPage.userData')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.userDataSize)?.size}
               </span>
             </li>
             <li className="mb-4 mr-8 flex items-center">
               <div className="mr-4 h-4 w-4 rounded-full bg-[oklch(0.7_0.12_168)]" />
               {t('settingsPage.appLogs')}{' '}
-              <span className="ml-2 text-echo">
+              <span className="ml-2 font-medium tabular-nums text-ink">
                 {parseByteSizes(storageMetrics?.appDataSizes.logSize)?.size}
               </span>
             </li>

@@ -59,7 +59,7 @@ const PatternChart = ({ title, buckets, maxBarWidth, footer }: PatternChartProps
   return (
     <div className="appear-from-bottom flex w-full flex-col rounded-md bg-surface-2/70 px-4 pb-3 pt-4 backdrop-blur-md">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="font-medium text-echo">
+        <h3 className="font-medium text-ink">
           {title}
         </h3>
         {total > 0 && (
@@ -159,7 +159,7 @@ const ListeningPatternCharts = ({ hourHistogram, weekdayHistogram, hourDataSince
       {hourDataSince === null ? (
         <div className="flex min-h-[16rem] flex-col items-center justify-center rounded-md bg-surface-2/70 p-6 text-center backdrop-blur-md">
           <span className="ms-icon mb-2 text-4xl opacity-60">schedule</span>
-          <h3 className="font-medium text-echo">
+          <h3 className="font-medium text-ink">
             {t('statsPage.hourlyActivity')}
           </h3>
           <p className="mt-1 max-w-sm text-sm opacity-70">{t('statsPage.noHourlyData')}</p>
