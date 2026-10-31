@@ -9,7 +9,7 @@ import NavigationControlsContainer from './NavigationControlsContainer';
 import WindowControlsContainer from './WindowControlsContainer';
 import TitleBarSearch from './TitleBarSearch';
 
-import LogoMark from '../../assets/images/webp/logo_mark.webp';
+import AppLogo from '../../assets/images/webp/logo_light_mode.webp';
 import GoToMainPlayerBtn from './special_controls/GoToMainPlayerBtn';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
@@ -36,8 +36,8 @@ const TitleBar = memo(() => {
       )}
     >
       <div className="logo-and-app-name-container flex h-full items-center gap-2.5 pl-4">
-        {/* The mark itself, as Nora showed it, not the app icon's tile; then the build's version. */}
-        <Img className="h-7 w-auto" src={LogoMark} alt="" />
+        {/* The app icon whole, white tile and all (no rounding that clips it); then the build's version. */}
+        <Img className="h-7 w-7" src={AppLogo} alt="" />
         <span className="app-version flex items-start gap-1 text-section font-semibold">
           Nemora
           <span className="pt-px text-[10px] font-semibold leading-none tracking-wide text-ink-faint">
