@@ -324,7 +324,7 @@ pub fn build(db: &Db, cached: Option<&TasteMap>) -> crate::Result<TasteMap> {
         });
         facts.entry(song).or_insert((title, artist, tone));
     }
-    let weights = crate::shuffle::stored_weights(db, &inputs.songs, 1.0, false)?;
+    let weights = crate::shuffle::stored_weights(db, &inputs.songs, 1.0, &crate::shuffle::Options::CLASSIC)?;
 
     let points = inputs
         .songs

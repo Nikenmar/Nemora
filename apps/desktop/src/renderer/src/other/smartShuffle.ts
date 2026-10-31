@@ -33,7 +33,11 @@ export const steeringStore = new Store<Steering>(NO_STEERING);
 // From the store: `getPreferences` throws for a preference that was never set.
 const preferences = () => store.state.localStorage.preferences;
 const intensity = () => preferences().tierShuffleIntensity ?? 0.6;
-const skipAware = () => !preferences().isSkipAwareDisabled;
+/** The model's options from the user's settings (PLAN/15); the nudge has no setting. */
+export const shuffleOptions = (): ShuffleOptions => ({
+  nudge: true,
+  skipAware: !preferences().isSkipAwareDisabled
+});
 
 const coreSteering = (): ShuffleSteering | undefined => {
   const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew } = steeringStore.state;
@@ -53,7 +57,7 @@ const coreSteering = (): ShuffleSteering | undefined => {
 /** Fetches the weights of the whole library with the session's steering and keeps them. */
 export async function loadShuffleData(): Promise<MegaShuffleData> {
   const data = await window.api.tierlistsData.getMegaShuffleData([], intensity(), {
-    skipAware: skipAware(),
+    options: shuffleOptions(),
     steering: coreSteering()
   });
   smartShuffleData.current = data;
@@ -156,7 +160,7 @@ export function explainSong(songId: string): Promise<ShuffleExplanation | undefi
         const { ids, resolve: done } = batch!;
         batch = null;
         window.api.tierlistsData
-          .explainShuffle(ids, intensity(), skipAware())
+          .explainShuffle(ids, intensity(), shuffleOptions())
           .then(done)
           .catch(() => done({}));
       }, 30);
@@ -177,6 +181,7 @@ export type ReasonKey =
   | 'neverHeard'
   | 'skipped'
   | 'recent'
+  | 'nudged'
   | 'plain';
 export type Reason = { key: ReasonKey; values?: Record<string, string | number>; strength: number };
 
@@ -216,5 +221,7 @@ export function reasonsOf(e: ShuffleExplanation): Reason[] {
       reasons.push({ key: 'notHeard', values: { weeks: Math.floor(days / 7) }, strength: 0.12 });
   } else reasons.push({ key: 'neverHeard', strength: 0.08 });
   if (e.freshness < 0.75) reasons.push({ key: 'recent', strength: 1.5 });
+  // A placed song below the unplaced median got a little lift (PLAN/15 F1).
+  if (e.nudge > 0) reasons.push({ key: 'nudged', strength: 0.11 });
   return reasons.sort((a, b) => b.strength - a.strength);
 }

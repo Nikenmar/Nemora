@@ -26,12 +26,12 @@ export const tierlistsData = {
   getMegaShuffleData: async (
     songIds: string[],
     intensity?: number,
-    options?: { skipAware?: boolean; steering?: ShuffleSteering }
+    options?: { options?: ShuffleOptions; steering?: ShuffleSteering }
   ): Promise<MegaShuffleData> => getRuntime().getMegaShuffleData(songIds, intensity, options),
   explainShuffle: async (
     songIds: string[],
     intensity?: number,
-    skipAware?: boolean
+    options?: ShuffleOptions
   ): Promise<Record<string, ShuffleExplanation>> =>
-    getRuntime().explainShuffle(songIds, intensity, skipAware)
+    getRuntime().explainShuffle(songIds, intensity, options)
 };

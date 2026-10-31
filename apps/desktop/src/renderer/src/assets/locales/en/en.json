@@ -1384,7 +1384,8 @@
       "neverHeard": "Not heard yet",
       "skipped": "Skipped early twice lately, so later",
       "recent": "Played recently, so later",
-      "plain": "Picked at random"
+      "plain": "Picked at random",
+      "nudged": "In a tierlist, so kept a little ahead"
     },
     "whyThisSong": "Why this song?",
     "whyTitle": "Why {{title}} is here",

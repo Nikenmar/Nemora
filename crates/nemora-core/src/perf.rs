@@ -166,10 +166,10 @@ fn measure(db: &mut Db, label: &str) -> Measured {
         .unwrap()
         .collect::<rusqlite::Result<_>>()
         .unwrap();
-    let weights = best(3, || shuffle::stored_weights(db, &[], 0.6, true).unwrap());
+    let weights = best(3, || shuffle::stored_weights(db, &[], 0.6, &shuffle::Options::default()).unwrap());
     let some: Vec<String> = songs.iter().step_by((songs.len() / 20).max(1)).take(20).cloned().collect();
-    let explain = best(3, || shuffle::explain(db, &some, 0.6, true).unwrap());
-    let map = shuffle::stored_weights(db, &[], 0.6, true).unwrap();
+    let explain = best(3, || shuffle::explain(db, &some, 0.6, &shuffle::Options::default()).unwrap());
+    let map = shuffle::stored_weights(db, &[], 0.6, &shuffle::Options::default()).unwrap();
     let mut random = Random(7);
     let order = best(3, || shuffle::weighted_order(&songs, &map, &[], Some(0), &mut || random.unit()));
     let song = songs[0].clone();
@@ -283,6 +283,39 @@ fn where_the_weights_go() {
         shuffle::skip_factors(&db, crate::db::now_ms()).unwrap();
     });
     t("all", &mut || {
-        shuffle::stored_weights(&db, &[], 0.6, true).unwrap();
+        shuffle::stored_weights(&db, &[], 0.6, &shuffle::Options::default()).unwrap();
     });
+}
+
+/// PLAN/15 P15.1 gate on a copy of a real profile (`NEMORA_PERF_DB`): how many placed songs the
+/// nudge lifts, by how much, and how far their rank among all songs moves.
+#[test]
+#[ignore]
+fn the_nudge_on_a_library_copy() {
+    let Ok(path) = std::env::var("NEMORA_PERF_DB") else { return };
+    let db = Db::open(std::path::Path::new(&path)).unwrap();
+    let stored = shuffle::stored_inputs(&db).unwrap();
+    let inputs = stored.inputs();
+    let classic: Vec<(String, shuffle::Parts)> = shuffle::parts(&inputs, &[], &shuffle::Options::CLASSIC);
+    let nudged: Vec<(String, shuffle::Parts)> = shuffle::parts(&inputs, &[], &shuffle::Options::default());
+    let rank = |list: &[(String, shuffle::Parts)]| -> std::collections::HashMap<String, usize> {
+        let mut order: Vec<&(String, shuffle::Parts)> = list.iter().collect();
+        order.sort_by(|a, b| b.1.score.total_cmp(&a.1.score).then_with(|| a.0.cmp(&b.0)));
+        order.iter().enumerate().map(|(i, (id, _))| (id.clone(), i)).collect()
+    };
+    let (before, after) = (rank(&classic), rank(&nudged));
+    let lifted: Vec<&(String, shuffle::Parts)> = nudged.iter().filter(|(_, p)| p.nudge > 0.0).collect();
+    let placed = nudged.iter().filter(|(_, p)| p.tier > 0.0).count();
+    let shifts: Vec<usize> = lifted.iter().map(|(id, _)| before[id] - after[id]).collect();
+    let max_nudge = lifted.iter().map(|(_, p)| p.nudge).fold(0.0, f64::max);
+    let mean_shift = shifts.iter().sum::<usize>() as f64 / shifts.len().max(1) as f64;
+    eprintln!(
+        "NUDGE {} songs, {placed} placed, {} nudged, largest nudge {max_nudge:.3}, rank moved up {:.1} places on average, at most {} (of {})",
+        nudged.len(),
+        lifted.len(),
+        mean_shift,
+        shifts.iter().max().unwrap_or(&0),
+        nudged.len()
+    );
+    assert!(lifted.iter().all(|(_, p)| p.nudge <= shuffle::NUDGE_MAX + 1e-12));
 }

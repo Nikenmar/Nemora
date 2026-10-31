@@ -645,7 +645,7 @@ export class NemoraRuntime {
   getMegaShuffleData(
     ids: string[],
     intensity?: number,
-    options?: { skipAware?: boolean; steering?: ShuffleSteering }
+    options?: { options?: ShuffleOptions; steering?: ShuffleSteering }
   ): Promise<MegaShuffleData> {
     return call('shuffle_data', { songIds: ids, intensity, ...options });
   }
@@ -653,9 +653,9 @@ export class NemoraRuntime {
   explainShuffle(
     ids: string[],
     intensity?: number,
-    skipAware?: boolean
+    options?: ShuffleOptions
   ): Promise<Record<string, ShuffleExplanation>> {
-    return call('shuffle_explain', { songIds: ids, intensity, skipAware });
+    return call('shuffle_explain', { songIds: ids, intensity, options });
   }
 
   // ----- statistics, ELO, Song Guessr ------------------------------------------------------------

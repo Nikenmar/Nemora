@@ -82,12 +82,40 @@ pub struct Parts {
     pub listens: f64,
     /// 1 unless played recently: the push back of the recent list.
     pub freshness: f64,
-    /// The smart score before blending with randomness.
+    /// What the tierlist nudge added to the score (PLAN/15 F1), 0 when none.
+    pub nudge: f64,
+    /// The smart score before blending with randomness, the nudge included.
     pub score: f64,
 }
 
+/// A placed song below the unplaced median gains this share of the gap (PLAN/15 F1)...
+pub const NUDGE_SHARE: f64 = 0.5;
+/// ...and never more than this much score: placed songs keep a small edge, the other parts decide.
+pub const NUDGE_MAX: f64 = 0.05;
+
+/// How the model runs (PLAN/15). The default is the shuffle as shipped; [`Options::CLASSIC`] is
+/// 3.0's model, which `tests/shuffle_oracle.rs` pins.
+#[derive(Debug, Clone, Copy, PartialEq, serde::Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Options {
+    /// F1: a placed song below the unplaced median is nudged up a little.
+    pub nudge: bool,
+    /// 3.0's skip-aware push back (C3 of PLAN/14).
+    pub skip_aware: bool,
+}
+
+impl Options {
+    pub const CLASSIC: Options = Options { nudge: false, skip_aware: false };
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options { nudge: true, skip_aware: true }
+    }
+}
+
 /// The parts of every target song (all songs when `targets` is empty), in target order.
-pub fn parts(inputs: &Inputs<'_>, targets: &[String]) -> Vec<(String, Parts)> {
+pub fn parts(inputs: &Inputs<'_>, targets: &[String], options: &Options) -> Vec<(String, Parts)> {
     if inputs.songs.is_empty() {
         return Vec::new();
     }
@@ -144,28 +172,59 @@ pub fn parts(inputs: &Inputs<'_>, targets: &[String]) -> Vec<(String, Parts)> {
     };
     let artists_of: HashMap<&str, &Vec<String>> = inputs.songs.iter().map(|(id, a)| (id.as_str(), a)).collect();
 
+    let classic = |id: &str| {
+        let t = song_tier.get(id).copied().unwrap_or(0.0);
+        let mut a = 0.0f64;
+        for artist in artists_of.get(id).copied().into_iter().flatten() {
+            let value = affinity.get(artist.as_str()).copied().unwrap_or(0.0);
+            if value > a {
+                a = value;
+            }
+        }
+        let l = if max_song_listen > 0 {
+            inputs.full_listens.get(id).copied().unwrap_or(0) as f64 / max_song_listen as f64
+        } else {
+            0.0
+        };
+        let elo = has_elo.then(|| elo_score(id));
+        let score = match elo {
+            Some(e) => 0.45 * t + 0.35 * a + 0.1 * e + 0.1 * l,
+            None => 0.5 * t + 0.4 * a + 0.1 * l,
+        };
+        Parts { tier: t, artist: a, elo, listens: l, freshness: freshness(id), nudge: 0.0, score }
+    };
+
+    // The unplaced median: what a song nobody put in an influencing tierlist typically scores.
+    let unplaced_median = options
+        .nudge
+        .then(|| {
+            let mut scores: Vec<f64> = inputs
+                .songs
+                .iter()
+                .filter(|(id, _)| !song_tier.contains_key(id))
+                .map(|(id, _)| classic(id).score)
+                .collect();
+            if scores.is_empty() {
+                return None;
+            }
+            let middle = scores.len() / 2;
+            let (_, median, _) = scores.select_nth_unstable_by(middle, f64::total_cmp);
+            Some(*median)
+        })
+        .flatten();
+
     targets
         .iter()
         .map(|id| {
-            let t = song_tier.get(id).copied().unwrap_or(0.0);
-            let mut a = 0.0f64;
-            for artist in artists_of.get(id.as_str()).copied().into_iter().flatten() {
-                let value = affinity.get(artist.as_str()).copied().unwrap_or(0.0);
-                if value > a {
-                    a = value;
-                }
+            let mut p = classic(id);
+            if let Some(median) = unplaced_median
+                && song_tier.contains_key(id)
+                && p.score < median
+            {
+                p.nudge = (NUDGE_SHARE * (median - p.score)).min(NUDGE_MAX);
+                p.score += p.nudge;
             }
-            let l = if max_song_listen > 0 {
-                inputs.full_listens.get(id).copied().unwrap_or(0) as f64 / max_song_listen as f64
-            } else {
-                0.0
-            };
-            let elo = has_elo.then(|| elo_score(id));
-            let score = match elo {
-                Some(e) => 0.45 * t + 0.35 * a + 0.1 * e + 0.1 * l,
-                None => 0.5 * t + 0.4 * a + 0.1 * l,
-            };
-            (id.clone(), Parts { tier: t, artist: a, elo, listens: l, freshness: freshness(id), score })
+            (id.clone(), p)
         })
         .collect()
 }
@@ -176,9 +235,19 @@ pub fn weight_of(parts: &Parts, intensity: f64) -> f64 {
     (1.0 - blend + blend * parts.score).max(0.001) * parts.freshness
 }
 
-/// Weight per target song (all songs when `targets` is empty), in [0.001 .. 1].
+/// Weight per target song (all songs when `targets` is empty), in [0.001 .. 1], by 3.0's model.
 pub fn weights(inputs: &Inputs<'_>, targets: &[String], intensity: f64) -> HashMap<String, f64> {
-    parts(inputs, targets).into_iter().map(|(id, p)| (id, weight_of(&p, intensity))).collect()
+    weights_with(inputs, targets, intensity, &Options::CLASSIC)
+}
+
+/// [`weights`] with the model's options.
+pub fn weights_with(
+    inputs: &Inputs<'_>,
+    targets: &[String],
+    intensity: f64,
+    options: &Options,
+) -> HashMap<String, f64> {
+    parts(inputs, targets, options).into_iter().map(|(id, p)| (id, weight_of(&p, intensity))).collect()
 }
 
 /// Skip-aware factor from a song's early skips (times in ms, oldest first): x0.5 for 14 days after
@@ -352,7 +421,7 @@ pub fn skip_factors(db: &crate::db::Db, now: i64) -> crate::Result<HashMap<Strin
         .collect())
 }
 
-struct StoredInputs {
+pub(crate) struct StoredInputs {
     songs: Vec<(String, Vec<String>)>,
     full: HashMap<String, i64>,
     tierlists: Vec<Tierlist>,
@@ -362,7 +431,7 @@ struct StoredInputs {
 }
 
 impl StoredInputs {
-    fn inputs(&self) -> Inputs<'_> {
+    pub(crate) fn inputs(&self) -> Inputs<'_> {
         Inputs {
             songs: &self.songs,
             tierlists: &self.tierlists,
@@ -379,11 +448,11 @@ pub fn stored_weights(
     db: &crate::db::Db,
     targets: &[String],
     intensity: f64,
-    skip_aware: bool,
+    options: &Options,
 ) -> crate::Result<HashMap<String, f64>> {
     let stored = stored_inputs(db)?;
-    let mut out = weights(&stored.inputs(), targets, intensity);
-    if skip_aware {
+    let mut out = weights_with(&stored.inputs(), targets, intensity, options);
+    if options.skip_aware {
         for (id, factor) in skip_factors(db, crate::db::now_ms())? {
             if let Some(w) = out.get_mut(&id) {
                 *w = (*w * factor).max(0.001);
@@ -413,6 +482,8 @@ pub struct Explanation {
     pub freshness: f64,
     /// The skip-aware factor, 1 when it does not apply.
     pub skip: f64,
+    /// What the tierlist nudge added to the score (PLAN/15 F1).
+    pub nudge: f64,
     pub weight: f64,
 }
 
@@ -421,10 +492,10 @@ pub fn explain(
     db: &crate::db::Db,
     targets: &[String],
     intensity: f64,
-    skip_aware: bool,
+    options: &Options,
 ) -> crate::Result<Vec<Explanation>> {
     let stored = stored_inputs(db)?;
-    let skips = if skip_aware { skip_factors(db, crate::db::now_ms())? } else { HashMap::new() };
+    let skips = if options.skip_aware { skip_factors(db, crate::db::now_ms())? } else { HashMap::new() };
 
     // Best placement per song, by tierlist and tier name, among tierlists that influence the shuffle.
     let mut best: HashMap<String, (f64, String, String)> = HashMap::new();
@@ -466,7 +537,7 @@ pub fn explain(
         last_days.insert(id, day);
     }
 
-    Ok(parts(&stored.inputs(), targets)
+    Ok(parts(&stored.inputs(), targets, options)
         .into_iter()
         .map(|(id, p)| {
             let skip = skips.get(&id).copied().unwrap_or(1.0);
@@ -484,6 +555,7 @@ pub fn explain(
                 last_day: last_days.get(&id).cloned(),
                 freshness: p.freshness,
                 skip,
+                nudge: p.nudge,
                 weight: (weight_of(&p, intensity) * skip).max(0.001),
                 song_id: id,
             }
@@ -491,7 +563,7 @@ pub fn explain(
         .collect())
 }
 
-fn stored_inputs(db: &crate::db::Db) -> crate::Result<StoredInputs> {
+pub(crate) fn stored_inputs(db: &crate::db::Db) -> crate::Result<StoredInputs> {
     let mut stmt = db.conn().prepare(
         "SELECT v.song_id, (SELECT group_concat(name, char(31)) FROM variant_artists a WHERE a.variant_id = v.variant_id AND a.role = 'artist')
          FROM track_variants v GROUP BY v.song_id ORDER BY v.song_id",
@@ -515,6 +587,27 @@ fn stored_inputs(db: &crate::db::Db) -> crate::Result<StoredInputs> {
         ratings: crate::elo::ratings(db)?,
         total_duels: crate::elo::total_duels(db)?,
     })
+}
+
+/// Each song's artists as small numbers (one per distinct name, case folded), for the view's
+/// ordering to keep an artist from playing twice in a row (PLAN/15 F2) without sending names.
+pub fn artist_ids(db: &crate::db::Db) -> crate::Result<HashMap<String, Vec<u32>>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT DISTINCT v.song_id, a.name FROM track_variants v JOIN variant_artists a ON a.variant_id = v.variant_id
+         WHERE a.role = 'artist'",
+    )?;
+    let mut names: HashMap<String, u32> = HashMap::new();
+    let mut out: HashMap<String, Vec<u32>> = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+        let (song, name) = row?;
+        let next = names.len() as u32;
+        let id = *names.entry(name.to_lowercase()).or_insert(next);
+        let list = out.entry(song).or_default();
+        if !list.contains(&id) {
+            list.push(id);
+        }
+    }
+    Ok(out)
 }
 
 /// "Less of this artist today" (PLAN/14 C2).
@@ -707,7 +800,7 @@ mod tests {
         skip(&db, "c", 4, now - DAY_MS, 150_000);
 
         let targets = [a.clone(), b.clone(), c.clone()];
-        let explained = explain(&db, &targets, 0.6, true).unwrap();
+        let explained = explain(&db, &targets, 0.6, &Options::default()).unwrap();
         assert_eq!(explained.iter().map(|e| e.song_id.as_str()).collect::<Vec<_>>(), [&a, &b, &c]);
         assert_eq!(explained[0].tierlist.as_deref(), Some("best"));
         assert_eq!(explained[0].tier_name.as_deref(), Some("S"));
@@ -720,11 +813,11 @@ mod tests {
         assert!(explained[2].artist > 0.0);
 
         // The weights the shuffle uses are the explained ones, with and without skip-aware.
-        let weights = stored_weights(&db, &targets, 0.6, true).unwrap();
+        let weights = stored_weights(&db, &targets, 0.6, &Options::default()).unwrap();
         for e in &explained {
             assert!((weights[&e.song_id] - e.weight).abs() < 1e-12);
         }
-        let plain = stored_weights(&db, &targets, 0.6, false).unwrap();
+        let plain = stored_weights(&db, &targets, 0.6, &Options { skip_aware: false, ..Options::default() }).unwrap();
         assert!((weights[&b] - plain[&b] * SKIP_FACTOR).abs() < 1e-12);
         assert_eq!(weights[&c], plain[&c]);
     }
@@ -766,6 +859,58 @@ mod tests {
         let held = steer(&db, &mut w, &steering, &none, now).unwrap();
         assert_eq!(held, [a.clone(), c.clone()].into());
         assert!((w[&b] - 0.5 * BOOST_NEW).abs() < 1e-12);
+    }
+
+    #[test]
+    fn a_placed_song_below_the_unplaced_median_is_nudged_a_little() {
+        // "low": bottom of a six-tier list, by an artist nobody else plays. "loved1..3": unplaced but
+        // by an artist with many full listens. "high": S tier.
+        let songs: Vec<(String, Vec<String>)> = [
+            ("low", "nobody"),
+            ("high", "star"),
+            ("loved1", "fav"),
+            ("loved2", "fav"),
+            ("loved3", "fav"),
+            ("plain", "other"),
+        ]
+        .iter()
+        .map(|(id, artist)| (id.to_string(), vec![artist.to_string()]))
+        .collect();
+        let tierlists = vec![Tierlist {
+            influences_shuffle: true,
+            tiers: vec![vec!["high".into()], vec![], vec![], vec![], vec![], vec!["low".into()]],
+        }];
+        let full: HashMap<String, i64> =
+            [("loved1".to_string(), 40), ("loved2".to_string(), 40), ("loved3".to_string(), 40)].into();
+        let ratings = HashMap::new();
+        let inputs = Inputs {
+            songs: &songs,
+            tierlists: &tierlists,
+            full_listens: &full,
+            recent: &[],
+            ratings: &ratings,
+            total_duels: 0,
+        };
+        let get = |options: &Options| -> HashMap<String, Parts> { parts(&inputs, &[], options).into_iter().collect() };
+        let classic = get(&Options::CLASSIC);
+        let nudged = get(&Options::default());
+
+        // The unplaced songs, in score order: plain (0) < loved (0.1 + artist) x3: median is a loved one.
+        let median = classic["loved1"].score;
+        let low = &nudged["low"];
+        assert!(classic["low"].score < median);
+        let expected = (NUDGE_SHARE * (median - classic["low"].score)).min(NUDGE_MAX);
+        assert!((low.nudge - expected).abs() < 1e-12 && low.nudge > 0.0 && low.nudge <= NUDGE_MAX);
+        assert!((low.score - classic["low"].score - low.nudge).abs() < 1e-12);
+        // Still below the median: tightened a drop, not lifted to it.
+        assert!(low.score < median);
+        // An S-tier song is above the median already; unplaced songs are never nudged.
+        assert_eq!(nudged["high"].nudge, 0.0);
+        for id in ["loved1", "plain"] {
+            assert_eq!(nudged[id], classic[id], "{id}");
+        }
+        // CLASSIC is 3.0's model: no nudge anywhere.
+        assert!(classic.values().all(|p| p.nudge == 0.0));
     }
 
     #[test]

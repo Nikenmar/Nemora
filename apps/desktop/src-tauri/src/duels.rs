@@ -356,14 +356,15 @@ pub fn tierlist_artworks(app: State<'_, App>, song_ids: Vec<String>) -> Res<Hash
 // ----- shuffle --------------------------------------------------------------------------------
 
 /// Weights for the songs of a queue (every song, by song id, when `song_ids` is empty) and the
-/// pairs to keep apart; the view orders the queue. `skip_aware` (PLAN/14 C3) is on unless false.
+/// pairs to keep apart; the view orders the queue. `options` are the model's (PLAN/15), the shipped
+/// default when absent.
 #[tauri::command]
 pub async fn shuffle_data(
     app: State<'_, App>,
     taste_map: State<'_, crate::tastemap::TasteMapCache>,
     song_ids: Vec<String>,
     intensity: Option<f64>,
-    skip_aware: Option<bool>,
+    options: Option<nemora_core::shuffle::Options>,
     steering: Option<nemora_core::shuffle::Steering>,
 ) -> Res<Value> {
     let mut trace = crate::trace::Trace::start("shuffle_data");
@@ -371,7 +372,7 @@ pub async fn shuffle_data(
     trace.step("lock");
     let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
     let mut weights =
-        nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6), skip_aware != Some(false))
+        nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6), &options.unwrap_or_default())
             .map_err(fail)?;
     trace.step("weights");
     // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue. "More
@@ -405,7 +406,15 @@ pub async fn shuffle_data(
     } else {
         song_ids.iter().zip(&songs).filter(|(_, song)| held.contains(*song)).map(|(view_id, _)| view_id).collect()
     };
-    Ok(json!({ "weights": by_view, "pairFeedback": feedback, "held": held }))
+    // Artists by number for the view's ordering (PLAN/15 F2), keyed like the weights.
+    let artist_ids = nemora_core::shuffle::artist_ids(&db).map_err(fail)?;
+    let artists: HashMap<&String, &Vec<u32>> = if song_ids.is_empty() {
+        artist_ids.iter().collect()
+    } else {
+        song_ids.iter().zip(&songs).filter_map(|(view_id, song)| Some((view_id, artist_ids.get(song)?))).collect()
+    };
+    trace.step("artists");
+    Ok(json!({ "weights": by_view, "pairFeedback": feedback, "held": held, "artists": artists }))
 }
 
 /// Why each of `song_ids` plays where it does (PLAN/14 C1), keyed by the ids as given. Async, so the
@@ -415,11 +424,11 @@ pub async fn shuffle_explain(
     app: State<'_, App>,
     song_ids: Vec<String>,
     intensity: Option<f64>,
-    skip_aware: Option<bool>,
+    options: Option<nemora_core::shuffle::Options>,
 ) -> Res<Value> {
     let db = app.read();
     let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
-    let explained = nemora_core::shuffle::explain(&db, &songs, intensity.unwrap_or(0.6), skip_aware != Some(false))
+    let explained = nemora_core::shuffle::explain(&db, &songs, intensity.unwrap_or(0.6), &options.unwrap_or_default())
         .map_err(fail)?;
     let by_view: serde_json::Map<String, Value> = song_ids
         .into_iter()

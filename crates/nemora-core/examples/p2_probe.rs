@@ -83,7 +83,7 @@ fn main() {
     let picks = rediscover::stored(&db, 30, &today).unwrap();
     println!("\nrediscover: {} songs ({:.2?})", picks.len(), started.elapsed());
     let started = Instant::now();
-    let weights = shuffle::stored_weights(&db, &[], 0.6, true).unwrap();
+    let weights = shuffle::stored_weights(&db, &[], 0.6, &shuffle::Options::default()).unwrap();
     let mut w: Vec<f64> = weights.values().copied().collect();
     w.sort_by(|a, b| a.partial_cmp(b).unwrap());
     println!(

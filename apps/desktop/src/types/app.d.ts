@@ -807,6 +807,14 @@ declare global {
     pairFeedback: DuelSkipRecord[];
     /** Songs the session filters hold back (PLAN/14 C4): they wait after the rest. */
     held?: string[];
+    /** Each song's artists as numbers, so the order keeps an artist from playing twice in a row (PLAN/15 F2). */
+    artists?: Record<string, number[]>;
+  }
+
+  /** How the Smart Shuffle model runs (core `shuffle::Options`, PLAN/15). */
+  interface ShuffleOptions {
+    nudge?: boolean;
+    skipAware?: boolean;
   }
 
   /** Session steering and filters for Smart Shuffle (PLAN/14 C2, C4); `nemora_core::shuffle::Steering`. */
@@ -832,6 +840,8 @@ declare global {
     lastDay: string | null;
     freshness: number;
     skip: number;
+    /** What the tierlist nudge added (PLAN/15 F1). */
+    nudge: number;
     weight: number;
   }
 
