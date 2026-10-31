@@ -147,8 +147,11 @@ const SeekBarSlider = (props: Props) => {
           Nothing is lost visually. Half a second of a three-minute track moves
           the bar by under two pixels, so the transition was smoothing a step
           nobody could see. Background still transitions; that one is cheap.
+
+          The played part is ink like the volume's, and turns echo blue under
+          the pointer, so the colour says "you can grab this".
         */
-        "seek-bar-slider relative float-left m-0 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-echo before:transition-[background] before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo "
+        "seek-bar-slider relative float-left m-0 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-ink before:transition-[background] before:content-[''] hover:before:bg-echo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo "
       }
       min={0}
       max={(currentSongData.duration || 0) >= songPos ? currentSongData.duration || 0 : songPos}

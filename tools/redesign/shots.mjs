@@ -16,7 +16,7 @@
  * theme, plus index.html to look at them side by side.
  */
 import { spawn } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, openSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, openSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync, backup } from 'node:sqlite';
@@ -35,7 +35,9 @@ const SOURCE = option('source', join(process.env.APPDATA ?? '', 'Nemora'));
 const THEMES = option('themes', 'dark,light').split(',');
 const ONLY = option('only', '').split(',').filter(Boolean);
 const PORT = Number(option('port', '9361'));
-const SKIP_EMPTY = process.argv.includes('--skip-empty');
+const SKIP_EMPTY = process.argv.includes('--skip-empty') || Boolean(option('probe', ''));
+/** `--probe file.js`: run that script in the app (after the library and queue are up) instead of shooting, and print what it returns, once per `--probe-widths`. */
+const PROBE = option('probe', '');
 
 const VIEW = { width: 1600, height: 900 };
 
@@ -365,6 +367,15 @@ async function runOne(name, shots, copyFrom) {
     if (copyFrom && data.queue.length) {
       await cdp.eval(`S.createQueue(D.queue, 'songs', false, undefined, true); await wait(2500); S.togglePlay(false); await wait(300); S.updateSongPosition(Math.round((D.song?.duration ?? 200) * 0.4));`);
     }
+    if (PROBE) {
+      const body = readFileSync(PROBE, 'utf8');
+      for (const width of option('probe-widths', String(VIEW.width)).split(',').map(Number)) {
+        await cdp.view({ width, height: VIEW.height });
+        await sleep(800);
+        console.log(`[probe ${width}px]`, JSON.stringify(await cdp.eval(body), null, 1));
+      }
+      return failures;
+    }
     for (const theme of THEMES) {
       await cdp.eval(`api.theme.changeAppTheme('${theme}');`);
       await sleep(800);
@@ -427,7 +438,7 @@ if (!existsSync(EXE)) throw new Error(`no build at ${EXE}: run \`npm run tauri -
 mkdirSync(OUT, { recursive: true });
 const failures = [...(await runOne('library', SHOTS, SOURCE))];
 if (!SKIP_EMPTY) failures.push(...(await runOne('empty', EMPTY_SHOTS, null)));
-contactSheet([{ id: '07-loading', surface: 'Loading (first frame)', themes: ['dark'] }, ...SHOTS, ...(SKIP_EMPTY ? [] : EMPTY_SHOTS)]);
+if (!PROBE) contactSheet([{ id: '07-loading', surface: 'Loading (first frame)', themes: ['dark'] }, ...SHOTS, ...(SKIP_EMPTY ? [] : EMPTY_SHOTS)]);
 console.log(`Shots in ${OUT}\\index.html`);
 if (failures.length) {
   console.log(`\n${failures.length} failed:\n${failures.join('\n')}`);

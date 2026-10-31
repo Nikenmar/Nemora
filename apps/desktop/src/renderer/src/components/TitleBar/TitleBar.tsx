@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { getVersionInfoFromString } from '../../utils/isLatestVersion';
 
 import { version } from '../../../../../package.json';
 
@@ -10,13 +9,14 @@ import NavigationControlsContainer from './NavigationControlsContainer';
 import WindowControlsContainer from './WindowControlsContainer';
 import TitleBarSearch from './TitleBarSearch';
 
-import LightModeLogo from '../../assets/images/webp/logo_light_mode.webp';
+import LogoMark from '../../assets/images/webp/logo_mark.webp';
 import GoToMainPlayerBtn from './special_controls/GoToMainPlayerBtn';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
 import { cn } from '../ui/cn';
 
-const appReleasePhase = getVersionInfoFromString(version)?.releasePhase || 'stable';
+/** `2.1.0-stable` reads as `v2.1.0`: the build, not its channel. */
+const buildVersion = version.split('-')[0];
 
 /**
  * The bar over the whole window: the mark and back/forward over the sidebar, the search field in the
@@ -36,12 +36,13 @@ const TitleBar = memo(() => {
       )}
     >
       <div className="logo-and-app-name-container flex h-full items-center gap-2.5 pl-4">
-        <Img className="h-5 w-5 rounded-[6px]" src={LightModeLogo} alt="" />
-        <span
-          className="app-version text-section font-semibold"
-          data-tooltip={`Nemora ${version} (${appReleasePhase})`}
-        >
+        {/* The mark itself, as Nora showed it, not the app icon's tile; then the build's version. */}
+        <Img className="h-7 w-auto" src={LogoMark} alt="" />
+        <span className="app-version flex items-start gap-1 text-section font-semibold">
           Nemora
+          <span className="pt-px text-[10px] font-semibold leading-none tracking-wide text-ink-faint">
+            v{buildVersion}
+          </span>
         </span>
       </div>
       <div className="flex min-w-0 items-center gap-3 pl-3">

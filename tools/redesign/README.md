@@ -13,5 +13,8 @@ Branch-only helpers for the desktop redesign (vault: `PROJECTS/nemora-reborn/PLA
   The window runs in the background and is never activated (`bench.rs`), so the machine stays
   usable meanwhile; the foreground is recorded for the whole run, and a run fails if the stand's
   window was in front even for a moment.
+  `--probe file.js` runs that script in the app instead of shooting and prints what it returns, once
+  per `--probe-widths 1280,1600,1920`: for checking layout by measurement (`getBoundingClientRect`)
+  rather than by eye.
 
 The app side is `apps/desktop/src/renderer/src/other/shots.tsx`, inert outside a bench run.
