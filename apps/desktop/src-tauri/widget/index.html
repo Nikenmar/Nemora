@@ -129,6 +129,19 @@
           0 0.1667rem 1rem rgb(0 0 0 / 0.4);
       }
 
+      /* The lines clip for their ellipsis, and a clip cuts a text-shadow at the text's box. So
+         each line gets room for its shadow inside the clip and gives it back as negative margin:
+         the layout and the ellipsis stay where they were, the shadow fades out instead of ending
+         in a hard edge. */
+      #title,
+      .artists,
+      .next-song {
+        box-sizing: border-box;
+        padding: 0.6rem 0.9rem;
+        margin: -0.6rem -0.9rem;
+        max-width: calc(100% + 1.8rem) !important;
+      }
+
       /* 14px semibold, leading 20px: the player's title. */
       #title {
         max-width: 100%;
