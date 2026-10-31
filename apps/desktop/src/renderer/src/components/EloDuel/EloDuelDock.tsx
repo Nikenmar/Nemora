@@ -7,6 +7,7 @@ import { store } from '@renderer/store';
 import { peekFirstAliveDuelPair } from '../../utils/duelQueue';
 import EloDuelPrompt from './EloDuelPrompt';
 import Icon from '../ui/Icon';
+import { GameDialog } from '../ui/GameWindow';
 
 const EloDuelDock = () => {
   const { t } = useTranslation();
@@ -99,24 +100,19 @@ const EloDuelDock = () => {
 
       {activePair &&
         createPortal(
-          <dialog
+          <GameDialog
             ref={dialogRef}
-            className="fixed left-1/2 top-1/2 m-0 max-h-[calc(100vh-4rem)] w-[min(62rem,92vw)] min-w-0 -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-canvas p-0 text-ink shadow-xl backdrop:bg-canvas/75 "
-            aria-label={t('eloDuels.promptTitle')}
-            onCancel={(event) => {
-              event.preventDefault();
-              minimizeDuel();
-            }}
+            label={t('eloDuels.promptTitle')}
+            className="h-fit w-[min(50rem,94vw)]"
+            onCancel={minimizeDuel}
           >
-            <div className="px-8 pb-8 pt-6">
-              <EloDuelPrompt
-                initialPair={activePair}
-                queuedDuels={pendingDuels}
-                onClose={closeDuel}
-                onMinimize={minimizeDuel}
-              />
-            </div>
-          </dialog>,
+            <EloDuelPrompt
+              initialPair={activePair}
+              queuedDuels={pendingDuels}
+              onClose={closeDuel}
+              onMinimize={minimizeDuel}
+            />
+          </GameDialog>,
           document.body
         )}
     </>

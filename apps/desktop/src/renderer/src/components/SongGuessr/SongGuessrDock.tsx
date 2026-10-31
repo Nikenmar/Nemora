@@ -2,18 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from '../ui/Icon';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { useStore } from '@tanstack/react-store';
 
-import { store } from '@renderer/store';
 import {
   SONG_GUESSR_GUESS_INPUT_ID,
   SONG_GUESSR_PANEL_ATTRIBUTE
 } from '../../utils/songGuessr/constants';
 import SongGuessrPrompt from './SongGuessrPrompt';
+import { GameDialog } from '../ui/GameWindow';
 
 const SongGuessrDock = () => {
   const { t } = useTranslation();
-  const isDarkMode = useStore(store, (state) => state.isDarkMode);
 
   const [hasStarted, setHasStarted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -82,45 +80,20 @@ const SongGuessrDock = () => {
 
       {hasStarted &&
         createPortal(
-          <dialog
+          /*
+            The height is fixed rather than content-driven: letting it grow moved the
+            window and its buttons on every guess, skip and opened suggestion list. The
+            panel holds still and only its inner regions scroll; 48rem holds all six
+            attempts unscrolled.
+          */
+          <GameDialog
             ref={dialogRef}
-            /*
-              Centred with `inset-0 m-auto`, NOT with a -50% translate: the
-              panel height is odd more often than not, so a percentage
-              transform lands it on a half pixel and rasterises the whole
-              composited layer — text and artwork included — slightly soft.
-
-              The height is fixed rather than content-driven. Letting it grow
-              meant the window resized and the buttons moved on every guess,
-              every skip and every time the suggestions opened; the panel now
-              holds still and only its inner regions scroll. 48rem is the budget
-              the attempt log needs to hold all six rows unscrolled once the
-              volume row is in — below that it is the log that gives.
-
-              `[&:not([open])]:hidden` is what makes Minimize work at all. The
-              browser hides a closed dialog with `dialog:not([open]){display:
-              none}` from its OWN stylesheet, and any author `display` beats a
-              user-agent one regardless of specificity — so the `flex` here kept
-              the panel on screen after `close()` and minimizing looked dead.
-              This rule is an author rule too, and more specific than `.flex`.
-
-              The `dark` class is here because the theme variables are declared
-              on `.App.dark`, which a dialog portalled to document.body is not
-              inside; without it the range slider and other var-driven styling
-              fall back to the light palette. Tailwind's `dark:` variants are
-              unaffected — that class sits on body.
-            */
-            className={`fixed inset-0 m-auto flex h-[min(48rem,calc(100vh-3rem))] w-[min(34rem,94vw)] min-w-0 flex-col overflow-hidden rounded-2xl bg-canvas p-0 text-ink shadow-2xl backdrop:bg-canvas/75 [&:not([open])]:hidden ${
-              isDarkMode ? 'dark' : ''
-            }`}
-            aria-label={t('songGuessr.promptTitle')}
-            onCancel={(event) => {
-              event.preventDefault();
-              minimizeSongGuessr();
-            }}
+            label={t('songGuessr.promptTitle')}
+            className="h-[min(48rem,calc(100vh-3rem))] w-[min(34rem,94vw)]"
+            onCancel={minimizeSongGuessr}
           >
             <SongGuessrPrompt onClose={closeSongGuessr} onMinimize={minimizeSongGuessr} />
-          </dialog>,
+          </GameDialog>,
           document.body
         )}
     </>

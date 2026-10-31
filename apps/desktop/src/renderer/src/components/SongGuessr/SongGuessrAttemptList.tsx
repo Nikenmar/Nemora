@@ -12,15 +12,12 @@ type SongGuessrAttemptListProps = {
 };
 
 const getDotClassName = (attempt: SongGuessrAttempt | undefined) => {
-  // The "empty" tone comes from the seekbar track tokens: unlike
-  // `background-color-3`, they are genuinely dark in the dark theme, so a
-  // pending dot cannot be mistaken for a filled one.
-  if (!attempt)
-    return 'bg-line';
-  if (attempt.kind === 'correct')
-    return 'bg-echo';
+  // An unused attempt is the track tone, a skipped one the faint ink: both read as "not a guess"
+  // without looking like a result.
+  if (!attempt) return 'bg-line';
+  if (attempt.kind === 'correct') return 'bg-echo';
   if (attempt.kind === 'wrong') return 'bg-danger';
-  return 'border-2 border-line bg-transparent';
+  return 'bg-ink-faint';
 };
 
 const getAttemptIcon = (attempt: SongGuessrAttempt) => {
@@ -41,7 +38,7 @@ const SongGuessrAttemptList = (props: SongGuessrAttemptListProps) => {
     // Kept tight on purpose: all six attempts should fit the log area, so it
     // has nothing to scroll in the first place.
     return (
-      <ul className="space-y-1" aria-label={t('songGuessr.attemptsLabel')}>
+      <ul className="space-y-1.5" aria-label={t('songGuessr.attemptsLabel')}>
         {attempts.map((attempt, index) => {
           const isCorrect = attempt.kind === 'correct';
           const label =
@@ -53,19 +50,17 @@ const SongGuessrAttemptList = (props: SongGuessrAttemptListProps) => {
           return (
             <li
               key={index}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-1 text-xs ${
-                isCorrect
-                  ? 'bg-echo/10'
-                  : 'bg-surface-2/50'
+              className={`flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-small ${
+                isCorrect ? 'bg-accent-soft text-ink' : 'bg-surface-2 text-ink-dim'
               }`}
             >
               <span
                 className={`ms-icon text-base !leading-none ${
                   isCorrect
-                    ? 'text-echo'
+                    ? 'ms-icon-filled text-echo'
                     : attempt.kind === 'wrong'
                       ? 'text-danger'
-                      : 'opacity-40'
+                      : 'text-ink-faint'
                 }`}
                 aria-hidden="true"
               >
@@ -73,8 +68,8 @@ const SongGuessrAttemptList = (props: SongGuessrAttemptListProps) => {
               </span>
               <span
                 className={`min-w-0 truncate ${
-                  attempt.kind === 'wrong' ? 'line-through opacity-60' : ''
-                } ${attempt.kind === 'skip' ? 'opacity-50' : ''}`}
+                  attempt.kind === 'wrong' ? 'line-through decoration-ink-faint' : ''
+                } ${attempt.kind === 'skip' ? 'text-ink-faint' : ''}`}
                 title={label}
               >
                 {label}
@@ -88,11 +83,11 @@ const SongGuessrAttemptList = (props: SongGuessrAttemptListProps) => {
 
   return (
     <section aria-label={t('songGuessr.attemptsLabel')}>
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex items-center justify-center gap-1.5">
         {dots.map((attempt, index) => (
           <span
             key={index}
-            className={`h-2.5 w-2.5 rounded-full transition-colors duration-200 motion-reduce:transition-none ${getDotClassName(
+            className={`h-1.5 w-7 rounded-full transition-colors duration-200 motion-reduce:transition-none ${getDotClassName(
               attempt
             )}`}
             title={t('songGuessr.attemptRow', {

@@ -22,14 +22,16 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
 
   return (
     <section
-      className="rounded-2xl bg-surface-2/45 px-5 py-3"
+      className="rounded-panel border border-line px-5 py-4"
       aria-label={t('songGuessr.statsTitle')}
     >
       <div className="grid grid-cols-4 gap-2">
         {summary.map((item) => (
           <div key={item.label} className="flex flex-col items-center">
-            <span className="text-lg font-semibold leading-none">{item.value}</span>
-            <span className="mt-1 text-center text-[0.65rem] opacity-50">
+            <span className="text-section font-semibold leading-none tabular-nums text-ink">
+              {item.value}
+            </span>
+            <span className="mt-1.5 text-center text-micro text-ink-faint">
               {item.label}
             </span>
           </div>
@@ -38,10 +40,10 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
 
       {stats.gamesPlayed > 0 && (
         <div className="mt-4">
-          <p className="mb-1.5 text-[0.65rem] opacity-50">
+          <p className="mb-2 text-micro font-semibold uppercase tracking-wide text-ink-faint">
             {t('songGuessr.distribution')}
           </p>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {stats.distribution.map((count, index) => {
               const isHighlighted = highlightAttempt === index;
               return (
@@ -50,17 +52,14 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
                   className="flex items-center gap-2"
                   aria-label={t('songGuessr.distributionBar', { attempt: index + 1, count })}
                 >
-                  <span className="w-3 text-[0.65rem] opacity-45">{index + 1}</span>
-                  <div className="flex h-3 min-w-0 flex-1 items-center">
+                  <span className="w-3 text-micro tabular-nums text-ink-faint">{index + 1}</span>
+                  <div className="flex h-4 min-w-0 flex-1 items-center">
                     {count > 0 ? (
                       <div
-                        /* The seekbar tone, which is what Nora already fills a
-                           progress shape with — the highlight colour as a slab
-                           read as a stray tint against the rest of the app. */
-                        className={`flex h-full min-w-[1.25rem] items-center justify-end rounded-[0.25rem] px-1.5 text-[0.6rem] font-semibold transition-all duration-500 ease-out motion-reduce:transition-none ${
-                          isHighlighted
-                            ? 'bg-echo text-canvas '
-                            : 'bg-echo/35'
+                        /* The bucket the round just landed in takes the echo; the rest stay on
+                           the track tone, so one bar answers "how did this round go". */
+                        className={`flex h-full min-w-[1.5rem] items-center justify-end rounded-full px-2 text-micro font-semibold tabular-nums transition-all duration-500 ease-out motion-reduce:transition-none ${
+                          isHighlighted ? 'bg-echo text-canvas' : 'bg-line text-ink-dim'
                         }`}
                         style={{ width: `${(count / peak) * 100}%` }}
                       >

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Button from '../Button';
 import Dropdown from '../Dropdown';
 
 export type SongGuessrPoolSelection = {
@@ -26,6 +27,8 @@ const pickRandomPool = (pools: SongGuessrPoolOption[]): SongGuessrPoolOption | u
   if (pools.length === 0) return undefined;
   return pools[Math.min(pools.length - 1, Math.floor(Math.random() * pools.length))];
 };
+
+const FIELD_LABEL = 'text-micro font-semibold uppercase tracking-wide text-ink-faint';
 
 const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
   const { pools, selection, disabled, onChange } = props;
@@ -106,24 +109,24 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
 
   return (
     <section
-      className="mb-4 flex flex-shrink-0 flex-wrap items-end gap-2 rounded-xl bg-surface-2/35 px-3 py-2.5"
+      className="mb-5 flex flex-shrink-0 flex-wrap items-end gap-2"
       aria-label={t('songGuessr.sourceLabel')}
     >
-      <label className="flex min-w-32 flex-1 flex-col gap-1 text-xs font-medium">
-        <span className="opacity-60">{t('songGuessr.modeLabel')}</span>
+      <label className="flex min-w-32 flex-1 flex-col gap-1.5">
+        <span className={FIELD_LABEL}>{t('songGuessr.modeLabel')}</span>
         <Dropdown
           name="song-guessr-mode"
           value={selection.poolType}
           options={modeOptions}
           onChange={(event) => changeMode(event.target.value as SongGuessrPoolType)}
-          className="!ml-0 h-9 w-full !rounded-lg border-2 px-2 text-xs"
+          className="ml-0 h-9 w-full max-w-none [&>span:nth-child(2)]:flex-1 [&>span:nth-child(2)]:text-left"
           isDisabled={disabled}
         />
       </label>
 
       {selection.poolType !== 'library' && (
-        <label className="flex min-w-40 flex-[1.6] flex-col gap-1 text-xs font-medium">
-          <span className="opacity-60">
+        <label className="flex min-w-40 flex-[1.6] flex-col gap-1.5">
+          <span className={FIELD_LABEL}>
             {selection.poolType === 'artist'
               ? t('songGuessr.artistLabel')
               : selection.poolType === 'album'
@@ -137,33 +140,26 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
             onChange={(event) =>
               onChange({ poolType: selection.poolType, poolId: event.target.value })
             }
-            className="!ml-0 h-9 w-full !rounded-lg border-2 px-2 text-xs"
+            className="ml-0 h-9 w-full max-w-none [&>span:nth-child(2)]:flex-1 [&>span:nth-child(2)]:text-left"
             isDisabled={disabled || availableTargetOptions.length === 0}
           />
         </label>
       )}
 
       {supportsRandom && (
-        <button
-          type="button"
-          onClick={chooseRandomTarget}
-          disabled={disabled || targetPools.length === 0}
-          aria-label={
+        <Button
+          iconName="shuffle"
+          variant="secondary"
+          size="lg"
+          tooltipLabel={
             selection.poolType === 'artist'
               ? t('songGuessr.randomArtist')
               : t('songGuessr.randomAlbum')
           }
-          title={
-            selection.poolType === 'artist'
-              ? t('songGuessr.randomArtist')
-              : t('songGuessr.randomAlbum')
-          }
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border-2 border-surface-2 bg-surface-2/25 opacity-70 transition-[border-color,background-color,opacity] duration-200 focus-visible:!border-echo hover:enabled:border-accent hover:enabled:bg-surface-2/60 hover:enabled:opacity-100 disabled:cursor-not-allowed disabled:opacity-30 motion-reduce:transition-none "
-        >
-          <span className="ms-icon text-lg !leading-none" aria-hidden="true">
-            shuffle
-          </span>
-        </button>
+          isDisabled={disabled || targetPools.length === 0}
+          className="m-0 h-9 w-9"
+          clickHandler={chooseRandomTarget}
+        />
       )}
     </section>
   );

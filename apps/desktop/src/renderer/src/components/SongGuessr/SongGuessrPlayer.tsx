@@ -332,24 +332,25 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
   return (
     <section className="flex flex-col items-center">
       {/* The disc stands in for the artwork we are not allowed to show yet. */}
-      <div className="relative flex h-28 w-28 items-center justify-center">
+      <div className="relative flex h-32 w-32 items-center justify-center">
         <div
-          className={`absolute inset-0 rounded-full bg-echo/10 blur-2xl transition-opacity duration-500 ${
+          className={`absolute -inset-3 rounded-full bg-echo/20 blur-2xl transition-opacity duration-500 ${
             isPlaying ? 'opacity-100' : 'opacity-0'
           }`}
           aria-hidden="true"
         />
         <div
-          className={`absolute inset-0 rounded-full border border-accent bg-gradient-to-br from-surface-2 to-accent shadow-lg ${
+          className={`absolute inset-0 rounded-full border border-line bg-surface-2 shadow-float ${
             isPlaying ? 'animate-spin motion-reduce:animate-none' : ''
           }`}
           style={{ animationDuration: '9s' }}
           aria-hidden="true"
         >
-          {/* Grooves: a light hairline in dark mode, a darker one on white. */}
-          <span className="absolute inset-4 rounded-full border border-accent/70" />
-          <span className="absolute inset-8 rounded-full border border-accent/50" />
-          <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-canvas" />
+          {/* Grooves on the line tone, which reads in both themes. */}
+          <span className="absolute inset-3 rounded-full border border-line" />
+          <span className="absolute inset-6 rounded-full border border-line/70" />
+          <span className="absolute inset-9 rounded-full border border-line/50" />
+          <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-surface-3" />
         </div>
 
         <div className="relative flex h-10 items-end gap-1" aria-hidden="true">
@@ -384,7 +385,7 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           broken. Here the playhead always crosses the whole width.
         */}
         <div
-          className="relative h-2.5 w-full overflow-hidden rounded-full bg-line"
+          className="relative h-1.5 w-full overflow-hidden rounded-full bg-line"
           role="progressbar"
           aria-label={t('songGuessr.snippetProgress')}
           aria-valuemin={0}
@@ -398,16 +399,16 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           />
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-xs">
-          <span className="font-semibold tabular-nums text-echo">
+        <div className="mt-2 flex items-center justify-between text-small">
+          <span className="font-semibold tabular-nums text-ink">
             {position.toFixed(1)}s / {snippetLength}s
           </span>
           {isAnalyzing ? (
-            <span className="opacity-45">{t('songGuessr.analyzing')}</span>
+            <span className="text-ink-faint">{t('songGuessr.analyzing')}</span>
           ) : nextRung ? (
-            <span className="opacity-45">{t('songGuessr.nextUnlock', { seconds: nextRung })}</span>
+            <span className="text-ink-faint">{t('songGuessr.nextUnlock', { seconds: nextRung })}</span>
           ) : (
-            <span className="opacity-45">{t('songGuessr.lastRung')}</span>
+            <span className="text-ink-faint">{t('songGuessr.lastRung')}</span>
           )}
         </div>
       </div>
@@ -417,13 +418,13 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
         onClick={requestPlay}
         aria-label={buttonLabel}
         title={buttonLabel}
-        className="group mt-5 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-echo/60 bg-surface-2/25 text-echo transition-[border-color,background-color,transform] duration-200 ease-in-out hover:scale-105 hover:border-echo hover:bg-surface-2/50 focus-visible:!border-echo active:scale-95 motion-reduce:transition-none "
+        className="group mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-float transition-[background-color,transform] duration-150 ease-out hover:scale-105 hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo active:scale-95 motion-reduce:transition-none"
       >
         {/* Spinning while it loads, seeks or waits out the silence analysis:
             the button has to say "not yet", or the bar sitting at 0.0s while
             nothing is audible reads as a broken snippet. */}
         <span
-          className={`ms-icon text-3xl !leading-none ${
+          className={`ms-icon ms-icon-filled text-3xl !leading-none ${
             isPreparing ? 'animate-spin motion-reduce:animate-none' : ''
           }`}
         >
@@ -447,10 +448,8 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           onClick={() => toggleMutedState(!isMuted)}
           aria-label={t('songGuessr.muteUnmute')}
           title={t('songGuessr.muteUnmute')}
-          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,opacity] duration-200 hover:bg-surface-2 motion-reduce:transition-none ${
-            isMuted
-              ? 'text-echo opacity-100'
-              : 'opacity-55 hover:opacity-100'
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,color] duration-150 hover:bg-surface-2 motion-reduce:transition-none ${
+            isMuted ? 'text-echo' : 'text-ink-dim hover:text-ink'
           }`}
         >
           <span className="ms-icon text-lg !leading-none">
@@ -462,7 +461,7 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           <VolumeSlider name="song-guessr-volume-slider" id="songGuessrVolumeSlider" />
         </div>
 
-        <span className="w-8 flex-shrink-0 text-right text-xs tabular-nums opacity-45">
+        <span className="w-8 flex-shrink-0 text-right text-small tabular-nums text-ink-faint">
           {Math.round(volume)}
         </span>
       </div>

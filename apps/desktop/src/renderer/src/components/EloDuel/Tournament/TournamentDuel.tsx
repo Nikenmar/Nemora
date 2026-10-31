@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 
-import type { TournamentMatch } from '@platform/core/stats/tournaments';
+import type { TournamentMatch } from "@platform/core/stats/tournaments";
 
-import DuelCard from '../DuelCard';
+import DuelCard, { DuelVersus } from "../DuelCard";
 
 interface TournamentDuelProps {
   match: TournamentMatch;
@@ -19,7 +19,7 @@ const TournamentDuel = ({
   isBusy,
   previewingSongId,
   onVote,
-  onPreviewToggle
+  onPreviewToggle,
 }: TournamentDuelProps) => {
   const { t } = useTranslation();
   const songA = songs.find(({ songId }) => songId === match.songAId);
@@ -27,32 +27,35 @@ const TournamentDuel = ({
   if (!songA || !songB) return null;
 
   return (
-    <section className="rounded-xl bg-surface-2/60 p-5">
-      <h3 className="mb-5 text-center text-section font-semibold text-ink">
-        {t('duels.tournament.currentMatch', {
+    <section>
+      <h3 className="mb-4 text-center text-micro font-semibold uppercase tracking-wide text-ink-faint">
+        {t("duels.tournament.currentMatch", {
           round: match.round + 1,
-          match: match.position + 1
+          match: match.position + 1,
         })}
       </h3>
-      <div className="flex items-center justify-center gap-6">
-        <DuelCard
-          entry={songA}
-          onVote={() => onVote(songA.songId)}
-          onPreviewToggle={() => onPreviewToggle(songA)}
-          isPreviewing={previewingSongId === songA.songId}
-          isDisabled={isBusy}
-          showResult={false}
-        />
-        <span className="text-2xl font-semibold opacity-60">VS</span>
-        <DuelCard
-          entry={songB}
-          onVote={() => onVote(songB.songId)}
-          onPreviewToggle={() => onPreviewToggle(songB)}
-          isPreviewing={previewingSongId === songB.songId}
-          isDisabled={isBusy}
-          showResult={false}
-        />
-      </div>
+      <DuelVersus
+        left={
+          <DuelCard
+            entry={songA}
+            onVote={() => onVote(songA.songId)}
+            onPreviewToggle={() => onPreviewToggle(songA)}
+            isPreviewing={previewingSongId === songA.songId}
+            isDisabled={isBusy}
+            showResult={false}
+          />
+        }
+        right={
+          <DuelCard
+            entry={songB}
+            onVote={() => onVote(songB.songId)}
+            onPreviewToggle={() => onPreviewToggle(songB)}
+            isPreviewing={previewingSongId === songB.songId}
+            isDisabled={isBusy}
+            showResult={false}
+          />
+        }
+      />
     </section>
   );
 };

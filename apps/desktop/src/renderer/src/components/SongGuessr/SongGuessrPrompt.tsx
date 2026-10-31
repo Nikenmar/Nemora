@@ -22,6 +22,9 @@ import SongGuessrPlayer from './SongGuessrPlayer';
 import SongGuessrPoolSelector, { type SongGuessrPoolSelection } from './SongGuessrPoolSelector';
 import SongGuessrResult from './SongGuessrResult';
 import SongGuessrStatsPanel from './SongGuessrStatsPanel';
+import Button from '../Button';
+import Icon from '../ui/Icon';
+import { GameHeader } from '../ui/GameWindow';
 
 type SongGuessrPromptProps = {
   onClose?: () => void;
@@ -336,54 +339,26 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
       {...{ [SONG_GUESSR_PANEL_ATTRIBUTE]: '' }}
       className="flex h-full min-h-0 w-full flex-col text-ink outline-none"
     >
-      {/*
-        Fixed height, and the streak sits inline as a chip rather than on a
-        second line: anything that changes the header's height would shift the
-        whole game below it mid-round.
-      */}
-      <header className="flex h-[4.25rem] flex-shrink-0 items-center gap-3 border-b border-surface-2 px-6">
-        {/*
-          The icon class sets `display: inline-block`, so the flex centering has
-          to live on a wrapper — putting both on one element knocks the glyph
-          out of its badge.
-        */}
-        <span
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-echo/15"
-          aria-hidden="true"
-        >
-          <span className="ms-icon text-xl text-echo">
-            graphic_eq
-          </span>
-        </span>
-
-        {/* Title only. Source controls live below, where their labels and full
-            artist/album names do not compete with the window actions. */}
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold leading-tight tracking-tight">
-          {t('songGuessr.promptTitle')}
-        </h1>
-
-        {onMinimize && (
-          <button
-            type="button"
-            onClick={minimizePrompt}
-            aria-label={t('songGuessr.minimize')}
-            title={t('songGuessr.minimize')}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl opacity-55 transition-[background-color,opacity] duration-200 hover:bg-surface-2 hover:opacity-100 motion-reduce:transition-none"
+      {/* The streak is a chip in the fixed-height header: nothing may change the header's height
+          and shift the game below it mid-round. */}
+      <GameHeader
+        icon="graphic_eq"
+        title={t('songGuessr.promptTitle')}
+        onMinimize={onMinimize ? minimizePrompt : undefined}
+        minimizeLabel={t('songGuessr.minimize')}
+        onClose={closePrompt}
+        closeLabel={t('songGuessr.close')}
+      >
+        {stats.currentStreak > 0 && (
+          <span
+            className="flex shrink-0 items-center gap-1 rounded-full bg-accent-soft py-1 pl-1.5 pr-2.5 text-small font-semibold tabular-nums text-echo"
+            title={t('songGuessr.streakChip', { count: stats.currentStreak })}
           >
-            <span className="ms-icon text-xl !leading-none">minimize</span>
-          </button>
+            <Icon name="local_fire_department" filled size={16} />
+            {stats.currentStreak}
+          </span>
         )}
-
-        <button
-          type="button"
-          onClick={closePrompt}
-          aria-label={t('songGuessr.close')}
-          title={t('songGuessr.close')}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl opacity-55 transition-[background-color,opacity] duration-200 hover:bg-surface-2 hover:opacity-100 motion-reduce:transition-none"
-        >
-          <span className="ms-icon text-xl !leading-none">close</span>
-        </button>
-      </header>
+      </GameHeader>
 
       <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
         <SongGuessrPoolSelector
@@ -395,42 +370,38 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
 
         {phase === 'loading' && (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-            <span
-              className="ms-icon mb-3 animate-spin text-3xl text-echo motion-reduce:animate-none"
-              aria-hidden="true"
-            >
-              progress_activity
-            </span>
-            <p className="text-sm opacity-60">{t('songGuessr.loading')}</p>
+            <Icon
+              name="progress_activity"
+              size={30}
+              className="mb-3 animate-spin text-echo motion-reduce:animate-none"
+            />
+            <p className="text-small text-ink-dim">{t('songGuessr.loading')}</p>
           </div>
         )}
 
         {phase === 'empty' && (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 text-center">
             <span
-              className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-2/60"
+              className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-2 text-ink-faint"
               aria-hidden="true"
             >
-              <span className="ms-icon text-3xl opacity-50">library_music</span>
+              <Icon name="library_music" size={30} />
             </span>
-            <h2 className="text-lg font-semibold">{t('songGuessr.noRound')}</h2>
-            <p className="mt-2 max-w-sm text-sm opacity-60">
+            <h2 className="text-section font-semibold text-ink">{t('songGuessr.noRound')}</h2>
+            <p className="mt-2 max-w-sm text-body text-ink-dim">
               {poolSelection.poolType === 'artist'
                 ? t('songGuessr.noArtistRoundHint')
                 : poolSelection.poolType === 'album'
                   ? t('songGuessr.noAlbumRoundHint')
                   : t('songGuessr.noRoundHint')}
             </p>
-            <button
-              type="button"
-              onClick={() => void startRound(persistedStateRef.current)}
-              className="mt-5 flex h-10 items-center gap-1.5 rounded-xl bg-surface-2/80 px-4 text-sm font-medium transition-colors duration-200 hover:bg-accent motion-reduce:transition-none "
-            >
-              <span className="ms-icon text-base !leading-none" aria-hidden="true">
-                refresh
-              </span>
-              {t('songGuessr.tryAgain')}
-            </button>
+            <Button
+              label={t('songGuessr.tryAgain')}
+              iconName="refresh"
+              variant="secondary"
+              className="m-0 mt-5"
+              clickHandler={() => void startRound(persistedStateRef.current)}
+            />
           </div>
         )}
 
@@ -448,28 +419,12 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
               />
             </div>
 
-            {/* Equal side columns keep the dots optically centred no matter
-                whether the streak chip is showing. */}
-            <div className="flex flex-shrink-0 items-center">
-              <div className="flex-1" />
+            <div className="flex flex-shrink-0 justify-center">
               <SongGuessrAttemptList
                 attempts={attempts}
                 maxAttempts={SONG_GUESSR_MAX_ATTEMPTS}
                 variant="dots"
               />
-              <div className="flex flex-1 justify-end">
-                {stats.currentStreak > 0 && (
-                  <span
-                    className="flex items-center gap-0.5 rounded-full bg-echo/15 py-0.5 pl-1 pr-2 text-xs font-semibold text-echo "
-                    title={t('songGuessr.streakChip', { count: stats.currentStreak })}
-                  >
-                    <span className="ms-icon text-sm !leading-none" aria-hidden="true">
-                      local_fire_department
-                    </span>
-                    {stats.currentStreak}
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* The log is handed to the input so it can share one fixed area

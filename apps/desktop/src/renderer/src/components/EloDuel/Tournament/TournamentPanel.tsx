@@ -71,20 +71,12 @@ const TournamentPanel = ({
 
   return (
     <div className="duel-tournament">
-      <div className="mb-5 flex items-center gap-3">
-        <span className="ms-icon text-3xl text-echo">
-          account_tree
-        </span>
-        <div>
-          <h2 className="text-2xl font-medium">{t('duels.tournament.title')}</h2>
-          <p className="text-sm opacity-65">{t('duels.tournament.subtitle')}</p>
-        </div>
-      </div>
+      <p className="mb-5 max-w-prose text-body text-ink-dim">{t('duels.tournament.subtitle')}</p>
 
       {error && (
         <div
           role="alert"
-          className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger"
+          className="mb-4 rounded-panel bg-danger-soft px-4 py-3 text-small text-danger"
         >
           {error}
         </div>

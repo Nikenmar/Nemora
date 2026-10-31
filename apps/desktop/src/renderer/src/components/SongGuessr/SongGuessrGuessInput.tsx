@@ -13,6 +13,7 @@ import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 
 import { SONG_GUESSR_GUESS_INPUT_ID } from '../../utils/songGuessr/constants';
 import { formatCandidateLabel } from '../../utils/songGuessr/matching';
+import Button from '../Button';
 import Img from '../Img';
 
 type SongGuessrGuessInputProps = {
@@ -297,10 +298,8 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
          option rather than a div wearing the role. */
       tabIndex={-1}
       style={{ height: SUGGESTION_ROW_HEIGHT }}
-      className={`flex cursor-pointer items-center gap-3 px-3 transition-colors duration-100 motion-reduce:transition-none ${
-        index === activeIndex
-          ? 'bg-echo/12'
-          : 'hover:bg-surface-2/70'
+      className={`mx-[5px] flex cursor-pointer items-center gap-3 rounded-lg px-2.5 transition-colors duration-100 motion-reduce:transition-none ${
+        index === activeIndex ? 'bg-glass-hover' : ''
       }`}
       onMouseEnter={() => setActiveIndex(index)}
       onMouseDown={(event) => {
@@ -313,19 +312,19 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           src={candidate.artworkPath}
           alt=""
           enableImgFadeIns={false}
-          className="h-9 w-9 flex-shrink-0 rounded-md object-cover"
+          className="h-9 w-9 flex-shrink-0 rounded-cover-sm object-cover"
         />
       ) : (
-        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-line">
-          <span className="ms-icon text-base !leading-none opacity-45">
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-cover-sm bg-surface-2 text-ink-faint">
+          <span className="ms-icon text-base !leading-none">
             music_note
           </span>
         </span>
       )}
       <span className="flex min-w-0 flex-col">
-        <span className="truncate text-sm">{candidate.title}</span>
+        <span className="truncate text-body text-ink">{candidate.title}</span>
         {candidate.artists.length > 0 && (
-          <span className="truncate text-xs opacity-55">{candidate.artists.join(', ')}</span>
+          <span className="truncate text-small text-ink-dim">{candidate.artists.join(', ')}</span>
         )}
       </span>
     </div>
@@ -337,17 +336,13 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         ref={inputBoxRef}
-        className={`flex flex-shrink-0 items-center gap-2 rounded-xl border-2 bg-surface-2/60 px-3 transition-colors duration-200 focus-within:border-echo motion-reduce:transition-none ${
-          selectedCandidate
-            ? 'border-echo/60'
-            : 'border-transparent'
+        className={`flex h-11 flex-shrink-0 items-center gap-2 rounded-full border bg-surface-2 pl-3.5 pr-1.5 transition-colors duration-150 focus-within:border-echo motion-reduce:transition-none ${
+          selectedCandidate ? 'border-echo' : 'border-line'
         }`}
       >
         <span
           className={`ms-icon text-xl !leading-none ${
-            selectedCandidate
-              ? 'text-echo'
-              : 'opacity-40'
+            selectedCandidate ? 'ms-icon-filled text-echo' : 'text-ink-faint'
           }`}
           aria-hidden="true"
         >
@@ -371,7 +366,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           }
           aria-label={t('songGuessr.guessInputLabel')}
           placeholder={t('songGuessr.guessPlaceholder')}
-          className="h-12 w-full min-w-0 bg-transparent text-sm outline-none placeholder:opacity-40 disabled:opacity-50"
+          className="h-full w-full min-w-0 bg-transparent text-body text-ink outline-none placeholder:text-ink-faint focus-visible:!outline-none disabled:opacity-50"
           onChange={(event) => {
             setSelectedCandidate(undefined);
             setQuery(event.target.value);
@@ -382,14 +377,14 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
         {/* How much of the ranking is in hand: with thousands of matches the
             hidden scrollbar gives no sense of depth on its own. */}
         {hasSuggestions && (
-          <span className="flex-shrink-0 text-xs tabular-nums opacity-40">
+          <span className="flex-shrink-0 text-small tabular-nums text-ink-faint">
             {t('songGuessr.searchCount', { shown: candidates.length, total: totalCandidates })}
           </span>
         )}
 
         {isBusy && (
           <span
-            className="ms-icon animate-spin text-base !leading-none opacity-40 motion-reduce:animate-none"
+            className="ms-icon animate-spin text-base !leading-none text-ink-faint motion-reduce:animate-none"
             aria-hidden="true"
           >
             progress_activity
@@ -402,7 +397,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
             onClick={clearSelection}
             aria-label={t('songGuessr.clearGuess')}
             title={t('songGuessr.clearGuess')}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full opacity-45 transition-opacity hover:bg-accent hover:opacity-100 motion-reduce:transition-none"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-ink-dim transition-colors hover:bg-line/70 hover:text-ink motion-reduce:transition-none"
           >
             <span className="ms-icon text-base !leading-none">close</span>
           </button>
@@ -410,26 +405,26 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
       </div>
 
       <div className="mt-3 flex flex-shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={disabled || !selectedCandidate}
-          className="h-10 flex-1 rounded-xl border-[3px] border-echo/60 bg-surface-2/25 text-sm font-medium transition-[border-color,background-color,opacity] duration-200 ease-in-out focus-visible:!border-echo hover:enabled:border-echo hover:enabled:bg-surface-2/50 disabled:opacity-35 motion-reduce:transition-none "
-        >
-          {t('songGuessr.submitGuess')}
-        </button>
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={disabled}
-          title={t('songGuessr.skipHint', { count: attemptsLeft })}
-          className="flex h-10 items-center gap-1.5 rounded-xl border-[3px] border-surface-2 bg-surface-2/25 px-4 text-sm font-medium transition-[border-color,background-color,opacity] duration-200 ease-in-out focus-visible:!border-echo hover:enabled:border-accent hover:enabled:bg-surface-2/50 disabled:opacity-35 motion-reduce:transition-none "
-        >
-          <span className="ms-icon text-base !leading-none" aria-hidden="true">
-            skip_next
-          </span>
-          {t('songGuessr.skip')}
-        </button>
+        <Button
+          label={t('songGuessr.submitGuess')}
+          variant="primary"
+          size="lg"
+          isDisabled={disabled || !selectedCandidate}
+          removeFocusOnClick={false}
+          className="m-0 flex-1"
+          clickHandler={submit}
+        />
+        <Button
+          label={t('songGuessr.skip')}
+          iconName="skip_next"
+          variant="outline"
+          size="lg"
+          tooltipLabel={t('songGuessr.skipHint', { count: attemptsLeft })}
+          isDisabled={disabled}
+          removeFocusOnClick={false}
+          className="m-0"
+          clickHandler={onSkip}
+        />
       </div>
 
       {/*
@@ -450,7 +445,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
           role={hasSuggestions ? 'listbox' : undefined}
           aria-label={hasSuggestions ? t('songGuessr.guessInputLabel') : undefined}
           style={suggestionBox}
-          className="fixed z-10 overflow-hidden rounded-xl border border-accent bg-canvas py-1 shadow-2xl "
+          className="fixed z-10 overflow-hidden rounded-menu border border-glass-border bg-glass py-[5px] text-ink shadow-float backdrop-blur-[26px] backdrop-saturate-[1.7]"
         >
           {hasSuggestions ? (
             <Virtuoso
@@ -464,7 +459,7 @@ const SongGuessrGuessInput = (props: SongGuessrGuessInputProps) => {
               itemContent={renderCandidate}
             />
           ) : (
-            <p className="flex h-full items-center px-3 text-xs opacity-45">
+            <p className="flex h-full items-center px-3 text-small text-ink-dim">
               {t('songGuessr.noCandidates')}
             </p>
           )}
