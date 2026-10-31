@@ -21,6 +21,7 @@ import { registerBenchApp } from './other/bench';
 import { registerShots } from './other/shots';
 import { applyCoverLight } from './other/coverLight';
 import { applyAccent } from './other/accentPalette';
+import { withViewTransition } from './other/viewTransition';
 import TooltipLayer from './components/ui/Tooltip';
 import { AppUpdateContext, type AppUpdateContextType } from './contexts/AppUpdateContext';
 // import { SongPositionContext } from './contexts/SongPositionContext';
@@ -1395,10 +1396,10 @@ export default function App() {
         history
       } as NavigationHistoryData;
 
-      return dispatch({
-        type: 'UPDATE_NAVIGATION_HISTORY',
-        data
-      });
+      return withViewTransition(
+        () => dispatch({ type: 'UPDATE_NAVIGATION_HISTORY', data }),
+        'back'
+      );
     }
     if (type === 'increment' && pageHistoryIndex + 1 < history.length) {
       const newPageHistoryIndex = pageHistoryIndex + 1;
@@ -1407,10 +1408,10 @@ export default function App() {
         history
       } as NavigationHistoryData;
 
-      return dispatch({
-        type: 'UPDATE_NAVIGATION_HISTORY',
-        data
-      });
+      return withViewTransition(
+        () => dispatch({ type: 'UPDATE_NAVIGATION_HISTORY', data }),
+        'forward'
+      );
     }
     if (type === 'home') {
       const data: NavigationHistoryData = {
@@ -1418,10 +1419,10 @@ export default function App() {
         pageHistoryIndex: 0
       };
 
-      return dispatch({
-        type: 'UPDATE_NAVIGATION_HISTORY',
-        data
-      });
+      return withViewTransition(
+        () => dispatch({ type: 'UPDATE_NAVIGATION_HISTORY', data }),
+        'back'
+      );
     }
     return undefined;
   }, []);
@@ -1553,10 +1554,10 @@ export default function App() {
 
         log(`User navigated to '${pageClass}'`);
 
-        dispatch({
-          type: 'UPDATE_NAVIGATION_HISTORY',
-          data: navigationHistory
-        });
+        withViewTransition(
+          () => dispatch({ type: 'UPDATE_NAVIGATION_HISTORY', data: navigationHistory }),
+          'forward'
+        );
       } else
         addNewNotifications([
           {

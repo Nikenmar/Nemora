@@ -15,7 +15,7 @@
  * navigation, so the shots survive the redesign's DOM changes. Output: one PNG per surface and
  * theme, plus index.html to look at them side by side.
  */
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, openSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,9 +35,18 @@ const SOURCE = option('source', join(process.env.APPDATA ?? '', 'Nemora'));
 const THEMES = option('themes', 'dark,light').split(',');
 const ONLY = option('only', '').split(',').filter(Boolean);
 const PORT = Number(option('port', '9361'));
-const SKIP_EMPTY = process.argv.includes('--skip-empty') || Boolean(option('probe', ''));
+const SKIP_EMPTY = process.argv.includes('--skip-empty') || Boolean(option('probe', '')) || Boolean(option('film', ''));
 /** `--probe file.js`: run that script in the app (after the library and queue are up) instead of shooting, and print what it returns, once per `--probe-widths`. */
 const PROBE = option('probe', '');
+/**
+ * `--film file.js`: run that script (its last act starts the motion), then freeze every finite
+ * animation and shoot it at 0, 25, 50, 75 and 100% of its run, in each `--themes` theme, into
+ * `<out>/film/<name>.<pct>.<theme>.png` (name: `--film-name`, else the script's file name).
+ */
+const FILM = option('film', '');
+const FILM_NAME = option('film-name', FILM ? FILM.replace(/^.*[\\/]/, '').replace(/\.js$/, '') : '');
+/** `--cpu <seconds>`: after a probe or film, the app's CPU (its whole process tree) over that time, in % of one core. */
+const CPU_SECONDS = Number(option('cpu', '0'));
 
 const VIEW = { width: 1600, height: 900 };
 
@@ -129,6 +138,42 @@ const EMPTY_SHOTS = [
 /** Helpers available to every setup. */
 const HELPERS = `
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// Motion (PLAN/14): finite animations only; looping ones (equalizer bars, spinners) are left alone.
+const finite = (a) => Number.isFinite(a.effect?.getComputedTiming?.().activeDuration ?? Infinity);
+async function untilAnimating(timeout = 800) {
+  for (let t = 0; t < timeout; t += 16) {
+    if (document.getAnimations().some((a) => finite(a) && a.playState === 'running')) return true;
+    await wait(16);
+  }
+  return false;
+}
+function seekAnimations(p) {
+  for (const a of document.getAnimations()) {
+    if (!finite(a)) continue;
+    a.pause();
+    const t = a.effect.getComputedTiming();
+    a.currentTime = (t.delay || 0) + p * t.activeDuration;
+  }
+}
+function finishAnimations() {
+  for (const a of document.getAnimations()) if (finite(a)) try { a.finish(); } catch {}
+}
+function animationInventory() {
+  return document.getAnimations().filter(finite).map((a) => ({
+    name: a.animationName ?? a.transitionProperty ?? a.id ?? '',
+    on: a.effect?.pseudoElement ?? (a.effect?.target?.className?.toString?.() ?? '').slice(0, 50),
+    ms: Math.round(a.effect.getComputedTiming().activeDuration)
+  }));
+}
+async function longTasksDuring(run, settle = 600) {
+  const tasks = [];
+  const observer = new PerformanceObserver((list) => list.getEntries().forEach((e) => tasks.push(Math.round(e.duration))));
+  observer.observe({ type: 'longtask', buffered: false });
+  await run();
+  await wait(settle);
+  observer.disconnect();
+  return tasks;
+}
 async function contextMenuOn(selectors) {
   for (let i = 0; i < 40; i++) {
     for (const sel of selectors) {
@@ -304,6 +349,21 @@ while ($true) { $h = [W.F]::GetForegroundWindow(); if ($h -ne $prev) { $p = 0; [
   };
 }
 
+/** CPU of a process and all its descendants (WebView2 runs as children), in % of one core. */
+function cpuPercent(pid, seconds) {
+  const script = `$all = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId
+function Tree($p) { $p; $all | Where-Object { $_.ParentProcessId -eq $p } | ForEach-Object { Tree $_.ProcessId } }
+$ids = @(Tree ${pid})
+function Total { (Get-Process -Id $ids -ErrorAction SilentlyContinue | ForEach-Object { $_.TotalProcessorTime.TotalMilliseconds } | Measure-Object -Sum).Sum }
+$a = Total; $t = [Diagnostics.Stopwatch]::StartNew(); Start-Sleep -Seconds ${seconds}; $b = Total
+[Math]::Round(($b - $a) / $t.ElapsedMilliseconds * 100, 2)`;
+  try {
+    return execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: (seconds + 30) * 1000, windowsHide: true }).trim();
+  } catch {
+    return '?';
+  }
+}
+
 function prepareProfile(dir, copyFrom) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, 'profile'), { recursive: true });
@@ -348,6 +408,8 @@ async function runOne(name, shots, copyFrom) {
   try {
     cdp = await Cdp.connect(PORT);
     await cdp.send('Page.enable');
+    // Ordinary shots must not catch a page mid-transition; motion is shot on purpose with --film.
+    if (!PROBE && !FILM) await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     await cdp.view(VIEW);
     mkdirSync(join(OUT, 'png'), { recursive: true });
     if (name === 'library' && (ONLY.length === 0 || ONLY.includes('07-loading'))) {
@@ -377,6 +439,32 @@ async function runOne(name, shots, copyFrom) {
         await sleep(800);
         console.log(`[probe ${width}px]`, JSON.stringify(await cdp.eval(body), null, 1));
       }
+      if (CPU_SECONDS > 0) console.log(`[cpu] ${cpuPercent(app.pid, CPU_SECONDS)}% of one core over ${CPU_SECONDS} s`);
+      return failures;
+    }
+    if (FILM) {
+      const body = readFileSync(FILM, 'utf8');
+      mkdirSync(join(OUT, 'film'), { recursive: true });
+      for (const theme of THEMES) {
+        await cdp.eval(RESET);
+        await cdp.eval(`api.theme.changeAppTheme('${theme}');`);
+        await sleep(900);
+        await cdp.eval(body);
+        const moving = await cdp.eval(`const ok = await untilAnimating(); seekAnimations(0); return ok ? animationInventory() : null;`);
+        if (!moving) {
+          failures.push(`film ${FILM_NAME} (${theme}): nothing animated`);
+          continue;
+        }
+        console.log(`[film ${FILM_NAME} ${theme}]`, JSON.stringify(moving));
+        for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+          await cdp.eval(`seekAnimations(${p});`);
+          await sleep(80);
+          await cdp.shoot(join(OUT, 'film', `${FILM_NAME}.${String(p * 100).padStart(3, '0')}.${theme}.png`));
+        }
+        await cdp.eval(`finishAnimations();`);
+        await sleep(400);
+      }
+      if (CPU_SECONDS > 0) console.log(`[cpu] ${cpuPercent(app.pid, CPU_SECONDS)}% of one core over ${CPU_SECONDS} s`);
       return failures;
     }
     for (const theme of THEMES) {
@@ -441,7 +529,7 @@ if (!existsSync(EXE)) throw new Error(`no build at ${EXE}: run \`npm run tauri -
 mkdirSync(OUT, { recursive: true });
 const failures = [...(await runOne('library', SHOTS, SOURCE))];
 if (!SKIP_EMPTY) failures.push(...(await runOne('empty', EMPTY_SHOTS, null)));
-if (!PROBE) contactSheet([{ id: '07-loading', surface: 'Loading (first frame)', themes: ['dark'] }, ...SHOTS, ...(SKIP_EMPTY ? [] : EMPTY_SHOTS)]);
+if (!PROBE && !FILM) contactSheet([{ id: '07-loading', surface: 'Loading (first frame)', themes: ['dark'] }, ...SHOTS, ...(SKIP_EMPTY ? [] : EMPTY_SHOTS)]);
 console.log(`Shots in ${OUT}\\index.html`);
 if (failures.length) {
   console.log(`\n${failures.length} failed:\n${failures.join('\n')}`);

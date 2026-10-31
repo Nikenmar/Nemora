@@ -111,7 +111,7 @@ const Body = memo(() => {
       <ErrorBoundary>
         <div
           key={currentlyActivePage.pageTitle}
-          className="page-enter relative z-[1] h-full w-full [&>*]:overflow-x-hidden"
+          className="page-view relative z-[1] h-full w-full [&>*]:overflow-x-hidden"
         >
           <Suspense fallback={<SuspenseLoader />}>
             {currentlyActivePage.pageTitle === "Songs" && <SongsPage />}

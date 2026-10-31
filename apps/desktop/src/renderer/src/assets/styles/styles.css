@@ -104,6 +104,15 @@
     'Segoe UI', sans-serif;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* Motion (PLAN/14): state changes, small moves, pages and track changes, shared elements. Only
+     these four durations; reduced motion turns every one of them into a cut. */
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 360ms;
+  /* A damped spring (overshoot 3.8%, settled by the end), for things that land: pills, thumbs,
+     covers, popping hearts. */
+  --ease-spring: linear(0, 0.06, 0.198, 0.365, 0.532, 0.68, 0.801, 0.892, 0.957, 1, 1.024, 1.036, 1.038, 1.036, 1.03, 1.024, 1.018, 1.012, 1.007, 1.004, 1.001, 1, 0.999, 0.999, 1);
 
   /* Kept for the components that still read them as durations. */
   --transition-duration-0_2s: 0.2s;
@@ -417,15 +426,84 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   animation: disappearToTop 160ms ease forwards;
 }
 
-/* A page that has just opened: in from 6 px below. */
-.page-enter {
-  animation: pageEnter 160ms var(--ease-out) both;
+/*
+ * ? VIEW TRANSITIONS (PLAN/14 A1-A3, other/viewTransition.ts)
+ * The frame (title bar, sidebar, player) carries its own names, so it is captured apart and stays
+ * still; the root keeps no animation of its own; only the page inside the panel moves, sliding
+ * the way the navigation went. Reduced motion never starts a transition at all.
+ */
+#title-bar {
+  view-transition-name: title-bar;
+}
+.side-bar {
+  view-transition-name: sidebar;
+}
+.song-controls-container {
+  view-transition-name: player-bar;
+}
+.page-view {
+  view-transition-name: page;
 }
 
-@keyframes pageEnter {
+::view-transition-group(*) {
+  animation-duration: var(--dur-3);
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(page) {
+  animation: vt-page-out var(--dur-2) var(--ease-out) both;
+}
+::view-transition-new(page) {
+  animation: vt-page-in var(--dur-3) var(--ease-out) both;
+}
+:root[data-vt-direction='back']::view-transition-old(page) {
+  animation-name: vt-page-out-back;
+}
+:root[data-vt-direction='back']::view-transition-new(page) {
+  animation-name: vt-page-in-back;
+}
+:root[data-vt-direction='none']::view-transition-old(page) {
+  animation-name: vt-fade-out;
+}
+:root[data-vt-direction='none']::view-transition-new(page) {
+  animation-name: vt-fade;
+}
+
+@keyframes vt-page-out {
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@keyframes vt-page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateX(12px);
+  }
+}
+@keyframes vt-page-out-back {
+  to {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+@keyframes vt-page-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
   }
 }
 

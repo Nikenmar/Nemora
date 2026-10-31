@@ -71,7 +71,15 @@ export const theme = {
     },
     transitionTimingFunction: {
       out: 'var(--ease-out)',
-      'in-out-strong': 'var(--ease-in-out)'
+      'in-out-strong': 'var(--ease-in-out)',
+      spring: 'var(--ease-spring)'
+    },
+    // The motion durations of PLAN/14: duration-m1 .. duration-m4.
+    transitionDuration: {
+      m1: 'var(--dur-1)',
+      m2: 'var(--dur-2)',
+      m3: 'var(--dur-3)',
+      m4: 'var(--dur-4)'
     },
     animation: {
       'spin-ease': 'spin 1000ms ease-in-out infinite',
