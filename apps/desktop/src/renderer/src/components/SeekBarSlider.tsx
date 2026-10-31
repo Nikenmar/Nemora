@@ -9,7 +9,6 @@ import {
   useState
 } from 'react';
 import { AppUpdateContext } from '../contexts/AppUpdateContext';
-import calculateTime from '../utils/calculateTime';
 import debounce from '../utils/debounce';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
@@ -117,8 +116,6 @@ const SeekBarSlider = (props: Props) => {
     return undefined;
   }, [updateSongPosition]);
 
-  const currentSongPosition = calculateTime(songPos);
-
   const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
     const pos = e.currentTarget.valueAsNumber;
     setSongPos(pos);
@@ -175,7 +172,6 @@ const SeekBarSlider = (props: Props) => {
       onWheel={handleOnWheel}
       ref={seekbarRef}
       style={seekBarCssProperties}
-      title={`${currentSongPosition.minutes}:${currentSongPosition.seconds}`}
     />
   );
 };

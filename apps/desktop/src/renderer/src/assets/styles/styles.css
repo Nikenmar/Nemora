@@ -509,6 +509,115 @@ input[type='checkbox']:checked ~ .checkmark .icon {
     transform: translateX(-12px);
   }
 }
+/*
+ * ? MICRO-INTERACTIONS (PLAN/14 A5-A20)
+ */
+/* A5: play and pause swap with a quarter turn; the round button springs on press. */
+.play-pause-btn {
+  transition: transform var(--dur-2) var(--ease-spring);
+}
+.play-pause-btn .ms-icon {
+  animation: iconSwap var(--dur-2) var(--ease-spring);
+}
+@keyframes iconSwap {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+/* A6: a heart that is just liked pops and sends a ring of the accent out. */
+.like-pop {
+  animation: likePop var(--dur-4) var(--ease-spring);
+}
+.like-ring {
+  border-radius: 9999px;
+  animation: likeRing 520ms var(--ease-out) both;
+}
+@keyframes likePop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.32);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes likeRing {
+  from {
+    box-shadow: 0 0 0 0 rgb(var(--echo) / 0.55);
+  }
+  to {
+    box-shadow: 0 0 0 12px rgb(var(--echo) / 0);
+  }
+}
+
+/* A11: a tile under the pointer lifts its cover 3 px with a deeper shadow; pressing sinks it. */
+:is(.song-card-cover, .album-cover-and-play-btn-container, .playlist-cover-and-play-btn-container, .artist-img-container) {
+  transition:
+    translate var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out),
+    scale var(--dur-1) var(--ease-out);
+}
+:where(*:has(> :is(.song-card-cover, .album-cover-and-play-btn-container, .playlist-cover-and-play-btn-container, .artist-img-container)):hover)
+  > :is(.song-card-cover, .album-cover-and-play-btn-container, .playlist-cover-and-play-btn-container) {
+  translate: 0 -3px;
+  box-shadow: 0 14px 28px rgb(0 0 0 / 0.35);
+}
+:where(*:has(> .artist-img-container):hover) > .artist-img-container {
+  translate: 0 -3px;
+}
+:where(*:has(> :is(.song-card-cover, .album-cover-and-play-btn-container, .playlist-cover-and-play-btn-container, .artist-img-container)):active)
+  > :is(.song-card-cover, .album-cover-and-play-btn-container, .playlist-cover-and-play-btn-container, .artist-img-container) {
+  scale: 0.98;
+}
+
+/* A13: on the first Home of a session the shelves' tiles rise in, 30 ms apart (8 at most). */
+.home-stagger :is(.songs-container, .artists-container) > * {
+  transition:
+    opacity var(--dur-3) var(--ease-out),
+    translate var(--dur-3) var(--ease-out);
+}
+@starting-style {
+  .home-stagger :is(.songs-container, .artists-container) > * {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(2) { transition-delay: 30ms; }
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(3) { transition-delay: 60ms; }
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(4) { transition-delay: 90ms; }
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(5) { transition-delay: 120ms; }
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(6) { transition-delay: 150ms; }
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(7) { transition-delay: 180ms; }
+.home-stagger :is(.songs-container, .artists-container) > :nth-child(n + 8) { transition-delay: 210ms; }
+
+/* A14: toasts and submenus enter on the same language as the rest. */
+.notification {
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    translate var(--dur-3) var(--ease-spring);
+}
+@starting-style {
+  .notification {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+/* A20: keyboard focus rings ease in instead of snapping on. */
+:focus-visible {
+  animation: focusIn var(--dur-1) var(--ease-out);
+}
+@keyframes focusIn {
+  from {
+    outline-color: transparent;
+    outline-offset: 0;
+  }
+}
+
 @keyframes vt-fade {
   from {
     opacity: 0;

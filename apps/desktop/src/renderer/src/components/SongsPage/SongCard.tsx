@@ -19,6 +19,7 @@ const DeleteSongsFromSystemConfrimPrompt = lazy(
 import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
+import { flyToQueue } from '../../other/motion';
 
 interface SongCardProp {
   index: number;
@@ -207,6 +208,7 @@ const SongCard = (props: SongCardProp) => {
             newQueue.splice(currentSongIndex + 1, 0, ...songIds);
 
             updateQueueData(currentSongIndex, newQueue, undefined, false);
+            flyToQueue();
             addNewNotifications([
               {
                 id: `${title}PlayNext`,
@@ -230,6 +232,7 @@ const SongCard = (props: SongCardProp) => {
                 : undefined;
 
             updateQueueData(currentSongIndex, newQueue, undefined, false);
+            flyToQueue();
             addNewNotifications([
               {
                 id: `${title}PlayNext`,
@@ -257,6 +260,7 @@ const SongCard = (props: SongCardProp) => {
             ]);
           } else {
             updateQueueData(undefined, [...queue.queue, songId], false);
+            flyToQueue();
             addNewNotifications([
               {
                 id: `${title}AddedToQueue`,

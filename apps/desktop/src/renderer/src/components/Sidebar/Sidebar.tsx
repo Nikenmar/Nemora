@@ -1,4 +1,4 @@
-import { memo, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useContext, useEffect, useMemo, useState, useLayoutEffect, useRef } from 'react';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import { useTranslation } from 'react-i18next';
 
@@ -31,6 +31,8 @@ interface Link {
  * title bar only. Below 1024 px the sidebar narrows to icons.
  */
 const Sidebar = memo(() => {
+  const listRef = useRef<HTMLUListElement>(null);
+  const [pill, setPill] = useState({ top: 0, height: 34, visible: false });
   const bodyBackgroundImage = useStore(store, (state) => state.bodyBackgroundImage);
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
 
@@ -92,6 +94,25 @@ const Sidebar = memo(() => {
   const activePlaylist =
     activePage === 'PlaylistInfo' ? (currentlyActivePage.data?.playlistId as string) : undefined;
 
+
+  // Measured after layout; again when the list resizes (it narrows to icons under 1024 px).
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return undefined;
+    const place = () => {
+      const active = list.querySelector<HTMLElement>('button[aria-current="page"]');
+      if (!active) {
+        setPill((p) => ({ ...p, visible: false }));
+        return;
+      }
+      const top = active.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+      setPill({ top, height: active.offsetHeight, visible: true });
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [activePage]);
   return (
     <nav
       aria-label={t('sideBar.navigation', 'Navigation')}
@@ -101,7 +122,19 @@ const Sidebar = memo(() => {
       )}
     >
       <ErrorBoundary>
-        <ul className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-2.5 pb-2 pt-2.5 [scrollbar-width:none]">
+        <ul
+          ref={listRef}
+          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-2.5 pb-2 pt-2.5 [scrollbar-width:none]"
+        >
+          {/* One pill for the whole list, sliding to the open page's link (PLAN/14 A7). */}
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute left-2.5 right-2.5 top-0 z-0 rounded-full bg-accent transition-[transform,opacity] duration-m3 ease-spring',
+              !pill.visible && 'opacity-0'
+            )}
+            style={{ height: pill.height, transform: `translateY(${pill.top}px)` }}
+          />
           {groups.map((group, index) => (
             <li key={group.label ?? index} className="flex flex-col gap-0.5">
               {group.label && (

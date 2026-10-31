@@ -189,7 +189,7 @@ const SongInfoContainer = (props: Props) => {
           data-tooltip={t('player.playPause')}
           onClick={toggleSongPlayback}
         >
-          <Icon name={isCurrentSongPlaying ? 'pause' : 'play_arrow'} filled size={30} />
+          <Icon key={isCurrentSongPlaying ? 'pause' : 'play'} name={isCurrentSongPlaying ? 'pause' : 'play_arrow'} filled size={30} />
         </button>
         <Button
           className={`skip-next-btn ${glass}`}

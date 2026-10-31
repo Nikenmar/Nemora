@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import { useStore } from '@tanstack/react-store';
 
 import { store } from '@renderer/store';
@@ -81,6 +81,21 @@ const COVER_SELECTOR = [
   '.genre-cover'
 ].join(',');
 
+/** The one cover of the tile or row an event happened in, if it happened in one. */
+function coverOf(target: EventTarget | null): Element | null {
+  let element = target instanceof Element ? target : null;
+  for (let depth = 0; element && depth < 8; depth += 1, element = element.parentElement) {
+    if (element.matches(COVER_SELECTOR)) return element;
+    const covers = element.querySelectorAll(COVER_SELECTOR);
+    if (covers.length === 1) return covers[0];
+    if (covers.length > 1) return null;
+  }
+  return null;
+}
+
+/** The cover whose context menu was opened last: where "Add to queue" flies from (A9). */
+let menuSource: Element | null = null;
+
 /**
  * Shared covers (A2): a click inside a tile or a row names that one cover `hero-cover` for the
  * next transition, so if the click opens a page with a hero header, the cover flies into it. The
@@ -89,20 +104,102 @@ const COVER_SELECTOR = [
  */
 export function installSharedCovers() {
   const onClick = (event: MouseEvent) => {
-    let element = event.target instanceof Element ? event.target : null;
-    for (let depth = 0; element && depth < 8; depth += 1, element = element.parentElement) {
-      if (element.matches(COVER_SELECTOR)) {
-        nameForTransition(element, 'hero-cover');
-        return;
-      }
-      const covers = element.querySelectorAll(COVER_SELECTOR);
-      if (covers.length === 1) {
-        nameForTransition(covers[0], 'hero-cover');
-        return;
-      }
-      if (covers.length > 1) return;
-    }
+    const cover = coverOf(event.target);
+    if (cover) nameForTransition(cover, 'hero-cover');
+  };
+  const onMenu = (event: MouseEvent) => {
+    menuSource = coverOf(event.target);
   };
   document.addEventListener('click', onClick, true);
-  return () => document.removeEventListener('click', onClick, true);
+  document.addEventListener('contextmenu', onMenu, true);
+  return () => {
+    document.removeEventListener('click', onClick, true);
+    document.removeEventListener('contextmenu', onMenu, true);
+  };
+}
+
+/**
+ * Add to queue / Play next (A9): a copy of the cover the menu was opened on flies in an arc to the
+ * player's queue button, which bumps when it lands. Nothing flies without a cover or with reduced
+ * motion; the queue change itself never waits for it.
+ */
+export function flyToQueue() {
+  const source = menuSource;
+  menuSource = null;
+  const target = document.querySelector('.song-controls-container .queue-btn');
+  const image = source?.querySelector('img');
+  if (!source?.isConnected || !target || !image || isMotionReduced()) return;
+  const from = source.getBoundingClientRect();
+  const to = target.getBoundingClientRect();
+  const size = Math.min(from.width, 64);
+  const flyer = Object.assign(document.createElement('img'), { src: image.currentSrc || image.src, alt: '' });
+  Object.assign(flyer.style, {
+    position: 'fixed',
+    left: `${from.left + (from.width - size) / 2}px`,
+    top: `${from.top + (from.height - size) / 2}px`,
+    width: `${size}px`,
+    height: `${size}px`,
+    borderRadius: '8px',
+    objectFit: 'cover',
+    zIndex: '200',
+    pointerEvents: 'none',
+    boxShadow: '0 10px 24px rgb(0 0 0 / 0.4)'
+  });
+  document.body.appendChild(flyer);
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+  const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+  const flight = flyer.animate(
+    [
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx * 0.55}px, ${dy * 0.35 - 60}px) scale(0.7)`, opacity: 1, offset: 0.55 },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.2)`, opacity: 0.2 }
+    ],
+    { duration: 450, easing: 'cubic-bezier(0.5, 0, 0.75, 0.5)' }
+  );
+  flight.finished
+    .then(() => target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 300, easing: springEasing() }))
+    .catch(() => undefined)
+    .finally(() => flyer.remove());
+}
+
+/**
+ * A number that counts up from zero the first time it comes into view (A15); strings such as
+ * "2.56 K" or "~137 hours" count their leading number and keep the rest. Returns the text to show.
+ */
+export function useCountUp(value: string | number, ref: RefObject<Element | null>) {
+  const text = String(value);
+  const match = text.match(/^(\D*?)(\d+(?:[.,]\d+)?)(.*)$/s);
+  const [shown, setShown] = useState(text);
+  const done = useRef(false);
+
+  useEffect(() => {
+    setShown(text);
+    if (done.current || !match || !ref.current || isMotionReduced()) return undefined;
+    const [, before, digits, after] = match;
+    const target = parseFloat(digits.replace(',', '.'));
+    const decimals = (digits.split(/[.,]/)[1] ?? '').length;
+    let frame = 0;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || done.current) return;
+      done.current = true;
+      observer.disconnect();
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / 600);
+        const eased = 1 - (1 - t) ** 3;
+        setShown(`${before}${(target * eased).toFixed(decimals)}${after}`);
+        if (t < 1) frame = requestAnimationFrame(step);
+      };
+      frame = requestAnimationFrame(step);
+    });
+    observer.observe(ref.current);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+    // The text is the only input; the ref is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+
+  return shown;
 }

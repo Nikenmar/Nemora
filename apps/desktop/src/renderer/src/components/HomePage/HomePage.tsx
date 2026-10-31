@@ -1,4 +1,4 @@
-import { lazy, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
+import { lazy, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import ContinueHero from './ContinueHero';
 import RediscoverShelf from './RediscoverShelf';
 import EmptyState from '../ui/EmptyState';
@@ -72,7 +72,15 @@ const reducer = (
   }
 };
 
+/** The shelves rise in on the first Home of a session only (PLAN/14 A13), never on a return. */
+let homeVisited = false;
+
 const HomePage = () => {
+  const [isFirstHomeOfSession] = useState(() => {
+    const first = !homeVisited;
+    homeVisited = true;
+    return first;
+  });
   const { updateContextMenuData, changePromptMenuData, addNewNotifications } =
     useContext(AppUpdateContext);
   const { t } = useTranslation();
@@ -362,7 +370,9 @@ const HomePage = () => {
 
   return (
     <MainContainer
-      className="home-page relative !h-full overflow-y-auto [scrollbar-gutter:stable]"
+      className={`home-page relative !h-full overflow-y-auto [scrollbar-gutter:stable] ${
+        isFirstHomeOfSession ? 'home-stagger' : ''
+      }`}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();

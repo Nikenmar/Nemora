@@ -5,6 +5,7 @@ import {
   memo,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react';
 import { cn as twMerge } from './ui/cn';
@@ -95,6 +96,16 @@ const Button = memo((props: ButtonProps) => {
   const updateIsDisabled = (state: boolean) => setIsButtonDisabled(state);
   const updateIsPending = (state: boolean) => setIsStatusPending(state);
 
+  // A heart that becomes liked pops and sends a ring out (PLAN/14 A6); never on first paint.
+  const [popKey, setPopKey] = useState(0);
+  const wasActive = useRef(isActive);
+  useEffect(() => {
+    if (isActive && !wasActive.current && iconName?.split(';').includes('favorite')) {
+      setPopKey((key) => key + 1);
+    }
+    wasActive.current = isActive;
+  }, [iconName, isActive]);
+
   const isIconOnly = !label && !!iconName;
   const look = variant ?? (isIconOnly ? 'ghost' : 'secondary');
   const sizing = SIZES[size];
@@ -106,21 +117,25 @@ const Button = memo((props: ButtonProps) => {
       .split(';')
       .map((name) => (
         <Icon
-          key={name}
+          key={`${name}-${popKey}`}
           name={name}
           filled={isActive || look === 'primary'}
           size={sizing.glyph}
-          className={twMerge('icon relative flex items-center justify-center', iconClassName)}
+          className={twMerge(
+            'icon relative flex items-center justify-center',
+            popKey > 0 && name === 'favorite' && 'like-pop',
+            iconClassName
+          )}
         />
       ));
-  }, [iconClassName, iconName, isActive, isPendingNow, look, sizing.glyph]);
+  }, [iconClassName, iconName, isActive, isPendingNow, look, popKey, sizing.glyph]);
 
   return (
     <button
       type="button"
       id={id}
       className={twMerge(
-        `button group mr-4 inline-flex shrink-0 cursor-pointer select-none items-center justify-center whitespace-nowrap rounded-full font-medium leading-none outline-none transition-[background-color,color,transform,opacity] duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo`,
+        `button group relative mr-4 inline-flex shrink-0 cursor-pointer select-none items-center justify-center whitespace-nowrap rounded-full font-medium leading-none outline-none transition-[background-color,color,transform,opacity] duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo`,
         isIconOnly ? sizing.icon : sizing.labelled,
         VARIANTS[look],
         isActive && look === 'ghost' && 'text-echo hover:text-echo',
@@ -152,6 +167,7 @@ const Button = memo((props: ButtonProps) => {
       ) : (
         buttonIcons
       )}
+      {popKey > 0 && <span key={popKey} className="like-ring pointer-events-none absolute inset-0" aria-hidden />}
       {label && <span className="button-label-text w-max leading-none">{label}</span>}
     </button>
   );

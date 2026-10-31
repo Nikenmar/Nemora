@@ -136,7 +136,7 @@ const Img = memo((props: ImgProps) => {
       ref={imgRef}
       className={`relative outline-1 outline-offset-4 focus-visible:!outline ${
         enableImgFadeIns && isFirstTimeRef.current
-          ? 'opacity-0 transition-opacity delay-[250ms]'
+          ? 'opacity-0 transition-opacity duration-m2'
           : '!opacity-100 !transition-none'
       } ${className}`}
       draggable={draggable}

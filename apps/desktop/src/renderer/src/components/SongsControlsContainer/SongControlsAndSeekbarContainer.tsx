@@ -98,6 +98,7 @@ const SongControlsAndSeekbarContainer = () => {
             />
           ) : (
             <Icon
+              key={isCurrentSongPlaying ? "pause" : "play"}
               name={isCurrentSongPlaying ? "pause" : "play_arrow"}
               filled
               size={24}

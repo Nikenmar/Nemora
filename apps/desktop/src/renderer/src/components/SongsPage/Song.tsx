@@ -36,6 +36,7 @@ import { appPreferences } from '../../../../../package.json';
 import EqualizerBars from '../ui/EqualizerBars';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
+import { flyToQueue } from '../../other/motion';
 
 interface SongProp {
   songId: string;
@@ -112,6 +113,12 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
   } = props;
 
   const [isAFavorite, setIsAFavorite] = useState(props.isAFavorite);
+  const [heartPop, setHeartPop] = useState(0);
+  const wasFavorite = useRef(props.isAFavorite);
+  useEffect(() => {
+    if (isAFavorite && !wasFavorite.current) setHeartPop((n) => n + 1);
+    wasFavorite.current = isAFavorite;
+  }, [isAFavorite]);
   const [isSongPlaying, setIsSongPlaying] = useState(false);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -293,6 +300,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             }
             newQueue.splice(currentSongIndex + 1, 0, ...songIds);
             updateQueueData(currentSongIndex, newQueue, undefined, false);
+            flyToQueue();
             addNewNotifications([
               {
                 id: `${title}PlayNext`,
@@ -315,6 +323,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
 
             newQueue.splice(newQueue.indexOf(currentSongData.songId) + 1 || 0, 0, songId);
             updateQueueData(currentSongIndex, newQueue, undefined, false);
+            flyToQueue();
             addNewNotifications([
               {
                 id: `${title}PlayNext`,
@@ -342,6 +351,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             ]);
           } else {
             updateQueueData(undefined, [...queue.queue, songId], false);
+            flyToQueue();
             addNewNotifications([
               {
                 id: `${title}AddedToQueue`,
@@ -701,7 +711,12 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             handleLikeButtonClick();
           }}
         >
-          <span className={`ms-icon text-[17px] ${isAFavorite ? 'ms-icon-filled' : ''}`}>favorite</span>
+          <span
+            key={heartPop}
+            className={`ms-icon text-[17px] ${isAFavorite ? 'ms-icon-filled' : ''} ${heartPop ? 'like-pop' : ''}`}
+          >
+            favorite
+          </span>
         </button>
         <span className="song-duration text-right text-small tabular-nums text-ink-dim">
           {minutes ?? '--'}:{seconds ?? '--'}
