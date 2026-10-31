@@ -655,7 +655,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
       <div className="song-info-container grid min-w-0 flex-1 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_2.75rem_1.75rem_3rem] items-center gap-4 lg:grid-cols-[minmax(0,1fr)_1.75rem_3rem] sm:grid-cols-[minmax(0,1fr)_3rem]">
         <div className="flex min-w-0 flex-col justify-center gap-0.5">
           <div
-            className={`song-title flex min-w-0 items-center gap-1.5 text-body font-medium outline-none focus-visible:underline ${
+            className={`song-title flex min-w-0 items-center gap-1.5 text-body font-medium outline-none transition-colors duration-m2 focus-visible:underline ${
               isCurrent ? 'text-echo' : 'text-ink'
             }`}
             tabIndex={0}

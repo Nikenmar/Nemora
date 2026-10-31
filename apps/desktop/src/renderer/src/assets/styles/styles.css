@@ -444,6 +444,19 @@ input[type='checkbox']:checked ~ .checkmark .icon {
 .page-view {
   view-transition-name: page;
 }
+/* Shared elements: a tile's cover into the hero header (other/motion.ts names the clicked one),
+   the player's cover into the full-screen player's. */
+.hero-cover {
+  view-transition-name: hero-cover;
+}
+.player-cover {
+  view-transition-name: player-cover;
+}
+::view-transition-group(hero-cover),
+::view-transition-group(player-cover) {
+  animation-duration: var(--dur-4);
+  animation-timing-function: var(--ease-spring);
+}
 
 ::view-transition-group(*) {
   animation-duration: var(--dur-3);

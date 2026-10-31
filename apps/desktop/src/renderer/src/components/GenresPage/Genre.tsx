@@ -303,7 +303,7 @@ const Genre = (props: GenreProp) => {
     >
       <Img
         src={artworkPaths.artworkPath}
-        className="aspect-square w-[5.5rem] shrink-0 rounded-cover object-cover shadow-[0_10px_24px_rgb(0_0_0/0.4)] transition-transform duration-300 ease-out group-hover:-rotate-2 group-hover:scale-[1.03]"
+        className="genre-cover aspect-square w-[5.5rem] shrink-0 rounded-cover object-cover shadow-[0_10px_24px_rgb(0_0_0/0.4)] transition-transform duration-300 ease-out group-hover:-rotate-2 group-hover:scale-[1.03]"
         alt=""
         enableImgFadeIns={!isMultipleSelectionEnabled}
       />

@@ -140,9 +140,16 @@ const HELPERS = `
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // Motion (PLAN/14): finite animations only; looping ones (equalizer bars, spinners) are left alone.
 const finite = (a) => Number.isFinite(a.effect?.getComputedTiming?.().activeDuration ?? Infinity);
-async function untilAnimating(timeout = 800) {
+async function untilAnimating(timeout = 1500) {
   for (let t = 0; t < timeout; t += 16) {
-    if (document.getAnimations().some((a) => finite(a) && a.playState === 'running')) return true;
+    const running = document.getAnimations().filter((a) => finite(a) && a.playState === 'running');
+    // A view transition announces itself on <html> before its animations exist (it may wait for
+    // the new page): wait for those, not for a hover fading somewhere.
+    const transitioning = 'vtKind' in document.documentElement.dataset;
+    const ready = transitioning
+      ? running.some((a) => String(a.effect?.pseudoElement ?? '').includes('view-transition'))
+      : running.length > 0;
+    if (ready) return true;
     await wait(16);
   }
   return false;

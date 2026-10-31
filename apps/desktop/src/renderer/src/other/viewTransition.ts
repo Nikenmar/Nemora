@@ -23,10 +23,23 @@ export const isMotionReduced = () =>
   document.body.classList.contains('reduced-motion') ||
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const hasLanding = (name: string) =>
+  [...document.querySelectorAll<HTMLElement>(`.${name}`)].some((e) => e.getBoundingClientRect().width > 0);
+
+async function untilPresent(names: string[], timeout: number) {
+  const start = performance.now();
+  while (!names.every(hasLanding) && performance.now() - start < timeout) {
+    // Not requestAnimationFrame: rendering is paused while this callback runs, so frames never come.
+    await new Promise((resolve) => setTimeout(resolve, 16));
+  }
+}
+
 export function withViewTransition(
   update: () => void,
   direction: TransitionDirection = 'none',
-  kind = 'page'
+  kind = 'page',
+  /** Class-held names the new view must contain before it is captured (a lazily loaded view). */
+  landings: string[] = []
 ): void {
   if (isMotionReduced() || typeof document.startViewTransition !== 'function') {
     for (const element of pending) element.style.viewTransitionName = '';
@@ -40,11 +53,17 @@ export function withViewTransition(
   root.dataset.vtKind = kind;
   const named = pending;
   pending = [];
-  const transition = document.startViewTransition(() => {
+  const travelling = [
+    ...new Set([...named.map((e) => e.style.viewTransitionName), ...landings])
+  ].filter((name) => name && name !== 'none');
+  const transition = document.startViewTransition(async () => {
     // The "before" picture is taken by now: the old elements give their names up, so the new view
     // is the only one holding them.
     for (const element of named) element.style.viewTransitionName = '';
     flushSync(update);
+    // A page that draws its hero header only once its data has loaded would have nothing for a
+    // travelling cover to land on: hold the old picture until the target exists (600 ms at most; an album page needs ~340 ms in a debug build).
+    if (travelling.length) await untilPresent(travelling, 600);
   });
   running = transition;
   transition.finished
@@ -59,11 +78,25 @@ export function withViewTransition(
 
 /**
  * Gives `element` a `view-transition-name` for the next `withViewTransition` only, so it travels to
- * the element of the same name in the next view. Call it right before `withViewTransition`.
+ * the element of the same name in the next view. Call it right before `withViewTransition`. Other
+ * elements already holding that name through a class (a hero header on the page being left) give it
+ * up for the same transition, so the name is never held twice. If no transition comes within
+ * 400 ms (the click did not navigate), everything is put back.
  */
 export function nameForTransition(element: Element | null | undefined, name: string) {
   if (!(element instanceof HTMLElement || element instanceof SVGElement)) return;
   if (isMotionReduced()) return;
+  for (const other of document.querySelectorAll<HTMLElement>(`.${name}`)) {
+    if (other === element) continue;
+    other.style.viewTransitionName = 'none';
+    pending.push(other);
+  }
   element.style.viewTransitionName = name;
   pending.push(element);
+  const named = [...pending];
+  setTimeout(() => {
+    if (!named.every((e) => pending.includes(e))) return;
+    for (const e of named) e.style.viewTransitionName = '';
+    pending = pending.filter((e) => !named.includes(e));
+  }, 400);
 }

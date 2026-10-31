@@ -543,7 +543,7 @@ const SongCard = (props: SongCardProp) => {
       title={isBlacklisted ? `'${title}' is blacklisted.` : undefined}
     >
       <div
-        className={`relative aspect-square w-full overflow-hidden rounded-cover bg-surface-2 ${
+        className={`song-card-cover relative aspect-square w-full overflow-hidden rounded-cover bg-surface-2 ${
           isAMultipleSelection ? 'ring-2 ring-echo ring-offset-2 ring-offset-canvas' : ''
         }`}
       >

@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
-import { lazy, useCallback, useContext, useMemo, useState } from 'react';
+import { lazy, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { useTrackChangeMotion } from '../../other/motion';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 
@@ -21,6 +22,9 @@ const DeleteSongsFromSystemConfrimPrompt = lazy(
 
 const CurrentlyPlayingSongInfoContainer = () => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  const coverRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  useTrackChangeMotion(coverRef, textRef);
   // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
   // the store compares selections shallowly, so a selection of the whole object never sees it change.
   const isAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
@@ -260,8 +264,9 @@ const CurrentlyPlayingSongInfoContainer = () => {
   return (
     <div className="current-playing-song-info-container flex min-w-0 items-center gap-3 pl-4">
       <div
-        className="song-cover-container relative h-12 w-12 shrink-0 lg:hidden"
+        className="song-cover-container player-cover relative h-12 w-12 shrink-0 lg:hidden"
         id="currentSongCover"
+        ref={coverRef}
       >
         {/* ${
                !currentSongData.artworkPath &&
@@ -285,7 +290,10 @@ const CurrentlyPlayingSongInfoContainer = () => {
         />
       </div>
       {/* As wide as its text, so the heart sits right after the title instead of at the far edge. */}
-      <div className="song-info-container relative flex min-w-0 shrink flex-col items-start justify-center gap-0.5">
+      <div
+        ref={textRef}
+        className="song-info-container relative flex min-w-0 shrink flex-col items-start justify-center gap-0.5"
+      >
         {currentSongData.title && (
           <div className="song-title flex w-full items-center">
             <div

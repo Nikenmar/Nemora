@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
+import { isMotionReduced } from '../../other/viewTransition';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -56,7 +57,7 @@ const LyricLine = (props: LyricProp) => {
               setIsInRange(true);
               if (isAutoScrolling)
                 lyricsRef.current?.scrollIntoView({
-                  behavior: 'smooth',
+                  behavior: isMotionReduced() ? 'auto' : 'smooth',
                   block: 'center'
                 });
 
@@ -159,7 +160,7 @@ const LyricLine = (props: LyricProp) => {
             })
           : undefined
       }
-      className={`highlight z-0 mb-5 flex w-fit select-none flex-col items-center justify-center text-balance text-center text-[28px] font-semibold leading-[1.2] text-ink transition-[transform,color,filter] duration-300 ease-out first:mt-8 last:mb-4 empty:mb-16 ${
+      className={`highlight z-0 mb-5 flex w-fit select-none flex-col items-center justify-center text-balance text-center text-[28px] font-semibold leading-[1.2] text-ink transition-[transform,color,filter] duration-m3 ease-spring first:mt-8 last:mb-4 empty:mb-16 ${
         syncedLyrics
           ? `cursor-pointer ${
               isInRange

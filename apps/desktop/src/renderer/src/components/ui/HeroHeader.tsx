@@ -52,7 +52,7 @@ const HeroHeader = ({
     <div className="relative flex items-center gap-7 p-6 lg:gap-5">
       <div
         className={cn(
-          'h-[13rem] w-[13rem] shrink-0 overflow-hidden bg-surface-2 shadow-[0_18px_44px_rgb(0_0_0/0.4)] lg:h-40 lg:w-40',
+          'hero-cover h-[13rem] w-[13rem] shrink-0 overflow-hidden bg-surface-2 shadow-[0_18px_44px_rgb(0_0_0/0.4)] lg:h-40 lg:w-40',
           isRound ? 'rounded-full' : 'rounded-cover-lg'
         )}
       >

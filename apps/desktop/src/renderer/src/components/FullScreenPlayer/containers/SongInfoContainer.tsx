@@ -1,4 +1,5 @@
-import { type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useContext, useMemo, useState, useRef } from 'react';
+import { useTrackChangeMotion } from '../../../other/motion';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
 import calculateTime from '../../../utils/calculateTime';
@@ -25,6 +26,10 @@ type Props = {
 
 const SongInfoContainer = (props: Props) => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  const columnRef = useRef<HTMLDivElement>(null);
+  const noTextRef = useRef<HTMLDivElement>(null);
+  // The whole column moves on a track change; its cover alone travels in and out of full screen.
+  useTrackChangeMotion(columnRef, noTextRef);
   // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
   // the store compares selections shallowly, so the whole object never shows the change.
   const isCurrentSongAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
@@ -86,13 +91,16 @@ const SongInfoContainer = (props: Props) => {
     '!m-0 !h-11 !w-11 !bg-on-media/10 !text-on-media hover:!bg-on-media/20 backdrop-blur-md';
 
   return (
-    <div className="song-info-container flex w-full max-w-[24rem] flex-col gap-4 text-on-media">
+    <div
+      ref={columnRef}
+      className="song-info-container flex w-full max-w-[24rem] flex-col gap-4 text-on-media"
+    >
       <Img
         src={currentSongData.artworkPath}
         fallbackSrc={DefaultSongCover}
         loading="eager"
         alt=""
-        className="aspect-square w-full rounded-cover-lg object-cover shadow-[0_24px_60px_rgb(0_0_0/0.55)]"
+        className="full-screen-cover player-cover aspect-square w-full rounded-cover-lg object-cover shadow-[0_24px_60px_rgb(0_0_0/0.55)]"
       />
       <div className="mt-2 min-w-0">
         {currentSongData.title && (

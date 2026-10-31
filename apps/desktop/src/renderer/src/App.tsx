@@ -22,6 +22,7 @@ import { registerShots } from './other/shots';
 import { applyCoverLight } from './other/coverLight';
 import { applyAccent } from './other/accentPalette';
 import { withViewTransition } from './other/viewTransition';
+import { installSharedCovers } from './other/motion';
 import TooltipLayer from './components/ui/Tooltip';
 import { AppUpdateContext, type AppUpdateContextType } from './contexts/AppUpdateContext';
 // import { SongPositionContext } from './contexts/SongPositionContext';
@@ -757,6 +758,9 @@ export default function App() {
     (artworkPath?: string) => applyCoverLight(artworkPath),
     []
   );
+
+  // Covers fly from the tile that was clicked into the page it opens (PLAN/14 A2).
+  useEffect(() => installSharedCovers(), []);
 
   // The accent colour the user chose (Settings > Appearance); blue needs no override.
   const accentColor = useStore(store, (state) => state.localStorage.preferences.accentColor);
@@ -1573,9 +1577,13 @@ export default function App() {
   );
 
   const updatePlayerType = useCallback((type: PlayerTypes) => {
-    if (store.state.playerType !== type) {
-      dispatch({ type: 'UPDATE_PLAYER_TYPE', data: type });
-    }
+    const from = store.state.playerType;
+    if (from === type) return;
+    const update = () => dispatch({ type: 'UPDATE_PLAYER_TYPE', data: type });
+    // Into and out of the full-screen player the cover travels between the two views; the mini
+    // player resizes the native window, which no view transition can follow.
+    if (from !== 'mini' && type !== 'mini') withViewTransition(update, 'none', 'player', ['player-cover']);
+    else update();
   }, []);
 
   const toggleIsFavorite = useCallback(
