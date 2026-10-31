@@ -101,14 +101,25 @@ pub fn in_background() -> bool {
     dir().is_some() && std::env::var_os("NEMORA_SHOTS_BACKGROUND").is_some()
 }
 
+/// The stand's windows are created without the focus: otherwise the webview takes it the moment it
+/// exists, long before the window is shown. The app itself still focuses its window on reveal.
+pub fn context<R: tauri::Runtime>(mut context: tauri::Context<R>) -> tauri::Context<R> {
+    if in_background() {
+        for window in &mut context.config_mut().app.windows {
+            window.focus = false;
+        }
+    }
+    context
+}
+
 #[tauri::command]
 pub fn bench_background() -> bool {
     in_background()
 }
 
-/// The stand's window has no taskbar button, stays behind every other window, and whenever Windows
-/// activates it anyway (showing a window activates it) gives the focus straight back to the window
-/// that had it when the app started.
+/// The stand's window has no taskbar button, stays behind every other window and is never
+/// activated: showing a window activates it, and even a moment in front minimises a full-screen
+/// game. Should Windows activate it by another path, the focus goes straight back.
 pub fn keep_in_background(window: &tauri::WebviewWindow) {
     if !in_background() {
         return;
@@ -119,9 +130,15 @@ pub fn keep_in_background(window: &tauri::WebviewWindow) {
     #[cfg(windows)]
     {
         use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::Shell::SetWindowSubclass;
         use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow};
 
         let own = window.hwnd().map(|h| h.0 as isize).unwrap_or_default();
+        // tao shows the window with SW_SHOW, which activates it; every move, resize and show of
+        // this window is made non-activating before it happens.
+        let _ = window.run_on_main_thread(move || unsafe {
+            let _ = SetWindowSubclass(HWND(own as *mut core::ffi::c_void), Some(no_activate), NO_ACTIVATE_ID, 0);
+        });
         // Follows whatever the user has in front for the whole run (they may switch apps while the
         // stand works); the moment this window is in front instead, the focus goes straight back.
         // Polled rather than driven by focus events: a window that cannot take the focus is not
@@ -141,5 +158,40 @@ pub fn keep_in_background(window: &tauri::WebviewWindow) {
                 std::thread::sleep(std::time::Duration::from_millis(25));
             }
         });
+    }
+}
+
+#[cfg(windows)]
+const NO_ACTIVATE_ID: usize = 0x4e4f_4143; // "NOAC"
+
+#[cfg(windows)]
+unsafe extern "system" fn no_activate(
+    hwnd: windows::Win32::Foundation::HWND,
+    message: u32,
+    wparam: windows::Win32::Foundation::WPARAM,
+    lparam: windows::Win32::Foundation::LPARAM,
+    _id: usize,
+    _data: usize,
+) -> windows::Win32::Foundation::LRESULT {
+    use windows::Win32::Foundation::LRESULT;
+    use windows::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        MA_NOACTIVATE, SWP_NOACTIVATE, WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY, WM_WINDOWPOSCHANGING,
+    };
+
+    unsafe {
+        match message {
+            WM_WINDOWPOSCHANGING => {
+                if let Some(pos) = (lparam.0 as *mut WINDOWPOS).as_mut() {
+                    pos.flags |= SWP_NOACTIVATE;
+                }
+            }
+            WM_MOUSEACTIVATE => return LRESULT(MA_NOACTIVATE as isize),
+            WM_NCDESTROY => {
+                let _ = RemoveWindowSubclass(hwnd, Some(no_activate), NO_ACTIVATE_ID);
+            }
+            _ => {}
+        }
+        DefSubclassProc(hwnd, message, wparam, lparam)
     }
 }

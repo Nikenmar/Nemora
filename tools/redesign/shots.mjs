@@ -15,7 +15,7 @@
  * navigation, so the shots survive the redesign's DOM changes. Output: one PNG per surface and
  * theme, plus index.html to look at them side by side.
  */
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, openSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -263,15 +263,37 @@ class Cdp {
   }
 }
 
-/** The process id owning the foreground window: the stand's app must never be it. */
-function foreground() {
-  const script = `Add-Type -Name F -Namespace W -MemberDefinition '[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(System.IntPtr h, out int p);'
-$p = 0; [void][W.F]::GetWindowThreadProcessId([W.F]::GetForegroundWindow(), [ref]$p); $p`;
-  try {
-    return execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 15_000 }).trim();
-  } catch {
-    return '?';
-  }
+/**
+ * Records every change of the foreground window for the whole run, polled every 20 ms: a single
+ * look at the end can both miss a moment in front and catch one that did not happen. `stop()`
+ * returns the stretches the stand's own process held the foreground.
+ */
+function watchForeground() {
+  const script = `Add-Type -Name F -Namespace W -MemberDefinition '[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern int GetWindowThreadProcessId(System.IntPtr h, out int p); [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(System.IntPtr h, System.Text.StringBuilder s, int n);'
+$prev = -1
+while ($true) { $h = [W.F]::GetForegroundWindow(); if ($h -ne $prev) { $p = 0; [void][W.F]::GetWindowThreadProcessId($h, [ref]$p); $c = New-Object System.Text.StringBuilder 128; [void][W.F]::GetClassName($h, $c, 128); [Console]::Out.WriteLine("$([DateTimeOffset]::Now.ToUnixTimeMilliseconds()) $p $c"); [Console]::Out.Flush(); $prev = $h }; Start-Sleep -Milliseconds 20 }`;
+  const changes = [];
+  let buffer = '';
+  const watcher = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
+  watcher.stdout.setEncoding('utf8');
+  watcher.stdout.on('data', (chunk) => {
+    buffer += chunk;
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop();
+    for (const line of lines) {
+      const [at, pid, ...rest] = line.trim().split(' ');
+      if (Number.isFinite(Number(at))) changes.push({ at: Number(at), pid: Number(pid), window: rest.join(' ') });
+    }
+  });
+  return {
+    stop(pid) {
+      watcher.kill();
+      const end = Date.now();
+      return changes
+        .map((change, i) => ({ ...change, ms: (changes[i + 1]?.at ?? end) - change.at }))
+        .filter((change) => change.pid === pid);
+    }
+  };
 }
 
 function prepareProfile(dir, copyFrom) {
@@ -293,6 +315,9 @@ async function runOne(name, shots, copyFrom) {
   const dir = join(OUT, `run-${name}`);
   await prepareProfile(dir, copyFrom);
   const log = openSync(join(dir, 'stdout.log'), 'w');
+  const focus = watchForeground();
+  await sleep(1500);
+  const started = Date.now();
   const app = spawn(EXE, [`--bench=${dir}`], {
     env: {
       ...process.env,
@@ -306,7 +331,9 @@ async function runOne(name, shots, copyFrom) {
         '--disable-renderer-backgrounding'
       ].join(' ')
     },
-    stdio: ['ignore', log, log]
+    stdio: ['ignore', log, log],
+    // A debug build is a console program: without this its console window opens and takes the focus.
+    windowsHide: true
   });
   const failures = [];
   let cdp;
@@ -335,7 +362,6 @@ async function runOne(name, shots, copyFrom) {
     if (copyFrom && data.queue.length) {
       await cdp.eval(`S.createQueue(D.queue, 'songs', false, undefined, true); await wait(2500); S.togglePlay(false); await wait(300); S.updateSongPosition(Math.round((D.song?.duration ?? 200) * 0.4));`);
     }
-    if (Number(foreground()) === app.pid) failures.push(`focus (${name}): the stand's window took the foreground`);
     for (const theme of THEMES) {
       await cdp.eval(`api.theme.changeAppTheme('${theme}');`);
       await sleep(800);
@@ -367,6 +393,10 @@ async function runOne(name, shots, copyFrom) {
     cdp?.close();
     await Promise.race([new Promise((r) => app.on('exit', r)), sleep(5000)]);
     if (app.exitCode === null) app.kill();
+    const taken = focus.stop(app.pid);
+    if (taken.length) {
+      failures.push(`focus (${name}): the stand's window was in front ${taken.length}x, ${taken.map((t) => `${t.window || 'a window'} ${t.ms} ms at +${((t.at - started) / 1000).toFixed(1)} s`).join(', ')}`);
+    }
   }
   return failures;
 }
