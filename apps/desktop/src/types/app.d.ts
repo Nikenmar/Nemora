@@ -865,6 +865,9 @@ declare global {
     skip: number;
     /** What the tierlist nudge added (PLAN/15 F1). */
     nudge: number;
+    /** V2, V3: the rotation and fatigue factors, 1 when off. */
+    rotation: number;
+    fatigue: number;
     /** L1: how listening engages with it, and the plays behind it. */
     engagement: number | null;
     ownPicks: number;

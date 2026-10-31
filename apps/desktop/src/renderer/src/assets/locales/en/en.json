@@ -1388,7 +1388,9 @@
       "nudged": "In a tierlist, so kept a little ahead",
       "ownPicks": "You picked it yourself {{count}} times",
       "replays": "You keep coming back to it",
-      "scrubbed": "Scrubbed through and skipped lately, so later"
+      "scrubbed": "Scrubbed through and skipped lately, so later",
+      "rotation": "Its turn in its tier: the longest waiting",
+      "fatigue": "Its artist played a lot tonight, so later"
     },
     "whyThisSong": "Why this song?",
     "whyTitle": "Why {{title}} is here",

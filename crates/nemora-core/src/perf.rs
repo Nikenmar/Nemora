@@ -322,3 +322,23 @@ fn the_nudge_on_a_library_copy() {
     );
     assert!(lifted.iter().all(|(_, p)| p.nudge <= shuffle::NUDGE_MAX + 1e-12));
 }
+
+#[test]
+#[ignore]
+fn where_the_signals_go() {
+    let db = generate(&LARGE);
+    let only = |set: &dyn Fn(&mut shuffle::Options)| {
+        let mut o = shuffle::Options::CLASSIC;
+        set(&mut o);
+        o
+    };
+    for (label, options) in [
+        ("none", shuffle::Options::CLASSIC),
+        ("learn", only(&|o| o.learn = true)),
+        ("freshness by days", only(&|o| o.freshness_by_days = true)),
+        ("fair rotation", only(&|o| o.fair_rotation = true)),
+        ("artist fatigue", only(&|o| o.artist_fatigue = true)),
+    ] {
+        eprintln!("SIGNAL {label}: {:.1} ms", best(3, || shuffle::stored_signals(&db, &options).unwrap()));
+    }
+}

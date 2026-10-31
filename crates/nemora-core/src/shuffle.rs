@@ -80,8 +80,12 @@ pub struct Parts {
     pub elo: Option<f64>,
     /// Full listens against the most listened song.
     pub listens: f64,
-    /// 1 unless played recently: the push back of the recent list.
+    /// 1 unless played recently: the push back of the recent list (by days with V1).
     pub freshness: f64,
+    /// V2: up to 1.5 for the song of its tier that waited longest, 1 otherwise or when off.
+    pub rotation: f64,
+    /// V3: below 1 after several plays of its artist tonight, 1 otherwise or when off.
+    pub fatigue: f64,
     /// How listening engages with the song (PLAN/15 L1), 0..1 around 0.5; None unless learning is on.
     pub engagement: Option<f64>,
     /// What the tierlist nudge added to the score (PLAN/15 F1), 0 when none.
@@ -164,7 +168,25 @@ impl Default for Options {
 pub struct Signals {
     /// `signals::engagement`, per song; a song missing from it is neutral.
     pub engagement: HashMap<String, f64>,
+    /// V1: when each song last ended (recent weeks only), and the time to measure from.
+    pub last_played: HashMap<String, i64>,
+    pub now: i64,
+    /// V2, V3: their factors per song; a song missing from them is at 1.
+    pub rotation: HashMap<String, f64>,
+    pub fatigue: HashMap<String, f64>,
 }
+
+/// V1: the push back of a song heard `days` ago: x0.4 just after, half way back in about a day
+/// and a half, gone in a week or two.
+pub fn freshness_by_days(days: f64) -> f64 {
+    1.0 - FRESHNESS_PENALTY * (-days.max(0.0) / 2.0).exp()
+}
+/// V2: the longest-waiting song of a tier gets up to this factor.
+pub const ROTATION_MAX: f64 = 1.5;
+/// V3: each play of an artist in the last few hours, on its other songs, and the floor.
+pub const FATIGUE_STEP: f64 = 0.85;
+pub const FATIGUE_FLOOR: f64 = 0.5;
+const FATIGUE_WINDOW_MS: i64 = 6 * 3_600_000;
 
 /// L1: engagement's share of the score; the 3.0 parts share the rest.
 pub const ENGAGEMENT_SHARE: f64 = 0.1;
@@ -225,9 +247,17 @@ pub fn parts_with(
     for (i, id) in inputs.recent.iter().enumerate() {
         recency.entry(id.as_str()).or_insert(i);
     }
-    let freshness = |id: &str| match recency.get(id) {
-        Some(&i) if history_len > 0 => 1.0 - FRESHNESS_PENALTY * ((history_len - i) as f64 / history_len as f64),
-        _ => 1.0,
+    let freshness = |id: &str| {
+        if options.freshness_by_days {
+            return signals
+                .last_played
+                .get(id)
+                .map_or(1.0, |&at| freshness_by_days((signals.now - at) as f64 / 86_400_000.0));
+        }
+        match recency.get(id) {
+            Some(&i) if history_len > 0 => 1.0 - FRESHNESS_PENALTY * ((history_len - i) as f64 / history_len as f64),
+            _ => 1.0,
+        }
     };
 
     let has_elo = inputs.total_duels >= ELO_MIN_DUELS;
@@ -260,7 +290,18 @@ pub fn parts_with(
         if let Some(g) = engagement {
             score = (1.0 - ENGAGEMENT_SHARE) * score + ENGAGEMENT_SHARE * g;
         }
-        Parts { tier: t, artist: a, elo, listens: l, engagement, freshness: freshness(id), nudge: 0.0, score }
+        Parts {
+            tier: t,
+            artist: a,
+            elo,
+            listens: l,
+            engagement,
+            freshness: freshness(id),
+            rotation: if options.fair_rotation { signals.rotation.get(id).copied().unwrap_or(1.0) } else { 1.0 },
+            fatigue: if options.artist_fatigue { signals.fatigue.get(id).copied().unwrap_or(1.0) } else { 1.0 },
+            nudge: 0.0,
+            score,
+        }
     };
 
     // The unplaced median: what a song nobody put in an influencing tierlist typically scores.
@@ -301,7 +342,7 @@ pub fn parts_with(
 /// The weight of a song with these parts at this intensity, in [0.001 .. 1].
 pub fn weight_of(parts: &Parts, intensity: f64) -> f64 {
     let blend = intensity.clamp(0.0, 1.0);
-    (1.0 - blend + blend * parts.score).max(0.001) * parts.freshness
+    (1.0 - blend + blend * parts.score).max(0.001) * parts.freshness * parts.rotation * parts.fatigue
 }
 
 /// Weight per target song (all songs when `targets` is empty), in [0.001 .. 1], by 3.0's model.
@@ -557,6 +598,9 @@ pub struct Explanation {
     pub skip: f64,
     /// What the tierlist nudge added to the score (PLAN/15 F1).
     pub nudge: f64,
+    /// V2, V3: the rotation and fatigue factors, 1 when off.
+    pub rotation: f64,
+    pub fatigue: f64,
     /// L1's engagement, when learning is on; and the plays behind it.
     pub engagement: Option<f64>,
     pub own_picks: i64,
@@ -641,6 +685,8 @@ pub fn explain(
                 freshness: p.freshness,
                 skip,
                 nudge: p.nudge,
+                rotation: p.rotation,
+                fatigue: p.fatigue,
                 engagement: p.engagement,
                 own_picks: counts.get(&id).map_or(0, |c| c.0),
                 replays: counts.get(&id).map_or(0, |c| c.1),
@@ -654,9 +700,124 @@ pub fn explain(
 
 /// The signals the options ask for (only what they use is read).
 pub(crate) fn stored_signals(db: &crate::db::Db, options: &Options) -> crate::Result<Signals> {
-    Ok(Signals {
-        engagement: if options.learn { crate::signals::engagement(db, crate::db::now_ms())? } else { HashMap::new() },
-    })
+    let now = crate::db::now_ms();
+    let mut signals = Signals { now, ..Signals::default() };
+    if options.learn {
+        signals.engagement = crate::signals::engagement(db, now)?;
+    }
+    if options.freshness_by_days {
+        // Three weeks is where the push back has faded to nothing. By time only, so SQLite walks the
+        // recent end of `play_events_ended`; a GROUP BY made it walk every play by song (90 ms at
+        // 200 000 plays).
+        let mut stmt = db.conn().prepare("SELECT song_id, ended_at FROM play_events WHERE ended_at >= ?1")?;
+        for row in stmt.query_map([now - 21 * DAY_MS], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
+            let (id, at) = row?;
+            let latest = signals.last_played.entry(id).or_insert(at);
+            if at > *latest {
+                *latest = at;
+            }
+        }
+    }
+    if options.fair_rotation {
+        signals.rotation = rotation(db)?;
+    }
+    if options.artist_fatigue {
+        signals.fatigue = fatigue(db, now)?;
+    }
+    Ok(signals)
+}
+
+/// V2: inside each tier (a song's best placement in a tierlist that influences the shuffle), the
+/// songs heard longest ago lean up, to x1.5 for the one that waited longest; never heard counts as
+/// longest. Day precision, from `song_totals.last_day` (1.x history included).
+fn rotation(db: &crate::db::Db) -> crate::Result<HashMap<String, f64>> {
+    let mut best: HashMap<String, (f64, usize, usize)> = HashMap::new();
+    for (list, tierlist) in stored_tierlists(db)?.iter().enumerate().filter(|(_, t)| t.influences_shuffle) {
+        let total = tierlist.tiers.len();
+        for (index, tier) in tierlist.tiers.iter().enumerate() {
+            let value = tier_value(index, total);
+            for id in tier {
+                if best.get(id).is_none_or(|b| value > b.0) {
+                    best.insert(id.clone(), (value, list, index));
+                }
+            }
+        }
+    }
+    let mut last_day: HashMap<String, String> = HashMap::new();
+    let mut stmt = db.conn().prepare("SELECT song_id, last_day FROM song_totals WHERE last_day IS NOT NULL")?;
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+        let (id, day) = row?;
+        last_day.insert(id, day);
+    }
+    let mut groups: HashMap<(usize, usize), Vec<&String>> = HashMap::new();
+    for (id, (_, list, tier)) in &best {
+        groups.entry((*list, *tier)).or_default().push(id);
+    }
+    let mut out = HashMap::new();
+    for (_, mut songs) in groups {
+        if songs.len() < 2 {
+            continue;
+        }
+        // Most recently heard first; never heard last (the longest wait); ties by id.
+        songs.sort_by(|a, b| {
+            let (da, db_) = (last_day.get(*a), last_day.get(*b));
+            match (da, db_) {
+                (Some(x), Some(y)) => y.cmp(x),
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, None) => std::cmp::Ordering::Equal,
+            }
+            .then_with(|| a.cmp(b))
+        });
+        let last = (songs.len() - 1) as f64;
+        for (i, id) in songs.into_iter().enumerate() {
+            out.insert(id.clone(), 1.0 + (ROTATION_MAX - 1.0) * i as f64 / last);
+        }
+    }
+    Ok(out)
+}
+
+/// V3: every play of an artist in the last six hours slows that artist's songs, x0.85 each, to x0.5.
+fn fatigue(db: &crate::db::Db, now: i64) -> crate::Result<HashMap<String, f64>> {
+    // The recent plays by the time index, then the artists from one read of the library: a join
+    // over the plays walked all of them (140 ms at 200 000 plays).
+    let recent: Vec<String> = db
+        .conn()
+        .prepare("SELECT song_id FROM play_events WHERE ended_at >= ?1")?
+        .query_map([now - FATIGUE_WINDOW_MS], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    if recent.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let artists = artist_names(db)?;
+    let mut plays_by_artist: HashMap<&str, u32> = HashMap::new();
+    for song in &recent {
+        for artist in artists.get(song).into_iter().flatten() {
+            *plays_by_artist.entry(artist.as_str()).or_insert(0) += 1;
+        }
+    }
+    let mut out: HashMap<String, f64> = HashMap::new();
+    for (song, names) in &artists {
+        let plays = names.iter().filter_map(|a| plays_by_artist.get(a.as_str())).max().copied().unwrap_or(0);
+        if plays > 0 {
+            out.insert(song.clone(), FATIGUE_STEP.powi(plays as i32).max(FATIGUE_FLOOR));
+        }
+    }
+    Ok(out)
+}
+
+/// Each song's artists, case folded.
+fn artist_names(db: &crate::db::Db) -> crate::Result<HashMap<String, Vec<String>>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT DISTINCT v.song_id, a.name FROM track_variants v JOIN variant_artists a ON a.variant_id = v.variant_id
+         WHERE a.role = 'artist'",
+    )?;
+    let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+        let (song, name) = row?;
+        out.entry(song).or_default().push(name.to_lowercase());
+    }
+    Ok(out)
 }
 
 pub(crate) fn stored_inputs(db: &crate::db::Db) -> crate::Result<StoredInputs> {
@@ -911,11 +1072,12 @@ mod tests {
         // The weights the shuffle uses are the explained ones, with and without skip-aware.
         let weights = stored_weights(&db, &targets, 0.6, &Options::default()).unwrap();
         for e in &explained {
-            assert!((weights[&e.song_id] - e.weight).abs() < 1e-12);
+            // Freshness by days reads the clock: two calls differ by microseconds.
+            assert!((weights[&e.song_id] - e.weight).abs() < 1e-6);
         }
         let plain = stored_weights(&db, &targets, 0.6, &Options { skip_aware: false, ..Options::default() }).unwrap();
-        assert!((weights[&b] - plain[&b] * SKIP_FACTOR).abs() < 1e-12);
-        assert_eq!(weights[&c], plain[&c]);
+        assert!((weights[&b] - plain[&b] * SKIP_FACTOR).abs() < 1e-6);
+        assert!((weights[&c] - plain[&c]).abs() < 1e-6);
     }
 
     #[test]
@@ -1022,7 +1184,10 @@ mod tests {
             ratings: &ratings,
             total_duels: 0,
         };
-        let signals = Signals { engagement: [("loved".to_string(), 0.9), ("scrubbed".to_string(), 0.1)].into() };
+        let signals = Signals {
+            engagement: [("loved".to_string(), 0.9), ("scrubbed".to_string(), 0.1)].into(),
+            ..Signals::default()
+        };
         let get = |learn: bool| -> HashMap<String, Parts> {
             let options = Options { learn, ..Options::CLASSIC };
             parts_with(&inputs, &[], &options, &signals).into_iter().collect()
@@ -1033,6 +1198,56 @@ mod tests {
         // Off, the three are the same song to the model, as in 3.0.
         assert_eq!(off["loved"].score, off["scrubbed"].score);
         assert!(off.values().all(|p| p.engagement.is_none()));
+    }
+
+    #[test]
+    fn freshness_by_days_fades_over_days() {
+        assert!((freshness_by_days(0.0) - 0.4).abs() < 1e-12);
+        assert!(freshness_by_days(1.0) > 0.6 && freshness_by_days(1.0) < 0.7);
+        assert!(freshness_by_days(7.0) > 0.98);
+        assert!(freshness_by_days(14.0) > 0.999);
+    }
+
+    #[test]
+    fn fair_rotation_leans_to_the_tier_song_that_waited_longest_and_fatigue_slows_an_artist() {
+        let db = seeded();
+        let (a, b, c) = ("a".repeat(26), "b".repeat(26), "c".repeat(26));
+        // a, b and c in one tier: a heard today, b a month ago, c never.
+        let doc = serde_json::json!({
+            "name": "flat",
+            "influencesShuffle": true,
+            "tiers": [{ "name": "S", "items": [a, b, c] }]
+        });
+        crate::playlists::save_tierlist(&db, None, &doc).unwrap();
+        // Only the flat list counts, so all three share one tier.
+        db.conn()
+            .execute(
+                "UPDATE tierlists SET doc = json_set(doc, '$.influencesShuffle', json('false'))
+                 WHERE json_extract(doc, '$.name') = 'best'",
+                [],
+            )
+            .unwrap();
+        let now = crate::db::now_ms();
+        for (song, days) in [(&a, 0), (&b, 30)] {
+            db.conn()
+                .execute(
+                    "INSERT INTO song_totals VALUES (?1, 1, 1, 1, 0, 1000, ?2)",
+                    rusqlite::params![song, crate::time::local_day(now - days * DAY_MS, 0)],
+                )
+                .unwrap();
+        }
+        let r = rotation(&db).unwrap();
+        assert_eq!(r[&a], 1.0);
+        assert!((r[&b] - 1.25).abs() < 1e-12);
+        assert!((r[&c] - ROTATION_MAX).abs() < 1e-12);
+
+        // Two plays of X (a and c) in the last hours: X's songs x0.85^2; Y's untouched.
+        skip(&db, "a", 1, now - 3_600_000, 200_000);
+        skip(&db, "c", 2, now - 1_800_000, 200_000);
+        let f = fatigue(&db, now).unwrap();
+        assert!((f[&a] - FATIGUE_STEP * FATIGUE_STEP).abs() < 1e-12);
+        assert!((f[&c] - FATIGUE_STEP * FATIGUE_STEP).abs() < 1e-12);
+        assert!(!f.contains_key(&b));
     }
 
     #[test]
