@@ -24,6 +24,7 @@ export const theme = {
     colors: {
       // ? Tokens (styles.css). They switch with the theme, so no `dark:` variant is needed.
       canvas: 'rgb(var(--canvas) / <alpha-value>)',
+      chrome: 'rgb(var(--chrome) / <alpha-value>)',
       'surface-1': 'rgb(var(--surface-1) / <alpha-value>)',
       'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
       'surface-3': 'rgb(var(--surface-3) / <alpha-value>)',

@@ -377,6 +377,12 @@ const HomePage = () => {
             {content.latestSongs[0] !== null && (
               <ContinueHero lastPlayed={content.recentlyPlayedSongs[0]} />
             )}
+            {content.latestSongs[0] !== null && (
+              <RecentlyAddedSongs
+                latestSongs={content.latestSongs as AudioInfo[]}
+                noOfVisibleSongs={noOfRecentlyAddedSongCards}
+              />
+            )}
             <RecentlyPlayedSongs
               recentlyPlayedSongs={content.recentlyPlayedSongs.slice(
                 0,
@@ -384,12 +390,6 @@ const HomePage = () => {
               )}
               noOfVisibleSongs={noOfRecentandLovedSongCards}
             />
-            {content.latestSongs[0] !== null && (
-              <RecentlyAddedSongs
-                latestSongs={content.latestSongs as AudioInfo[]}
-                noOfVisibleSongs={noOfRecentlyAddedSongCards}
-              />
-            )}
             {content.latestSongs[0] !== null && (
               <RediscoverShelf noOfVisibleSongs={noOfRecentandLovedSongCards} />
             )}

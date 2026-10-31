@@ -71,6 +71,8 @@
 .light {
   color-scheme: light;
   --canvas: 246 247 248;
+  /* The frame around the content: title bar, sidebar, player. */
+  --chrome: 255 255 255;
   --surface-1: 255 255 255;
   --surface-2: 237 238 239;
   --surface-3: 255 255 255;
@@ -112,24 +114,27 @@
 /* `.dark` sits on <body>; the mini and full-screen players and portalled dialogs carry it too. */
 .dark {
   color-scheme: dark;
-  --canvas: 0 0 0;
-  --surface-1: 11 11 12;
-  --surface-2: 23 23 24;
-  --surface-3: 29 29 30;
-  --line: 36 36 37;
+  /* A near-black frame around a content area one step up: pure black under the content was
+     heavy to read for long. Panels, chips and dialogs climb with it. */
+  --chrome: 8 8 9;
+  --canvas: 20 20 22;
+  --surface-1: 27 27 29;
+  --surface-2: 33 33 36;
+  --surface-3: 38 38 41;
+  --line: 46 46 49;
   --ink: 240 240 241;
-  --ink-dim: 146 146 147;
-  --ink-faint: 88 88 89;
+  --ink-dim: 150 150 153;
+  --ink-faint: 100 100 103;
   --accent: 29 64 148;
   --accent-hover: 42 79 164;
   --on-accent: 255 255 255;
-  --accent-soft: 12 27 62;
+  --accent-soft: 21 36 74;
   --echo: 99 151 241;
   --danger: 210 84 80;
-  --danger-soft: 34 13 13;
+  --danger-soft: 50 22 22;
   --success: 46 165 92;
   --warning: 195 146 39;
-  --glass: 29 29 30;
+  --glass: 38 38 41;
   --glass-alpha: 0.55;
   --glass-hover: 255 255 255 / 0.08;
   --glass-border: 255 255 255 / 0.09;
@@ -209,11 +214,15 @@ body,
 }
 
 /* ? MATERIAL SYMBOLS: outline at weight 300; filled marks what is selected or on */
+/* Without specificity, so `flex`, `hidden` and the like on an icon win: an icon that centres its
+   glyph in a round badge is a flex box. */
+:where(.ms-icon) {
+  display: inline-block;
+}
 .ms-icon {
   font-family: 'Material Symbols Rounded';
   font-weight: normal;
   font-style: normal;
-  display: inline-block;
   line-height: 1 !important;
   text-transform: none;
   letter-spacing: normal;
@@ -482,6 +491,19 @@ input[type='checkbox']:checked ~ .checkmark .icon {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* The game windows centre with `inset: 0; margin: auto`, not a translate: scale and fade only. */
+@keyframes gameDialogIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

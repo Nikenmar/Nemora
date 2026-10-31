@@ -55,7 +55,7 @@ const ContextMenu = memo(() => {
             ? pageY -
               menuHeight +
               // ? 40px get added to stop the context menu from reaching the title-bar.
-              // ? Height of the title bar is  40px (2.5rem).
+              // ? Height of the title bar is 48px (3rem); 40 keeps the menu clear of its controls.
               (pageY - menuHeight > 40 ? 0 : Math.abs(pageY - menuHeight) + 40)
             : pageY,
         transformOrigin: `${

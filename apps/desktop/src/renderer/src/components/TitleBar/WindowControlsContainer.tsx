@@ -30,7 +30,6 @@ const WindowControlsContainer = () => {
         className={cn('minimize-btn', zone, 'hover:bg-surface-2 hover:text-ink')}
         onClick={minimize}
         aria-label={t('titleBar.minimize')}
-        data-tooltip={t('titleBar.minimize')}
       >
         <Icon name="remove" size={18} />
       </button>
@@ -39,7 +38,6 @@ const WindowControlsContainer = () => {
         className={cn('maximize-btn', zone, 'hover:bg-surface-2 hover:text-ink')}
         onClick={maximize}
         aria-label={t('titleBar.maximize')}
-        data-tooltip={t('titleBar.maximize')}
       >
         <Icon name="crop_square" size={16} />
       </button>
@@ -48,7 +46,6 @@ const WindowControlsContainer = () => {
         className={cn('close-btn', zone, 'hover:bg-danger hover:text-on-accent')}
         onClick={close}
         aria-label={t('titleBar.close')}
-        data-tooltip={t('titleBar.close')}
       >
         <Icon name="close" size={18} />
       </button>

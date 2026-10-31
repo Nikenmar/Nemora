@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 
 import { raiseToTopLayer, topModalDialog } from './topLayer';
 
-/** The first tooltip waits; once one has shown, its neighbours appear at once. */
-const FIRST_DELAY_MS = 500;
-const WARM_WINDOW_MS = 400;
+/** The first tooltip waits a full second; once one has shown, its neighbours appear at once. */
+const FIRST_DELAY_MS = 1000;
+const WARM_WINDOW_MS = 300;
 const GAP = 8;
 
 interface Shown {
@@ -22,7 +22,18 @@ interface Shown {
  * One tooltip for the whole app, drawn in the app's own style instead of the system's. Anything with
  * `data-tooltip` gets it; a native `title` is taken over the first time the pointer reaches it, so
  * the system tooltip never shows. Mounted once, next to the context menu.
+ *
+ * Kept to a minimum: a tooltip that only repeats text already on screen never shows, and a taken-over
+ * `title` on text shows only while that text is cut off. What is left is icon buttons and real hints.
  */
+const isWorthShowing = (el: Element, text: string) => {
+  const visible = (el as HTMLElement).innerText?.trim() ?? '';
+  if (!visible) return true;
+  const isCutOff = el.scrollWidth > el.clientWidth + 1;
+  if (isCutOff) return true;
+  return visible !== text.trim() && !el.hasAttribute('data-tooltip-title');
+};
+
 const TooltipLayer = memo(() => {
   const [shown, setShown] = useState<Shown | null>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -46,7 +57,7 @@ const TooltipLayer = memo(() => {
 
     const show = (el: Element, instant: boolean) => {
       const text = el.getAttribute('data-tooltip');
-      if (!text || !el.isConnected) return;
+      if (!text || !el.isConnected || !isWorthShowing(el, text)) return;
       const rect = el.getBoundingClientRect();
       const below = rect.top < 48;
       isUp.current = true;
@@ -67,7 +78,10 @@ const TooltipLayer = memo(() => {
       if (titled) {
         const title = titled.getAttribute('title');
         titled.removeAttribute('title');
-        if (title && !titled.hasAttribute('data-tooltip')) titled.setAttribute('data-tooltip', title);
+        if (title && !titled.hasAttribute('data-tooltip')) {
+          titled.setAttribute('data-tooltip', title);
+          titled.setAttribute('data-tooltip-title', '');
+        }
       }
       const el = start?.closest?.('[data-tooltip]') ?? null;
       if (el === target.current) return;

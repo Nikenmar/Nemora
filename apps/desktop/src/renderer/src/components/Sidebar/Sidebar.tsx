@@ -26,8 +26,9 @@ interface Link {
 }
 
 /**
- * The sidebar: Home and Search, then the library, then what is yours, then the playlists pinned to
- * it; SongGuessr, Duel and Settings sit as icons at the bottom. Below 1024 px it narrows to icons.
+ * The sidebar: Home, then the library, then what is yours, then the playlists pinned to it;
+ * SongGuessr, Duel and Settings sit as three evenly spaced icons at the bottom. Search lives in the
+ * title bar only. Below 1024 px the sidebar narrows to icons.
  */
 const Sidebar = memo(() => {
   const bodyBackgroundImage = useStore(store, (state) => state.bodyBackgroundImage);
@@ -40,8 +41,7 @@ const Sidebar = memo(() => {
     (): { label?: string; links: Link[] }[] => [
       {
         links: [
-          { id: 'Home', icon: 'home', content: t('sideBar.home') },
-          { id: 'Search', icon: 'search', content: t('sideBar.search') }
+          { id: 'Home', icon: 'home', content: t('sideBar.home') }
         ]
       },
       {
@@ -96,8 +96,8 @@ const Sidebar = memo(() => {
     <nav
       aria-label={t('sideBar.navigation', 'Navigation')}
       className={cn(
-        'side-bar relative z-20 order-1 flex !h-full w-[216px] shrink-0 flex-col bg-surface-1 lg:w-[72px]',
-        bodyBackgroundImage && 'bg-surface-1/60 backdrop-blur-md'
+        'side-bar relative z-20 order-1 flex !h-full w-[216px] shrink-0 flex-col bg-chrome lg:w-[72px]',
+        bodyBackgroundImage && 'bg-chrome/60 backdrop-blur-md'
       )}
     >
       <ErrorBoundary>
@@ -165,13 +165,13 @@ const Sidebar = memo(() => {
             </li>
           )}
         </ul>
-        <div className="flex shrink-0 items-center gap-1 border-t border-line px-2.5 py-2 lg:flex-col">
+        <div className="grid shrink-0 grid-cols-3 place-items-center border-t border-line px-2.5 py-2 lg:grid-cols-1 lg:gap-1">
           <SongGuessrDock />
           <EloDuelDock />
           <button
             type="button"
             className={cn(
-              'settings ml-auto flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo lg:ml-0',
+              'settings flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo lg:ml-0',
               activePage === 'Settings' && 'bg-accent text-on-accent hover:bg-accent hover:text-on-accent'
             )}
             onClick={() => go('Settings')}

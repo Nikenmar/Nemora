@@ -3,8 +3,8 @@ import { cn } from './cn';
 /** A miniature of the window, drawn with one theme's own tokens (`.light` / `.dark` in styles.css). */
 const Mini = ({ theme, className }: { theme: 'light' | 'dark'; className?: string }) => (
   <div className={cn(theme, 'grid h-full w-full grid-cols-[26%_1fr] grid-rows-[10%_1fr_16%] bg-canvas', className)}>
-    <div className="col-span-2 bg-surface-1" />
-    <div className="flex flex-col gap-[6%] bg-surface-1 px-[10%] pt-[12%]">
+    <div className="col-span-2 bg-chrome" />
+    <div className="flex flex-col gap-[6%] bg-chrome px-[10%] pt-[12%]">
       <span className="h-[9%] w-full rounded-full bg-accent" />
       <span className="h-[6%] w-3/4 rounded-full bg-line" />
       <span className="h-[6%] w-2/3 rounded-full bg-line" />
@@ -19,7 +19,7 @@ const Mini = ({ theme, className }: { theme: 'light' | 'dark'; className?: strin
         </span>
       ))}
     </div>
-    <div className="col-span-2 flex items-center justify-center border-t border-line bg-surface-1">
+    <div className="col-span-2 flex items-center justify-center border-t border-line bg-chrome">
       <span className="aspect-square h-[45%] rounded-full bg-ink" />
     </div>
   </div>

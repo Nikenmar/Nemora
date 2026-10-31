@@ -27,7 +27,7 @@ export const GameDialog = forwardRef<HTMLDialogElement, GameDialogProps>(
       ref={ref}
       aria-label={label}
       className={twMerge(
-        'fixed inset-0 m-auto flex max-h-[calc(100vh-3rem)] min-w-0 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-3 p-0 text-ink shadow-float backdrop:bg-scrim backdrop:backdrop-blur-[2px] open:animate-dialog-appear-ease-in-out [&:not([open])]:hidden',
+        'fixed inset-0 m-auto flex max-h-[calc(100vh-3rem)] min-w-0 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-3 p-0 text-ink shadow-float backdrop:bg-scrim backdrop:backdrop-blur-[2px] open:animate-[gameDialogIn_180ms_var(--ease-out)] [&:not([open])]:hidden',
         className
       )}
       onCancel={(event) => {

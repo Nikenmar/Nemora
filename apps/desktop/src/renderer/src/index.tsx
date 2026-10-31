@@ -141,11 +141,12 @@ const capturedConsoleErrors: string[] = [];
 async function mount() {
   if (isTauri) {
     // Electron created its window with webPreferences.zoomFactor 0.9
-    // (src/main/main.ts:173). Tauri has no such option, so without this the
-    // whole interface renders 11% larger than the Electron build.
+    // (src/main/main.ts:173) and Tauri has no such option, so the zoom is set
+    // here. 0.95 rather than 0.9 since the redesign: its type scale is smaller
+    // than the old one, and at 0.9 the whole interface read a little too small.
     const { getCurrentWebview } = await import('@tauri-apps/api/webview');
     await getCurrentWebview()
-      .setZoom(0.9)
+      .setZoom(0.95)
       .catch(() => undefined);
 
     // Renderer failures used to land only in a devtools console, which means a

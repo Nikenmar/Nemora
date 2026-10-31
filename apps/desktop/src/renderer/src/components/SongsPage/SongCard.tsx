@@ -483,7 +483,7 @@ const SongCard = (props: SongCardProp) => {
               key={artist.artistId}
               artistId={artist.artistId}
               name={artist.name}
-              className="!text-on-media/80"
+              className="!text-small hover:text-ink"
             />
           ];
 

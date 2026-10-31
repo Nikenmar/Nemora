@@ -30,15 +30,15 @@ const TitleBar = memo(() => {
     <header
       id="title-bar"
       className={cn(
-        'relative top-0 z-40 grid h-10 w-full shrink-0 grid-cols-[216px_minmax(0,1fr)_auto] items-center overflow-hidden bg-surface-1 text-ink',
+        'relative top-0 z-40 grid h-12 w-full shrink-0 grid-cols-[216px_minmax(0,1fr)_auto] items-center overflow-hidden bg-chrome text-ink',
         playerType === 'full' && 'bg-transparent',
         bodyBackgroundImage && 'bg-canvas/60 backdrop-blur-md'
       )}
     >
       <div className="logo-and-app-name-container flex h-full items-center gap-2.5 pl-4">
-        <Img className="h-[18px] w-[18px] rounded-[5px]" src={LightModeLogo} alt="" />
+        <Img className="h-5 w-5 rounded-[6px]" src={LightModeLogo} alt="" />
         <span
-          className="app-version text-[13px] font-semibold"
+          className="app-version text-section font-semibold"
           data-tooltip={`Nemora ${version} (${appReleasePhase})`}
         >
           Nemora

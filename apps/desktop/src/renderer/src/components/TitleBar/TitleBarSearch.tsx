@@ -37,8 +37,8 @@ const TitleBarSearch = () => {
   };
 
   return (
-    <label className="title-bar-search group relative mx-auto flex h-7 w-full max-w-[26rem] items-center gap-2 rounded-full bg-surface-2 pl-3 pr-1.5 text-ink-dim transition-colors duration-150 hover:bg-line/60 focus-within:text-ink">
-      <Icon name="search" size={17} />
+    <label className="title-bar-search group relative mx-auto flex h-9 w-full max-w-[32rem] items-center gap-2.5 rounded-full bg-surface-2 pl-3.5 pr-2 text-ink-dim transition-colors duration-150 hover:bg-line/60 focus-within:text-ink">
+      <Icon name="search" size={18} />
       <input
         ref={inputRef}
         id="titleBarSearch"
@@ -48,7 +48,7 @@ const TitleBarSearch = () => {
         aria-label={t('titleBar.search', 'Search')}
         autoComplete="off"
         spellCheck={false}
-        className="h-full min-w-0 flex-1 bg-transparent text-small text-ink outline-none placeholder:text-ink-dim [&::-webkit-search-cancel-button]:hidden"
+        className="h-full min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-dim [&::-webkit-search-cancel-button]:hidden"
         onFocus={() => {
           if (!onSearchPage && keyword === '') changeCurrentActivePage('Search');
         }}

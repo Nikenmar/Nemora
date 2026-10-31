@@ -53,13 +53,9 @@ const SongGuessrDock = () => {
 
   return (
     <>
-      {/*
-        `mt-auto` lives here, on the first of the two docks, so the pair is
-        pushed to the bottom of the sidebar as one block. It used to sit on the
-        duel dock, which sent only that button down and left this one stranded
-        under Stats.
-      */}
+      {/* Stays in place while the game is open, so the footer's three icons keep their cells. */}
       <span className="flex">
+
         {!isExpanded && (
           <button
             type="button"
