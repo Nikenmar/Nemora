@@ -618,6 +618,70 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   }
 }
 
+/*
+ * ? SCROLL-LINKED (PLAN/14 A16)
+ * A hero header drifts and fades as it scrolls away; a page's title shrinks and its header gains a
+ * hairline once the list under it moves. Only with motion on: under reduced motion the global rule
+ * would zero these animations, which for a scroll timeline means stuck at their end state.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    body:not(.reduced-motion) .main-container {
+      timeline-scope: --page-scroll;
+    }
+    body:not(.reduced-motion) .main-container [data-virtuoso-scroller] {
+      scroll-timeline: --page-scroll block;
+    }
+    /* Named, because the header clips (overflow: hidden makes it a scroll container), so a view()
+       inside it would measure against the header instead of the page. */
+    body:not(.reduced-motion) .hero-header {
+      view-timeline: --hero block;
+      animation: heroLeave linear both;
+      animation-timeline: --hero;
+      animation-range: exit 0% exit 100%;
+    }
+    body:not(.reduced-motion) .hero-header .hero-cover {
+      animation: heroCoverDrift linear both;
+      animation-timeline: --hero;
+      animation-range: exit 0% exit 100%;
+    }
+    body:not(.reduced-motion) .title-container {
+      animation: titleBarSettle linear both;
+      animation-timeline: --page-scroll;
+      animation-range: 0px 120px;
+    }
+    body:not(.reduced-motion) .title-container h1 {
+      transform-origin: left center;
+      animation: titleShrink linear both;
+      animation-timeline: --page-scroll;
+      animation-range: 0px 120px;
+    }
+  }
+}
+@keyframes heroLeave {
+  to {
+    opacity: 0.15;
+  }
+}
+@keyframes heroCoverDrift {
+  to {
+    transform: translateY(28%) scale(0.9);
+  }
+}
+@keyframes titleBarSettle {
+  from {
+    box-shadow: 0 1px 0 transparent;
+  }
+  to {
+    box-shadow: 0 1px 0 rgb(var(--line));
+  }
+}
+@keyframes titleShrink {
+  to {
+    transform: scale(0.8);
+  }
+}
+
 @keyframes vt-fade {
   from {
     opacity: 0;
