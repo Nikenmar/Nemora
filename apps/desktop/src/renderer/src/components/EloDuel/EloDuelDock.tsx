@@ -75,7 +75,7 @@ const EloDuelDock = () => {
         {showDock && (
           <button
             type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-glass-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-echo"
             data-shot="duel-dock"
             onClick={maximizeDuel}
             aria-label={dockLabel}

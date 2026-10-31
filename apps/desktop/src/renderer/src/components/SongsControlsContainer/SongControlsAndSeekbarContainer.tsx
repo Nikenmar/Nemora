@@ -50,7 +50,7 @@ const SongControlsAndSeekbarContainer = () => {
     `!m-0 !h-8 !w-8 ${isOn ? "!text-echo hover:!text-echo" : ""}`;
 
   return (
-    <div className="song-controls-and-seekbar-container flex min-w-0 flex-col items-center justify-center gap-1.5 py-2">
+    <div className="song-controls-and-seekbar-container flex min-w-0 flex-col items-center justify-center gap-1.5 pt-1.5">
       {/* Three controls a side, mirrored in size, in equal columns: play sits exactly over the middle
           of the seek bar whatever the icons' widths. */}
       <div className="controls-container grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">

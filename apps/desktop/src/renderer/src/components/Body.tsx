@@ -88,11 +88,11 @@ const Body = memo(() => {
   }, [currentlyActivePage.data?.scrollToId]);
 
   return (
-    // A panel inset in the frame, rounded like everything inside it: the frame (title bar, sidebar,
-    // player) shows around it, so its corners have the frame's own colour behind them. It sits right
-    // on the player, with no gap or line between: the corners alone mark the edge.
+    // A panel set into the frame: it runs to the window's right edge and sits right on the player,
+    // with no gap or line, and only the two corners it shares with the sidebar are rounded (a corner
+    // at the window's edge would be a notch). The frame's colour is behind them (App: bg-chrome).
     <div
-      className="body relative order-2 mr-2 !h-full min-w-0 flex-1 overflow-hidden rounded-[16px] bg-canvas"
+      className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden rounded-l-[16px] bg-canvas"
       ref={bodyRef}
     >
       {/* Cover light: the cover's primary tone over the top of every page, its secondary one in the

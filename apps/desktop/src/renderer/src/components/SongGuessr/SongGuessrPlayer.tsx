@@ -448,7 +448,7 @@ const SongGuessrPlayer = (props: SongGuessrPlayerProps) => {
           onClick={() => toggleMutedState(!isMuted)}
           aria-label={t('songGuessr.muteUnmute')}
           title={t('songGuessr.muteUnmute')}
-          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,color] duration-150 hover:bg-surface-2 motion-reduce:transition-none ${
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-[background-color,color] duration-150 hover:bg-glass-hover motion-reduce:transition-none ${
             isMuted ? 'text-echo' : 'text-ink-dim hover:text-ink'
           }`}
         >

@@ -10,7 +10,7 @@ const SongControlsContainer = () => {
 
   return (
     <footer
-      className={`song-controls-container relative bottom-0 z-20 grid h-[76px] w-full shrink-0 grid-cols-[minmax(0,1fr)_minmax(20rem,40rem)_minmax(0,1fr)] items-center gap-4 text-ink sm:gap-2 ${
+      className={`song-controls-container relative bottom-0 z-20 grid h-[76px] w-full shrink-0 grid-cols-[minmax(0,1fr)_minmax(20rem,40rem)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] items-center gap-4 text-ink sm:gap-2 ${
         bodyBackgroundImage ? 'bg-chrome/70 backdrop-blur-md' : 'bg-chrome'
       } bg-[linear-gradient(90deg,color-mix(in_srgb,var(--cover-glow)_var(--cover-glow-strength),transparent),transparent_46%)]`}
     >

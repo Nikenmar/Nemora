@@ -171,7 +171,7 @@ const Sidebar = memo(() => {
           <button
             type="button"
             className={cn(
-              'settings flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo lg:ml-0',
+              'settings flex h-9 w-9 items-center justify-center rounded-full text-ink-dim outline-none transition-colors duration-150 hover:bg-glass-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-echo lg:ml-0',
               activePage === 'Settings' && 'bg-accent text-on-accent hover:bg-accent hover:text-on-accent'
             )}
             onClick={() => go('Settings')}

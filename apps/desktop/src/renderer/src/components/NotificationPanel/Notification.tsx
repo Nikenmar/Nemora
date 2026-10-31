@@ -109,7 +109,7 @@ const Notification = (props: AppNotification) => {
       />
       <div className="close-button-container absolute right-1.5 top-1.5 z-[1] opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100">
         <span
-          className="ms-icon icon flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[16px] text-ink-dim hover:bg-surface-2 hover:text-ink"
+          className="ms-icon icon flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[16px] text-ink-dim hover:bg-glass-hover hover:text-ink"
           aria-label="Dismiss"
           onClick={removeNotification}
           onKeyDown={removeNotification}

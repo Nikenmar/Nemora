@@ -53,7 +53,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-accent text-on-accent hover:bg-accent-hover',
   secondary: 'bg-surface-2 text-ink hover:bg-line/70',
   outline: 'border border-line text-ink hover:bg-surface-2',
-  ghost: 'text-ink-dim hover:bg-surface-2 hover:text-ink',
+  ghost: 'text-ink-dim hover:bg-glass-hover hover:text-ink',
   danger: 'bg-danger-soft text-danger hover:bg-danger hover:text-on-accent'
 };
 
