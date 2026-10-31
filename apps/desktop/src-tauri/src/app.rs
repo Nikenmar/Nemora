@@ -49,7 +49,9 @@ impl App {
     pub fn open(profile: &Path) -> nemora_core::Result<Self> {
         std::fs::create_dir_all(profile)?;
         let db_path = profile.join("nemora.db");
-        let write = Db::open(&db_path)?;
+        let mut write = Db::open(&db_path)?;
+        // Smart Shuffle's per-song signals follow their formula's version (PLAN/15 L1).
+        nemora_core::signals::ensure_current(&mut write)?;
         let read = Db::open(&db_path)?;
         Ok(Self {
             profile: profile.to_owned(),

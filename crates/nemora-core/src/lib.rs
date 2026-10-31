@@ -30,6 +30,7 @@ pub mod scan;
 pub mod search;
 pub mod settings;
 pub mod shuffle;
+pub mod signals;
 pub mod stats;
 pub mod tags;
 pub mod tastemap;

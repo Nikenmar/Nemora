@@ -1385,7 +1385,10 @@
       "skipped": "Skipped early twice lately, so later",
       "recent": "Played recently, so later",
       "plain": "Picked at random",
-      "nudged": "In a tierlist, so kept a little ahead"
+      "nudged": "In a tierlist, so kept a little ahead",
+      "ownPicks": "You picked it yourself {{count}} times",
+      "replays": "You keep coming back to it",
+      "scrubbed": "Scrubbed through and skipped lately, so later"
     },
     "whyThisSong": "Why this song?",
     "whyTitle": "Why {{title}} is here",
@@ -1397,7 +1400,8 @@
       "listens": "Full listens",
       "freshness": "Not played lately",
       "skip": "Not skipped lately",
-      "weight": "Chance of coming up"
+      "weight": "Chance of coming up",
+      "engagement": "How you listen to it"
     },
     "lessArtist": "Less of {{artist}} today",
     "moreLike": "More like this",

@@ -136,6 +136,9 @@ pub fn generate(shape: &Shape) -> Db {
         crate::playlists::save_tierlist(&db, None, &doc).unwrap();
     }
     crate::plays::rebuild_rollups(&mut db).unwrap();
+    let started = Instant::now();
+    crate::signals::rebuild(&mut db).unwrap();
+    eprintln!("PERF signals rebuilt from {} plays in {:.0} ms", shape.plays, started.elapsed().as_secs_f64() * 1000.0);
     db
 }
 

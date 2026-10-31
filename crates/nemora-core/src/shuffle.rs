@@ -82,6 +82,8 @@ pub struct Parts {
     pub listens: f64,
     /// 1 unless played recently: the push back of the recent list.
     pub freshness: f64,
+    /// How listening engages with the song (PLAN/15 L1), 0..1 around 0.5; None unless learning is on.
+    pub engagement: Option<f64>,
     /// What the tierlist nudge added to the score (PLAN/15 F1), 0 when none.
     pub nudge: f64,
     /// The smart score before blending with randomness, the nudge included.
@@ -156,8 +158,29 @@ impl Default for Options {
     }
 }
 
+/// What the database knows beyond [`Inputs`] (PLAN/15): kept apart so 3.0's inputs stay as they
+/// were for the oracle and Rediscover.
+#[derive(Debug, Clone, Default)]
+pub struct Signals {
+    /// `signals::engagement`, per song; a song missing from it is neutral.
+    pub engagement: HashMap<String, f64>,
+}
+
+/// L1: engagement's share of the score; the 3.0 parts share the rest.
+pub const ENGAGEMENT_SHARE: f64 = 0.1;
+
 /// The parts of every target song (all songs when `targets` is empty), in target order.
 pub fn parts(inputs: &Inputs<'_>, targets: &[String], options: &Options) -> Vec<(String, Parts)> {
+    parts_with(inputs, targets, options, &Signals::default())
+}
+
+/// [`parts`] with what the database knows beyond the inputs.
+pub fn parts_with(
+    inputs: &Inputs<'_>,
+    targets: &[String],
+    options: &Options,
+    signals: &Signals,
+) -> Vec<(String, Parts)> {
     if inputs.songs.is_empty() {
         return Vec::new();
     }
@@ -229,11 +252,15 @@ pub fn parts(inputs: &Inputs<'_>, targets: &[String], options: &Options) -> Vec<
             0.0
         };
         let elo = has_elo.then(|| elo_score(id));
-        let score = match elo {
+        let mut score = match elo {
             Some(e) => 0.45 * t + 0.35 * a + 0.1 * e + 0.1 * l,
             None => 0.5 * t + 0.4 * a + 0.1 * l,
         };
-        Parts { tier: t, artist: a, elo, listens: l, freshness: freshness(id), nudge: 0.0, score }
+        let engagement = options.learn.then(|| signals.engagement.get(id).copied().unwrap_or(0.5));
+        if let Some(g) = engagement {
+            score = (1.0 - ENGAGEMENT_SHARE) * score + ENGAGEMENT_SHARE * g;
+        }
+        Parts { tier: t, artist: a, elo, listens: l, engagement, freshness: freshness(id), nudge: 0.0, score }
     };
 
     // The unplaced median: what a song nobody put in an influencing tierlist typically scores.
@@ -493,7 +520,11 @@ pub fn stored_weights(
     options: &Options,
 ) -> crate::Result<HashMap<String, f64>> {
     let stored = stored_inputs(db)?;
-    let mut out = weights_with(&stored.inputs(), targets, intensity, options);
+    let signals = stored_signals(db, options)?;
+    let mut out: HashMap<String, f64> = parts_with(&stored.inputs(), targets, options, &signals)
+        .into_iter()
+        .map(|(id, p)| (id, weight_of(&p, intensity)))
+        .collect();
     if options.skip_aware {
         for (id, factor) in skip_factors(db, crate::db::now_ms())? {
             if let Some(w) = out.get_mut(&id) {
@@ -526,6 +557,11 @@ pub struct Explanation {
     pub skip: f64,
     /// What the tierlist nudge added to the score (PLAN/15 F1).
     pub nudge: f64,
+    /// L1's engagement, when learning is on; and the plays behind it.
+    pub engagement: Option<f64>,
+    pub own_picks: i64,
+    pub replays: i64,
+    pub scrub_skips: i64,
     pub weight: f64,
 }
 
@@ -579,7 +615,14 @@ pub fn explain(
         last_days.insert(id, day);
     }
 
-    Ok(parts(&stored.inputs(), targets, options)
+    let signals = stored_signals(db, options)?;
+    let mut counts: HashMap<String, (i64, i64, i64)> = HashMap::new();
+    let mut stmt = db.conn().prepare("SELECT song_id, own_picks, replays, scrub_skips FROM song_signals")?;
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))? {
+        let (id, picks, replays, scrubs) = row?;
+        counts.insert(id, (picks, replays, scrubs));
+    }
+    Ok(parts_with(&stored.inputs(), targets, options, &signals)
         .into_iter()
         .map(|(id, p)| {
             let skip = skips.get(&id).copied().unwrap_or(1.0);
@@ -598,11 +641,22 @@ pub fn explain(
                 freshness: p.freshness,
                 skip,
                 nudge: p.nudge,
+                engagement: p.engagement,
+                own_picks: counts.get(&id).map_or(0, |c| c.0),
+                replays: counts.get(&id).map_or(0, |c| c.1),
+                scrub_skips: counts.get(&id).map_or(0, |c| c.2),
                 weight: (weight_of(&p, intensity) * skip).max(0.001),
                 song_id: id,
             }
         })
         .collect())
+}
+
+/// The signals the options ask for (only what they use is read).
+pub(crate) fn stored_signals(db: &crate::db::Db, options: &Options) -> crate::Result<Signals> {
+    Ok(Signals {
+        engagement: if options.learn { crate::signals::engagement(db, crate::db::now_ms())? } else { HashMap::new() },
+    })
 }
 
 pub(crate) fn stored_inputs(db: &crate::db::Db) -> crate::Result<StoredInputs> {
@@ -935,7 +989,7 @@ mod tests {
         };
         let get = |options: &Options| -> HashMap<String, Parts> { parts(&inputs, &[], options).into_iter().collect() };
         let classic = get(&Options::CLASSIC);
-        let nudged = get(&Options::default());
+        let nudged = get(&Options { nudge: true, ..Options::CLASSIC });
 
         // The unplaced songs, in score order: plain (0) < loved (0.1 + artist) x3: median is a loved one.
         let median = classic["loved1"].score;
@@ -953,6 +1007,32 @@ mod tests {
         }
         // CLASSIC is 3.0's model: no nudge anywhere.
         assert!(classic.values().all(|p| p.nudge == 0.0));
+    }
+
+    #[test]
+    fn learning_moves_a_song_by_how_it_is_listened_to_only_when_on() {
+        let songs: Vec<(String, Vec<String>)> =
+            ["loved", "scrubbed", "unknown"].iter().map(|id| (id.to_string(), vec!["x".to_string()])).collect();
+        let (full, ratings) = (HashMap::new(), HashMap::new());
+        let inputs = Inputs {
+            songs: &songs,
+            tierlists: &[],
+            full_listens: &full,
+            recent: &[],
+            ratings: &ratings,
+            total_duels: 0,
+        };
+        let signals = Signals { engagement: [("loved".to_string(), 0.9), ("scrubbed".to_string(), 0.1)].into() };
+        let get = |learn: bool| -> HashMap<String, Parts> {
+            let options = Options { learn, ..Options::CLASSIC };
+            parts_with(&inputs, &[], &options, &signals).into_iter().collect()
+        };
+        let (on, off) = (get(true), get(false));
+        assert!(on["loved"].score > on["unknown"].score && on["unknown"].score > on["scrubbed"].score);
+        assert_eq!(on["unknown"].engagement, Some(0.5));
+        // Off, the three are the same song to the model, as in 3.0.
+        assert_eq!(off["loved"].score, off["scrubbed"].score);
+        assert!(off.values().all(|p| p.engagement.is_none()));
     }
 
     #[test]
