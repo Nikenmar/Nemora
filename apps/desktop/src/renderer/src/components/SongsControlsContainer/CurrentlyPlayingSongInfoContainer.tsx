@@ -4,6 +4,7 @@ import { lazy, useCallback, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 
+import Button from '../Button';
 import Img from '../Img';
 import SongArtist from '../SongsPage/SongArtist';
 
@@ -27,7 +28,8 @@ const CurrentlyPlayingSongInfoContainer = () => {
     updateContextMenuData,
     changePromptMenuData,
     toggleMultipleSelections,
-    addNewNotifications
+    addNewNotifications,
+    toggleIsFavorite
   } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
@@ -279,7 +281,8 @@ const CurrentlyPlayingSongInfoContainer = () => {
           }}
         />
       </div>
-      <div className="song-info-container relative flex min-w-0 flex-1 flex-col items-start justify-center gap-0.5">
+      {/* As wide as its text, so the heart sits right after the title instead of at the far edge. */}
+      <div className="song-info-container relative flex min-w-0 shrink flex-col items-start justify-center gap-0.5">
         {currentSongData.title && (
           <div className="song-title flex w-full items-center">
             <div
@@ -337,6 +340,22 @@ const CurrentlyPlayingSongInfoContainer = () => {
         )}
         <UpNextSongPopup onPopupAppears={(isVisible) => setIsNextSongPopupVisible(isVisible)} />
       </div>
+      {/* The heart belongs to the song, so it sits with it; the centre keeps three controls a side. */}
+      {currentSongData.title && (
+        <Button
+          className={`like-btn !m-0 !h-8 !w-8 shrink-0 ${
+            currentSongData.isAFavorite ? '!text-echo hover:!text-echo' : ''
+          } ${!currentSongData.isKnownSource && '!cursor-not-allowed opacity-40'}`}
+          tooltipLabel={
+            currentSongData.isKnownSource ? t('player.likeDislike') : t('player.likeDislikeDisabled')
+          }
+          iconName="favorite"
+          isActive={currentSongData.isAFavorite}
+          clickHandler={() =>
+            currentSongData.isKnownSource && toggleIsFavorite(!currentSongData.isAFavorite)
+          }
+        />
+      )}
     </div>
   );
 };
