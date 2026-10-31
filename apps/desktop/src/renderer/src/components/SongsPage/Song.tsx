@@ -34,6 +34,8 @@ import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
 
 import { appPreferences } from '../../../../../package.json';
 import EqualizerBars from '../ui/EqualizerBars';
+import ShuffleReason from '../ui/ShuffleReason';
+import { steer, type SteeringAction } from '../../other/smartShuffle';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
 import { flyToQueue } from '../../other/motion';
@@ -59,6 +61,8 @@ interface SongProp {
   isDraggable?: boolean;
   provided?: DraggableProvided;
   selectAllHandler?: (_upToId?: string) => void;
+  /** The queue shows Smart Shuffle's reason for an upcoming song beside its artists (PLAN/14 C1). */
+  isShuffleReasonShown?: boolean;
 }
 
 const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => {
@@ -76,6 +80,12 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
   );
   const multipleSelectionsData = useStore(store, (state) => state.multipleSelectionsData);
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
+  // Steering actions (PLAN/14 C2) while Smart Shuffle is on and the user has not hidden them.
+  const isSteeringShown = useStore(
+    store,
+    (state) =>
+      state.player.isTierShuffling && !state.localStorage.preferences.isShuffleSteeringHidden
+  );
 
   const {
     playSong,
@@ -109,7 +119,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     selectAllHandler,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     provided = {} as any,
-    onPlayClick
+    onPlayClick,
+    isShuffleReasonShown = false
   } = props;
 
   const [isAFavorite, setIsAFavorite] = useState(props.isAFavorite);
@@ -240,6 +251,19 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     currentlyActivePage?.data?.albumId,
     currentlyActivePage.pageTitle
   ]);
+
+  const steerWith = useCallback(
+    (action: SteeringAction) => {
+      steer(action)
+        .then(() =>
+          addNewNotifications([
+            { id: 'smartShuffleSteered', duration: 4000, content: t('smartShuffle.steeringApplied') }
+          ])
+        )
+        .catch((error) => console.error(error));
+    },
+    [addNewNotifications, t]
+  );
 
   const contextMenuItems: ContextMenuItem[] = useMemo(() => {
     const isMultipleSelectionsEnabled =
@@ -521,6 +545,33 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         },
         isDisabled: isMultipleSelectionsEnabled
       },
+      ...(isSteeringShown
+        ? [
+            { label: 'Hr', isContextMenuItemSeperator: true, handlerFunction: () => true },
+            ...(artists?.[0]
+              ? [
+                  {
+                    label: t('smartShuffle.lessArtist', { artist: artists[0].name }),
+                    iconName: 'trending_down',
+                    handlerFunction: () => steerWith({ kind: 'lessArtist', artist: artists[0].name }),
+                    isDisabled: isMultipleSelectionsEnabled
+                  }
+                ]
+              : []),
+            {
+              label: t('smartShuffle.moreLike'),
+              iconName: 'trending_up',
+              handlerFunction: () => steerWith({ kind: 'moreLike', songId, title }),
+              isDisabled: isMultipleSelectionsEnabled
+            },
+            {
+              label: t('smartShuffle.notNow'),
+              iconName: 'schedule',
+              handlerFunction: () => steerWith({ kind: 'notNow', songId, title }),
+              isDisabled: isMultipleSelectionsEnabled || currentSongData.songId === songId
+            }
+          ]
+        : []),
       {
         label: t('song.delete'),
         iconName: 'delete',
@@ -543,6 +594,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     multipleSelectionsData,
     isAMultipleSelection,
     additionalContextMenuItems,
+    isSteeringShown,
+    steerWith,
     t,
     isAFavorite,
     goToSongInfoPage,
@@ -675,7 +728,15 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             {isCurrent && <EqualizerBars isPlaying={isSongPlaying} className="mr-0.5" />}
             <span className="truncate">{title}</span>
           </div>
-          <div className="song-artists min-w-0 truncate text-small text-ink-dim">{songArtists}</div>
+          <div className="song-artists min-w-0 truncate text-small text-ink-dim">
+            {songArtists}
+            {isShuffleReasonShown && (
+              <>
+                <span className="text-ink-faint"> · </span>
+                <ShuffleReason songId={songId} />
+              </>
+            )}
+          </div>
         </div>
         <div className="song-album min-w-0 truncate text-small text-ink-dim lg:hidden">
           {album?.name ? (

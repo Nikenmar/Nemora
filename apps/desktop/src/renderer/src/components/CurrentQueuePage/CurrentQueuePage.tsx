@@ -23,6 +23,8 @@ import FolderImg from '../../assets/images/webp/empty-folder.webp';
 import MainContainer from '../MainContainer';
 import Img from '../Img';
 import Song from '../SongsPage/Song';
+import SteeringBar from './SteeringBar';
+import { useShuffleReasonsShown } from '../ui/ShuffleReason';
 import VirtualizedList from '../VirtualizedList';
 import { type VirtuosoHandle } from 'react-virtuoso';
 import { useStore } from '@tanstack/react-store';
@@ -45,6 +47,7 @@ const CurrentQueuePage = () => {
   const queue = useStore(store, (state) => state.localStorage.queue);
   const currentQueue = useStore(store, (state) => state.localStorage.queue.queue);
   const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const isShuffleReasonShown = useShuffleReasonsShown();
 
   const { updateQueueData, addNewNotifications, toggleMultipleSelections } =
     useContext(AppUpdateContext);
@@ -356,6 +359,7 @@ const CurrentQueuePage = () => {
             </div>
           </div>
         )}
+        {currentQueue.length > 0 && <SteeringBar />}
         <div
           className={`songs-container overflow-auto ${queuedSongs.length > 0 ? 'h-full' : 'h-0'}`}
         >
@@ -423,6 +427,11 @@ const CurrentQueuePage = () => {
                                 isIndexingSongs={preferences?.isSongIndexingEnabled}
                                 {...song}
                                 trackNo={undefined}
+                                isShuffleReasonShown={
+                                  isShuffleReasonShown &&
+                                  queue.currentSongIndex !== null &&
+                                  index > queue.currentSongIndex
+                                }
                                 selectAllHandler={selectAllHandler}
                                 // no need for onPlayClick because the component is in the currentQueuePage
                                 // onPlayClick={handleSongPlayBtnClick}

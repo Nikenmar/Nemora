@@ -44,6 +44,7 @@ const monthNames = [
 const StatsPage = () => {
   const { t } = useTranslation();
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
+  const isTasteMapHidden = useStore(store, (state) => !!state.localStorage.preferences.isTasteMapHidden);
   const {
     changeCurrentActivePage,
     updateCurrentlyActivePageData,
@@ -253,6 +254,14 @@ const StatsPage = () => {
         <div className="title-container mb-4 mt-1 flex items-center justify-between pr-4 text-page font-semibold text-ink">
           <div className="container flex items-center">{t('statsPage.title')}</div>
           <div className="other-controls-container flex items-center">
+            {!isTasteMapHidden && (
+              <Button
+                label={t('tasteMap.title')}
+                iconName="bubble_chart"
+                className="stats-taste-map-btn mr-2 text-sm md:text-lg"
+                clickHandler={() => changeCurrentActivePage('TasteMap')}
+              />
+            )}
             <Button
               label={t('statsPage.recap.open')}
               iconName="auto_awesome"

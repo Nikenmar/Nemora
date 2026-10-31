@@ -8,6 +8,7 @@ import Button from '../Button';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
 import { reportUpNextToObsWidget } from '../../other/obsWidgetFeed';
+import ShuffleReason, { useShuffleReasonsShown } from '../ui/ShuffleReason';
 
 type Props = {
   onPopupAppears: (isVisible: boolean) => void;
@@ -18,6 +19,7 @@ type Props = {
 const UpNextSongPopup = (props: Props) => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
   const queue = useStore(store, (state) => state.localStorage.queue);
+  const isReasonShown = useShuffleReasonsShown();
 
   const {
     changeCurrentActivePage
@@ -177,6 +179,12 @@ const UpNextSongPopup = (props: Props) => {
             {upNextSongData.artists.length - 1 > 0 && (
               <span className="opacity-80"> +{upNextSongData.artists.length - 1}</span>
             )}
+          </>
+        )}
+        {isReasonShown && (
+          <>
+            <span className="opacity-60"> · </span>
+            <ShuffleReason songId={upNextSongData.songId} className={isSemiTransparent ? '!text-on-media/60' : ''} />
           </>
         )}
       </p>

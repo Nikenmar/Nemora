@@ -9,6 +9,7 @@ import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
 const AppShortcutsPrompt = lazy(() => import('../SettingsPage/AppShortcutsPrompt'));
+const WhyThisSongPrompt = lazy(() => import('../WhyThisSongPrompt'));
 
 const OtherSongControlsContainer = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
@@ -55,6 +56,27 @@ const OtherSongControlsContainer = () => {
               })
           },
           { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
+          // "Why this song?" (PLAN/14 C1), while Smart Shuffle is on and its reasons are shown.
+          ...(store.state.player.isTierShuffling &&
+          !store.state.localStorage.preferences.isShuffleReasonsHidden &&
+          store.state.currentSongData.songId
+            ? [
+                {
+                  label: t('smartShuffle.whyThisSong'),
+                  iconName: 'auto_fix',
+                  iconClassName: 'ms-icon mr-2',
+                  handlerFunction: () =>
+                    changePromptMenuData(
+                      true,
+                      <WhyThisSongPrompt
+                        songId={store.state.currentSongData.songId}
+                        title={store.state.currentSongData.title}
+                      />,
+                      '!max-w-[34rem]'
+                    )
+                }
+              ]
+            : []),
           {
             label: t('player.showCurrentQueue'),
             iconName: 'table_rows',

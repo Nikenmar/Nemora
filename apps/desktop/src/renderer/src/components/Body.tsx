@@ -45,6 +45,7 @@ const TierlistEditorPage = lazy(
   () => import("./TierlistEditorPage/TierlistEditorPage"),
 );
 const StatsPage = lazy(() => import("./StatsPage/StatsPage"));
+const TasteMapPage = lazy(() => import("./TasteMapPage/TasteMapPage"));
 
 const isPageDataEmpty = (pageData: PageData | undefined) =>
   !pageData || Object.keys(pageData).length === 0;
@@ -116,6 +117,7 @@ const Body = memo(() => {
             {currentlyActivePage.pageTitle === "Genres" && <GenresPage />}
             {currentlyActivePage.pageTitle === "Tierlists" && <TierlistsPage />}
             {currentlyActivePage.pageTitle === "Stats" && <StatsPage />}
+            {currentlyActivePage.pageTitle === "TasteMap" && <TasteMapPage />}
             {currentlyActivePage.pageTitle === "TierlistEditor" &&
               !isPageDataEmpty(currentlyActivePage.data) && (
                 <TierlistEditorPage />

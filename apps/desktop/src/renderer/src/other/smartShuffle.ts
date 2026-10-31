@@ -14,8 +14,8 @@ export const smartShuffleData: { current: MegaShuffleData } = {
   current: { weights: {}, pairFeedback: [] }
 };
 
-/** "Not now" songs this session: each goes to the end of the queue once. */
-export type Steering = ShuffleSteering & { notNow: string[] };
+/** Plus "Not now" songs, which go to the end of the queue, and the titles the chips show for song ids. */
+export type Steering = ShuffleSteering & { notNow: string[]; titles: Record<string, string> };
 
 export const NO_STEERING: Steering = {
   lessArtists: [],
@@ -23,17 +23,20 @@ export const NO_STEERING: Steering = {
   onlyUnheard: false,
   onlyRanked: false,
   boostNew: false,
-  notNow: []
+  notNow: [],
+  titles: {}
 };
 
 export const steeringStore = new Store<Steering>(NO_STEERING);
 
-const intensity = () => storage.preferences.getPreferences('tierShuffleIntensity') ?? 0.6;
-const skipAware = () => !storage.preferences.getPreferences('isSkipAwareDisabled');
+// From the store: `getPreferences` throws for a preference that was never set.
+const preferences = () => store.state.localStorage.preferences;
+const intensity = () => preferences().tierShuffleIntensity ?? 0.6;
+const skipAware = () => !preferences().isSkipAwareDisabled;
 
 const coreSteering = (): ShuffleSteering | undefined => {
   const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew } = steeringStore.state;
-  const filters = !!storage.preferences.getPreferences('isSessionFiltersEnabled');
+  const filters = !!preferences().isSessionFiltersEnabled;
   const steering = {
     lessArtists,
     moreLike,
@@ -89,8 +92,8 @@ export function reorderRemaining() {
 
 export type SteeringAction =
   | { kind: 'lessArtist'; artist: string }
-  | { kind: 'moreLike'; songId: string }
-  | { kind: 'notNow'; songId: string }
+  | { kind: 'moreLike'; songId: string; title: string }
+  | { kind: 'notNow'; songId: string; title: string }
   | { kind: 'filter'; filter: 'onlyUnheard' | 'onlyRanked' | 'boostNew'; isOn: boolean }
   | { kind: 'remove'; what: 'lessArtists' | 'moreLike' | 'notNow'; value: string }
   | { kind: 'clear' };
@@ -104,9 +107,17 @@ export async function steer(action: SteeringAction) {
       case 'lessArtist':
         return { ...state, lessArtists: added(state.lessArtists, action.artist) };
       case 'moreLike':
-        return { ...state, moreLike: added(state.moreLike, action.songId) };
+        return {
+          ...state,
+          moreLike: added(state.moreLike, action.songId),
+          titles: { ...state.titles, [action.songId]: action.title }
+        };
       case 'notNow':
-        return { ...state, notNow: added(state.notNow, action.songId) };
+        return {
+          ...state,
+          notNow: added(state.notNow, action.songId),
+          titles: { ...state.titles, [action.songId]: action.title }
+        };
       case 'filter':
         return { ...state, [action.filter]: action.isOn };
       case 'remove':
@@ -123,21 +134,45 @@ export async function steer(action: SteeringAction) {
 }
 
 const explanations = new Map<string, Promise<ShuffleExplanation | undefined>>();
+let batch: { ids: string[]; resolve: (all: Record<string, ShuffleExplanation>) => void } | null = null;
+let batchResult: Promise<Record<string, ShuffleExplanation>> = Promise.resolve({});
 
-/** Why `songId` plays where it does; cached until the weights change. */
+/** Why `songId` plays where it does; requests made together go in one call, cached until the weights change. */
 export function explainSong(songId: string): Promise<ShuffleExplanation | undefined> {
   let pending = explanations.get(songId);
   if (!pending) {
-    pending = window.api.tierlistsData
-      .explainShuffle([songId], intensity(), skipAware())
-      .then((all) => all[songId])
-      .catch(() => undefined);
+    if (!batch) {
+      let resolve!: (all: Record<string, ShuffleExplanation>) => void;
+      const all = new Promise<Record<string, ShuffleExplanation>>((r) => (resolve = r));
+      batch = { ids: [], resolve };
+      batchResult = all;
+      setTimeout(() => {
+        const { ids, resolve: done } = batch!;
+        batch = null;
+        window.api.tierlistsData
+          .explainShuffle(ids, intensity(), skipAware())
+          .then(done)
+          .catch(() => done({}));
+      }, 30);
+    }
+    batch.ids.push(songId);
+    pending = batchResult.then((all) => all[songId]);
     explanations.set(songId, pending);
   }
   return pending;
 }
 
-export type Reason = { key: string; values?: Record<string, string | number>; strength: number };
+export type ReasonKey =
+  | 'tier'
+  | 'artist'
+  | 'duels'
+  | 'listens'
+  | 'notHeard'
+  | 'neverHeard'
+  | 'skipped'
+  | 'recent'
+  | 'plain';
+export type Reason = { key: ReasonKey; values?: Record<string, string | number>; strength: number };
 
 const daysSince = (day: string) => {
   const [y, m, d] = day.split('-').map(Number);

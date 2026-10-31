@@ -1,5 +1,6 @@
 import { memo, useCallback, useRef } from 'react';
 import useAudioVisual, { follow, Range } from '../../../hooks/useAudioVisual';
+import { isMotionReduced } from '../../../other/viewTransition';
 
 const COUNT = 24;
 const BAR = 3;
@@ -46,6 +47,8 @@ const SpectrumBars = memo(() => {
   }, []);
   useAudioVisual(true, onFrame, canvasRef);
 
+  // Under reduced motion the bars would stand still: no strip at all rather than an empty one.
+  if (isMotionReduced()) return null;
   return (
     <canvas
       ref={canvasRef}

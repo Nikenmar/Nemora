@@ -8,6 +8,7 @@ import { lazy, type ReactNode } from 'react';
 
 import { isBenchRun } from './bench';
 import storage from '../utils/localStorage';
+import { store } from '../store';
 import ErrorPrompt from '../components/ErrorPrompt';
 import OpenLinkConfirmPrompt from '../components/OpenLinkConfirmPrompt';
 import SensitiveActionConfirmPrompt from '../components/SensitiveActionConfirmPrompt';
@@ -15,6 +16,7 @@ import SensitiveActionConfirmPrompt from '../components/SensitiveActionConfirmPr
 const AppShortcutsPrompt = lazy(() => import('../components/SettingsPage/AppShortcutsPrompt'));
 const ReleaseNotesPrompt = lazy(() => import('../components/ReleaseNotesPrompt/ReleaseNotesPrompt'));
 const Showcase = lazy(() => import('../components/ui/Showcase'));
+const WhyThisSongPrompt = lazy(() => import('../components/WhyThisSongPrompt'));
 
 export interface ShotsBridge {
   changeCurrentActivePage: (page: PageTitles, data?: PageData) => void;
@@ -51,7 +53,15 @@ const PROMPTS: Record<string, () => [ReactNode, string?]> = {
   openLink: () => [
     <OpenLinkConfirmPrompt key="openLink" link="https://github.com/Nikenmar/Nemora/issues" />
   ],
-  error: () => [<ErrorPrompt key="error" reason="JUST_FOR_FUN" />]
+  error: () => [<ErrorPrompt key="error" reason="JUST_FOR_FUN" />],
+  why: () => [
+    <WhyThisSongPrompt
+      key="why"
+      songId={store.state.currentSongData.songId}
+      title={store.state.currentSongData.title}
+    />,
+    '!max-w-[34rem]'
+  ]
 };
 
 let registered = false;

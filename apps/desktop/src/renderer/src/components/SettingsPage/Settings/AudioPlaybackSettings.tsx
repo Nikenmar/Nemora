@@ -8,6 +8,19 @@ import Checkbox from '../../Checkbox';
 import i18n from '../../../i18n';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import { loadShuffleData, reorderRemaining } from '../../../other/smartShuffle';
+
+/**
+ * Settings > Audio playback > Smart Shuffle (PLAN/14 C1-C5). Stored inverted where the default is
+ * on, so an unset preference reads as the default.
+ */
+const SMART_SHUFFLE = [
+  { key: 'isShuffleReasonsHidden', label: 'showReasons', inverted: true, reorders: false },
+  { key: 'isShuffleSteeringHidden', label: 'steeringActions', inverted: true, reorders: false },
+  { key: 'isSkipAwareDisabled', label: 'skipAware', inverted: true, reorders: true },
+  { key: 'isSessionFiltersEnabled', label: 'sessionFilters', inverted: false, reorders: true },
+  { key: 'isTasteMapHidden', label: 'tasteMap', inverted: true, reorders: false }
+] as const;
 
 const second = i18n.t('settingsPage.second');
 const seconds = i18n.t('settingsPage.second_other');
@@ -102,6 +115,33 @@ const AudioPlaybackSettings = () => {
               </div>
             </div>
           </div>
+        </li>
+
+        <li className="secondary-container smart-shuffle-settings mb-6" id="smartShuffleSettings">
+          <div className="description">
+            <span className="font-semibold text-ink">{t('smartShuffle.settings')}</span>
+            {'. '}
+            {t('smartShuffle.settingsDescription')}
+          </div>
+          {SMART_SHUFFLE.map(({ key, label, inverted, reorders }) => (
+            <div key={key} className="mt-2">
+              <Checkbox
+                id={key}
+                isChecked={inverted ? !preferences?.[key] : !!preferences?.[key]}
+                checkedStateUpdateFunction={(state) => {
+                  storage.preferences.setPreferences(key, inverted ? !state : state);
+                  if (reorders && store.state.player.isTierShuffling)
+                    loadShuffleData()
+                      .then(reorderRemaining)
+                      .catch((error) => console.error(error));
+                }}
+                labelContent={t(`smartShuffle.${label}`)}
+              />
+              <div className="description ml-8 text-small text-ink-dim">
+                {t(`smartShuffle.${label}Description`)}
+              </div>
+            </div>
+          ))}
         </li>
 
         <li className="playback-rate mb-6" id="playbackRateInterval">

@@ -356,6 +356,7 @@ pub fn tierlist_artworks(app: State<'_, App>, song_ids: Vec<String>) -> Res<Hash
 #[tauri::command]
 pub fn shuffle_data(
     app: State<'_, App>,
+    taste_map: State<'_, crate::tastemap::TasteMapCache>,
     song_ids: Vec<String>,
     intensity: Option<f64>,
     skip_aware: Option<bool>,
@@ -366,10 +367,20 @@ pub fn shuffle_data(
     let mut weights =
         nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6), skip_aware != Some(false))
             .map_err(fail)?;
-    // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue.
+    // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue. "More
+    // like this" leans on the taste map's neighbours when a map was ever built.
+    if steering.as_ref().is_some_and(|s| !s.more_like.is_empty()) {
+        taste_map.warm(&app);
+    }
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
-    let held = nemora_core::shuffle::steer(&db, &mut weights, &steering.unwrap_or_default(), &|_| Vec::new(), now)
-        .map_err(fail)?;
+    let held = nemora_core::shuffle::steer(
+        &db,
+        &mut weights,
+        &steering.unwrap_or_default(),
+        &|id| taste_map.neighbours(id),
+        now,
+    )
+    .map_err(fail)?;
     // Duplicate rows share their song's weight.
     let by_view: HashMap<&String, f64> = if song_ids.is_empty() {
         weights.iter().map(|(song, w)| (song, *w)).collect()
@@ -389,9 +400,10 @@ pub fn shuffle_data(
     Ok(json!({ "weights": by_view, "pairFeedback": feedback, "held": held }))
 }
 
-/// Why each of `song_ids` plays where it does (PLAN/14 C1), keyed by the ids as given.
+/// Why each of `song_ids` plays where it does (PLAN/14 C1), keyed by the ids as given. Async, so the
+/// whole-library pass it makes never holds the main thread.
 #[tauri::command]
-pub fn shuffle_explain(
+pub async fn shuffle_explain(
     app: State<'_, App>,
     song_ids: Vec<String>,
     intensity: Option<f64>,

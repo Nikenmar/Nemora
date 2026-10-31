@@ -23,6 +23,7 @@ mod system;
 mod tags_cmd;
 #[allow(unsafe_op_in_unsafe_fn)]
 mod taskbar;
+mod tastemap;
 mod user_data;
 mod view;
 mod visuals;
@@ -196,6 +197,7 @@ pub fn run() {
             duels::tierlist_artworks,
             duels::shuffle_data,
             duels::shuffle_explain,
+            tastemap::taste_map,
             shellops::trash_item,
             shellops::reveal_song_in_file_explorer,
             shellops::reveal_folder_in_file_explorer,
@@ -234,6 +236,7 @@ pub fn run() {
         .manage(watch::FolderWatch::default())
         .manage(engine::Engine::default())
         .manage(visuals::Visuals::default())
+        .manage(tastemap::TasteMapCache::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;
             let profile = bench::profile().unwrap_or_else(|| {

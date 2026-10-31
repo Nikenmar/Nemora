@@ -29,6 +29,7 @@ pub mod settings;
 pub mod shuffle;
 pub mod stats;
 pub mod tags;
+pub mod tastemap;
 pub mod time;
 pub mod tournament;
 pub mod transfer;
