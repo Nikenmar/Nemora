@@ -1,9 +1,11 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import { memo, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import ContextMenuItem from './ContextMenuItem';
 import ContextMenuDataItem from './ContextMenuDataItem';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import { raiseToTopLayer, topModalDialog } from '../ui/topLayer';
 
 const ContextMenu = memo(() => {
   const contextMenuData = useStore(store, (state) => state.contextMenuData);
@@ -11,6 +13,16 @@ const ContextMenu = memo(() => {
   const { isVisible, menuItems, data } = contextMenuData;
 
   const contextMenuRef = useRef(null as null | HTMLDivElement);
+  // Over a modal dialog the menu opens inside it, in the top layer (ui/topLayer.ts).
+  const [host, setHost] = useState<HTMLDialogElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (isVisible) setHost(topModalDialog());
+  }, [isVisible]);
+
+  useLayoutEffect(() => {
+    if (isVisible && host) raiseToTopLayer(contextMenuRef.current);
+  }, [isVisible, host]);
   const [dimensions, setDimensions] = useState({
     width: 0,
     height: 0,
@@ -80,13 +92,14 @@ const ContextMenu = memo(() => {
         }),
     [menuItems]
   );
-  return (
+  const menu = (
     <div
+      popover={host ? 'manual' : undefined}
       className={`context-menu ${
         isVisible
           ? 'visible scale-100 opacity-100 duration-[140ms]'
           : 'invisible scale-[0.96] opacity-0 duration-[90ms]'
-      } absolute z-50 h-fit max-h-[calc(100vh-3rem)] w-fit min-w-[14.5rem] max-w-[22rem] overflow-y-auto rounded-menu border border-glass-border bg-glass p-[5px] text-ink shadow-float backdrop-blur-[26px] backdrop-saturate-[1.7] transition-[opacity,transform,visibility] ease-out`}
+      } ${host ? 'fixed inset-auto m-0' : 'absolute'} z-50 h-fit max-h-[calc(100vh-3rem)] w-fit min-w-[14.5rem] max-w-[22rem] overflow-y-auto rounded-menu border border-glass-border bg-glass p-[5px] text-ink shadow-float backdrop-blur-[26px] backdrop-saturate-[1.7] transition-[opacity,transform,visibility] ease-out`}
       onClick={(e) => e.stopPropagation()}
       style={{
         top: dimensions.positionY,
@@ -102,6 +115,8 @@ const ContextMenu = memo(() => {
       {contextMenuItems}
     </div>
   );
+
+  return host ? createPortal(menu, host) : menu;
 });
 
 ContextMenu.displayName = 'ContextMenu';

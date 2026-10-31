@@ -1,4 +1,7 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { raiseToTopLayer, topModalDialog } from './topLayer';
 
 /** The first tooltip waits; once one has shown, its neighbours appear at once. */
 const FIRST_DELAY_MS = 500;
@@ -11,6 +14,8 @@ interface Shown {
   y: number;
   below: boolean;
   instant: boolean;
+  /** Over a modal dialog the tooltip is drawn inside it, in the top layer (topLayer.ts). */
+  host: HTMLDialogElement | null;
 }
 
 /**
@@ -24,6 +29,11 @@ const TooltipLayer = memo(() => {
   const lastHidden = useRef(0);
   const target = useRef<Element | null>(null);
   const isUp = useRef(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (shown?.host) raiseToTopLayer(tooltipRef.current);
+  }, [shown]);
 
   useEffect(() => {
     const hide = () => {
@@ -45,7 +55,8 @@ const TooltipLayer = memo(() => {
         x: rect.left + rect.width / 2,
         y: below ? rect.bottom + GAP : rect.top - GAP,
         below,
-        instant
+        instant,
+        host: topModalDialog()
       });
     };
 
@@ -100,10 +111,12 @@ const TooltipLayer = memo(() => {
   }, []);
 
   if (!shown) return null;
-  return (
+  const tooltip = (
     <div
+      ref={tooltipRef}
       role="tooltip"
-      className={`pointer-events-none fixed z-[100] max-w-[22rem] -translate-x-1/2 rounded-lg border border-glass-border bg-surface-3 px-2.5 py-1.5 text-small text-ink shadow-float ${
+      popover={shown.host ? 'manual' : undefined}
+      className={`pointer-events-none fixed inset-auto z-[100] m-0 overflow-visible max-w-[22rem] -translate-x-1/2 rounded-lg border border-glass-border bg-surface-3 px-2.5 py-1.5 text-small text-ink shadow-float ${
         shown.below ? '' : '-translate-y-full'
       } ${shown.instant ? '' : 'animate-[tooltipIn_125ms_var(--ease-out)]'}`}
       style={{ left: Math.min(Math.max(shown.x, 16), window.innerWidth - 16), top: shown.y }}
@@ -111,6 +124,7 @@ const TooltipLayer = memo(() => {
       {shown.text}
     </div>
   );
+  return shown.host ? createPortal(tooltip, shown.host) : tooltip;
 });
 
 TooltipLayer.displayName = 'TooltipLayer';
