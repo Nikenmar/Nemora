@@ -89,7 +89,7 @@ const Body = memo(() => {
 
   return (
     <div
-      className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden rounded-tl-[14px] bg-canvas"
+      className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden bg-canvas"
       ref={bodyRef}
     >
       {/* Cover light: the playing cover's colour over the top of every page (other/coverLight.ts). */}

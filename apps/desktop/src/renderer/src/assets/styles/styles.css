@@ -114,27 +114,28 @@
 /* `.dark` sits on <body>; the mini and full-screen players and portalled dialogs carry it too. */
 .dark {
   color-scheme: dark;
-  /* A near-black frame around a content area one step up: pure black under the content was
-     heavy to read for long. Panels, chips and dialogs climb with it. */
-  --chrome: 8 8 9;
-  --canvas: 20 20 22;
-  --surface-1: 27 27 29;
-  --surface-2: 33 33 36;
-  --surface-3: 38 38 41;
-  --line: 46 46 49;
-  --ink: 240 240 241;
-  --ink-dim: 150 150 153;
-  --ink-faint: 100 100 103;
+  /* One family, not black beside grey: the frame sits a hair below the content, and the whole dark
+     ramp leans slightly cool (H ~265) so the deep blue accent belongs to it. Pure black under the
+     content was heavy to read for long; a neutral grey beside a black frame read as patchwork. */
+  --chrome: 11 12 15;
+  --canvas: 15 16 20;
+  --surface-1: 21 22 27;
+  --surface-2: 27 28 34;
+  --surface-3: 33 34 41;
+  --line: 41 42 50;
+  --ink: 239 240 243;
+  --ink-dim: 148 150 160;
+  --ink-faint: 98 100 110;
   --accent: 29 64 148;
   --accent-hover: 42 79 164;
   --on-accent: 255 255 255;
-  --accent-soft: 21 36 74;
+  --accent-soft: 20 33 68;
   --echo: 99 151 241;
   --danger: 210 84 80;
   --danger-soft: 50 22 22;
   --success: 46 165 92;
   --warning: 195 146 39;
-  --glass: 38 38 41;
+  --glass: 33 34 41;
   --glass-alpha: 0.55;
   --glass-hover: 255 255 255 / 0.08;
   --glass-border: 255 255 255 / 0.09;
@@ -189,6 +190,11 @@ body,
 :focus-visible {
   outline: 2px solid rgb(var(--echo));
   outline-offset: 2px;
+}
+/* A text field already shows its focus with the caret and its own border; the ring is for things
+   the keyboard lands on, not for where it types. */
+:is(input:not([type='range'], [type='checkbox'], [type='radio']), textarea):focus-visible {
+  outline: none;
 }
 
 /* ? SCROLLBARS: thin, on the canvas, no track */
