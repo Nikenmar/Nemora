@@ -131,7 +131,7 @@ const DuplicateArtistsSuggestion = (props: Props) => {
     <>
       {duplicateArtists.length > 1 && isVisible && (
         <div
-          className={`appear-from-bottom mx-auto mb-6 w-[90%] rounded-lg p-4 text-shade shadow-md transition-[height] ${
+          className={`appear-from-bottom mx-auto mb-6 w-[90%] rounded-panel p-4 text-ink transition-[height] ${
             bodyBackgroundImage
               ? 'bg-surface-2/75 backdrop-blur-sm'
               : 'bg-surface-2'

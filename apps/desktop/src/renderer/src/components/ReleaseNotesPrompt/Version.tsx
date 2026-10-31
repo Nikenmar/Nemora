@@ -17,22 +17,50 @@ interface VersionProp {
   };
 }
 
+const NoteSection = (props: { title: string; notes?: VersionNoteProps[]; id: string }) => {
+  const { title, notes, id } = props;
+  if (!Array.isArray(notes) || notes.length === 0) return null;
+  return (
+    <section className="mt-5">
+      <h3 className="mb-2 text-small font-semibold uppercase tracking-wide text-ink-faint">
+        {title}
+      </h3>
+      <ul className="notes list-disc pl-5 text-body leading-relaxed text-ink-dim marker:text-ink-faint">
+        {notes.map((note, index) => (
+          <VersionNote key={`${id}-${index}`} note={note.note} artworkPath={note.artworkPath} />
+        ))}
+      </ul>
+    </section>
+  );
+};
+
 const Version = (props: VersionProp) => {
   const { t } = useTranslation();
 
   const { version, releaseDate, isLatest, notes } = props;
   const elapsed = calculateElapsedTime(releaseDate);
   const localeReleaseDate = new Date(releaseDate).toLocaleDateString();
+  const isCurrent = version === appVersion;
   return (
-    <div key={version} className="app-version group mb-8 px-4 pb-4 last:pb-8">
-      <div className="version-info mb-4 flex justify-between text-lg font-medium">
-        <span className="version text-echo">
-          v{version} {version === appVersion && `(${t('releaseNotesPrompt.current')})`}
-        </span>
-        <span className="release-date">
+    <div
+      key={version}
+      className="app-version border-b border-line py-6 first:pt-2 last:border-b-0 last:pb-2"
+    >
+      <div className="version-info flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="version text-section font-semibold text-ink">v{version}</span>
+        {isCurrent && (
+          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-micro font-semibold text-echo">
+            {t('releaseNotesPrompt.current')}
+          </span>
+        )}
+        {isLatest && !isCurrent && (
+          <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-micro font-semibold text-ink-dim">
+            {t('releaseNotesPrompt.latest')}
+          </span>
+        )}
+        <span className="release-date ml-auto text-small text-ink-faint">
           {elapsed && !elapsed.isFuture ? (
             <span
-              className="text-echo"
               title={t('settingsPage.releasedOn', {
                 val: new Date(releaseDate),
                 formatParams: {
@@ -45,71 +73,33 @@ const Version = (props: VersionProp) => {
                 }
               })}
             >
-              {isLatest ? <>{t('releaseNotesPrompt.latest')} &bull; </> : ''}(
-              {elapsed.elapsedString})
+              {elapsed.elapsedString}
             </span>
           ) : (
             localeReleaseDate
           )}
         </span>
       </div>
-      {Array.isArray(notes.new) && notes.new.length > 0 && (
-        <>
-          <h3 className="mb-2 px-4 text-lg">{t('releaseNotesPrompt.newFeaturesAndUpdates')}</h3>
-          <ul className="notes list-disc px-8 font-light text-shade/80 marker:text-echo ">
-            {notes.new.map((note, index) => (
-              <VersionNote
-                key={`${version}-feature-${index}`}
-                note={note.note}
-                artworkPath={note.artworkPath}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      {Array.isArray(notes.fixed) && notes.fixed.length > 0 && (
-        <>
-          <h3 className="mb-2 px-4 text-lg">{t('releaseNotesPrompt.fixesAndImprovements')}</h3>
-          <ul className="notes list-disc px-8 font-light text-shade/80 marker:text-echo ">
-            {notes.fixed.map((note, index) => (
-              <VersionNote
-                key={`${version}-fix-${index}`}
-                note={note.note}
-                artworkPath={note.artworkPath}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      {Array.isArray(notes.knownIssues) && notes.knownIssues.length > 0 && (
-        <>
-          <h3 className="mb-2 px-4 text-lg">{t('releaseNotesPrompt.issuesAndBugs')}</h3>
-          <ul className="notes list-disc px-8 font-light text-shade/80 marker:text-echo ">
-            {notes.knownIssues.map((note, index) => (
-              <VersionNote
-                key={`${version}-issue-${index}`}
-                note={note.note}
-                artworkPath={note.artworkPath}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      {Array.isArray(notes.developerUpdates) && notes.developerUpdates.length > 0 && (
-        <>
-          <h3 className="mb-2 px-4 text-lg">{t('releaseNotesPrompt.developerUpdates')}</h3>
-          <ul className="notes list-disc px-8 font-light text-shade/80 marker:text-echo ">
-            {notes.developerUpdates.map((note, index) => (
-              <VersionNote
-                key={`${version}-issue-${index}`}
-                note={note.note}
-                artworkPath={note.artworkPath}
-              />
-            ))}
-          </ul>
-        </>
-      )}
-      <div className="mb-4 mt-8 h-[2px] w-full bg-line/60 group-last:invisible" />
+      <NoteSection
+        id={`${version}-feature`}
+        title={t('releaseNotesPrompt.newFeaturesAndUpdates')}
+        notes={notes.new}
+      />
+      <NoteSection
+        id={`${version}-fix`}
+        title={t('releaseNotesPrompt.fixesAndImprovements')}
+        notes={notes.fixed}
+      />
+      <NoteSection
+        id={`${version}-issue`}
+        title={t('releaseNotesPrompt.issuesAndBugs')}
+        notes={notes.knownIssues}
+      />
+      <NoteSection
+        id={`${version}-developer`}
+        title={t('releaseNotesPrompt.developerUpdates')}
+        notes={notes.developerUpdates}
+      />
     </div>
   );
 };

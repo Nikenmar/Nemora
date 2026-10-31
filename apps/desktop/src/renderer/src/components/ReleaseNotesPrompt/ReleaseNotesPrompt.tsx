@@ -58,7 +58,7 @@ const ReleaseNotesPrompt = () => {
         return (
           <li
             key={`important note ${index + 1}`}
-            className="latest-version-important-note mb-2 max-w-[90%] font-medium"
+            className="latest-version-important-note mb-1.5 last:mb-0"
           >
             {note}
           </li>
@@ -66,7 +66,7 @@ const ReleaseNotesPrompt = () => {
       });
 
       return (
-        <ul className="mb-12 mt-8 flex list-disc flex-col justify-center px-8 marker:text-echo">
+        <ul className="mb-2 mt-4 list-disc rounded-panel bg-surface-2 py-4 pl-9 pr-5 text-body font-medium text-ink marker:text-echo">
           {notes}
         </ul>
       );
@@ -79,7 +79,7 @@ const ReleaseNotesPrompt = () => {
       <div className="h-full w-full">
         {releaseNotes && (
           <>
-            <h2 className="title-container mb-2 text-center text-title font-semibold">
+            <h2 className="title-container mb-2 text-title font-semibold text-ink">
               {t('releaseNotesPrompt.changelog')}
             </h2>
             {latestUpdatedInfo.artwork && (
@@ -91,7 +91,7 @@ const ReleaseNotesPrompt = () => {
                   that repo moved - which is exactly how the old upstream update
                   check died. The bundled path is now the only source.
                 */}
-                <Img src={latestUpdatedInfo.artwork} className="mx-auto rounded-lg" alt="" />
+                <Img src={latestUpdatedInfo.artwork} className="mx-auto rounded-panel" alt="" />
               </div>
             )}
             {latestVersionImportantNotes}

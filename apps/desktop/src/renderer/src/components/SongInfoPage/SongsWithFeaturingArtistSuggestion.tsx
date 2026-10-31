@@ -159,7 +159,7 @@ const SongsWithFeaturingArtistsSuggestion = (props: Props) => {
     <>
       {separatedFeatArtistsNames.length > 0 && !isIgnored && (
         <div
-          className={`appear-from-bottom mx-auto mt-8 w-[90%] rounded-lg p-4 text-shade shadow-md transition-[width,height] ${
+          className={`appear-from-bottom mx-auto mt-8 w-[90%] rounded-panel p-4 text-ink transition-[width,height] ${
             bodyBackgroundImage
               ? 'bg-surface-2/75 backdrop-blur-sm'
               : 'bg-surface-2'
