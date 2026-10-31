@@ -2,6 +2,7 @@ import { Store } from '@tanstack/react-store';
 import storage from '../utils/localStorage';
 import { store } from '../store';
 import megaShuffleQueue from './megaShuffleQueue';
+import { startTrace } from './trace';
 
 /**
  * Smart Shuffle as the view holds it (PLAN/14 C1-C4): the weights of the whole library, the session's
@@ -102,6 +103,7 @@ const added = (list: string[], value: string) => (list.includes(value) ? list : 
 
 /** Applies a steering action, refreshes the weights and reorders the rest of the queue. */
 export async function steer(action: SteeringAction) {
+  const trace = startTrace(`Smart Shuffle steer ${action.kind}`);
   steeringStore.setState((state) => {
     switch (action.kind) {
       case 'lessArtist':
@@ -128,9 +130,13 @@ export async function steer(action: SteeringAction) {
         return state;
     }
   });
+  trace.step('steering');
   if (!store.state.player.isTierShuffling) return;
   await loadShuffleData();
+  trace.step('weights');
   reorderRemaining();
+  trace.step('reorder');
+  await trace.end({ queue: store.state.localStorage.queue.queue.length });
 }
 
 const explanations = new Map<string, Promise<ShuffleExplanation | undefined>>();

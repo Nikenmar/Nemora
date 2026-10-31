@@ -22,8 +22,13 @@ export type EndReason =
   | 'stopped'
   | 'app_closed';
 
+/** Why a song started (core `plays::StartReason`): Smart Shuffle reads a pick of the user's own
+ * differently from a song the queue brought. */
+export type StartReason = 'auto' | 'user_selected' | 'user_previous' | 'resume' | 'unknown';
+
 export type PlaySession = {
   songId: string;
+  startReason?: StartReason;
   startedAt: number;
   utcOffsetMin: number;
   durationMs: number;
@@ -41,6 +46,7 @@ class ListeningDataSession {
   readonly songId: string;
   readonly duration: number;
   readonly isKnownSource: boolean;
+  readonly startReason: StartReason;
   readonly abortController = new AbortController();
   private readonly player: MediaLike;
   private readonly startedAt = Date.now();
@@ -52,11 +58,18 @@ class ListeningDataSession {
   private intervalId?: ReturnType<typeof setInterval>;
   private nowPlayingId?: ReturnType<typeof setTimeout>;
 
-  constructor(player: MediaLike, songId: string, duration: number, isKnownSource = true) {
+  constructor(
+    player: MediaLike,
+    songId: string,
+    duration: number,
+    isKnownSource = true,
+    startReason: StartReason = 'unknown'
+  ) {
     this.player = player;
     this.songId = songId;
     this.duration = duration;
     this.isKnownSource = isKnownSource;
+    this.startReason = startReason;
   }
 
   recordListeningData() {
@@ -121,7 +134,8 @@ class ListeningDataSession {
         startedAt: this.startedAt,
         utcOffsetMin: -new Date(this.startedAt).getTimezoneOffset(),
         durationMs: ms(this.duration),
-        facts: this.facts
+        facts: this.facts,
+        startReason: this.startReason
       })
       .catch((error: unknown) =>
         console.error(`The session of ${this.songId} was not recorded.`, error)

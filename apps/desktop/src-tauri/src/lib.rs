@@ -24,6 +24,7 @@ mod tags_cmd;
 #[allow(unsafe_op_in_unsafe_fn)]
 mod taskbar;
 mod tastemap;
+mod trace;
 mod user_data;
 mod view;
 mod visuals;
@@ -153,6 +154,7 @@ pub fn run() {
             appdata::song_from_path,
             guessr::guessr_pools,
             guessr::guessr_round,
+            guessr::guessr_record,
             guessr::guessr_search,
             tags_cmd::artist_duplicates,
             tags_cmd::artist_resolve_duplicates,

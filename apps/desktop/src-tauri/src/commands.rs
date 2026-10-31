@@ -984,13 +984,17 @@ pub struct SessionInput {
     source_kind: Option<String>,
     source_id: Option<String>,
     facts: Vec<FactInput>,
+    /// Why the song started (`plays::StartReason`); older renderers send nothing.
+    #[serde(default)]
+    start_reason: Option<String>,
 }
 
 /// Stores one finished session of one song; the core decides whether it was a play, a skip or a
 /// full listen (listening definitions 2.0).
 #[tauri::command]
-pub fn play_record(handle: AppHandle, app: State<'_, App>, session: SessionInput) -> Res<Value> {
-    use nemora_core::plays::{EndReason, Fact, Session, record};
+pub async fn play_record(handle: AppHandle, app: State<'_, App>, session: SessionInput) -> Res<Value> {
+    use nemora_core::plays::{EndReason, Fact, Session, StartReason, record_with};
+    let start = session.start_reason.as_deref().map_or(StartReason::Unknown, StartReason::parse);
     let facts = session
         .facts
         .into_iter()
@@ -1012,7 +1016,7 @@ pub fn play_record(handle: AppHandle, app: State<'_, App>, session: SessionInput
         source_id: session.source_id,
         facts,
     };
-    let recorded = app.write(|db| record(db, &session)).map_err(fail)?;
+    let recorded = app.write(|db| record_with(db, &session, start)).map_err(fail)?;
     let e = &recorded.evaluation;
     notify(&handle, &["songs/listeningData", "playlists/history", "userData/recentlyPlayedSongs"]);
     Ok(json!({

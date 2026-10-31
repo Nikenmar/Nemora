@@ -9,5 +9,7 @@ export const songGuessr = {
     offset?: number
   ): Promise<SongGuessrSearchResult> =>
     getRuntime().searchSongGuessrCandidates(query, limit, offset),
-  getPools: async (): Promise<SongGuessrPoolOption[]> => getRuntime().getSongGuessrPools()
+  getPools: async (): Promise<SongGuessrPoolOption[]> => getRuntime().getSongGuessrPools(),
+  recordRound: async (songId: string, attempts: number | null, poolKind?: string): Promise<void> =>
+    getRuntime().recordSongGuessrRound(songId, attempts, poolKind)
 };

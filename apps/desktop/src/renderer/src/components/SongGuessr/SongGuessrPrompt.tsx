@@ -191,6 +191,10 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
       );
       updatePersistedState(nextState);
       saveSongGuessrState(nextState);
+      // Per song, for Smart Shuffle: a song not recognised is one to bring back (PLAN/15 M1).
+      window.api.songGuessr
+        .recordRound(round.answer.songId, won ? attemptIndex + 1 : null, currentState.poolType)
+        .catch((error: unknown) => console.error('The Song Guessr round was not recorded.', error));
     },
     [round, updatePersistedState]
   );

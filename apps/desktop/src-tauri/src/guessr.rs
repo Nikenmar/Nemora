@@ -132,6 +132,19 @@ pub fn guessr_pools(app: State<'_, App>) -> Res<Vec<Value>> {
     Ok(pools)
 }
 
+/// Remembers a finished round about one song (PLAN/15 D2): `attempts` is the attempt that found
+/// it, none when the round ran out.
+#[tauri::command]
+pub async fn guessr_record(
+    app: State<'_, App>,
+    song_id: String,
+    attempts: Option<u8>,
+    pool_kind: Option<String>,
+) -> Res<()> {
+    let song = crate::view::parse_view_id(&song_id).0.to_owned();
+    app.write(|db| nemora_core::guessr::record_round(db, &song, attempts, false, pool_kind.as_deref())).map_err(fail)
+}
+
 #[tauri::command]
 pub fn guessr_round(app: State<'_, App>, options: Value) -> Res<Value> {
     let index = index(&app)?;

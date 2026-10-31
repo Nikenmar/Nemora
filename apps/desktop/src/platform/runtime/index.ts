@@ -748,6 +748,11 @@ export class NemoraRuntime {
     return call('guessr_pools');
   }
 
+  /** One finished round about one song, for Smart Shuffle's memory (PLAN/15 D2). */
+  recordSongGuessrRound(songId: string, attempts: number | null, poolKind?: string): Promise<void> {
+    return call('guessr_record', { songId, attempts, poolKind });
+  }
+
   // ----- lyrics ----------------------------------------------------------------------------------
 
   /**

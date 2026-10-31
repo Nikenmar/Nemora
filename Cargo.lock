@@ -2926,6 +2926,7 @@ dependencies = [
  "discord-rich-presence",
  "drag",
  "image",
+ "log",
  "nemora-audio",
  "nemora-core",
  "notify",

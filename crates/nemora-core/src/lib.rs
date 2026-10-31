@@ -11,6 +11,7 @@ pub mod covers;
 pub mod db;
 pub mod elo;
 pub mod error;
+pub mod guessr;
 pub mod identity;
 pub mod ids;
 pub mod import;
@@ -18,6 +19,8 @@ pub mod library;
 pub mod lyrics;
 pub mod m3u;
 pub mod palette;
+#[cfg(test)]
+mod perf;
 pub mod playlists;
 pub mod plays;
 pub mod queue;

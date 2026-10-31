@@ -206,8 +206,57 @@ pub struct Recorded {
     pub evaluation: Evaluation,
 }
 
+/// Why a song started playing (`play_details.start_reason`, schema v2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StartReason {
+    /// The player advanced to it, or a play button built the queue it leads.
+    Auto,
+    /// The user picked it: a row, a search result, the queue.
+    UserSelected,
+    /// The previous button brought it back.
+    UserPrevious,
+    /// Previous pressed during the song, which starts it again.
+    Restart,
+    /// The session restored at start-up.
+    Resume,
+    #[default]
+    Unknown,
+}
+
+impl StartReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::UserSelected => "user_selected",
+            Self::UserPrevious => "user_previous",
+            Self::Restart => "restart",
+            Self::Resume => "resume",
+            Self::Unknown => "unknown",
+        }
+    }
+
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "auto" => Self::Auto,
+            "user_selected" => Self::UserSelected,
+            "user_previous" => Self::UserPrevious,
+            "restart" => Self::Restart,
+            "resume" => Self::Resume,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// `play_details.seeks` keeps at most this many seeks of a session, the first ones.
+pub const DETAIL_SEEKS: usize = 64;
+
 /// Stores a finished session and updates the roll-ups, in one transaction.
 pub fn record(db: &mut Db, session: &Session) -> Result<Recorded> {
+    record_with(db, session, StartReason::Unknown)
+}
+
+/// [`record`], with why the song started. Every seek of the session goes to `play_details`.
+pub fn record_with(db: &mut Db, session: &Session, start: StartReason) -> Result<Recorded> {
     let device_id = db.device_id()?;
     let evaluation = evaluate(session);
     let tx = db.conn_mut().transaction()?;
@@ -236,6 +285,23 @@ pub fn record(db: &mut Db, session: &Session) -> Result<Recorded> {
             session.source_kind,
             session.source_id,
             seeks
+        ],
+    )?;
+    let raw_seeks: Vec<[i64; 3]> = session
+        .facts
+        .iter()
+        .filter_map(|f| match *f {
+            Fact::Seek { at_ms, from_ms, to_ms } => Some([at_ms, from_ms, to_ms]),
+            _ => None,
+        })
+        .take(DETAIL_SEEKS)
+        .collect();
+    tx.execute(
+        "INSERT INTO play_details (event_id, start_reason, seeks) VALUES (?1, ?2, ?3)",
+        params![
+            event_id,
+            start.as_str(),
+            (!raw_seeks.is_empty()).then(|| serde_json::to_string(&raw_seeks)).transpose()?
         ],
     )?;
     add_to_rollups(&tx, &session.song_id, session.started_at, session.utc_offset_min, &evaluation)?;

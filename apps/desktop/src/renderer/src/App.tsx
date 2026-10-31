@@ -62,12 +62,13 @@ import { isDataChanged } from './utils/hasDataChanged';
 import log from './utils/log';
 import throttle from './utils/throttle';
 import parseNotificationFromMain from './other/parseNotificationFromMain';
-import ListeningDataSession, { type EndReason } from './other/listeningDataSession';
+import ListeningDataSession, { type EndReason, type StartReason } from './other/listeningDataSession';
 import { updateSystemMedia } from './other/systemMedia';
 import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
+import { startTrace } from './other/trace';
 import AudioPlayer from './other/player';
 import {
   freshMediaUrl,
@@ -398,6 +399,7 @@ export default function App() {
       .then((startUpSongData) => {
         if (startUpSongData) playSongFromUnknownSource(startUpSongData, true);
         else if (playback?.currentSong.songId) {
+          setStartReason('resume');
           playSong(playback?.currentSong.songId, false);
 
           const currSongPosition = Number(playback?.currentSong.stoppedPosition);
@@ -729,18 +731,29 @@ export default function App() {
   const recordRef = useRef<ListeningDataSession>(undefined);
   /** Why the current song is about to stop, set by whatever moves the queue. */
   const endReasonRef = useRef<EndReason>('user_selected');
+  /** Why the next song starts: the queue moving on, previous, the restored session; otherwise the
+   * user picked it. Read once by the next session, and only for a few seconds: a skip that plays
+   * nothing (the end of the queue) must not label the user's next own pick. */
+  const startReasonRef = useRef<{ reason: StartReason; at: number }>({ reason: 'user_selected', at: 0 });
+  const setStartReason = (reason: StartReason) => {
+    startReasonRef.current = { reason, at: performance.now() };
+  };
 
   const recordListeningData = useCallback(
     (songId: string, duration: number, isRepeating = false, isKnownSource = true) => {
       if (recordRef?.current?.songId !== songId || isRepeating) {
         recordRef.current?.stopRecording(endReasonRef.current);
         endReasonRef.current = 'user_selected';
+        const pending = startReasonRef.current;
+        const startReason = performance.now() - pending.at < 10_000 ? pending.reason : 'user_selected';
+        startReasonRef.current = { reason: 'user_selected', at: 0 };
 
         const listeningDataSession = new ListeningDataSession(
           player,
           songId,
           duration,
-          isKnownSource
+          isKnownSource,
+          startReason
         );
         listeningDataSession.recordListeningData();
         recordRef.current = listeningDataSession;
@@ -921,6 +934,7 @@ export default function App() {
       return;
     }
     endReasonRef.current = 'user_previous';
+    setStartReason('user_previous');
     if (typeof currentSongIndex === 'number') {
       if (currentSongIndex === 0) {
         if (queue.queue.length > 0) changeQueueCurrentSongIndex(queue.queue.length - 1);
@@ -935,6 +949,8 @@ export default function App() {
       const { currentSongIndex } = queue;
       // A song that played to its end has already closed its session as finished.
       if (reason === 'USER_SKIP') endReasonRef.current = 'user_next';
+      // Next, or the end of a song: the queue brings the next one, the user did not pick it.
+      setStartReason('auto');
       if (store.state.player.isRepeating === 'repeat-1' && reason !== 'USER_SKIP') {
         player.currentTime = 0;
         toggleSongPlayback(true);
@@ -1176,7 +1192,11 @@ export default function App() {
       }
 
       storage.queue.setQueue(queue);
-      if (startPlaying) changeQueueCurrentSongIndex(0);
+      // Play buttons of a whole list: the user chose the list, the queue chose its first song.
+      if (startPlaying) {
+        setStartReason('auto');
+        changeQueueCurrentSongIndex(0);
+      }
     },
     [changeQueueCurrentSongIndex, shuffleQueue, toggleShuffling]
   );
@@ -1216,9 +1236,11 @@ export default function App() {
         return;
       }
 
+      const trace = startTrace('Smart Shuffle on');
       window.api.tierlistsData
         .getTierlistData()
         .then((tierlists) => {
+          trace.step('tierlists');
           const hasInfluencing = (tierlists || []).some((tl) => tl.influencesShuffle);
           if (!hasInfluencing) {
             // No tierlist feeds the shuffle — don't enable, just tell the user.
@@ -1236,23 +1258,29 @@ export default function App() {
         })
         .then((data) => {
           if (!data) return; // aborted (no influencing tierlists)
+          trace.step('weights');
           const { shuffledQueue, positions } = megaShuffleQueue(
             baseQueue,
             data,
             currentQueue.currentSongIndex ?? undefined
           );
+          trace.step('order');
           storage.queue.setQueue({
             ...currentQueue,
             queue: shuffledQueue,
             queueBeforeShuffle: positions,
             currentSongIndex: 0
           });
+          trace.step('queue');
           toggleShuffling(false); // mutual exclusivity with the normal shuffle
           dispatch({ type: 'TOGGLE_TIER_SHUFFLE_STATE', data: true });
+          trace.step('state');
           // No playSong() call — the current track keeps playing seamlessly.
           addNewNotifications([
             { id: 'tierShuffleOn', duration: 4000, content: t('player.tierShuffleOn') }
           ]);
+          trace.step('toast');
+          void trace.end({ queue: baseQueue.length });
         })
         .catch((err) => console.error(err));
     },

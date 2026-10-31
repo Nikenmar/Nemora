@@ -332,9 +332,10 @@ pub fn recent_songs(db: &crate::db::Db, limit: usize) -> crate::Result<Vec<Strin
 pub fn skip_factors(db: &crate::db::Db, now: i64) -> crate::Result<HashMap<String, f64>> {
     let since = now - SKIP_PAIR_WINDOW_MS - SKIP_HOLD_MS - SKIP_RECOVER_MS;
     let mut stmt = db.conn().prepare(
+        // By time only, so SQLite walks the recent end of `play_events_ended`; ordering by song made
+        // it scan every play through the song index (110 ms at 200 000 plays).
         "SELECT song_id, ended_at FROM play_events
-         WHERE end_reason = 'user_next' AND ended_at >= ?1 AND (heard_ms < 30000 OR heard_ms * 4 < duration_ms)
-         ORDER BY song_id, ended_at",
+         WHERE ended_at >= ?1 AND end_reason = 'user_next' AND (heard_ms < 30000 OR heard_ms * 4 < duration_ms)",
     )?;
     let mut skips: HashMap<String, Vec<i64>> = HashMap::new();
     for row in stmt.query_map([since], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
@@ -343,7 +344,10 @@ pub fn skip_factors(db: &crate::db::Db, now: i64) -> crate::Result<HashMap<Strin
     }
     Ok(skips
         .into_iter()
-        .map(|(id, times)| (id, skip_factor(&times, now)))
+        .map(|(id, mut times)| {
+            times.sort_unstable();
+            (id, skip_factor(&times, now))
+        })
         .filter(|(_, factor)| *factor < 1.0)
         .collect())
 }

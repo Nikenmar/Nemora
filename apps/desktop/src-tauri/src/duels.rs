@@ -201,7 +201,11 @@ fn without_pending(mut doc: Value) -> Value {
 }
 
 #[tauri::command]
-pub fn tierlists_list(app: State<'_, App>, ids: Option<Vec<String>>, sort_type: Option<String>) -> Res<Vec<Value>> {
+pub async fn tierlists_list(
+    app: State<'_, App>,
+    ids: Option<Vec<String>>,
+    sort_type: Option<String>,
+) -> Res<Vec<Value>> {
     let db = app.read();
     let wanted = ids.unwrap_or_default();
     let mut docs: Vec<Value> = playlists::tierlists(&db)
@@ -354,7 +358,7 @@ pub fn tierlist_artworks(app: State<'_, App>, song_ids: Vec<String>) -> Res<Hash
 /// Weights for the songs of a queue (every song, by song id, when `song_ids` is empty) and the
 /// pairs to keep apart; the view orders the queue. `skip_aware` (PLAN/14 C3) is on unless false.
 #[tauri::command]
-pub fn shuffle_data(
+pub async fn shuffle_data(
     app: State<'_, App>,
     taste_map: State<'_, crate::tastemap::TasteMapCache>,
     song_ids: Vec<String>,
@@ -362,11 +366,14 @@ pub fn shuffle_data(
     skip_aware: Option<bool>,
     steering: Option<nemora_core::shuffle::Steering>,
 ) -> Res<Value> {
+    let mut trace = crate::trace::Trace::start("shuffle_data");
     let db = app.read();
+    trace.step("lock");
     let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
     let mut weights =
         nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6), skip_aware != Some(false))
             .map_err(fail)?;
+    trace.step("weights");
     // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue. "More
     // like this" leans on the taste map's neighbours when a map was ever built.
     if steering.as_ref().is_some_and(|s| !s.more_like.is_empty()) {
@@ -381,6 +388,7 @@ pub fn shuffle_data(
         now,
     )
     .map_err(fail)?;
+    trace.step("steering");
     // Duplicate rows share their song's weight.
     let by_view: HashMap<&String, f64> = if song_ids.is_empty() {
         weights.iter().map(|(song, w)| (song, *w)).collect()
