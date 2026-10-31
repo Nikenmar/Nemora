@@ -18,7 +18,6 @@ type Props = {
   id: string;
   name: string;
   className?: string;
-  sliderOpacity?: number;
   onSeek?: (currentPosition: number) => void;
 };
 
@@ -28,7 +27,7 @@ const SeekBarSlider = (props: Props) => {
 
   const { updateSongPosition } = useContext(AppUpdateContext);
 
-  const { id, name, className, sliderOpacity, onSeek } = props;
+  const { id, name, className, onSeek } = props;
 
   const [songPos, setSongPos] = useState(0);
   const isMouseDownRef = useRef(false);
@@ -42,7 +41,6 @@ const SeekBarSlider = (props: Props) => {
       ((currentSongData.duration || 0) >= songPos ? currentSongData.duration || 0 : songPos)) *
     100
   }%`;
-  if (sliderOpacity !== undefined) seekBarCssProperties['--slider-opacity'] = `${sliderOpacity}`;
 
   const handleSongPositionChange = useCallback((e: Event) => {
     if ('detail' in e && typeof e.detail === 'number') {

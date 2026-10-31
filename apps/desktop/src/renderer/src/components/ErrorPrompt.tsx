@@ -18,7 +18,7 @@ const ErrorPrompt = (props: ErrorPromptProps) => {
   return (
     <>
       <div className="alert-icon-container">
-        <div className="title-container mb-4 mt-1 flex items-center text-3xl font-medium uppercase text-danger">
+        <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-danger">
           <span className="ms-icon icon mr-4 text-4xl">warning</span>
           <span className="font-semibold">{t('errorPrompt.title')}</span>
         </div>

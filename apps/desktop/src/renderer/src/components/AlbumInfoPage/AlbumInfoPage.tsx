@@ -201,6 +201,7 @@ const AlbumInfoPage = () => {
     >
       <TitleContainer
         title={albumContent.albumData.title}
+        titleClassName="sr-only"
         className="pr-4"
         buttons={[
           {
@@ -242,6 +243,7 @@ const AlbumInfoPage = () => {
           },
           {
             label: t('common.playAll'),
+            variant: 'primary',
             iconName: 'play_arrow',
             clickHandler: () =>
               createQueue(

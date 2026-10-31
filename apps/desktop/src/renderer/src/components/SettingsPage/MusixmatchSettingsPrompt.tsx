@@ -30,7 +30,7 @@ const MusixmatchSettingsPrompt = () => {
 
   return (
     <div>
-      <div className="title-container mb-4 text-2xl font-medium uppercase text-ink">
+      <div className="title-container mb-4 text-title font-semibold text-ink">
         {t('musixmatchSettingsPrompt.title')}
       </div>
       <ul className="list-inside list-disc font-light">
@@ -133,7 +133,7 @@ const MusixmatchSettingsPrompt = () => {
           <Trans
             i18nKey="musixmatchSettingsPrompt.savedTokenAvailableMessage"
             components={{
-              Title: <p className="flex items-center font-semibold uppercase" />,
+              Title: <p className="flex items-center font-semibold" />,
               span: <span className="ms-icon mr-2 text-xl">done</span>,
               p: <p className="text-sm" />
             }}

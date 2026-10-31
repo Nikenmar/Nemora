@@ -1,7 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import log from '../utils/log';
-import BugImg from '../assets/images/svg/Bug Fixed_Monochromatic.svg';
 import Button from './Button';
 
 interface ErrorBoundaryProps {
@@ -19,7 +18,9 @@ const ErrorBoundaryFallbackUi = (props: ErrorBoundaryStates) => {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center overflow-x-hidden text-ink">
-      <img src={BugImg} alt="App bug found." className="w-48" />
+      <span className="ms-icon mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-[28px] text-ink-dim" aria-hidden>
+            bug_report
+          </span>
       <br />
       <h2>{t('common.somethingWentWrong')}</h2>
       {/*
@@ -34,10 +35,10 @@ const ErrorBoundaryFallbackUi = (props: ErrorBoundaryStates) => {
         style={{ whiteSpace: 'pre-wrap' }}
         className="mx-auto max-w-[80%] text-sm font-light select-text"
       >
-        <summary className="cursor-pointer px-4 py-2 underline select-none">
+        <summary className="cursor-pointer px-4 py-2 text-ink-dim select-none hover:text-ink">
           {t('common.details')}
         </summary>
-        <p className="mt-4 rounded-2xl bg-surface-2 p-4 select-text">
+        <p className="mt-2 rounded-panel bg-surface-2 p-4 text-small text-ink-dim select-text">
           {error && error.toString()}
           <br />
           {errorInfo?.componentStack}
@@ -45,7 +46,8 @@ const ErrorBoundaryFallbackUi = (props: ErrorBoundaryStates) => {
       </details>
       <div className="buttons-container">
         <Button
-          className="!mr-0 mt-4 !bg-accent text-sm text-on-accent hover:border-accent "
+          variant="primary"
+          className="!mr-0 mt-4"
           label={t('common.restartApp')}
           iconName="restart_alt"
           clickHandler={() => window.api.appControls.restartRenderer('error')}

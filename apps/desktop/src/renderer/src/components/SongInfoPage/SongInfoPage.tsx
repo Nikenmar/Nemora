@@ -217,7 +217,7 @@ const SongInfoPage = () => {
                 : 'text-ink'
             }`}
           >
-            <div className="font-semibold uppercase opacity-50 dark:font-medium">
+            <div className="text-small text-ink-dim">
               {t('common.song_one')}
             </div>
             <div

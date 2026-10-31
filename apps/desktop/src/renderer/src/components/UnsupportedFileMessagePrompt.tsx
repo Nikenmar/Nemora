@@ -24,7 +24,7 @@ const UnsupportedFileMessagePrompt = (props: Props) => {
 
   return (
     <div>
-      <div className="title-container mb-4 text-3xl font-medium">
+      <div className="title-container mb-4 text-title font-semibold">
         {t('unsupportedFileMessagePrompt.title')}
       </div>
       <div className="description">

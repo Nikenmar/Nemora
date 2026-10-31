@@ -14,7 +14,6 @@ import Recap from './Recap/Recap';
 import type { RecapPeriod, RecapSlide } from '@platform/core/stats/recap';
 import MainContainer from '../MainContainer';
 import Button from '../Button';
-import Img from '../Img';
 import StatTile from './StatTile';
 import ActivityBarGraph from './ActivityBarGraph';
 import ActivityCalendar from './ActivityCalendar';
@@ -22,8 +21,8 @@ import ListeningPatternCharts from './ListeningPatternCharts';
 import TopSongRow from './TopSongRow';
 import TopNameRow from './TopNameRow';
 import SongGuessrStatsSection from './SongGuessrStatsSection';
+import EmptyState from '../ui/EmptyState';
 
-import NoStatsImage from '../../assets/images/svg/Summer landscape_Monochromatic.svg';
 
 const ImportStatsPrompt = lazy(() => import('./ImportStatsPrompt'));
 
@@ -326,7 +325,7 @@ const StatsPage = () => {
             </div>
 
             <section className="mb-6">
-              <h2 className="mb-2 text-lg font-medium text-echo">
+              <h2 className="mb-3 text-section font-semibold text-ink">
                 {t('statsPage.listeningActivity')}
               </h2>
               <ActivityBarGraph key={stats.timeRange} data={activityData} />
@@ -338,7 +337,7 @@ const StatsPage = () => {
             </section>
 
             <section className="mb-6">
-              <h2 className="mb-2 text-lg font-medium text-echo">
+              <h2 className="mb-3 text-section font-semibold text-ink">
                 {yearRangeLabel(t('statsPage.listeningCalendar'), stats.scopes.calendar)}
               </h2>
               <div className="grid grid-cols-3 gap-3">
@@ -364,7 +363,7 @@ const StatsPage = () => {
 
             <div className="mb-6 grid gap-6 lg:grid-cols-3">
               <section>
-                <h2 className="mb-2 text-lg font-medium text-echo">
+                <h2 className="mb-3 text-section font-semibold text-ink">
                   {t('statsPage.topSongs')}
                 </h2>
                 <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
@@ -382,7 +381,7 @@ const StatsPage = () => {
                 </div>
               </section>
               <section>
-                <h2 className="mb-2 text-lg font-medium text-echo">
+                <h2 className="mb-3 text-section font-semibold text-ink">
                   {t('statsPage.topArtists')}
                 </h2>
                 <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
@@ -398,7 +397,7 @@ const StatsPage = () => {
                 </div>
               </section>
               <section>
-                <h2 className="mb-2 text-lg font-medium text-echo">
+                <h2 className="mb-3 text-section font-semibold text-ink">
                   {t('statsPage.topAlbums')}
                 </h2>
                 <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
@@ -413,7 +412,7 @@ const StatsPage = () => {
 
             <div className="mb-6 grid gap-6 lg:grid-cols-2">
               <section>
-                <h2 className="mb-2 text-lg font-medium text-echo">
+                <h2 className="mb-3 text-section font-semibold text-ink">
                   {t('statsPage.topGenres')}
                 </h2>
                 <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
@@ -425,7 +424,7 @@ const StatsPage = () => {
                 </div>
               </section>
               <section>
-                <h2 className="mb-2 text-lg font-medium text-echo">
+                <h2 className="mb-3 text-section font-semibold text-ink">
                   {yearRangeLabel(t('statsPage.mostSkipped'), stats.scopes.mostSkipped)}
                 </h2>
                 <div className="rounded-md bg-surface-2/70 p-4 backdrop-blur-md">
@@ -453,7 +452,7 @@ const StatsPage = () => {
 
             {stats.elo.totalDuels > 0 && (
               <section className="mb-6">
-                <h2 className="mb-2 text-lg font-medium text-echo">
+                <h2 className="mb-3 text-section font-semibold text-ink">
                   {yearRangeLabel(t('eloDuels.sectionTitle'), stats.scopes.elo)}
                 </h2>
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -539,10 +538,7 @@ const StatsPage = () => {
             )}
           </div>
         ) : (
-          <div className="no-stats-container my-[8%] flex h-full w-full flex-col items-center justify-center text-center text-xl">
-            <Img src={NoStatsImage} alt="" className="mb-8 w-60" />
-            <span>{t('statsPage.empty')}</span>
-          </div>
+          <EmptyState className="no-stats-container h-full" iconName="monitoring" title={t('statsPage.empty')} />
         )}
       </>
     </MainContainer>

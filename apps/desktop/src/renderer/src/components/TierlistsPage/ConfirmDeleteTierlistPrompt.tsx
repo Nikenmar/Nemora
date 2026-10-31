@@ -30,7 +30,7 @@ const ConfirmDeleteTierlistPrompt = ({ tierlist }: ConfirmDeleteTierlistProps) =
 
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-ink">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {t('tierlistsPage.deleteTierlist')} — {tierlist.name}
       </div>
       <div className="description">{t('tierlistsPage.confirmDeleteMessage')}</div>

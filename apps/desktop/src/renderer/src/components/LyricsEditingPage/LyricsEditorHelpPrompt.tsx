@@ -24,9 +24,9 @@ const LyricsEditorHelpPrompt = (props: Props) => {
 
   return (
     <div>
-      <div className="title-container mb-4 flex items-center justify-between text-echo">
-        <span className="flex items-center text-3xl font-medium">
-          <span className="ms-icon mr-2 text-4xl">help</span>{' '}
+      <div className="title-container mb-4 flex items-center justify-between text-ink">
+        <span className="flex items-center text-title font-semibold">
+          <span className="ms-icon mr-2 text-[24px] text-ink-dim">help</span>{' '}
           {t('lyricsEditorHelpPrompt.title')}
         </span>
 

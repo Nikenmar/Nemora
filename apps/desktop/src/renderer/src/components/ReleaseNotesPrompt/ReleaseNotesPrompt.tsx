@@ -79,7 +79,7 @@ const ReleaseNotesPrompt = () => {
       <div className="h-full w-full">
         {releaseNotes && (
           <>
-            <h2 className="title-container mb-2 text-center text-3xl font-medium">
+            <h2 className="title-container mb-2 text-center text-title font-semibold">
               {t('releaseNotesPrompt.changelog')}
             </h2>
             {latestUpdatedInfo.artwork && (

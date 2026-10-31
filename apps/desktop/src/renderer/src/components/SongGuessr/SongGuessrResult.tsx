@@ -57,7 +57,7 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
 
           <div className="flex min-w-0 flex-col">
             <span
-              className={`mb-1.5 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${
+              className={`mb-1.5 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ${
                 won
                   ? 'bg-echo/15 text-echo '
                   : 'bg-danger/15 text-danger'

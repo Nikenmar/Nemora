@@ -118,20 +118,27 @@ pub fn keep_in_background(window: &tauri::WebviewWindow) {
     let _ = window.set_always_on_bottom(true);
     #[cfg(windows)]
     {
+        use windows::Win32::Foundation::HWND;
         use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow};
-        let previous = unsafe { GetForegroundWindow() }.0 as isize;
+
         let own = window.hwnd().map(|h| h.0 as isize).unwrap_or_default();
-        if previous == 0 || previous == own {
-            return;
-        }
-        window.on_window_event(move |event| {
-            if let tauri::WindowEvent::Focused(true) = event {
-                let hwnd = windows::Win32::Foundation::HWND(previous as *mut core::ffi::c_void);
-                unsafe {
-                    if IsWindow(Some(hwnd)).as_bool() {
-                        let _ = SetForegroundWindow(hwnd);
+        // Follows whatever the user has in front for the whole run (they may switch apps while the
+        // stand works); the moment this window is in front instead, the focus goes straight back.
+        // Polled rather than driven by focus events: a window that cannot take the focus is not
+        // told when Windows activates it anyway.
+        std::thread::spawn(move || {
+            let mut last = unsafe { GetForegroundWindow() }.0 as isize;
+            loop {
+                let front = unsafe { GetForegroundWindow() }.0 as isize;
+                if front == own {
+                    let target = HWND(last as *mut core::ffi::c_void);
+                    if last != 0 && unsafe { IsWindow(Some(target)) }.as_bool() {
+                        let _ = unsafe { SetForegroundWindow(target) };
                     }
+                } else if front != 0 {
+                    last = front;
                 }
+                std::thread::sleep(std::time::Duration::from_millis(25));
             }
         });
     }

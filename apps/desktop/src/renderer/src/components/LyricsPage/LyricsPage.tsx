@@ -398,7 +398,7 @@ const LyricsPage = () => {
         {isOnline || lyrics ? (
           lyrics && lyrics.lyrics.parsedLyrics.length > 0 ? (
             <>
-              <div className="title-container relative flex w-full items-center justify-between py-2 pl-8 pr-2 text-2xl text-echo">
+              <div className="title-container relative flex w-full items-center justify-between py-2 pl-8 pr-2 text-title font-semibold text-ink">
                 <div className="flex max-w-[40%] items-center">
                   <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
                     {t(

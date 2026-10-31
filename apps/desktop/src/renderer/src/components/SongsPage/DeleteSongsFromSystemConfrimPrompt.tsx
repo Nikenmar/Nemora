@@ -36,7 +36,7 @@ const DeleteSongFromSystemConfirmPrompt = (props: { songIds: string[] }) => {
 
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-ink">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {t('deleteSongFromSystemConfirmPrompt.title', {
           count: songsData.length,
           title: songsData[0]?.title

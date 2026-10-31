@@ -116,7 +116,7 @@ export const MostRelevantResult = (props: MostRelevantResultProp) => {
             {infoType2}
           </div>
         )}
-        <div className="result-type mt-3 w-fit -translate-x-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-2xl bg-accent px-3 py-1 font-medium uppercase text-on-accent group-hover:bg-canvas group-hover:text-ink ">
+        <div className="result-type mt-3 w-fit -translate-x-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-2xl bg-accent px-3 py-1 font-medium text-on-accent group-hover:bg-canvas group-hover:text-ink ">
           {t(`common.${resultType}_one`)}
         </div>
       </div>

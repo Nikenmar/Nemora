@@ -92,7 +92,7 @@ const AccountsSettings = () => {
               />
               <div className="flex-grow-0">
                 <p
-                  className={`flex items-center font-semibold uppercase ${
+                  className={`flex items-center font-semibold ${
                     isLastFmConnected ? 'text-success' : 'text-danger'
                   } `}
                 >

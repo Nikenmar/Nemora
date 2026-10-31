@@ -65,7 +65,7 @@ const EditTierlistSourcesPrompt = ({ tierlist, onSaved }: EditTierlistSourcesPro
 
       {folders.length > 0 && (
         <>
-          <span className="mb-2 self-start text-sm font-medium uppercase tracking-wide opacity-70">
+          <span className="mb-2 self-start text-sm font-medium opacity-70">
             {t('tierlistsPage.folders')}
           </span>
           <div className="folders-picker mb-5 flex w-full flex-wrap justify-center gap-3 px-1 py-1">
@@ -96,7 +96,7 @@ const EditTierlistSourcesPrompt = ({ tierlist, onSaved }: EditTierlistSourcesPro
         </>
       )}
 
-      <span className="mb-2 self-start text-sm font-medium uppercase tracking-wide opacity-70">
+      <span className="mb-2 self-start text-sm font-medium opacity-70">
         {t('common.playlist_other')}
       </span>
       <div className="playlists-picker flex w-full flex-wrap justify-center gap-3 px-1 py-1">

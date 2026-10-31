@@ -64,7 +64,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
             label={t(
               `customizeSelectedMetadataPrompt.${isSelectedArtwork ? 'selected' : 'select'}`
             )}
-            className={`!mx-0 mt-4 bg-surface-2 !py-1 uppercase group-hover:bg-canvas ${
+            className={`!mx-0 mt-4 bg-surface-2 !py-1 group-hover:bg-canvas ${
               isSelectedArtwork &&
               '!!!border-accent !bg-accent font-medium !text-on-accent'
             }`}
@@ -267,7 +267,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
                   !selectedMetadata.isTitleSelected && '!opacity-50'
                 }`}
               >
-                <div className="title text-xs uppercase opacity-50">{t('common.songTitle')}</div>
+                <div className="title text-xs opacity-50">{t('common.songTitle')}</div>
                 <div className="data text-lg">{title}</div>
               </div>
             </div>
@@ -290,7 +290,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
                   !selectedMetadata.isArtistsSelected && '!opacity-50'
                 }`}
               >
-                <div className="title text-xs uppercase opacity-50">{t('common.artist_other')}</div>
+                <div className="title text-xs opacity-50">{t('common.artist_other')}</div>
                 <div className="data text-lg">{artists?.join(', ')}</div>
               </div>
             </div>
@@ -313,7 +313,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
                   !selectedMetadata.isAlbumSelected && '!opacity-50'
                 }`}
               >
-                <div className="title text-xs uppercase opacity-50">{t('common.album_one')}</div>
+                <div className="title text-xs opacity-50">{t('common.album_one')}</div>
                 <div className="data text-lg">{album}</div>
               </div>
             </div>
@@ -336,7 +336,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
                   !selectedMetadata.isGenresSelected && '!opacity-50'
                 }`}
               >
-                <div className="title text-xs uppercase opacity-50">{t('common.genre_other')}</div>
+                <div className="title text-xs opacity-50">{t('common.genre_other')}</div>
                 <div className="data text-lg">{genres?.join(', ')}</div>
               </div>
             </div>
@@ -359,7 +359,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
                   !selectedMetadata.isReleasedYearSelected && '!opacity-50'
                 }`}
               >
-                <div className="title text-xs uppercase opacity-50">{t('common.releasedYear')}</div>
+                <div className="title text-xs opacity-50">{t('common.releasedYear')}</div>
                 <div className="data text-lg">{releasedYear}</div>
               </div>
             </div>
@@ -382,7 +382,7 @@ const CustomizeSelectedMetadataPrompt = (props: SongMetadataResultProp) => {
                   !selectedMetadata.isLyricsSelected && '!opacity-50'
                 }`}
               >
-                <div className="title text-xs uppercase opacity-50">{t('common.lyrics')}</div>
+                <div className="title text-xs opacity-50">{t('common.lyrics')}</div>
                 <div className="data line-clamp-2 overflow-hidden truncate text-lg">
                   <div className="flex">
                     {isLyricsSynchronised && (

@@ -208,7 +208,7 @@ const AppShortcutsPrompt = () => {
 
         return (
           <li key={categoryIndex} className="shortcut-category mt-8">
-            <div className="shortcut-category-title text-2xl text-echo">
+            <div className="shortcut-category-title text-section font-semibold text-ink">
               {shortcutCategoryTitle}
             </div>
             <div className="shortcuts-container ml-4 flex flex-row flex-wrap justify-between">
@@ -221,7 +221,7 @@ const AppShortcutsPrompt = () => {
   );
   return (
     <div>
-      <div className="title-container text-center text-3xl font-medium">
+      <div className="title-container text-center text-title font-semibold">
         {t('appShortcutsPrompt.inAppShortcuts')}
       </div>
       <ul className="shortcuts-categories-container px-4">{shortcutCategoryComponents}</ul>

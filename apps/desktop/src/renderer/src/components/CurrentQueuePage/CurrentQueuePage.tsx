@@ -1,4 +1,6 @@
 /* eslint-disable promise/catch-or-return */
+import TitleContainer from '../TitleContainer';
+import EmptyState from '../ui/EmptyState';
 import {
   useCallback,
   useContext,
@@ -15,11 +17,9 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import useSelectAllHandler from '../../hooks/useSelectAllHandler';
 import calculateTimeFromSeconds from '../../utils/calculateTimeFromSeconds';
 
-import Button from '../Button';
 import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
 import DefaultPlaylistCover from '../../assets/images/webp/playlist_cover_default.webp';
 import FolderImg from '../../assets/images/webp/empty-folder.webp';
-import NoSongsImage from '../../assets/images/svg/Sun_Monochromatic.svg';
 import MainContainer from '../MainContainer';
 import Img from '../Img';
 import Song from '../SongsPage/Song';
@@ -46,7 +46,7 @@ const CurrentQueuePage = () => {
   const currentQueue = useStore(store, (state) => state.localStorage.queue.queue);
   const preferences = useStore(store, (state) => state.localStorage.preferences);
 
-  const { updateQueueData, addNewNotifications, updateContextMenuData, toggleMultipleSelections } =
+  const { updateQueueData, addNewNotifications, toggleMultipleSelections } =
     useContext(AppUpdateContext);
   const { t } = useTranslation();
 
@@ -259,51 +259,25 @@ const CurrentQueuePage = () => {
       }}
     >
       <>
-        <div className="title-container mb-4 mt-2 flex items-center justify-between pr-4 text-page font-semibold text-ink">
-          {t('currentQueuePage.queue')}
-          <div className="other-controls-container float-right flex">
-            <Button
-              key={0}
-              className="more-options-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-              iconName="more_horiz"
-              isDisabled={currentQueue.length > 0 === false}
-              clickHandler={(e) => {
-                e.stopPropagation();
-                const button = e.currentTarget;
-                const { x, y } = button.getBoundingClientRect();
-                updateContextMenuData(true, moreOptionsContextMenuItems, x + 10, y + 50);
-              }}
-              tooltipLabel="More Options"
-              onContextMenu={(e) => {
-                e.preventDefault();
-                updateContextMenuData(true, moreOptionsContextMenuItems, e.pageX, e.pageY);
-              }}
-            />
-            <Button
-              key={1}
-              className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-              iconName={isMultipleSelectionEnabled ? 'remove_done' : 'checklist'}
-              clickHandler={() => toggleMultipleSelections(!isMultipleSelectionEnabled, 'songs')}
-              isDisabled={currentQueue.length > 0 === false}
-              tooltipLabel={t(`common.${isMultipleSelectionEnabled ? 'unselectAll' : 'select'}`)}
-            />
-            <Button
-              key={2}
-              className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
-              iconName={isAutoScrolling ? 'flash_off' : 'flash_on'}
-              clickHandler={() => setIsAutoScrolling((state) => !state)}
-              isDisabled={currentQueue.length > 0 === false}
-              tooltipLabel={t(
-                `currentQueuePage.${isAutoScrolling ? 'disableAutoScrolling' : 'enableAutoScrolling'}`
-              )}
-            />
-            <Button
-              key={3}
-              className="shuffle-all-button text-sm"
-              iconName="shuffle"
-              tooltipLabel={t('currentQueuePage.shuffleQueue')}
-              isDisabled={currentQueue.length > 0 === false}
-              clickHandler={() => {
+        <TitleContainer
+          title={t('currentQueuePage.queue')}
+          otherItems={
+            currentQueue.length > 0
+              ? [
+                  <span key="meta" className="text-small text-ink-dim">
+                    {t('common.songWithCount', { count: queuedSongs.length })},{' '}
+                    {t('currentQueuePage.durationRemaining', { duration: completedQueueDuration })}
+                  </span>
+                ]
+              : []
+          }
+          buttons={[
+            {
+              label: t('currentQueuePage.shuffleQueue'),
+              iconName: 'shuffle',
+              className: 'shuffle-all-button',
+              isDisabled: currentQueue.length > 0 === false,
+              clickHandler: () => {
                 updateQueueData(undefined, currentQueue, true);
                 fetchAllSongsData();
                 addNewNotifications([
@@ -314,15 +288,41 @@ const CurrentQueuePage = () => {
                     iconName: 'shuffle'
                   }
                 ]);
-              }}
-            />
-            <Button
-              key={4}
-              label={t('currentQueuePage.clearQueue')}
-              className="clear-queue-button text-sm"
-              iconName="clear"
-              isDisabled={currentQueue.length > 0 === false}
-              clickHandler={() => {
+              }
+            },
+            {
+              iconName: isMultipleSelectionEnabled ? 'remove_done' : 'checklist',
+              className: 'select-btn',
+              isActive: isMultipleSelectionEnabled,
+              isDisabled: currentQueue.length > 0 === false,
+              tooltipLabel: t(`common.${isMultipleSelectionEnabled ? 'unselectAll' : 'select'}`),
+              clickHandler: () => toggleMultipleSelections(!isMultipleSelectionEnabled, 'songs')
+            },
+            {
+              iconName: isAutoScrolling ? 'flash_off' : 'flash_on',
+              isActive: isAutoScrolling,
+              isDisabled: currentQueue.length > 0 === false,
+              tooltipLabel: t(
+                `currentQueuePage.${isAutoScrolling ? 'disableAutoScrolling' : 'enableAutoScrolling'}`
+              ),
+              clickHandler: () => setIsAutoScrolling((state) => !state)
+            },
+            ...moreOptionsContextMenuItems
+              .filter((item) => !(item as ContextMenuItem).isContextMenuItemSeperator)
+              .map((item) => ({
+                label: item.label,
+                iconName: item.iconName,
+                inOverflowMenu: true,
+                isDisabled: currentQueue.length > 0 === false,
+                clickHandler: () => item.handlerFunction?.()
+              })),
+            {
+              label: t('currentQueuePage.clearQueue'),
+              iconName: 'clear_all',
+              variant: 'danger',
+              inOverflowMenu: true,
+              isDisabled: currentQueue.length > 0 === false,
+              clickHandler: () => {
                 updateQueueData(undefined, []);
                 addNewNotifications([
                   {
@@ -332,47 +332,27 @@ const CurrentQueuePage = () => {
                     iconName: 'check'
                   }
                 ]);
-              }}
-            />
-          </div>
-        </div>
+              }
+            }
+          ]}
+        />
         {currentQueue.length > 0 && (
-          <div className="queue-info-container mb-6 ml-8 flex items-center text-ink">
-            <div className="cover-img-container mr-8">
-              <Img
-                className={`h-20 w-20 rounded-md shadow-lg ${
-                  queue.queueType === 'artist'
-                    ? 'artist-img !rounded-full'
-                    : `${queue.queueType}-img`
-                }`}
-                src={queueInfo.onlineArtworkPath}
-                fallbackSrc={queueInfo.artworkPath}
-                loading="eager"
-                alt="Current Playing Queue Cover"
-              />
-            </div>
-            <div className="queue-info">
-              <div className="queue-type text-sm font-semibold uppercase opacity-50 dark:font-medium">
-                {queue.queueType}
+          <div className="queue-info-container mb-5 mr-4 flex items-center gap-4 rounded-panel bg-surface-1 p-3 text-ink">
+            <Img
+              className={`h-14 w-14 shrink-0 object-cover shadow-[0_6px_16px_rgb(0_0_0/0.3)] ${
+                queue.queueType === 'artist' ? 'artist-img rounded-full' : `${queue.queueType}-img rounded-cover`
+              }`}
+              src={queueInfo.onlineArtworkPath}
+              fallbackSrc={queueInfo.artworkPath}
+              loading="eager"
+              alt=""
+            />
+            <div className="queue-info min-w-0">
+              <div className="queue-type text-small text-ink-dim">
+                {t('currentQueuePage.playingFrom', 'Playing from')}
               </div>
-              <div className="queue-title text-3xl">{queueInfo.title}</div>
-              <div className="other-info flex text-sm font-light">
-                <div className="queue-no-of-songs">
-                  {t('common.songWithCount', { count: queuedSongs.length })}
-                </div>
-                <span className="mx-1">&bull;</span>
-                <div className="queue-duration">
-                  <span>{queueDuration}</span>{' '}
-                  <span>
-                    (
-                    {t('currentQueuePage.durationRemaining', {
-                      duration: completedQueueDuration
-                    })}
-                    )
-                  </span>
-                </div>
-              </div>
-              {/* <div className="queue-buttons mt-4 flex"></div> */}
+              <div className="queue-title truncate text-section font-semibold">{queueInfo.title}</div>
+              <div className="queue-duration text-small text-ink-dim">{queueDuration}</div>
             </div>
           </div>
         )}
@@ -476,9 +456,11 @@ const CurrentQueuePage = () => {
           )}
         </div>
         {currentQueue.length === 0 && (
-          <div className="no-songs-container flex h-full w-full flex-col items-center justify-center text-center text-2xl text-ink-dim">
-            <Img src={NoSongsImage} className="mb-8 w-60" alt="" /> {t('currentQueuePage.empty')}
-          </div>
+          <EmptyState
+            className="no-songs-container h-full"
+            iconName="queue_music"
+            title={t('currentQueuePage.empty')}
+          />
         )}
       </>
     </MainContainer>

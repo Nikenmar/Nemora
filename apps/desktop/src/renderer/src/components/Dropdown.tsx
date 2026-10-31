@@ -74,7 +74,11 @@ function Dropdown<T extends string>(props: DropdownProp<T>) {
       )}
     >
       <Icon name={iconName ?? guessIcon(name)} size={16} className="text-ink-dim" />
-      <span className="truncate">{selected?.label ?? value}</span>
+      <span className="truncate">
+        {selected?.label ??
+          // An order the options do not list (an album's own track order): readable, not raw.
+          value.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
+      </span>
       <Icon name="expand_more" size={18} className="text-ink-dim" />
     </button>
   );

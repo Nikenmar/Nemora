@@ -37,7 +37,7 @@ const SongGuessrStatsSection = ({ stats, onTitleClick }: SongGuessrStatsSectionP
 
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-lg font-medium text-echo">
+      <h2 className="mb-3 text-section font-semibold text-ink">
         {t('songGuessr.sectionTitle')}
       </h2>
 

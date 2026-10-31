@@ -7,7 +7,7 @@ const MusixmatchDisclaimerPrompt = () => {
 
   return (
     <div className="">
-      <div className="mb-4 flex items-center text-3xl font-semibold uppercase">
+      <div className="mb-4 flex items-center text-title font-semibold">
         <span className="ms-icon mr-2 text-4xl !leading-none">error</span>{' '}
         <p>{t('musixmatchDisclaimerPrompt.title')}</p>
       </div>

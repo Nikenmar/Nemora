@@ -8,13 +8,12 @@ import i18n from '../../i18n';
 import { Album } from './Album';
 import MainContainer from '../MainContainer';
 import Dropdown, { type DropdownOption } from '../Dropdown';
-import Img from '../Img';
 import Button from '../Button';
 
-import NoAlbumsImage from '../../assets/images/svg/Easter bunny_Monochromatic.svg';
 import VirtualizedGrid from '../VirtualizedGrid';
 import { store } from '@renderer/store';
 import { useStore } from '@tanstack/react-store';
+import EmptyState from '../ui/EmptyState';
 
 const albumSortOptions: DropdownOption<AlbumSortTypes>[] = [
   { label: i18n.t('sortTypes.aToZ'), value: 'aToZ' },
@@ -175,10 +174,7 @@ const AlbumsPage = () => {
           </div>
         )} */}
         {albumsData && albumsData.length === 0 && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
-            <Img src={NoAlbumsImage} alt="No songs available." className="mb-8 w-60" />
-            <div>{t('albumsPage.empty')}</div>
-          </div>
+          <EmptyState className="no-songs-container h-full" iconName="album" title={t('albumsPage.empty')} />
         )}
       </>
     </MainContainer>

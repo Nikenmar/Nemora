@@ -8,10 +8,9 @@ import i18n from '../../i18n';
 import Dropdown, { type DropdownOption } from '../Dropdown';
 import MainContainer from '../MainContainer';
 import Button from '../Button';
-import Img from '../Img';
 import TierlistCard from './TierlistCard';
+import EmptyState from '../ui/EmptyState';
 
-import NoTierlistsImage from '../../assets/images/svg/Summer landscape_Monochromatic.svg';
 
 const NewTierlistPrompt = lazy(() => import('./NewTierlistPrompt'));
 
@@ -103,16 +102,20 @@ const TierlistsPage = () => {
             ))}
           </div>
         ) : (
-          <div className="no-tierlists-container my-[8%] flex h-full w-full flex-col items-center justify-center text-center text-xl">
-            <Img src={NoTierlistsImage} alt="" className="mb-8 w-60" />
-            <span>{t('tierlistsPage.empty')}</span>
-            <Button
-              label={t('tierlistsPage.addTierlist')}
-              iconName="add"
-              className="mt-6 !bg-accent !px-8 !py-3 !text-on-accent"
-              clickHandler={openCreatePrompt}
-            />
-          </div>
+          <EmptyState
+            className="no-tierlists-container h-full"
+            iconName="leaderboard"
+            title={t('tierlistsPage.empty')}
+            action={
+              <Button
+                label={t('tierlistsPage.addTierlist')}
+                iconName="add"
+                variant="primary"
+                className="!mr-0"
+                clickHandler={openCreatePrompt}
+              />
+            }
+          />
         )}
       </>
     </MainContainer>

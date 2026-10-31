@@ -8,13 +8,12 @@ import i18n from '../../i18n';
 import { Artist } from './Artist';
 import Dropdown, { type DropdownOption } from '../Dropdown';
 import MainContainer from '../MainContainer';
-import Img from '../Img';
 import Button from '../Button';
 
-import NoArtistImage from '../../assets/images/svg/Sun_Monochromatic.svg';
 import VirtualizedGrid from '../VirtualizedGrid';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import EmptyState from '../ui/EmptyState';
 
 const artistSortOptions: DropdownOption<ArtistSortTypes>[] = [
   { label: i18n.t('sortTypes.aToZ'), value: 'aToZ' },
@@ -211,10 +210,7 @@ const ArtistPage = () => {
           </div>
         )} */}
         {artistsData && artistsData.length === 0 && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
-            <Img src={NoArtistImage} alt="Sun in a desert" className="mb-8 w-60" />
-            <div>{t('artistsPage.empty')}</div>
-          </div>
+          <EmptyState className="no-songs-container h-full" iconName="group" title={t('artistsPage.empty')} />
         )}
       </>
     </MainContainer>

@@ -46,42 +46,7 @@ export const theme = {
       'glass-hover': 'rgb(var(--glass-hover))',
       'glass-border': 'rgb(var(--glass-border))',
       scrim: 'rgb(var(--scrim))',
-      'cover-glow': 'var(--cover-glow)',
-
-      // ? Bridge: the old theme's names, pointed at the tokens in styles.css. Removed in P9.
-      'background-color-1': 'rgb(var(--background-color-1) / <alpha-value>)',
-      'background-color-2': 'rgb(var(--background-color-2) / <alpha-value>)',
-      'background-color-3': 'rgb(var(--background-color-3) / <alpha-value>)',
-      'background-color-dimmed': 'rgb(var(--background-color-dimmed) / <alpha-value>)',
-      'side-bar-background': 'rgb(var(--side-bar-background) / <alpha-value>)',
-      'song-background-color': 'rgb(var(--song-background-color) / <alpha-value>)',
-      'font-color': 'rgb(var(--text-color) / <alpha-value>)',
-      'font-color-dimmed': 'rgb(var(--text-color-dimmed) / <alpha-value>)',
-      'font-color-black': 'rgb(var(--text-color-black) / <alpha-value>)',
-      'font-color-white': 'rgb(var(--text-color-white) / <alpha-value>)',
-      'font-color-highlight': 'rgb(var(--text-color-highlight) / <alpha-value>)',
-      'font-color-crimson': 'rgb(var(--text-color-crimson) / <alpha-value>)',
-      'seekbar-background-color': 'rgb(var(--seekbar-background-color) / <alpha-value>)',
-      'seekbar-track-background-color': 'rgb(var(--seekbar-track-background-color) / <alpha-value>)',
-      'dark-font-color-highlight': 'rgb(var(--dark-text-color-highlight) / <alpha-value>)',
-      'font-color-highlight-2': 'rgb(var(--text-color-highlight-2) / <alpha-value>)',
-      'dark-font-color-highlight-2': 'rgb(var(--dark-text-color-highlight-2) / <alpha-value>)',
-      'context-menu-background': 'rgb(var(--context-menu-background) / <alpha-value>)',
-      'context-menu-list-hover': 'rgb(var(--context-menu-list-hover) / <alpha-value>)',
-      'foreground-color-1': 'rgb(var(--foreground-color-1) / <alpha-value>)',
-      'dark-background-color-1': 'rgb(var(--dark-background-color-1) / <alpha-value>)',
-      'dark-background-color-2': 'rgb(var(--dark-background-color-2) / <alpha-value>)',
-      'dark-background-color-3': 'rgb(var(--dark-background-color-3) / <alpha-value>)',
-      'dark-song-background-color': 'rgb(var(--dark-song-background-color) / <alpha-value>)',
-      'dark-seekbar-background-color': 'rgb(var(--dark-seekbar-background-color) / <alpha-value>)',
-      'dark-seekbar-track-background-color':
-        'rgb(var(--dark-seekbar-track-background-color) / <alpha-value>)',
-      'dark-side-bar-background': 'rgb(var(--dark-side-bar-background) / <alpha-value>)',
-      'dark-font-color': 'rgb(var(--dark-text-color) / <alpha-value>)',
-      'dark-font-color-dimmed': 'rgb(var(--dark-text-color-dimmed) / <alpha-value>)',
-      'dark-font-color-variant': 'rgb(var(--dark-text-color-variant) / <alpha-value>)',
-      'dark-context-menu-background': 'rgb(var(--dark-context-menu-background) / <alpha-value>)',
-      'dark-context-menu-list-hover': 'rgb(var(--dark-context-menu-list-hover) / <alpha-value>)'
+      'cover-glow': 'var(--cover-glow)'
     },
     fontFamily: {
       sans: ['var(--font-ui)']

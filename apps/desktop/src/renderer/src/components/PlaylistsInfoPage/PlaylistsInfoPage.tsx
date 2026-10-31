@@ -245,6 +245,7 @@ const PlaylistInfoPage = () => {
     >
       <TitleContainer
         title={playlistData.name}
+        titleClassName="sr-only"
         className="pr-4"
         buttons={[
           {
@@ -262,6 +263,7 @@ const PlaylistInfoPage = () => {
           },
           {
             label: t('common.playAll'),
+            variant: 'primary',
             iconName: 'play_arrow',
             clickHandler: playAllSongs,
             isDisabled: !(playlistData.songs && playlistData.songs.length > 0)

@@ -8,13 +8,12 @@ import i18n from '../../i18n';
 import Dropdown, { type DropdownOption } from '../Dropdown';
 import MainContainer from '../MainContainer';
 import Genre from './Genre';
-import Img from '../Img';
 import Button from '../Button';
 
-import NoSongsImage from '../../assets/images/svg/Summer landscape_Monochromatic.svg';
 import VirtualizedGrid from '../VirtualizedGrid';
 import { store } from '@renderer/store';
 import { useStore } from '@tanstack/react-store';
+import EmptyState from '../ui/EmptyState';
 
 const genreSortTypes: DropdownOption<GenreSortTypes>[] = [
   { label: i18n.t('sortTypes.aToZ'), value: 'aToZ' },
@@ -165,10 +164,7 @@ const GenresPage = () => {
           )}
         </div>
         {genresData === null && (
-          <div className="no-songs-container my-[10%] flex h-full w-full flex-col items-center justify-center text-center text-xl text-ink">
-            <Img src={NoSongsImage} alt="No songs available." className="mb-8 w-60" />
-            <span>{t('genresPage.empty')}</span>
-          </div>
+          <EmptyState className="no-songs-container h-full" iconName="category" title={t('genresPage.empty')} />
         )}
       </>
     </MainContainer>

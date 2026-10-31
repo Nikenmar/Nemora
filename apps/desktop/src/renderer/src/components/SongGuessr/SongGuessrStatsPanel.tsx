@@ -29,7 +29,7 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
         {summary.map((item) => (
           <div key={item.label} className="flex flex-col items-center">
             <span className="text-lg font-semibold leading-none">{item.value}</span>
-            <span className="mt-1 text-center text-[0.65rem] uppercase tracking-wide opacity-50">
+            <span className="mt-1 text-center text-[0.65rem] opacity-50">
               {item.label}
             </span>
           </div>
@@ -38,7 +38,7 @@ const SongGuessrStatsPanel = ({ stats, highlightAttempt }: SongGuessrStatsPanelP
 
       {stats.gamesPlayed > 0 && (
         <div className="mt-4">
-          <p className="mb-1.5 text-[0.65rem] uppercase tracking-wide opacity-50">
+          <p className="mb-1.5 text-[0.65rem] opacity-50">
             {t('songGuessr.distribution')}
           </p>
           <div className="space-y-0.5">

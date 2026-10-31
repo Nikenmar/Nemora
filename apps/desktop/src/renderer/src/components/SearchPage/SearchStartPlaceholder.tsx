@@ -3,10 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 
 import Button from '../Button';
-import Img from '../Img';
 import RecentSearchResult from './RecentSearchResult';
 
-import SearchSomethingImage from '../../assets/images/svg/Flying kite_Monochromatic.svg';
 
 type Props = {
   searchInput: string;
@@ -19,7 +17,7 @@ const SearchStartPlaceholder = (props: Props) => {
   const { updateCurrentlyActivePageData } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
-  const { searchResults, searchInput, updateSearchInput } = props;
+  const { searchInput, updateSearchInput } = props;
 
   const [recentSearchResults, setRecentSearchResults] = useState([] as string[]);
 
@@ -77,22 +75,11 @@ const SearchStartPlaceholder = (props: Props) => {
     <>
       {searchInput.trim() === '' && (
         <div className="search-start-placeholder active appear-from-bottom relative flex !h-full w-full flex-col items-center justify-center text-center">
-          <Img
-            src={SearchSomethingImage}
-            className={
-              searchResults.songs.length === 0 &&
-              searchResults.artists.length === 0 &&
-              searchResults.albums.length === 0 &&
-              searchResults.playlists.length === 0 &&
-              searchResults.genres.length === 0 &&
-              searchInput.trim() === ''
-                ? 'mb-4 w-60 max-w-full'
-                : ''
-            }
-            alt=""
-          />
+          <span className="ms-icon mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-[28px] text-ink-dim" aria-hidden>
+            search
+          </span>
 
-          <div className="description text-xl text-ink">
+          <div className="description text-section font-semibold text-ink">
             {t('searchPage.searchForAnythingInLibrary')}
           </div>
           <div className="recent-search-results-container mt-4 flex w-[clamp(12.5rem,90%,50rem)] flex-wrap items-center justify-center">

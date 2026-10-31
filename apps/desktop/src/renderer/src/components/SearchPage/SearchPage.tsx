@@ -3,7 +3,6 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import useResizeObserver from '../../hooks/useResizeObserver';
-import debounce from '../../utils/debounce';
 import i18n from '../../i18n';
 
 import SearchResultsFilter, { type SearchResultFilter } from './SearchResultsFilter';
@@ -45,6 +44,9 @@ const SearchPage = () => {
   const [searchInput, setSearchInput] = useState(
     (currentlyActivePage?.data?.keyword as string) || ''
   );
+  // The top bar writes the keyword into the page's data as the user types.
+  const pageKeyword = (currentlyActivePage?.data?.keyword as string) || '';
+  useEffect(() => setSearchInput(pageKeyword), [pageKeyword]);
 
   const searchContainerRef = useRef(null);
   const { width } = useResizeObserver(searchContainerRef);
@@ -135,80 +137,29 @@ const SearchPage = () => {
     };
   }, [fetchSearchResults]);
 
-  const updateSearchInput = useCallback((input: string) => setSearchInput(input), []);
+  // A recent search or a suggestion fills the top bar's field through the page's keyword.
+  const updateSearchInput = useCallback(
+    (input: string) => updateCurrentlyActivePageData((data) => ({ ...data, keyword: input })),
+    [updateCurrentlyActivePageData]
+  );
 
   return (
     <MainContainer className="!h-full !pb-0 [scrollbar-gutter:stable]" ref={searchContainerRef}>
       <div className="search-controls-container">
-        <div className="search-input-container appear-from-bottom mb-4 flex items-center">
-          {/*
-            The bar used to take its height from the padding of the
-            predictive-search toggle that sat inside it, so removing that button
-            shrank the field. The height is stated here instead, and everything
-            else about the bar is exactly as it was.
-          */}
-          <div className="search-bar-container flex h-[3.125rem] w-1/2 min-w-[25rem] max-w-xl items-center rounded-3xl bg-surface-2 px-4">
-            <span
-              className="ms-icon mr-3 flex-shrink-0 text-xl !leading-none text-echo"
-              aria-hidden="true"
-            >
-              search
-            </span>
-            {/* SEARCH INPUT */}
-            <input
-              type="search"
-              name="search"
-              id="searchBar"
-              /* The webkit cancel button is unstyled browser chrome — a grey
-                 cross that ignores the theme. Ours sits in its place. */
-              className="h-full w-full min-w-0 border-2 border-[transparent] bg-[transparent] text-ink outline-none placeholder:text-echo [&::-webkit-search-cancel-button]:hidden"
-              aria-label="Search"
-              placeholder={t('searchPage.searchForAnything')}
-              value={searchInput}
-              autoComplete="off"
-              spellCheck={false}
-              onChange={(e) => {
-                debounce(
-                  () =>
-                    updateCurrentlyActivePageData((currentData) => ({
-                      ...currentData,
-                      keyword: e.target.value
-                    })),
-                  500
-                );
-                setSearchInput(e.target.value);
-              }}
-              onKeyDown={(e) => e.stopPropagation()}
-              autoFocus
-            />
-            {searchInput.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  updateSearchInput('');
-                  updateCurrentlyActivePageData((currentData) => ({
-                    ...currentData,
-                    keyword: ''
-                  }));
-                }}
-                aria-label={t('searchPage.clearSearch')}
-                title={t('searchPage.clearSearch')}
-                className="ml-2 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-echo opacity-60 transition-[background-color,opacity] duration-200 hover:bg-accent hover:opacity-100 motion-reduce:transition-none "
-              >
-                <span className="ms-icon text-base !leading-none">close</span>
-              </button>
-            )}
-          </div>
+        {/* The query comes from the field in the top bar (TitleBar/TitleBarSearch). */}
+        <div className="mb-4 mt-1 flex items-baseline gap-3">
+          <h1 className="text-page font-semibold text-ink">{t('sideBar.search')}</h1>
           <span
-            className="ms-icon ml-4 flex-shrink-0 cursor-help text-2xl text-echo"
-            title={t('searchPage.separateKeywords')}
+            className="ms-icon cursor-help text-[18px] text-ink-dim"
+            data-tooltip={t('searchPage.separateKeywords')}
+            aria-label={t('searchPage.separateKeywords')}
           >
             help
           </span>
         </div>
         {/* SEARCH FILTERS */}
         <div className="search-filters-container mb-6">
-          <ul className="flex items-center">{filters}</ul>
+          <ul className="flex flex-wrap items-center gap-2">{filters}</ul>
         </div>
       </div>
       <div className="search-results-container relative !h-full">

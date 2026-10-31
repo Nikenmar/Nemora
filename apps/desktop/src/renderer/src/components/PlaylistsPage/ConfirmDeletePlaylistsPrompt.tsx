@@ -58,7 +58,7 @@ const ConfirmDeletePlaylistsPrompt = (props: ConfirmDeletePlaylistProp) => {
 
   return (
     <>
-      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-ink">
+      <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
         {t('confirmDeletePlaylistsPrompt.confirmPlaylistDeleteWithCount', {
           count: playlistIds.length,
           playlistName

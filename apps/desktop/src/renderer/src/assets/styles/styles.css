@@ -67,7 +67,8 @@
  * from the Obsidian seeds in OKLCH (grey H 270 C 0.002, panels L 0.15 step 0.055; blue H 264
  * C 0.145 L 0.40; echo L 0.68); see PLAN/13 for the derivation and the measured contrast.
  */
-:root {
+:root,
+.light {
   color-scheme: light;
   --canvas: 246 247 248;
   --surface-1: 255 255 255;
@@ -143,65 +144,9 @@
   inherits: true;
   initial-value: transparent;
 }
-:root {
+:root,
+.light {
   transition: --cover-glow 600ms ease;
-}
-
-/*
- * ? BRIDGE (removed in P9)
- * The variable names of the old theme, pointed at the new tokens, so every component not yet
- * rebuilt already shows the new palette. Declared again under `.dark` because a custom property
- * resolves `var()` where it is declared. The old pale-blue highlight becomes the blue accent in the
- * black theme and the soft blue in the light one, where its black text keeps reading.
- */
-:root,
-.dark {
-  --bridge-highlight: var(--accent-soft);
-  --bridge-on-highlight: var(--ink);
-}
-.dark {
-  --bridge-highlight: var(--accent);
-  --bridge-on-highlight: var(--on-accent);
-}
-:root,
-.dark {
-  --background-color-1: var(--canvas);
-  --background-color-2: var(--surface-2);
-  --background-color-3: var(--bridge-highlight);
-  --background-color-dimmed: 0 0 0;
-  --side-bar-background: var(--surface-1);
-  --song-background-color: var(--canvas);
-  --text-color: var(--ink);
-  --text-color-dimmed: var(--ink-dim);
-  --text-color-white: 255 255 255;
-  --text-color-black: var(--bridge-on-highlight);
-  --text-color-crimson: var(--danger);
-  --text-color-highlight: var(--echo);
-  --text-color-highlight-2: var(--echo);
-  --context-menu-background: var(--surface-3);
-  --context-menu-list-hover: var(--surface-2);
-  --seekbar-background-color: var(--echo);
-  --seekbar-track-background-color: var(--line);
-  --foreground-color-1: var(--accent);
-  --scrollbar-thumb-background-color: var(--line);
-  --slider-opacity: 1;
-
-  --dark-background-color-1: var(--canvas);
-  --dark-background-color-2: var(--surface-2);
-  --dark-background-color-3: var(--bridge-highlight);
-  --dark-song-background-color: var(--canvas);
-  --dark-side-bar-background: var(--surface-1);
-  --dark-text-color: var(--ink);
-  --dark-text-color-dimmed: var(--ink-dim);
-  --dark-text-color-variant: var(--canvas);
-  --dark-text-color-highlight: var(--echo);
-  --dark-text-color-highlight-2: var(--echo);
-  --dark-context-menu-background: var(--surface-3);
-  --dark-context-menu-list-hover: var(--surface-2);
-  --dark-seekbar-background-color: var(--echo);
-  --dark-seekbar-track-background-color: var(--line);
-  --dark-scrollbar-thumb-background-color: var(--line);
-  --dark-slider-opacity: 1;
 }
 
 /* ? BASE */
@@ -264,10 +209,7 @@ body,
 }
 
 /* ? MATERIAL SYMBOLS: outline at weight 300; filled marks what is selected or on */
-.ms-icon,
-.material-icons-round,
-.material-icons-round-outlined,
-.material-icons-round.material-icons-round-outlined {
+.ms-icon {
   font-family: 'Material Symbols Rounded';
   font-weight: normal;
   font-style: normal;
@@ -288,9 +230,7 @@ body,
     'opsz' 24;
 }
 .ms-icon.ms-icon-filled,
-.icon-filled .ms-icon,
-.material-icons-round.icon-filled,
-.icon-filled .material-icons-round {
+.icon-filled .ms-icon {
   font-variation-settings:
     'FILL' 1,
     'wght' 400,

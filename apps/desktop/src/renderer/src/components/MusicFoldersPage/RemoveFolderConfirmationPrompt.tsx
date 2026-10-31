@@ -10,7 +10,7 @@ const RemoveFolderConfrimationPrompt = (props: { folderName: string; absolutePat
   const { folderName, absolutePath } = props;
   return (
     <>
-      <div className="title-container mb-4 mt-1 text-3xl font-medium text-ink">
+      <div className="title-container mb-4 mt-1 text-title font-semibold text-ink">
         {t('removeFolderConfirmationPrompt.title', { folderName })}
       </div>
       <div className="description">{t('removeFolderConfirmationPrompt.message')}</div>

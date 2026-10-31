@@ -335,7 +335,7 @@ async function runOne(name, shots, copyFrom) {
     if (copyFrom && data.queue.length) {
       await cdp.eval(`S.createQueue(D.queue, 'songs', false, undefined, true); await wait(2500); S.togglePlay(false); await wait(300); S.updateSongPosition(Math.round((D.song?.duration ?? 200) * 0.4));`);
     }
-    if (Number(foreground()) === app.pid) failures.push(`focus: the stand's window took the foreground`);
+    if (Number(foreground()) === app.pid) failures.push(`focus (${name}): the stand's window took the foreground`);
     for (const theme of THEMES) {
       await cdp.eval(`api.theme.changeAppTheme('${theme}');`);
       await sleep(800);

@@ -17,6 +17,7 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 
 import MainContainer from '../MainContainer';
 import Button from '../Button';
+import Segmented from '../ui/Segmented';
 import TierItemCard from './TierItemCard';
 import { getTierColor, TIER_LABEL_TEXT_COLOR } from './tierColors';
 import { incrementalBoard, sameIds, seedBoard, type Board, type Item } from './tierlistBoard';
@@ -637,86 +638,106 @@ const TierlistEditorPage = () => {
       </MainContainer>
     );
 
-  const labelModeText =
-    tierlist.labelMode === 'artistAndTrack'
-      ? t('tierlistsPage.labelModeArtistAndTrack')
-      : t('tierlistsPage.labelModeTrack');
   const showPlayButton = tierlist.showPlayButton !== false;
   const influencesShuffle = !!tierlist.influencesShuffle;
 
   return (
     <MainContainer className="tierlist-editor flex !h-full flex-col overflow-hidden !pb-0 text-ink">
       <>
-        <div className="header mb-4 flex items-center justify-between pr-4">
-          <div className="flex items-center gap-2">
+        <header className="header mb-5 flex flex-col gap-3 pr-4">
+          <div className="flex min-w-0 items-center gap-2">
             <Button
               iconName="arrow_back"
-              className="!mr-0 !rounded-full !p-2"
+              className="!mr-0"
               tooltipLabel={t('tierlistsPage.title')}
               clickHandler={() => changeCurrentActivePage('Tierlists')}
             />
-            <span className="truncate text-page font-semibold text-ink">
-              {tierlist.name}
-            </span>
+            <h1 className="truncate text-page font-semibold text-ink">{tierlist.name}</h1>
           </div>
-          <div className="controls flex flex-wrap items-center gap-1">
-            <Button
-              label={`${t('tierlistsPage.labelMode')}: ${labelModeText}`}
-              iconName="badge"
-              className="text-sm"
-              clickHandler={toggleLabelMode}
-            />
-            <Button
-              label={t(
-                showPlayButton ? 'tierlistsPage.hidePlayButton' : 'tierlistsPage.showPlayButton'
-              )}
-              iconName={showPlayButton ? 'play_disabled' : 'play_arrow'}
-              className="text-sm"
-              clickHandler={toggleShowPlayButton}
-            />
-            <Button
-              label={t(
-                influencesShuffle
-                  ? 'tierlistsPage.influencesShuffleOn'
-                  : 'tierlistsPage.influencesShuffleOff'
-              )}
-              iconName="auto_fix"
-              className={`text-sm ${influencesShuffle ? '!text-echo' : ''}`}
-              clickHandler={toggleInfluencesShuffle}
-            />
-            <Button
-              label={t('tierlistsPage.editSources')}
-              iconName="queue_music"
-              className="text-sm"
-              clickHandler={() =>
-                changePromptMenuData(
-                  true,
-                  <EditTierlistSourcesPrompt tierlist={tierlist} onSaved={persist} />
-                )
-              }
-            />
+          <div className="controls flex flex-wrap items-center gap-2">
             <Button
               label={t('tierlistsPage.addTier')}
               iconName="add"
-              className="text-sm"
+              variant="primary"
+              className="!mr-0"
               clickHandler={addTier}
             />
-            <Button
-              label={t('tierlistsPage.exportImage')}
-              iconName="photo_camera"
-              className="text-sm"
-              clickHandler={exportAsImage}
+            <Segmented
+              label={t('tierlistsPage.labelMode')}
+              value={tierlist.labelMode === 'artistAndTrack' ? 'artistAndTrack' : 'track'}
+              onChange={(mode) => {
+                if (mode !== (tierlist.labelMode === 'artistAndTrack' ? 'artistAndTrack' : 'track'))
+                  toggleLabelMode();
+              }}
+              options={[
+                { value: 'track', label: t('tierlistsPage.labelModeTrack') },
+                { value: 'artistAndTrack', label: t('tierlistsPage.labelModeArtistAndTrack') }
+              ]}
             />
-            <Button
-              iconName="delete"
-              className="!mr-0 !rounded-full !p-2"
-              tooltipLabel={t('tierlistsPage.deleteTierlist')}
-              clickHandler={() =>
-                changePromptMenuData(true, <ConfirmDeleteTierlistPrompt tierlist={tierlist} />)
-              }
-            />
+            <div className="ml-1 flex items-center gap-0.5">
+              <Button
+                iconName={showPlayButton ? 'play_circle' : 'play_disabled'}
+                isActive={showPlayButton}
+                className="!mr-0"
+                tooltipLabel={t(
+                  showPlayButton ? 'tierlistsPage.hidePlayButton' : 'tierlistsPage.showPlayButton'
+                )}
+                clickHandler={toggleShowPlayButton}
+              />
+              <Button
+                iconName="auto_fix"
+                isActive={influencesShuffle}
+                className="!mr-0"
+                tooltipLabel={t(
+                  influencesShuffle
+                    ? 'tierlistsPage.influencesShuffleOn'
+                    : 'tierlistsPage.influencesShuffleOff'
+                )}
+                clickHandler={toggleInfluencesShuffle}
+              />
+              <Button
+                iconName="tune"
+                className="!mr-0"
+                tooltipLabel={t('tierlistsPage.editSources')}
+                clickHandler={() =>
+                  changePromptMenuData(
+                    true,
+                    <EditTierlistSourcesPrompt tierlist={tierlist} onSaved={persist} />
+                  )
+                }
+              />
+              <Button
+                iconName="ios_share"
+                className="!mr-0"
+                tooltipLabel={t('tierlistsPage.exportImage')}
+                clickHandler={exportAsImage}
+              />
+              <Button
+                iconName="more_horiz"
+                className="!mr-0"
+                tooltipLabel={t('common.moreOptions')}
+                clickHandler={(e) => {
+                  e.stopPropagation?.();
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  updateContextMenuData(
+                    true,
+                    [
+                      {
+                        label: t('tierlistsPage.deleteTierlist'),
+                        iconName: 'delete',
+                        class: 'menu-item-danger',
+                        handlerFunction: () =>
+                          changePromptMenuData(true, <ConfirmDeleteTierlistPrompt tierlist={tierlist} />)
+                      }
+                    ],
+                    rect.left,
+                    rect.bottom + 6
+                  );
+                }}
+              />
+            </div>
           </div>
-        </div>
+        </header>
 
         <div
           ref={scrollContainerRef}

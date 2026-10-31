@@ -16,11 +16,8 @@ const SearchResultsFilter = memo((props: SearchResultsFilterProp) => {
 
   return (
     <Button
-      className={`appear-from-bottom mr-3 flex w-fit cursor-pointer list-none items-center !border-0 text-ink outline-1 outline-offset-1 transition-[width,background,color] duration-200 focus-visible:!outline ${
-        isCurrentActiveFilter
-          ? 'active bg-accent '
-          : 'bg-surface-2 hover:bg-accent '
-      }`}
+      className={`!mr-0 ${isCurrentActiveFilter ? 'active !bg-accent-soft !text-echo' : ''}`}
+      isActive={isCurrentActiveFilter}
       clickHandler={() => changeActiveFilter(value)}
       label={label}
       iconName={icon}

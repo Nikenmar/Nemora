@@ -6,16 +6,15 @@ import storage from '../../utils/localStorage';
 import i18n from '../../i18n';
 
 import Button from '../Button';
-import Img from '../Img';
 import Folder from './Folder';
 import Dropdown, { type DropdownOption } from '../Dropdown';
 import MainContainer from '../MainContainer';
 
 const AddMusicFoldersPrompt = lazy(() => import('./AddMusicFoldersPrompt'));
 
-import NoFoldersImage from '../../assets/images/svg/Empty Inbox _Monochromatic.svg';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import EmptyState from '../ui/EmptyState';
 
 const folderDropdownOptions: DropdownOption<FolderSortTypes>[] = [
   { label: i18n.t('sortTypes.aToZ'), value: 'aToZ' },
@@ -212,22 +211,21 @@ const MusicFoldersPage = () => {
         </div>
 
         {musicFolders.length === 0 && (
-          <div className="no-folders-container flex h-full flex-col items-center justify-center text-lg text-ink">
-            <Img src={NoFoldersImage} className="w-60" />
-            <br />
-            <p> {t('foldersPage.empty')}</p>
-
-            <div className="flex items-center justify-between">
+          <EmptyState
+            className="no-folders-container h-full"
+            iconName="folder_open"
+            title={t('foldersPage.empty')}
+            action={
               <Button
                 label={t('foldersPage.addFolder')}
-                className="mt-4 !bg-accent px-8 text-lg !text-on-accent hover:border-accent "
+                variant="primary"
+                className="!mr-0"
                 iconName="create_new_folder"
                 pendingAnimationOnDisabled
-                iconClassName="ms-icon"
                 clickHandler={addNewFolder}
               />
-            </div>
-          </div>
+            }
+          />
         )}
       </>
     </MainContainer>

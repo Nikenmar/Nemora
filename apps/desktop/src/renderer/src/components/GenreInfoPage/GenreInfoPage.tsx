@@ -132,10 +132,12 @@ const GenreInfoPage = () => {
     >
       <TitleContainer
         title={genreData?.name || ''}
+        titleClassName="sr-only"
         className="pr-4"
         buttons={[
           {
             label: t('common.playAll'),
+            variant: 'primary',
             iconName: 'play_arrow',
             clickHandler: () =>
               createQueue(

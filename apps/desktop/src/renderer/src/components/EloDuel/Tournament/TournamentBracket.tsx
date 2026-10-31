@@ -43,7 +43,7 @@ const TournamentBracket = ({ tournament, songs }: TournamentBracketProps) => {
       <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
         {rounds.map(([round, matches]) => (
           <div key={round} className="w-56 shrink-0">
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-60">
+            <h4 className="mb-2 text-xs font-semibold opacity-60">
               {round === rounds.length - 1
                 ? t('duels.tournament.final')
                 : t('duels.tournament.round', { count: round + 1 })}

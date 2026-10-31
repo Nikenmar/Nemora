@@ -7,7 +7,6 @@ type Props = {
   id: string;
   name: string;
   className?: string;
-  sliderOpacity?: number;
   onSeek?: (currentPosition: number) => void;
 };
 
@@ -16,13 +15,12 @@ const VolumeSlider = (props: Props) => {
   const volume = useStore(store, (state) => state.player.volume.value);
 
   const { updateVolume } = useContext(AppUpdateContext);
-  const { id, name, className, sliderOpacity, onSeek } = props;
+  const { id, name, className, onSeek } = props;
 
   const volumeSliderRef = useRef<HTMLInputElement>(null);
 
   const volumeBarCssProperties: CSSProperties = {};
   volumeBarCssProperties['--volume-before-width'] = `${volume}%`;
-  if (sliderOpacity !== undefined) volumeBarCssProperties['--slider-opacity'] = `${sliderOpacity}`;
 
   const changeVolume = (value: number) => {
     updateVolume(value);

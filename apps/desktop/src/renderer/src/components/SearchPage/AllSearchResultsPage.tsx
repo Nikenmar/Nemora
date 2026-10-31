@@ -100,7 +100,7 @@ const AllSearchResultsPage = () => {
   return (
     <MainContainer className="main-container all-search-results-container !h-full !pb-0">
       <>
-        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-3xl font-medium text-ink">
+        <div className="title-container mb-8 mt-1 flex items-center pr-4 text-page font-semibold text-ink">
           <div className="container flex">
             <Trans
               i18nKey={`searchPage.${

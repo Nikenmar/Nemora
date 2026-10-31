@@ -95,7 +95,7 @@ const AboutSettings = () => {
           </div>
           <div className="flex items-center justify-center gap-6">
             <Button
-              className="about-link !mr-0 block w-fit cursor-pointer !rounded-none !border-0 bg-transparent !p-0 leading-[0] opacity-70 outline-1 outline-offset-2 transition-opacity hover:bg-transparent hover:opacity-100 focus-visible:!outline dark:bg-transparent dark:hover:bg-transparent"
+              className="about-link !mr-0 block w-fit cursor-pointer !rounded-none !border-0 bg-transparent !p-0 leading-[0] opacity-70 outline-1 outline-offset-2 transition-opacity hover:bg-transparent hover:opacity-100 focus-visible:!outline"
               iconName="language"
               iconClassName="!text-2xl !leading-none"
               tooltipLabel={t('settingsPage.noraWebsite')}
@@ -181,12 +181,12 @@ const AboutSettings = () => {
               components={{
                 Button: (
                   <Button
-                    className="show-app-licence-btn about-link !inline w-fit cursor-pointer !rounded-none !border-0 bg-transparent !p-0 text-sm text-echo !outline-1 outline-offset-1 hover:bg-transparent hover:underline focus:!outline dark:bg-transparent dark:hover:bg-transparent"
+                    className="show-app-licence-btn about-link !inline w-fit cursor-pointer !rounded-none !border-0 bg-transparent !p-0 text-sm text-echo !outline-1 outline-offset-1 hover:bg-transparent hover:underline focus:!outline"
                     clickHandler={() =>
                       changePromptMenuData(
                         true,
                         <>
-                          <div className="mb-4 w-full text-center text-3xl font-medium">
+                          <div className="mb-4 w-full text-center text-title font-semibold">
                             {t('settingsPage.appLicense')}
                           </div>
                           <pre className="relative max-h-full w-full overflow-y-auto px-4">
@@ -220,7 +220,7 @@ const AboutSettings = () => {
               changePromptMenuData(
                 true,
                 <>
-                  <div className="mb-4 w-full text-center text-3xl font-medium">
+                  <div className="mb-4 w-full text-center text-title font-semibold">
                     {t('settingsPage.openSourceLicenses')}
                   </div>
                   <div className="relative max-h-full w-full overflow-y-auto whitespace-pre-wrap px-4 text-sm">
@@ -359,7 +359,7 @@ const AboutSettings = () => {
             />
 
             <div className="mt-6 border-t border-surface-2 pt-4">
-              <div className="mb-1 text-xs font-medium uppercase tracking-wider text-echo opacity-90">
+              <div className="mb-1 text-xs font-medium text-echo opacity-90">
                 {t('settingsPage.origins')}
               </div>
               <p className="max-w-prose text-xs font-light leading-relaxed text-ink opacity-80">
