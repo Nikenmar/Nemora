@@ -11,6 +11,7 @@ import UpNextSongPopup from '../../SongsControlsContainer/UpNextSongPopup';
 
 import DefaultSongCover from '../../../assets/images/webp/song_cover_default.webp';
 import VolumeSlider from '../../VolumeSlider';
+import SpectrumBars from './SpectrumBars';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
@@ -102,6 +103,7 @@ const SongInfoContainer = (props: Props) => {
         alt=""
         className="full-screen-cover player-cover aspect-square w-full rounded-cover-lg object-cover shadow-[0_24px_60px_rgb(0_0_0/0.55)]"
       />
+      {preferences.isFullScreenSpectrum && <SpectrumBars />}
       <div className="mt-2 min-w-0">
         {currentSongData.title && (
           <div className="song-title flex items-center gap-2">
@@ -151,7 +153,7 @@ const SongInfoContainer = (props: Props) => {
           isSemiTransparent
         />
       </div>
-      <div className="flex items-center gap-3 text-micro tabular-nums text-on-media/70">
+      <div className="ambient-hide flex items-center gap-3 text-micro tabular-nums text-on-media/70">
         <span className="w-10 shrink-0 text-right">
           {preferences?.showSongRemainingTime ? '-' : ''}
           {songDuration.minutes}:{songDuration.seconds}
@@ -161,7 +163,7 @@ const SongInfoContainer = (props: Props) => {
           {fullDuration.minutes}:{fullDuration.seconds}
         </span>
       </div>
-      <div className="song-controls-container flex items-center justify-center gap-3">
+      <div className="song-controls-container ambient-hide flex items-center justify-center gap-3">
         <Button
           className={`favorite-btn ${glass} ${isCurrentSongAFavorite ? '!text-echo' : ''}`}
           isActive={isCurrentSongAFavorite}
@@ -208,7 +210,7 @@ const SongInfoContainer = (props: Props) => {
         />
       </div>
       <div
-        className={`flex items-center justify-center gap-2 transition-opacity duration-300 ${
+        className={`ambient-hide flex items-center justify-center gap-2 transition-opacity duration-300 ${
           isMouseActive ? 'opacity-100' : 'opacity-0'
         }`}
       >

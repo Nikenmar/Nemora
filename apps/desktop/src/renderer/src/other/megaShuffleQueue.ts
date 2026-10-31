@@ -22,9 +22,13 @@ const megaShuffleQueue = (
       .filter(({ reason }) => reason === 'tooDifferent')
       .map(({ songAId, songBId }) => pairKey(songAId, songBId))
   );
+  // A duplicate row (`songId:variant`) shares its song's weight; songs the session filters hold
+  // back (PLAN/14 C4) come after every other one.
+  const held = new Set(data.held ?? []);
+  const isHeld = (id: string) => held.has(id) || held.has(id.split(':')[0]);
   const remaining = working.map((id) => {
-    const weight = data.weights[id] ?? 0.4;
-    return { id, key: random() ** (1 / weight) };
+    const weight = data.weights[id] ?? data.weights[id.split(':')[0]] ?? 0.4;
+    return { id, key: random() ** (1 / weight) - (isHeld(id) ? 4 : 0) };
   });
   const shuffledQueue = currentSongId ? [currentSongId] : [];
 

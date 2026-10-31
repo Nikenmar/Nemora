@@ -810,6 +810,38 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   }
 }
 
+/* Ambient full screen (PLAN/14 B3, FullScreenPlayer.tsx): the controls fade out slowly and come
+   back at once; the cover's tones drift, each field on its own long period. */
+.full-screen-player :is(#title-bar, .ambient-hide) {
+  transition: opacity var(--dur-2) ease-out;
+}
+.full-screen-player.ambient :is(#title-bar, .ambient-hide) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.6s ease-in;
+}
+.ambient-layer {
+  animation: vt-fade 2.4s ease-out both;
+}
+.ambient-field {
+  animation: ambientDrift 47s ease-in-out infinite alternate;
+}
+.ambient-field-2 {
+  animation-duration: 61s;
+  animation-direction: alternate-reverse;
+}
+@keyframes ambientDrift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(12vw, 8vh) scale(1.15);
+  }
+  to {
+    transform: translate(4vw, 18vh) scale(0.95);
+  }
+}
+
 /* The playing-now bars in a song row (ui/EqualizerBars.tsx). */
 @keyframes eqBar {
   0%,

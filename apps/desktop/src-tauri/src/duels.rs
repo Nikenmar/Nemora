@@ -351,19 +351,60 @@ pub fn tierlist_artworks(app: State<'_, App>, song_ids: Vec<String>) -> Res<Hash
 
 // ----- shuffle --------------------------------------------------------------------------------
 
-/// Weights for the songs of a queue and the pairs to keep apart; the view orders the queue.
+/// Weights for the songs of a queue (every song, by song id, when `song_ids` is empty) and the
+/// pairs to keep apart; the view orders the queue. `skip_aware` (PLAN/14 C3) is on unless false.
 #[tauri::command]
-pub fn shuffle_data(app: State<'_, App>, song_ids: Vec<String>, intensity: Option<f64>) -> Res<Value> {
+pub fn shuffle_data(
+    app: State<'_, App>,
+    song_ids: Vec<String>,
+    intensity: Option<f64>,
+    skip_aware: Option<bool>,
+    steering: Option<nemora_core::shuffle::Steering>,
+) -> Res<Value> {
     let db = app.read();
     let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
-    let weights = nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6)).map_err(fail)?;
+    let mut weights =
+        nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6), skip_aware != Some(false))
+            .map_err(fail)?;
+    // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue.
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
+    let held = nemora_core::shuffle::steer(&db, &mut weights, &steering.unwrap_or_default(), &|_| Vec::new(), now)
+        .map_err(fail)?;
     // Duplicate rows share their song's weight.
-    let by_view: HashMap<&String, f64> =
-        song_ids.iter().zip(&songs).filter_map(|(view_id, song)| Some((view_id, *weights.get(song)?))).collect();
+    let by_view: HashMap<&String, f64> = if song_ids.is_empty() {
+        weights.iter().map(|(song, w)| (song, *w)).collect()
+    } else {
+        song_ids.iter().zip(&songs).filter_map(|(view_id, song)| Some((view_id, *weights.get(song)?))).collect()
+    };
     let feedback: Vec<Value> = elo::skipped_pairs(&db)
         .map_err(fail)?
         .iter()
         .map(|s| json!({ "at": s.at, "songAId": s.a, "songBId": s.b, "reason": s.reason.as_str() }))
         .collect();
-    Ok(json!({ "weights": by_view, "pairFeedback": feedback }))
+    let held: Vec<&String> = if song_ids.is_empty() {
+        held.iter().collect()
+    } else {
+        song_ids.iter().zip(&songs).filter(|(_, song)| held.contains(*song)).map(|(view_id, _)| view_id).collect()
+    };
+    Ok(json!({ "weights": by_view, "pairFeedback": feedback, "held": held }))
+}
+
+/// Why each of `song_ids` plays where it does (PLAN/14 C1), keyed by the ids as given.
+#[tauri::command]
+pub fn shuffle_explain(
+    app: State<'_, App>,
+    song_ids: Vec<String>,
+    intensity: Option<f64>,
+    skip_aware: Option<bool>,
+) -> Res<Value> {
+    let db = app.read();
+    let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
+    let explained = nemora_core::shuffle::explain(&db, &songs, intensity.unwrap_or(0.6), skip_aware != Some(false))
+        .map_err(fail)?;
+    let by_view: serde_json::Map<String, Value> = song_ids
+        .into_iter()
+        .zip(explained)
+        .map(|(view_id, e)| (view_id, serde_json::to_value(e).unwrap_or(Value::Null)))
+        .collect();
+    Ok(Value::Object(by_view))
 }

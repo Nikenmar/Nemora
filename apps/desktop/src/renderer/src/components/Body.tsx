@@ -2,6 +2,7 @@ import { Suspense, lazy, memo, useEffect, useRef } from "react";
 
 import SuspenseLoader from "./SuspenseLoader";
 import ErrorBoundary from "./ErrorBoundary";
+import CoverGlow from "./CoverGlow";
 import { useStore } from "@tanstack/react-store";
 import { store } from "@renderer/store";
 
@@ -96,18 +97,7 @@ const Body = memo(() => {
       className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden rounded-tl-[16px] bg-canvas"
       ref={bodyRef}
     >
-      {/* Cover light: the cover's primary tone over the top of every page, its secondary one in the
-          far corner, as the Android player lights its own (other/coverLight.ts). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[24rem]"
-        style={{
-          backgroundImage: [
-            'radial-gradient(ellipse 70% 100% at 18% -12%, color-mix(in srgb, var(--cover-glow) var(--cover-glow-strength), transparent), transparent 72%)',
-            'radial-gradient(ellipse 45% 80% at 100% -20%, color-mix(in srgb, var(--cover-glow-2) calc(var(--cover-glow-strength) * 0.6), transparent), transparent 70%)'
-          ].join(', ')
-        }}
-      />
+      <CoverGlow />
       <ErrorBoundary>
         <div
           key={currentlyActivePage.pageTitle}

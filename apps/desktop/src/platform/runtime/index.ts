@@ -642,8 +642,20 @@ export class NemoraRuntime {
     return (await this.getMegaShuffleData(ids, intensity)).weights;
   }
 
-  getMegaShuffleData(ids: string[], intensity?: number): Promise<MegaShuffleData> {
-    return call('shuffle_data', { songIds: ids, intensity });
+  getMegaShuffleData(
+    ids: string[],
+    intensity?: number,
+    options?: { skipAware?: boolean; steering?: ShuffleSteering }
+  ): Promise<MegaShuffleData> {
+    return call('shuffle_data', { songIds: ids, intensity, ...options });
+  }
+
+  explainShuffle(
+    ids: string[],
+    intensity?: number,
+    skipAware?: boolean
+  ): Promise<Record<string, ShuffleExplanation>> {
+    return call('shuffle_explain', { songIds: ids, intensity, skipAware });
   }
 
   // ----- statistics, ELO, Song Guessr ------------------------------------------------------------

@@ -530,6 +530,17 @@ declare global {
     enableImageBasedDynamicThemes: boolean;
     /** The cover light (the playing cover's colour under the page and the player) is off. */
     isCoverLightDisabled?: boolean;
+    /** Visuals (Settings > Appearance > Visuals, PLAN/14 B1-B4), each off unless switched on. */
+    isBreathingCoverLight?: boolean;
+    isLiveRowEqualizer?: boolean;
+    isAmbientFullScreen?: boolean;
+    isFullScreenSpectrum?: boolean;
+    /** Smart Shuffle (Settings > Audio playback, PLAN/14 C1-C5); the first three and the map are on by default. */
+    isShuffleReasonsHidden?: boolean;
+    isShuffleSteeringHidden?: boolean;
+    isSkipAwareDisabled?: boolean;
+    isSessionFiltersEnabled?: boolean;
+    isTasteMapHidden?: boolean;
     /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
     accentColor?: string;
     autoTranslateLyrics: boolean;
@@ -794,6 +805,34 @@ declare global {
     weights: Record<string, number>;
     /** Pairwise signals used by the renderer's final queue ordering pass. */
     pairFeedback: DuelSkipRecord[];
+    /** Songs the session filters hold back (PLAN/14 C4): they wait after the rest. */
+    held?: string[];
+  }
+
+  /** Session steering and filters for Smart Shuffle (PLAN/14 C2, C4); `nemora_core::shuffle::Steering`. */
+  interface ShuffleSteering {
+    lessArtists: string[];
+    moreLike: string[];
+    onlyUnheard: boolean;
+    onlyRanked: boolean;
+    boostNew: boolean;
+  }
+
+  /** Why a song plays where it does (PLAN/14 C1); `nemora_core::shuffle::Explanation`. */
+  interface ShuffleExplanation {
+    songId: string;
+    tier: number;
+    tierlist: string | null;
+    tierName: string | null;
+    artist: number;
+    elo: number | null;
+    eloPercentile: number | null;
+    listens: number;
+    fullListens: number;
+    lastDay: string | null;
+    freshness: number;
+    skip: number;
+    weight: number;
   }
 
   /**

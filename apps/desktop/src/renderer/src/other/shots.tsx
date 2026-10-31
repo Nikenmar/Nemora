@@ -7,6 +7,7 @@
 import { lazy, type ReactNode } from 'react';
 
 import { isBenchRun } from './bench';
+import storage from '../utils/localStorage';
 import ErrorPrompt from '../components/ErrorPrompt';
 import OpenLinkConfirmPrompt from '../components/OpenLinkConfirmPrompt';
 import SensitiveActionConfirmPrompt from '../components/SensitiveActionConfirmPrompt';
@@ -71,7 +72,10 @@ export function registerShots(bridge: ShotsBridge) {
         const [prompt, className] = make();
         bridge.changePromptMenuData(true, prompt, className);
       },
-      closePrompt: () => bridge.changePromptMenuData(false, null)
+      closePrompt: () => bridge.changePromptMenuData(false, null),
+      /** Sets a preference, as its switch in Settings would. */
+      setPreference: <Key extends keyof Preferences>(key: Key, value: Preferences[Key]) =>
+        storage.preferences.setPreferences(key, value)
     };
     if (!registered) {
       registered = true;

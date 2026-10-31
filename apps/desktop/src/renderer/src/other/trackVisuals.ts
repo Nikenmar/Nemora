@@ -42,3 +42,12 @@ export const frameAt = (visuals: TrackVisuals, seconds: number, out?: Float32Arr
   for (let i = 0; i < record; i += 1) frame[i] = visuals.data[index * record + i] / 255;
   return frame;
 };
+
+let clock: () => number = () => 0;
+
+/** App gives the player's position here; the visuals read it by frame, so they stay in sync. */
+export const setPlaybackClock = (read: () => number) => {
+  clock = read;
+};
+
+export const playbackPosition = () => clock();

@@ -18,6 +18,14 @@ import {
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
+/** Settings > Appearance > Visuals (PLAN/14 B1-B4), all off until switched on. */
+const VISUALS = [
+  { key: 'isBreathingCoverLight', label: 'breathingCoverLight' },
+  { key: 'isLiveRowEqualizer', label: 'liveRowEqualizer' },
+  { key: 'isAmbientFullScreen', label: 'ambientFullScreen' },
+  { key: 'isFullScreenSpectrum', label: 'fullScreenSpectrum' }
+] as const;
+
 const ThemeSettings = () => {
   const userData = useStore(store, (state) => state.userData);
   const preferences = useStore(store, (state) => state.localStorage.preferences);
@@ -198,6 +206,26 @@ const ThemeSettings = () => {
             }
             labelContent={t('settingsPage.enableImageBasedDynamicThemes')}
           />
+        </li>
+        <li className="secondary-container visuals mb-4">
+          <div className="description">
+            <span className="font-semibold text-ink">{t('settingsPage.visuals')}</span>
+            {'. '}
+            {t('settingsPage.visualsDescription')}
+          </div>
+          {VISUALS.map(({ key, label }) => (
+            <div key={key} className="mt-2">
+              <Checkbox
+                id={key}
+                isChecked={!!preferences?.[key]}
+                checkedStateUpdateFunction={(state) => storage.preferences.setPreferences(key, state)}
+                labelContent={t(`settingsPage.${label}`)}
+              />
+              <div className="description ml-8 text-small text-ink-dim">
+                {t(`settingsPage.${label}Description`)}
+              </div>
+            </div>
+          ))}
         </li>
       </ul>
     </li>

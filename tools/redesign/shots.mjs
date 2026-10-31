@@ -302,7 +302,7 @@ class Cdp {
       this.pending.set(id, { resolve, reject });
       setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error(`CDP ${method} timed out`));
-      }, 60_000);
+      }, 120_000);
     });
   }
   async eval(body) {

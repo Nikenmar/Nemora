@@ -195,6 +195,7 @@ pub fn run() {
             duels::tierlists_remove,
             duels::tierlist_artworks,
             duels::shuffle_data,
+            duels::shuffle_explain,
             shellops::trash_item,
             shellops::reveal_song_in_file_explorer,
             shellops::reveal_folder_in_file_explorer,

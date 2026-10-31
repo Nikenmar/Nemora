@@ -20,6 +20,7 @@ import { appPreferences } from '../../../package.json';
 import { registerBenchApp } from './other/bench';
 import { registerShots } from './other/shots';
 import { applyCoverLight } from './other/coverLight';
+import { setPlaybackClock } from './other/trackVisuals';
 import { applyAccent } from './other/accentPalette';
 import { withViewTransition } from './other/viewTransition';
 import { installSharedCovers } from './other/motion';
@@ -66,6 +67,7 @@ import { updateSystemMedia } from './other/systemMedia';
 import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
+import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import AudioPlayer from './other/player';
 import {
   freshMediaUrl,
@@ -81,6 +83,7 @@ const DURATION = 1000;
 
 // ? INITIALIZE PLAYER
 const player = new AudioPlayer();
+setPlaybackClock(() => player.currentTime);
 /**
  * What has already been tried for the track that is failing right now.
  *
@@ -387,14 +390,7 @@ export default function App() {
     // that's what made the earlier attempt behave backwards after a restart.
     if (playback?.isTierShuffling) {
       dispatch({ type: 'TOGGLE_TIER_SHUFFLE_STATE', data: true });
-      const intensity = preferences?.tierShuffleIntensity ?? 0.6;
-      window.api.tierlistsData
-        .getMegaShuffleData([], intensity)
-        .then((data) => {
-          tierShuffleDataRef.current = data;
-          return undefined;
-        })
-        .catch((err) => console.error(err));
+      loadShuffleData().catch((err) => console.error(err));
     }
 
     window.api.audioLibraryControls
@@ -1122,21 +1118,15 @@ export default function App() {
   // Cached per-song weights for the Smart Shuffle, so building a fresh queue can
   // be weighted synchronously (just like the normal shuffle) — fixes the "play a
   // track and it goes linear" bug. Warmed whenever Smart Shuffle turns on.
-  const tierShuffleDataRef = useRef<MegaShuffleData>({ weights: {}, pairFeedback: [] });
+  // Held by other/smartShuffle.ts, which also applies the session's steering (PLAN/14 C2).
+  const tierShuffleDataRef = smartShuffleData;
 
   useEffect(() => {
     const refreshDuelFeedback = (event: Event) => {
       if (!('detail' in event) || !store.state.player.isTierShuffling) return;
       const updates = (event as DetailAvailableEvent<DataUpdateEvent[]>).detail;
       if (!updates.some(({ dataType }) => dataType === 'eloDuels')) return;
-      const intensity = storage.preferences.getPreferences('tierShuffleIntensity') ?? 0.6;
-      window.api.tierlistsData
-        .getMegaShuffleData([], intensity)
-        .then((data) => {
-          tierShuffleDataRef.current = data;
-          return undefined;
-        })
-        .catch((error) => console.error(error));
+      loadShuffleData().catch((error) => console.error(error));
     };
 
     document.addEventListener('app/dataUpdates', refreshDuelFeedback);
@@ -1241,13 +1231,11 @@ export default function App() {
             ]);
             return null;
           }
-          const intensity = storage.preferences.getPreferences('tierShuffleIntensity') ?? 0.6;
           // Weights for the WHOLE library, so later queue rebuilds stay smart too.
-          return window.api.tierlistsData.getMegaShuffleData([], intensity);
+          return loadShuffleData();
         })
         .then((data) => {
           if (!data) return; // aborted (no influencing tierlists)
-          tierShuffleDataRef.current = data;
           const { shuffledQueue, positions } = megaShuffleQueue(
             baseQueue,
             data,
