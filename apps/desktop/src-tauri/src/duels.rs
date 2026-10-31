@@ -309,6 +309,16 @@ pub fn tierlist_save(handle: AppHandle, app: State<'_, App>, tierlist: Value) ->
                 tier["items"] = Value::Array(items);
             }
         }
+        // Songs kept out of Magic Shuffle, by song id like the tiers, each once.
+        if let Some(excluded) = doc["shuffleExcluded"].as_array_mut() {
+            let mut seen = HashSet::new();
+            *excluded = excluded
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| parse_view_id(s).0.to_owned()))
+                .filter(|s| seen.insert(s.clone()))
+                .map(Value::from)
+                .collect();
+        }
         playlists::save_tierlist(db, Some(&id), &doc)
     })
     .map_err(fail)?;

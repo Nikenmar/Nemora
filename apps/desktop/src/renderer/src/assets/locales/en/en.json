@@ -699,6 +699,12 @@
     "stats": "Stats"
   },
   "tierlistsPage": {
+    "excludeFromShuffle": "Keep out of Smart Shuffle",
+    "includeInShuffle": "Let back into Smart Shuffle",
+    "excludedFromShuffle": "Kept out of Smart Shuffle",
+    "shuffleExclusions_one": "Keep songs out of Smart Shuffle ({{count}} kept out)",
+    "shuffleExclusions_other": "Keep songs out of Smart Shuffle ({{count}} kept out)",
+    "shuffleExclusionModeOn": "Click songs to keep them out of Smart Shuffle or let them back in; they stay in the tierlist and the queue",
     "title": "Tierlists",
     "tierlistWithCount_one": "{{count}} tierlist",
     "tierlistWithCount_other": "{{count}} tierlists",

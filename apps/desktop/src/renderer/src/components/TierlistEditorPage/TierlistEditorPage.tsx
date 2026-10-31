@@ -144,6 +144,9 @@ const TierlistEditorPage = () => {
     songMapRef.current = songMap;
   }, [songMap]);
 
+  // Set below, once persist exists; the card menu is declared before it.
+  const toggleShuffleExcludedRef = useRef<(songId: string) => void>(() => undefined);
+
   const openCardMenu = useCallback(
     (e: ReactMouseEvent<HTMLDivElement>, songId: string) => {
       const song = songMapRef.current[songId];
@@ -210,6 +213,17 @@ const TierlistEditorPage = () => {
         },
         ...(artistItem ? [artistItem] : []),
         { label: 'Hr', isContextMenuItemSeperator: true, handlerFunction: () => true },
+        (tl?.shuffleExcluded ?? []).includes(songId)
+          ? {
+              label: t('tierlistsPage.includeInShuffle'),
+              iconName: 'auto_fix',
+              handlerFunction: () => toggleShuffleExcludedRef.current(songId)
+            }
+          : {
+              label: t('tierlistsPage.excludeFromShuffle'),
+              iconName: 'block',
+              handlerFunction: () => toggleShuffleExcludedRef.current(songId)
+            },
         removeItem
       ];
       updateContextMenuData(true, items, e.pageX, e.pageY);
@@ -586,6 +600,28 @@ const TierlistEditorPage = () => {
     persist({ ...tl, influencesShuffle: !tl.influencesShuffle });
   }, [persist]);
 
+  /**
+   * Keeps a song out of Smart Shuffle, or lets it back in: it stays in its tier, in its playlists
+   * and in the queue, but its placement here stops lifting or sinking it (nemora-core reads
+   * `shuffleExcluded`). While the mode is on, a click on a card does this.
+   */
+  const [isExclusionMode, setIsExclusionMode] = useState(false);
+  const toggleShuffleExcluded = useCallback(
+    (songId: string) => {
+      const tl = tierlistRef.current;
+      if (!tl) return;
+      const excluded = tl.shuffleExcluded ?? [];
+      persist({
+        ...tl,
+        shuffleExcluded: excluded.includes(songId)
+          ? excluded.filter((id) => id !== songId)
+          : [...excluded, songId]
+      });
+    },
+    [persist]
+  );
+  toggleShuffleExcludedRef.current = toggleShuffleExcluded;
+
   // Play a track FROM the tierlist: build a queue from the whole tierlist (tiers
   // top-to-bottom, then the pool) so next/prev/shuffle/Smart-Shuffle all operate
   // within it — the tierlist acts like a hidden playlist. Clicking the currently
@@ -612,12 +648,22 @@ const TierlistEditorPage = () => {
   const exportAsImage = useCallback(async () => {
     if (!exportRef.current) return;
     try {
-      const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(exportRef.current, { cacheBust: true, pixelRatio: 2 });
-      const link = document.createElement('a');
-      link.download = `${tierlistRef.current?.name || 'tierlist'}.png`;
-      link.href = dataUrl;
-      link.click();
+      // "Save as" with a place to choose, not a browser download dropped into Downloads behind a
+      // "tauri.localhost wants to save files" prompt. Closing the dialog cancels quietly.
+      const [{ toBlob }, { save }, { writeFile }] = await Promise.all([
+        import('html-to-image'),
+        import('@tauri-apps/plugin-dialog'),
+        import('@tauri-apps/plugin-fs')
+      ]);
+      const destination = await save({
+        title: t('tierlistsPage.exportImage'),
+        defaultPath: `${(tierlistRef.current?.name || 'tierlist').replace(/[\\/:*?"<>|]/g, '_')}.png`,
+        filters: [{ name: 'PNG', extensions: ['png'] }]
+      });
+      if (typeof destination !== 'string') return;
+      const blob = await toBlob(exportRef.current, { cacheBust: true, pixelRatio: 2 });
+      if (!blob) throw new Error('The tierlist could not be drawn.');
+      await writeFile(destination, new Uint8Array(await blob.arrayBuffer()));
       addNewNotifications([
         { id: 'tierlistExported', duration: 5000, content: t('tierlistsPage.exportSuccess') }
       ]);
@@ -640,6 +686,7 @@ const TierlistEditorPage = () => {
 
   const showPlayButton = tierlist.showPlayButton !== false;
   const influencesShuffle = !!tierlist.influencesShuffle;
+  const shuffleExcluded = new Set(tierlist.shuffleExcluded ?? []);
 
   return (
     <MainContainer className="tierlist-editor flex !h-full flex-col overflow-hidden !pb-0 text-ink">
@@ -694,6 +741,17 @@ const TierlistEditorPage = () => {
                     : 'tierlistsPage.influencesShuffleOff'
                 )}
                 clickHandler={toggleInfluencesShuffle}
+              />
+              <Button
+                iconName="block"
+                isActive={isExclusionMode}
+                className="!mr-0"
+                tooltipLabel={
+                  isExclusionMode
+                    ? t('tierlistsPage.shuffleExclusionModeOn')
+                    : t('tierlistsPage.shuffleExclusions', { count: shuffleExcluded.size })
+                }
+                clickHandler={() => setIsExclusionMode((on) => !on)}
               />
               <Button
                 iconName="tune"
@@ -809,6 +867,8 @@ const TierlistEditorPage = () => {
                       }
                       onPlay={handlePlay}
                       onCardContextMenu={openCardMenu}
+                      isShuffleExcluded={shuffleExcluded.has(item.id)}
+                      onToggleShuffleExcluded={isExclusionMode ? toggleShuffleExcluded : undefined}
                     />
                   ))}
                 </ReactSortable>
@@ -858,6 +918,8 @@ const TierlistEditorPage = () => {
                   }
                   onPlay={handlePlay}
                   onCardContextMenu={openCardMenu}
+                  isShuffleExcluded={shuffleExcluded.has(item.id)}
+                  onToggleShuffleExcluded={isExclusionMode ? toggleShuffleExcluded : undefined}
                 />
               ))}
             </ReactSortable>

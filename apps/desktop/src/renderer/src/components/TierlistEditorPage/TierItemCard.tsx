@@ -45,6 +45,10 @@ interface TierItemCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onPlay
   thumbSrc?: string;
   /** 'playing'/'paused' when this card is the current track, else 'none'. */
   playState?: 'none' | 'playing' | 'paused';
+  /** Kept out of Smart Shuffle: a mark in the corner and a dimmed cover. */
+  isShuffleExcluded?: boolean;
+  /** Set while the editor's exclusion mode is on: a click on the card keeps it out or lets it in. */
+  onToggleShuffleExcluded?: (_songId: string) => void;
 }
 
 // Plain presentational card (SortableJS owns the drag behaviour). 96px wide with
@@ -59,6 +63,8 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
       onCardContextMenu,
       thumbSrc,
       playState = 'none',
+      isShuffleExcluded = false,
+      onToggleShuffleExcluded,
       className = '',
       ...rest
     },
@@ -82,8 +88,11 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
           e.preventDefault();
           onCardContextMenu?.(e, song.songId);
         }}
+        onClick={onToggleShuffleExcluded ? () => onToggleShuffleExcluded(song.songId) : undefined}
         title={caption}
-        className={`tier-item group/item relative flex w-24 shrink-0 cursor-grab flex-col overflow-hidden rounded-lg border bg-canvas shadow-[0_2px_8px_rgba(0,0,0,0.28)] transition-shadow [contain-intrinsic-size:96px_138px] [content-visibility:auto] hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)] ${
+        className={`tier-item group/item relative flex w-24 shrink-0 ${
+          onToggleShuffleExcluded ? 'cursor-pointer' : 'cursor-grab'
+        } flex-col overflow-hidden rounded-lg border bg-canvas shadow-[0_2px_8px_rgba(0,0,0,0.28)] transition-shadow [contain-intrinsic-size:96px_138px] [content-visibility:auto] hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)] ${
           isCurrent
             ? 'border-echo ring-1 ring-echo '
             : 'border-shade/10'
@@ -95,8 +104,19 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
           alt=""
           loading="lazy"
           enableImgFadeIns={false}
-          className="block aspect-square w-full object-cover [image-rendering:high-quality]"
+          className={`block aspect-square w-full object-cover transition-[opacity,filter] [image-rendering:high-quality] ${
+            isShuffleExcluded ? 'opacity-45 grayscale' : ''
+          }`}
         />
+        {isShuffleExcluded && (
+          <span
+            className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-shade/65 text-on-media backdrop-blur-sm"
+            data-tooltip={t('tierlistsPage.excludedFromShuffle')}
+            aria-label={t('tierlistsPage.excludedFromShuffle')}
+          >
+            <span className="ms-icon text-[16px] leading-none">block</span>
+          </span>
+        )}
         {(showPlayButton || isCurrent) && (
           <button
             type="button"

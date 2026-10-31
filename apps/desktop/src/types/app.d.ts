@@ -728,6 +728,11 @@ declare global {
     showPlayButton?: boolean;
     /** When true, this tierlist's rankings feed the Tierlist (Mega Smart) Shuffle. */
     influencesShuffle?: boolean;
+    /**
+     * Song ids kept out of that shuffle: they stay in their tier, in playlists and in the queue,
+     * but their placement here lifts or sinks nothing (nemora-core `shuffle::tierlist_of`).
+     */
+    shuffleExcluded?: string[];
   }
 
   // ? CMR stats types (ELO duels + stats aggregation + portable stats transfer)

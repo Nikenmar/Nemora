@@ -214,25 +214,34 @@ pub fn stored_tierlists(db: &crate::db::Db) -> crate::Result<Vec<Tierlist>> {
     Ok(docs
         .into_iter()
         .filter_map(|d| serde_json::from_str::<serde_json::Value>(&d).ok())
-        .map(|doc| Tierlist {
-            influences_shuffle: doc["influencesShuffle"].as_bool().unwrap_or(false),
-            tiers: doc["tiers"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .map(|t| {
-                    t["items"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|v| v.as_str())
-                        .filter(|s| !s.starts_with("pending:"))
-                        .map(str::to_owned)
-                        .collect()
-                })
-                .collect(),
-        })
+        .map(|d| tierlist_of(&d))
         .collect())
+}
+
+/// A stored tierlist as the shuffle reads it. Songs in its `shuffleExcluded` keep their place in the
+/// tierlist (and in playlists and the queue) but feed no tier score from it, so they neither lift
+/// nor sink themselves or their artists in Magic Shuffle.
+pub fn tierlist_of(doc: &serde_json::Value) -> Tierlist {
+    let excluded: HashSet<&str> =
+        doc["shuffleExcluded"].as_array().into_iter().flatten().filter_map(|v| v.as_str()).collect();
+    Tierlist {
+        influences_shuffle: doc["influencesShuffle"].as_bool().unwrap_or(false),
+        tiers: doc["tiers"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|t| {
+                t["items"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|v| v.as_str())
+                    .filter(|s| !s.starts_with("pending:") && !excluded.contains(s))
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .collect(),
+    }
 }
 
 /// The last `limit` distinct songs played, newest first.
@@ -309,6 +318,20 @@ pub fn too_different_pairs(db: &crate::db::Db) -> crate::Result<Vec<(String, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn excluded_songs_stay_in_the_tierlist_but_feed_no_tier_score() {
+        let doc = serde_json::json!({
+            "influencesShuffle": true,
+            "shuffleExcluded": ["b"],
+            "tiers": [{ "items": ["a", "b"] }, { "items": ["c", "pending:x"] }]
+        });
+        let tierlist = tierlist_of(&doc);
+        assert_eq!(tierlist.tiers, vec![vec!["a".to_owned()], vec!["c".to_owned()]]);
+        let scores = tier_scores(std::iter::once(&tierlist));
+        assert!(scores.contains_key("a") && scores.contains_key("c"));
+        assert!(!scores.contains_key("b"));
+    }
 
     #[test]
     fn the_current_song_stays_first_and_neighbours_are_kept_apart() {
