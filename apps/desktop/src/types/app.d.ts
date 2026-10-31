@@ -541,6 +541,20 @@ declare global {
     isSkipAwareDisabled?: boolean;
     isSessionFiltersEnabled?: boolean;
     isTasteMapHidden?: boolean;
+    /** Smart Shuffle in depth (PLAN/15): the new defaults, stored as "off" so unset means on... */
+    isListeningLearningDisabled?: boolean;
+    isAdaptiveShuffleDisabled?: boolean;
+    isImplicitDuelsDisabled?: boolean;
+    isFreshnessByDaysDisabled?: boolean;
+    isFairRotationDisabled?: boolean;
+    isForgottenFavouritesDisabled?: boolean;
+    /** ...and the optional ones, off unless switched on. */
+    isArtistFatigueEnabled?: boolean;
+    isFavouriteMomentsEnabled?: boolean;
+    isNightShuffleEnabled?: boolean;
+    isEnergyFlowEnabled?: boolean;
+    isFollowTasteMapEnabled?: boolean;
+    isTeachingDuelsEnabled?: boolean;
     /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
     accentColor?: string;
     autoTranslateLyrics: boolean;
@@ -815,6 +829,15 @@ declare global {
   interface ShuffleOptions {
     nudge?: boolean;
     skipAware?: boolean;
+    learn?: boolean;
+    adaptive?: boolean;
+    implicitDuels?: boolean;
+    freshnessByDays?: boolean;
+    fairRotation?: boolean;
+    forgottenFavourites?: boolean;
+    artistFatigue?: boolean;
+    night?: boolean;
+    followMap?: boolean;
   }
 
   /** Session steering and filters for Smart Shuffle (PLAN/14 C2, C4); `nemora_core::shuffle::Steering`. */

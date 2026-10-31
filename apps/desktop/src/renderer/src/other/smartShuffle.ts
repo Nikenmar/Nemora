@@ -34,10 +34,22 @@ export const steeringStore = new Store<Steering>(NO_STEERING);
 const preferences = () => store.state.localStorage.preferences;
 const intensity = () => preferences().tierShuffleIntensity ?? 0.6;
 /** The model's options from the user's settings (PLAN/15); the nudge has no setting. */
-export const shuffleOptions = (): ShuffleOptions => ({
-  nudge: true,
-  skipAware: !preferences().isSkipAwareDisabled
-});
+export const shuffleOptions = (): ShuffleOptions => {
+  const p = preferences();
+  return {
+    nudge: true,
+    skipAware: !p.isSkipAwareDisabled,
+    learn: !p.isListeningLearningDisabled,
+    adaptive: !p.isAdaptiveShuffleDisabled,
+    implicitDuels: !p.isImplicitDuelsDisabled,
+    freshnessByDays: !p.isFreshnessByDaysDisabled,
+    fairRotation: !p.isFairRotationDisabled,
+    forgottenFavourites: !p.isForgottenFavouritesDisabled,
+    artistFatigue: !!p.isArtistFatigueEnabled,
+    night: !!p.isNightShuffleEnabled,
+    followMap: !!p.isFollowTasteMapEnabled
+  };
+};
 
 const coreSteering = (): ShuffleSteering | undefined => {
   const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew } = steeringStore.state;

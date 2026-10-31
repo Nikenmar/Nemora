@@ -102,15 +102,57 @@ pub struct Options {
     pub nudge: bool,
     /// 3.0's skip-aware push back (C3 of PLAN/14).
     pub skip_aware: bool,
+    /// L1: learn from how the user listens (own picks, replays, rewinds, scrub-then-skip).
+    pub learn: bool,
+    /// L2: a confidence per song, evidence weighed by its amount, exploration by sampling.
+    pub adaptive: bool,
+    /// L4: a skip followed by an own pick as a faint duel (for L2 only).
+    pub implicit_duels: bool,
+    /// V1: freshness measured in days instead of the last 50 songs.
+    pub freshness_by_days: bool,
+    /// V2: every song of a tier gets its turn.
+    pub fair_rotation: bool,
+    /// M1: loved songs not heard for long, or missed in Song Guessr, come up more.
+    pub forgotten_favourites: bool,
+    /// V3: many plays of one artist tonight slow the next.
+    pub artist_fatigue: bool,
+    /// C1: lean to what the user plays at this time of day.
+    pub night: bool,
+    /// C3: the next song leans to the taste map's neighbours of the current one.
+    pub follow_map: bool,
 }
 
 impl Options {
-    pub const CLASSIC: Options = Options { nudge: false, skip_aware: false };
+    /// 3.0's model: none of PLAN/15's parts.
+    pub const CLASSIC: Options = Options {
+        nudge: false,
+        skip_aware: false,
+        learn: false,
+        adaptive: false,
+        implicit_duels: false,
+        freshness_by_days: false,
+        fair_rotation: false,
+        forgotten_favourites: false,
+        artist_fatigue: false,
+        night: false,
+        follow_map: false,
+    };
 }
 
 impl Default for Options {
+    /// As shipped: the new defaults on (PLAN/15, the user's choice), the extraordinary ones off.
     fn default() -> Self {
-        Options { nudge: true, skip_aware: true }
+        Options {
+            nudge: true,
+            skip_aware: true,
+            learn: true,
+            adaptive: true,
+            implicit_duels: true,
+            freshness_by_days: true,
+            fair_rotation: true,
+            forgotten_favourites: true,
+            ..Options::CLASSIC
+        }
     }
 }
 

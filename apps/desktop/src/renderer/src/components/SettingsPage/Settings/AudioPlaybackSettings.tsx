@@ -15,12 +15,82 @@ import { loadShuffleData, reorderRemaining } from '../../../other/smartShuffle';
  * on, so an unset preference reads as the default.
  */
 const SMART_SHUFFLE = [
-  { key: 'isShuffleReasonsHidden', label: 'showReasons', inverted: true, reorders: false },
-  { key: 'isShuffleSteeringHidden', label: 'steeringActions', inverted: true, reorders: false },
-  { key: 'isSkipAwareDisabled', label: 'skipAware', inverted: true, reorders: true },
-  { key: 'isSessionFiltersEnabled', label: 'sessionFilters', inverted: false, reorders: true },
-  { key: 'isTasteMapHidden', label: 'tasteMap', inverted: true, reorders: false }
+  {
+    group: 'groupExplain',
+    items: [
+      { key: 'isShuffleReasonsHidden', label: 'showReasons', inverted: true, reorders: false },
+      { key: 'isShuffleSteeringHidden', label: 'steeringActions', inverted: true, reorders: false },
+      { key: 'isSkipAwareDisabled', label: 'skipAware', inverted: true, reorders: true },
+      { key: 'isSessionFiltersEnabled', label: 'sessionFilters', inverted: false, reorders: true },
+      { key: 'isTasteMapHidden', label: 'tasteMap', inverted: true, reorders: false }
+    ]
+  },
+  {
+    group: 'groupLearning',
+    items: [
+      { key: 'isListeningLearningDisabled', label: 'learn', inverted: true, reorders: true },
+      { key: 'isAdaptiveShuffleDisabled', label: 'adaptive', inverted: true, reorders: true },
+      { key: 'isImplicitDuelsDisabled', label: 'implicitDuels', inverted: true, reorders: true }
+    ]
+  },
+  {
+    group: 'groupVariety',
+    items: [
+      { key: 'isFreshnessByDaysDisabled', label: 'freshnessByDays', inverted: true, reorders: true },
+      { key: 'isFairRotationDisabled', label: 'fairRotation', inverted: true, reorders: true },
+      { key: 'isArtistFatigueEnabled', label: 'artistFatigue', inverted: false, reorders: true }
+    ]
+  },
+  {
+    group: 'groupMemory',
+    items: [
+      { key: 'isForgottenFavouritesDisabled', label: 'forgottenFavourites', inverted: true, reorders: true },
+      { key: 'isFavouriteMomentsEnabled', label: 'favouriteMoments', inverted: false, reorders: false }
+    ]
+  },
+  {
+    group: 'groupContext',
+    items: [
+      { key: 'isNightShuffleEnabled', label: 'night', inverted: false, reorders: true },
+      { key: 'isEnergyFlowEnabled', label: 'energyFlow', inverted: false, reorders: true },
+      { key: 'isFollowTasteMapEnabled', label: 'followMap', inverted: false, reorders: true }
+    ]
+  },
+  {
+    group: 'groupDuels',
+    items: [{ key: 'isTeachingDuelsEnabled', label: 'teachingDuels', inverted: false, reorders: false }]
+  }
 ] as const;
+
+type SmartShuffleItem = (typeof SMART_SHUFFLE)[number]['items'][number];
+
+/** PLAN/15's parts: on by default (stored as "disabled") and opt-in (stored as "enabled"). */
+const NEW_DEFAULTS = [
+  'isListeningLearningDisabled',
+  'isAdaptiveShuffleDisabled',
+  'isImplicitDuelsDisabled',
+  'isFreshnessByDaysDisabled',
+  'isFairRotationDisabled',
+  'isForgottenFavouritesDisabled'
+] as const;
+const NEW_OPTIONAL = [
+  'isArtistFatigueEnabled',
+  'isFavouriteMomentsEnabled',
+  'isNightShuffleEnabled',
+  'isEnergyFlowEnabled',
+  'isFollowTasteMapEnabled',
+  'isTeachingDuelsEnabled'
+] as const;
+
+/** Classic: every new part off (3.0's shuffle). Recommended: the new defaults on, the rest off. */
+const applyPreset = (classic: boolean) => {
+  for (const key of NEW_DEFAULTS) storage.preferences.setPreferences(key, classic);
+  for (const key of NEW_OPTIONAL) storage.preferences.setPreferences(key, false);
+  if (store.state.player.isTierShuffling)
+    loadShuffleData()
+      .then(reorderRemaining)
+      .catch((error) => console.error(error));
+};
 
 const second = i18n.t('settingsPage.second');
 const seconds = i18n.t('settingsPage.second_other');
@@ -123,23 +193,44 @@ const AudioPlaybackSettings = () => {
             {'. '}
             {t('smartShuffle.settingsDescription')}
           </div>
-          {SMART_SHUFFLE.map(({ key, label, inverted, reorders }) => (
-            <div key={key} className="mt-2">
-              <Checkbox
-                id={key}
-                isChecked={inverted ? !preferences?.[key] : !!preferences?.[key]}
-                checkedStateUpdateFunction={(state) => {
-                  storage.preferences.setPreferences(key, inverted ? !state : state);
-                  if (reorders && store.state.player.isTierShuffling)
-                    loadShuffleData()
-                      .then(reorderRemaining)
-                      .catch((error) => console.error(error));
-                }}
-                labelContent={t(`smartShuffle.${label}`)}
-              />
-              <div className="description ml-8 text-small text-ink-dim">
-                {t(`smartShuffle.${label}Description`)}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              label={t('smartShuffle.recommended')}
+              tooltipLabel={t('smartShuffle.recommendedDescription')}
+              className="!mr-0 text-sm"
+              clickHandler={() => applyPreset(false)}
+            />
+            <Button
+              label={t('smartShuffle.classic')}
+              tooltipLabel={t('smartShuffle.classicDescription')}
+              className="!mr-0 text-sm"
+              clickHandler={() => applyPreset(true)}
+            />
+          </div>
+          {SMART_SHUFFLE.map(({ group, items }) => (
+            <div key={group} className="mt-5">
+              <div className="text-small font-semibold uppercase tracking-wide text-ink-dim">
+                {t(`smartShuffle.${group}`)}
               </div>
+              {(items as readonly SmartShuffleItem[]).map(({ key, label, inverted, reorders }) => (
+                <div key={key} className="mt-2">
+                  <Checkbox
+                    id={key}
+                    isChecked={inverted ? !preferences?.[key] : !!preferences?.[key]}
+                    checkedStateUpdateFunction={(state) => {
+                      storage.preferences.setPreferences(key, inverted ? !state : state);
+                      if (reorders && store.state.player.isTierShuffling)
+                        loadShuffleData()
+                          .then(reorderRemaining)
+                          .catch((error) => console.error(error));
+                    }}
+                    labelContent={t(`smartShuffle.${label}`)}
+                  />
+                  <div className="description ml-8 text-small text-ink-dim">
+                    {t(`smartShuffle.${label}Description`)}
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </li>
