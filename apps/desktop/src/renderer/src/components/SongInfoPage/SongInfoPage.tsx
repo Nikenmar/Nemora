@@ -5,8 +5,7 @@ import calculateTimeFromSeconds from '../../utils/calculateTimeFromSeconds';
 import log from '../../utils/log';
 import { valueRounder } from '../../utils/valueRounder';
 
-import Button from '../Button';
-import Img from '../Img';
+import HeroHeader from '../ui/HeroHeader';
 import MainContainer from '../MainContainer';
 import SecondaryContainer from '../SecondaryContainer';
 import SongArtist from '../SongsPage/SongArtist';
@@ -109,7 +108,7 @@ const SongInfoPage = () => {
               key={artist.artistId}
               artistId={artist.artistId}
               name={artist.name}
-              className={`ml-1 !text-base first:!ml-0 ${bodyBackgroundImage && '!text-on-media'}`}
+              className={`!text-body ${bodyBackgroundImage && '!text-on-media'}`}
             />
           ];
 
@@ -180,90 +179,55 @@ const SongInfoPage = () => {
   return songInfo ? (
     <MainContainer className="song-information-container pt-8 [scrollbar-gutter:stable]">
       <>
-        <div className="appear-from-bottom container flex">
-          <div className="song-cover-container mr-8 h-60 w-fit overflow-hidden rounded-md">
-            <Img
-              src={songInfo.artworkPaths?.artworkPath}
-              alt={`${songInfo.title} cover`}
-              className="h-full object-cover"
-              loading="eager"
-              onContextMenu={(e) =>
-                !songInfo.artworkPaths.isDefaultArtwork &&
-                updateContextMenuData(
-                  true,
-                  [
-                    {
-                      label: t('common.saveArtwork'),
-                      class: 'edit',
-                      iconName: 'image',
-                      iconClassName: 'ms-icon',
-                      handlerFunction: () =>
-                        window.api.songUpdates.saveArtworkToSystem(
-                          songInfo.artworkPaths.artworkPath,
-                          `${songInfo.title} song artwork`.replaceAll(' ', '_')
-                        )
-                    }
-                  ],
-                  e.pageX,
-                  e.pageY
-                )
-              }
-            />
-          </div>
-          <div
-            className={`song-info flex max-w-[70%] flex-col justify-center ${
-              bodyBackgroundImage
-                ? '!text-on-media'
-                : 'text-ink'
-            }`}
-          >
-            <div className="text-small text-ink-dim">
-              {t('common.song_one')}
-            </div>
-            <div
-              className={`title info-type-1 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-hero font-semibold text-ink ${
-                bodyBackgroundImage && '!text-echo'
-              }`}
-              title={songInfo.title}
-            >
-              {songInfo.title}
-            </div>
-            <div className="song-artists info-type-2 mb-1 flex items-center overflow-hidden text-ellipsis whitespace-nowrap text-base">
-              {songArtists}
-            </div>
-            <Button
-              className={`info-type-2 !mr-0 mb-5 !w-fit truncate !border-0 !p-0 ${
-                songInfo.album && 'hover:underline'
-              } ${bodyBackgroundImage && '!text-on-media'}`}
-              label={songInfo.album ? songInfo.album.name : t('common.unknownAlbum')}
-              clickHandler={() => {
-                if (songInfo.album) {
-                  return changeCurrentActivePage('AlbumInfo', {
-                    albumId: songInfo.album.albumId
-                  });
+        <div
+          className="appear-from-bottom"
+          onContextMenu={(e) =>
+            !songInfo.artworkPaths.isDefaultArtwork &&
+            updateContextMenuData(
+              true,
+              [
+                {
+                  label: t('common.saveArtwork'),
+                  class: 'edit',
+                  iconName: 'image',
+                  iconClassName: 'ms-icon',
+                  handlerFunction: () =>
+                    window.api.songUpdates.saveArtworkToSystem(
+                      songInfo.artworkPaths.artworkPath,
+                      `${songInfo.title} song artwork`.replaceAll(' ', '_')
+                    )
                 }
-                return undefined;
-              }}
-            />
-            <div
-              className="info-type-3 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm"
-              title={songDuration}
-            >
-              {songDuration}
-            </div>
-
-            {songInfo && songInfo.sampleRate && (
-              <div className="info-type-3 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm">
-                {songInfo.sampleRate / 1000} KHZ
-              </div>
-            )}
-
-            {songInfo && songInfo.bitrate && (
-              <div className="info-type-3 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm">
-                {Math.floor(songInfo.bitrate / 1000)} Kbps
-              </div>
-            )}
-          </div>
+              ],
+              e.pageX,
+              e.pageY
+            )
+          }
+        >
+          <HeroHeader
+            artwork={songInfo.artworkPaths?.artworkPath}
+            kind={t('common.song_one')}
+            title={songInfo.title}
+            subtitle={<span className="song-artists flex items-center">{songArtists}</span>}
+            meta={[
+              songInfo.album ? (
+                <button
+                  type="button"
+                  className="font-medium text-ink hover:underline"
+                  onClick={() =>
+                    songInfo.album &&
+                    changeCurrentActivePage('AlbumInfo', { albumId: songInfo.album.albumId })
+                  }
+                >
+                  {songInfo.album.name}
+                </button>
+              ) : (
+                t('common.unknownAlbum')
+              ),
+              songDuration,
+              songInfo.sampleRate ? `${songInfo.sampleRate / 1000} kHz` : undefined,
+              songInfo.bitrate ? `${Math.floor(songInfo.bitrate / 1000)} kbps` : undefined
+            ]}
+          />
         </div>
 
         <SongsWithFeaturingArtistsSuggestion
@@ -274,7 +238,7 @@ const SongInfoPage = () => {
           updateSongInfo={updateSongInfo}
         />
 
-        <SecondaryContainer className="secondary-container song-stats-container mt-8 flex h-fit flex-row flex-wrap items-center justify-center rounded-2xl p-2">
+        <SecondaryContainer className="secondary-container song-stats-container flex h-fit flex-row flex-wrap items-center justify-center rounded-2xl p-2">
           {listeningData && (
             <div className="grid w-full grid-flow-col place-content-center gap-4 py-4 pr-4 xl:grid-flow-row">
               <ListeningActivityBarGraph listeningData={listeningData} className="xl:order-2" />

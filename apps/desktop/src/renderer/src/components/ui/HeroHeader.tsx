@@ -49,7 +49,7 @@ const HeroHeader = ({
         <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-surface-1/60 to-transparent" />
       </div>
     )}
-    <div className="relative flex items-end gap-7 p-6 lg:gap-5">
+    <div className="relative flex items-center gap-7 p-6 lg:gap-5">
       <div
         className={cn(
           'h-[13rem] w-[13rem] shrink-0 overflow-hidden bg-surface-2 shadow-[0_18px_44px_rgb(0_0_0/0.4)] lg:h-40 lg:w-40',
@@ -60,7 +60,7 @@ const HeroHeader = ({
           <Img src={artwork} fallbackSrc={fallbackArtwork} alt="" loading="eager" className="h-full w-full object-cover" />
         )}
       </div>
-      <div className="min-w-0 flex-1 pb-1">
+      <div className="min-w-0 flex-1">
         <p className="text-small text-ink-dim">{kind}</p>
         <h1 className="mt-1 line-clamp-2 text-hero font-semibold text-ink [text-wrap:balance]">{title}</h1>
         {subtitle && <div className="mt-2 truncate text-body text-ink">{subtitle}</div>}

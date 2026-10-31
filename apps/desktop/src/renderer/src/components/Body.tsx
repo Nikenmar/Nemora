@@ -88,8 +88,10 @@ const Body = memo(() => {
   }, [currentlyActivePage.data?.scrollToId]);
 
   return (
+    // A panel inset in the frame, rounded like everything inside it: the frame (title bar, sidebar,
+    // player) shows around it, so its corners have the frame's own colour behind them.
     <div
-      className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden bg-canvas"
+      className="body relative order-2 mb-2 mr-2 !h-[calc(100%-0.5rem)] min-w-0 flex-1 overflow-hidden rounded-[16px] bg-canvas"
       ref={bodyRef}
     >
       {/* Cover light: the playing cover's colour over the top of every page (other/coverLight.ts). */}

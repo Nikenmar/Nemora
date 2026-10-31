@@ -19,12 +19,13 @@
 //! already subclasses this same window for its thumbbar buttons. This uses its
 //! own subclass id, so the two chain instead of fighting.
 //!
-//! The strip follows the theme: the dark canvas or the light one, switched by
+//! The strip follows the theme: the dark frame or the light one, switched by
 //! the view through `window_backdrop_set` whenever the theme changes.
 
-/// The canvas of each theme, as written in the stylesheet (`--canvas`).
-pub const DARK: u32 = 0x0f1014;
-pub const LIGHT: u32 = 0xf6f7f8;
+/// The frame of each theme, as written in the stylesheet (`--chrome`): it is
+/// what surrounds the content, so it is what shows at the window's edges.
+pub const DARK: u32 = 0x08090c;
+pub const LIGHT: u32 = 0xffffff;
 
 #[cfg(windows)]
 mod windows_impl {

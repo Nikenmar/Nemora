@@ -2017,7 +2017,7 @@ export default function App() {
         {playerType === 'normal' ? (
           <div
             className={`App select-none ${
-              isDarkMode ? 'dark bg-canvas' : 'bg-canvas'
+              isDarkMode ? 'dark bg-chrome' : 'bg-chrome'
             } ${
               isReducedMotion
                 ? 'reduced-motion animate-none transition-none !delay-0 !duration-[0] [&.dialog-menu]:!backdrop-blur-none'

@@ -21,7 +21,7 @@
         "minHeight": 500,
         "decorations": false,
         "center": true,
-        "backgroundColor": "#0f1014",
+        "backgroundColor": "#08090c",
         "transparent": false,
         "visible": false,
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,AudioServiceOutOfProcess"

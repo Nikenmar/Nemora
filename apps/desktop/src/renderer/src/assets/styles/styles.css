@@ -114,15 +114,16 @@
 /* `.dark` sits on <body>; the mini and full-screen players and portalled dialogs carry it too. */
 .dark {
   color-scheme: dark;
-  /* One family, not black beside grey: the frame sits a hair below the content, and the whole dark
-     ramp leans slightly cool (H ~265) so the deep blue accent belongs to it. Pure black under the
-     content was heavy to read for long; a neutral grey beside a black frame read as patchwork. */
-  --chrome: 11 12 15;
-  --canvas: 15 16 20;
-  --surface-1: 21 22 27;
-  --surface-2: 27 28 34;
-  --surface-3: 33 34 41;
-  --line: 41 42 50;
+  /* One family, not black beside grey: the content is a rounded panel inset in a darker frame, and
+     the whole dark ramp leans slightly cool (H ~265) so the deep blue accent belongs to it. Pure
+     black under the content was heavy to read for long; a neutral grey beside a black frame, with
+     no shape between them, read as patchwork. */
+  --chrome: 8 9 12;
+  --canvas: 17 18 22;
+  --surface-1: 24 25 31;
+  --surface-2: 30 31 38;
+  --surface-3: 36 37 45;
+  --line: 44 45 54;
   --ink: 239 240 243;
   --ink-dim: 148 150 160;
   --ink-faint: 98 100 110;
@@ -135,7 +136,7 @@
   --danger-soft: 50 22 22;
   --success: 46 165 92;
   --warning: 195 146 39;
-  --glass: 33 34 41;
+  --glass: 36 37 45;
   --glass-alpha: 0.55;
   --glass-hover: 255 255 255 / 0.08;
   --glass-border: 255 255 255 / 0.09;
