@@ -45,7 +45,7 @@ const SongGuessrResult = (props: SongGuessrResultProps) => {
         Artwork beside the text rather than above it. Stacked, the reveal plus the stats panel ran
         past the bottom of a fixed-height dialog; side by side the whole result fits.
       */}
-      <div className="flex flex-col bg-surface-3/85 p-5">
+      <div className="flex flex-col bg-surface-1/85 p-5">
         <div className="flex items-center gap-4">
           <Img
             src={answer.artworkPaths.artworkPath}

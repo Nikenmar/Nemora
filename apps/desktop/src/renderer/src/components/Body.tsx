@@ -89,10 +89,11 @@ const Body = memo(() => {
 
   return (
     // A panel set into the frame: it runs to the window's right edge and sits right on the player,
-    // with no gap or line, and only the two corners it shares with the sidebar are rounded (a corner
-    // at the window's edge would be a notch). The frame's colour is behind them (App: bg-chrome).
+    // with no gap or line. Only the corner under the title bar and beside the sidebar is rounded; the
+    // others meet the window's edge or the player, where a curve reads as a notch. The frame's colour
+    // is behind it (App: bg-chrome).
     <div
-      className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden rounded-l-[16px] bg-canvas"
+      className="body relative order-2 !h-full min-w-0 flex-1 overflow-hidden rounded-tl-[16px] bg-canvas"
       ref={bodyRef}
     >
       {/* Cover light: the cover's primary tone over the top of every page, its secondary one in the

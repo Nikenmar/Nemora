@@ -86,7 +86,7 @@ const PromptMenu = () => {
 
   return (
     <dialog
-      className={`dialog-menu relative left-1/2 top-1/2 flex h-fit [&:not([open])]:hidden max-h-[86%] w-[min(56rem,92vw)] min-w-[30rem] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-3 pb-6 text-ink shadow-float open:backdrop:transition-[background-color] ${
+      className={`dialog-menu relative left-1/2 top-1/2 flex h-fit [&:not([open])]:hidden max-h-[86%] w-[min(56rem,92vw)] min-w-[30rem] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-1 pb-6 text-ink shadow-float open:backdrop:transition-[background-color] ${
         promptMenuData.isVisible
           ? 'open:animate-dialog-appear-ease-in-out open:backdrop:bg-scrim'
           : 'animate-dialog-dissappear-ease-in-out backdrop:bg-transparent'

@@ -14,7 +14,7 @@ interface GameDialogProps {
 }
 
 /**
- * The window Duel and SongGuessr open in: the app's dialog surface (surface-3, a hairline edge, the
+ * The window Duel and SongGuessr open in: the app's dialog surface (surface-1, a hairline edge, the
  * float shadow) over the scrim, so a game reads as a layer above the page and never blends into it.
  *
  * Centred with `inset-0 m-auto`, not a -50% translate: an odd height lands a translate on a half
@@ -27,7 +27,7 @@ export const GameDialog = forwardRef<HTMLDialogElement, GameDialogProps>(
       ref={ref}
       aria-label={label}
       className={twMerge(
-        'fixed inset-0 m-auto flex max-h-[calc(100vh-3rem)] min-w-0 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-3 p-0 text-ink shadow-float backdrop:bg-scrim backdrop:backdrop-blur-[2px] open:animate-[gameDialogIn_180ms_var(--ease-out)] [&:not([open])]:hidden',
+        'fixed inset-0 m-auto flex max-h-[calc(100vh-3rem)] min-w-0 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-1 p-0 text-ink shadow-float backdrop:bg-scrim backdrop:backdrop-blur-[2px] open:animate-[gameDialogIn_180ms_var(--ease-out)] [&:not([open])]:hidden',
         className
       )}
       onCancel={(event) => {
