@@ -37,7 +37,7 @@ const TitleBar = memo(() => {
     >
       <div className="logo-and-app-name-container flex h-full items-center gap-2.5 pl-4">
         {/* The app icon whole, white tile and all (no rounding that clips it); then the build's version. */}
-        <Img className="h-7 w-7" src={AppLogo} alt="" />
+        <Img className="h-[22px] w-[22px]" src={AppLogo} alt="" />
         <span className="app-version flex items-start gap-1 text-section font-semibold">
           Nemora
           <span className="pt-px text-[10px] font-semibold leading-none tracking-wide text-ink-faint">

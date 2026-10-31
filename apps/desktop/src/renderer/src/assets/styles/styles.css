@@ -546,6 +546,17 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   }
 }
 
+/* The playing-now bars in a song row (ui/EqualizerBars.tsx). */
+@keyframes eqBar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @keyframes tooltipIn {
   from {
     opacity: 0;

@@ -33,6 +33,7 @@ import SongArtist from './SongArtist';
 import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
 
 import { appPreferences } from '../../../../../package.json';
+import EqualizerBars from '../ui/EqualizerBars';
 import { useStore } from '@tanstack/react-store';
 import { store } from '../../store';
 
@@ -658,11 +659,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             onKeyDown={(e) => e.key === 'Enter' && goToSongInfoPage()}
             title={title}
           >
-            {isCurrent && (
-              <span className={`ms-icon shrink-0 text-[15px] ${isSongPlaying ? 'ms-icon-filled' : ''}`} aria-hidden>
-                graphic_eq
-              </span>
-            )}
+            {isCurrent && <EqualizerBars isPlaying={isSongPlaying} className="mr-0.5" />}
             <span className="truncate">{title}</span>
           </div>
           <div className="song-artists min-w-0 truncate text-small text-ink-dim">{songArtists}</div>
