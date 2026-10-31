@@ -101,6 +101,9 @@
     "loading": "Loading"
   },
   "titleBar": {
+    "clearSearch": "Clear search",
+    "searchPlaceholder": "Search songs, artists, albums",
+    "search": "Search",
     "changeTheme": "Change theme",
     "goBack": "Go Back (Alt + Left-Arrow)",
     "goHome": "Go to Home (Alt + Home)",
@@ -110,6 +113,8 @@
     "close": "Close"
   },
   "player": {
+    "pause": "Pause",
+    "play": "Play",
     "goToMainPlayer": "Go to Main Player (Ctrl + N)",
     "openInMiniPlayer": "Open in Mini player (Ctrl + N)",
     "openInFullScreen": "Open in Fullscreen",
@@ -261,6 +266,12 @@
     "selectedGenreCount": "{{count}} selected $t(common.genre, {\"count\":{{count}}})"
   },
   "homePage": {
+    "rediscover": "Rediscover",
+    "upNext": "Up next",
+    "queueWithCount_other": "Queue, {{count}} songs",
+    "queueWithCount_one": "Queue, {{count}} song",
+    "resume": "Resume",
+    "continue": "Continue where you left off",
     "empty": "There's nothing here..",
     "loading": "Hold on. We are getting everything ready for you...",
     "listenMoreToShowMetrics": "Listen to more songs to show additional metrics.",
@@ -500,6 +511,7 @@
     "unavailableTracks": "Unavailable Tracks of this Album"
   },
   "currentQueuePage": {
+    "playingFrom": "Playing from",
     "queue": "Currently Playing Queue",
     "folderWithName": "{{name}} Folder",
     "enableAutoScrolling": "Enable Auto Scrolling",
@@ -675,6 +687,12 @@
     "byteWithCount_other": "{{count}} bytes"
   },
   "sideBar": {
+    "unpin": "Unpin from sidebar",
+    "pin": "Pin to sidebar",
+    "pinned": "Pinned",
+    "yours": "Yours",
+    "library": "Library",
+    "navigation": "Navigation",
     "home": "Home",
     "search": "Search",
     "tierlists": "Tierlists",
