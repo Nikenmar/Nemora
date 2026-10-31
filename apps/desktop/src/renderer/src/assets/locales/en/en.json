@@ -347,6 +347,18 @@
     "darkTheme": "Dark theme",
     "systemTheme": "System theme",
     "enableImageBasedDynamicThemes": "Cover light",
+    "accentColor": "Accent colour",
+    "accentColorDescription": "The colour of buttons, the selection, progress and links. Blue is Nemora's own; each other colour keeps its depth and contrast.",
+    "accentColors": {
+      "blue": "Blue",
+      "violet": "Violet",
+      "pink": "Pink",
+      "red": "Red",
+      "orange": "Orange",
+      "green": "Green",
+      "teal": "Teal",
+      "graphite": "Graphite"
+    },
     "enableImageBasedDynamicThemesDescription": "Light the top of the page and the player with the colour of the playing song's cover.",
     "language": "Language",
     "languageDescription": "Select the language you want Nemora to be displayed in.",

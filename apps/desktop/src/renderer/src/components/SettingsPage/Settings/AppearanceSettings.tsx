@@ -8,12 +8,22 @@ import storage from '../../../utils/localStorage';
 import ThemePreview from '../../ui/ThemePreview';
 
 import Checkbox from '../../Checkbox';
+import Icon from '../../ui/Icon';
+import {
+  ACCENT_PRESETS,
+  DEFAULT_ACCENT,
+  accentTokens,
+  type AccentId
+} from '../../../other/accentPalette';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
 const ThemeSettings = () => {
   const userData = useStore(store, (state) => state.userData);
   const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const isDarkMode = useStore(store, (state) => state.isDarkMode);
+  const accent: AccentId =
+    ACCENT_PRESETS.find((p) => p.id === preferences?.accentColor)?.id ?? DEFAULT_ACCENT;
 
   const { t } = useTranslation();
 
@@ -135,6 +145,45 @@ const ThemeSettings = () => {
                 {t('settingsPage.systemTheme')}
               </span>
             </label>
+          </div>
+        </li>
+        <li className="accent-color mb-2">
+          <div className="description">{t('settingsPage.accentColorDescription')}</div>
+          {/* Each swatch is the accent as this theme draws it, ringed by its echo (progress,
+              links, focus): the two colours the choice actually changes. */}
+          <div
+            role="radiogroup"
+            aria-label={t('settingsPage.accentColor')}
+            className="flex flex-wrap items-center gap-3 pl-4 pt-4"
+          >
+            {ACCENT_PRESETS.map(({ id }) => {
+              const tokens = accentTokens(id, isDarkMode ? 'dark' : 'light');
+              const isOn = accent === id;
+              const label = t(`settingsPage.accentColors.${id}`);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isOn}
+                  aria-label={label}
+                  data-tooltip={label}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-on-accent outline-none transition-transform duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo ${
+                    isOn ? 'ring-2 ring-ink ring-offset-2 ring-offset-surface-1' : ''
+                  }`}
+                  style={{
+                    backgroundColor: `rgb(${tokens.accent.join(' ')})`,
+                    boxShadow: `inset 0 0 0 3px rgb(${tokens.echo.join(' ')})`
+                  }}
+                  onClick={() => storage.preferences.setPreferences('accentColor', id)}
+                >
+                  {isOn && <Icon name="check" size={18} />}
+                </button>
+              );
+            })}
+            <span className="ml-1 text-small text-ink-dim">
+              {t(`settingsPage.accentColors.${accent}`)}
+            </span>
           </div>
         </li>
         <li className="secondary-container enable-image-based-dynamic-themes mb-4">

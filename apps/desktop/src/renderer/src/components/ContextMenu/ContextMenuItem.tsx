@@ -5,6 +5,16 @@ import { useContext } from 'react';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Icon from '../ui/Icon';
 
+/**
+ * Menus still hand over icon classes written for the 1.x menu (`ms-icon mr-4 text-xl`): margins and
+ * sizes from those push the glyph out of its slot. Only the fill and a colour still apply here.
+ */
+const iconLook = (classes?: string) =>
+  (classes ?? '')
+    .split(/\s+/)
+    .filter((c) => c === 'ms-icon-filled' || /^!?text-(?!xs|sm|base|lg|\d*xl|\[)/.test(c))
+    .join(' ');
+
 const ContextMenuItem = (props: ContextMenuItem) => {
   const { updateContextMenuData } = useContext(AppUpdateContext);
   const isDanger = props.class?.includes('menu-item-danger');
@@ -38,7 +48,7 @@ const ContextMenuItem = (props: ContextMenuItem) => {
           <Icon
             name={props.iconName}
             size={18}
-            className={`icon ${isDanger ? 'text-danger' : 'text-ink-dim'} ${props.iconClassName ?? ''}`}
+            className={`icon ${isDanger ? 'text-danger' : 'text-ink-dim'} ${iconLook(props.iconClassName)}`}
           />
         )}
       </span>

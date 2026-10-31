@@ -530,6 +530,8 @@ declare global {
     enableImageBasedDynamicThemes: boolean;
     /** The cover light (the playing cover's colour under the page and the player) is off. */
     isCoverLightDisabled?: boolean;
+    /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
+    accentColor?: string;
     autoTranslateLyrics: boolean;
     autoConvertLyrics: boolean;
     /** Smart Shuffle intensity, 0..1 (0 = pure random, 0.6 = default 60/40, 1 = fully smart). */

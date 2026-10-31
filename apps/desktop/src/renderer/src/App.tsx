@@ -20,6 +20,7 @@ import { appPreferences } from '../../../package.json';
 import { registerBenchApp } from './other/bench';
 import { registerShots } from './other/shots';
 import { applyCoverLight } from './other/coverLight';
+import { applyAccent } from './other/accentPalette';
 import TooltipLayer from './components/ui/Tooltip';
 import { AppUpdateContext, type AppUpdateContextType } from './contexts/AppUpdateContext';
 // import { SongPositionContext } from './contexts/SongPositionContext';
@@ -755,6 +756,10 @@ export default function App() {
     (artworkPath?: string) => applyCoverLight(artworkPath),
     []
   );
+
+  // The accent colour the user chose (Settings > Appearance); blue needs no override.
+  const accentColor = useStore(store, (state) => state.localStorage.preferences.accentColor);
+  useEffect(() => applyAccent(accentColor), [accentColor]);
 
   // Cover light is on unless the user switched it off (Settings > Appearance).
   const isImageBasedDynamicThemesEnabled = useStore(

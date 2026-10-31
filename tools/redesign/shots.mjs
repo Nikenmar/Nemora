@@ -107,7 +107,10 @@ const SHOTS = [
   { id: '35-settings-1', surface: 'Settings, top', setup: `S.go('Settings');`, settle: 1500 },
   { id: '35-settings-2', surface: 'Settings, middle', setup: `S.go('Settings'); await wait(1200); scrollMain(0.4);` },
   { id: '35-settings-3', surface: 'Settings, lower', setup: `S.go('Settings'); await wait(1200); scrollMain(0.75);` },
-  { id: '36-release-notes', surface: "What's new", setup: `S.prompt('releaseNotes');`, settle: 1500 }
+  { id: '36-release-notes', surface: "What's new", setup: `S.prompt('releaseNotes');`, settle: 1500 },
+  // Last on purpose: the accent stays chosen in this run's profile copy.
+  { id: '37-accent-picker', surface: 'Accent colour picker, violet chosen', setup: `S.go('Settings'); await wait(1200); document.querySelector('[role=radiogroup] [aria-label=Violet]').click(); await wait(300); document.querySelector('.accent-color').scrollIntoView({ block: 'center' });`, settle: 1200 },
+  { id: '38-accent-home', surface: 'Home in teal', setup: `S.go('Settings'); await wait(1200); document.querySelector('[role=radiogroup] [aria-label=Teal]').click(); await wait(300); S.go('Home');`, settle: 1800 }
 ];
 
 /** In the empty run: the screens a new user sees before the first scan. */
