@@ -192,7 +192,9 @@ const UpNextSongPopup = (props: Props) => {
         iconName="close"
         tooltipLabel={t('player.closeUpNext')}
         size="sm"
-        className="!m-0 ml-1 !hidden !h-5 !w-5 shrink-0 !text-echo group-hover/nextSong:!flex"
+        // 20 px button on a 14 px line: the negative margins keep the row from growing when it appears,
+        // so the title above does not jump.
+        className="!-my-[3px] !mr-0 ml-1 !hidden !h-5 !w-5 shrink-0 !text-echo group-hover/nextSong:!flex"
         clickHandler={() => setUpNextSongData(undefined)}
       />
     </div>
