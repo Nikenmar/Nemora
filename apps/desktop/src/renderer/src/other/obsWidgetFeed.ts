@@ -1,5 +1,6 @@
 import type { ObsWidgetState, ObsWidgetUpNext } from '@platform/api';
 import { store } from '../store';
+import { accentTokens, type AccentId } from './accentPalette';
 
 /**
  * Feeds the OBS widget from the renderer store.
@@ -48,7 +49,12 @@ const push = (): void => {
     artists: artists || undefined,
     playing: player.isCurrentSongPlaying,
     upNext,
-    art: currentSongData.artworkPath || undefined
+    art: currentSongData.artworkPath || undefined,
+    // The widget draws over video in the black theme's colours, so it takes the dark echo.
+    accent: accentTokens(
+      (store.state.localStorage.preferences.accentColor ?? 'blue') as AccentId,
+      'dark'
+    ).echo.join(' ')
   };
 
   const fingerprint = JSON.stringify(state);

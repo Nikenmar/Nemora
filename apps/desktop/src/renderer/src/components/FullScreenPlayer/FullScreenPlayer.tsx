@@ -98,7 +98,8 @@ const FullScreenPlayer = () =>
         </div>
         <TitleBar />
         <div
-          className={`relative grid min-h-0 items-center gap-16 px-16 pb-12 ${
+          // Cover and lyrics as one block in the middle of a wide window, not pinned to its left edge.
+          className={`relative grid min-h-0 w-full max-w-[84rem] items-center gap-16 justify-self-center px-16 pb-12 ${
             isLyricsShown
               ? 'grid-cols-[minmax(0,24rem)_minmax(0,1fr)]'
               : 'grid-cols-1 justify-items-center'

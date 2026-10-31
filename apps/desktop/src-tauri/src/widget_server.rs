@@ -64,6 +64,10 @@ pub struct WidgetStateInput {
     /// The renderer's `artworkPath`: a `http://nemora.localhost/...` URL for a
     /// local file, a remote `https://` URL for online artwork, or nothing.
     pub art: Option<String>,
+    /// The chosen accent's echo for the black theme, as `r g b`, so the widget's "Up next" matches
+    /// the player's; the widget falls back to blue without it.
+    #[serde(default)]
+    pub accent: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -95,6 +99,7 @@ struct ServerState {
     playing: bool,
     up_next: Option<UpNext>,
     art: ArtSource,
+    accent: Option<String>,
     /// Bumped only when the artwork itself changes.
     art_version: u64,
     /// The last few artworks, each under the token its URL carries.
@@ -142,6 +147,7 @@ struct StatePayload<'a> {
     playing: bool,
     up_next: Option<&'a UpNext>,
     art: Option<String>,
+    accent: Option<&'a String>,
 }
 
 impl ServerState {
@@ -157,6 +163,7 @@ impl ServerState {
                 ArtSource::File(_) => Some(format!("/art?v={}", art_token(self.art_version))),
                 ArtSource::Remote(url) => Some(url.clone()),
             },
+            accent: self.accent.as_ref(),
         }
     }
 }
@@ -211,7 +218,8 @@ fn apply_state(state: WidgetStateInput) -> Result<(), String> {
         || current.title != state.title
         || current.artists != state.artists
         || current.playing != state.playing
-        || current.up_next != state.up_next;
+        || current.up_next != state.up_next
+        || current.accent != state.accent;
 
     if !changed {
         return Ok(());
@@ -231,6 +239,7 @@ fn apply_state(state: WidgetStateInput) -> Result<(), String> {
     current.artists = state.artists;
     current.playing = state.playing;
     current.up_next = state.up_next;
+    current.accent = state.accent;
     current.version += 1;
     Ok(())
 }
@@ -493,6 +502,7 @@ mod tests {
             playing: true,
             up_next: Some(UpNext { title: "SLEEPLESS".to_owned(), artist: Some("enable secret".to_owned()), extra: 0 }),
             art: Some(format!("http://nemora.localhost/{encoded}")),
+            accent: None,
         })
         .expect("state push must be accepted");
 
@@ -519,6 +529,7 @@ mod tests {
             playing: true,
             up_next: Some(UpNext { title: "SLEEPLESS".to_owned(), artist: Some("enable secret".to_owned()), extra: 0 }),
             art: Some(format!("http://nemora.localhost/{encoded}")),
+            accent: None,
         })
         .expect("state push must be accepted");
         let (_, body) = get(port, "/state");
@@ -545,6 +556,7 @@ mod tests {
             playing: true,
             up_next: None,
             art: Some(format!("http://nemora.localhost/{second_encoded}")),
+            accent: None,
         })
         .expect("state push must be accepted");
 

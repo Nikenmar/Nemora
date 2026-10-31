@@ -1708,8 +1708,10 @@ export default function App() {
       else if (e.ctrlKey && e.key === 'l') {
         const currentlyActivePage =
           store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex];
-        if (currentlyActivePage.pageTitle === 'Lyrics') changeCurrentActivePage('Home');
-        else changeCurrentActivePage('Lyrics');
+        // Leaving Lyrics goes back to the page it was opened from, as the player's lyrics button does.
+        if (currentlyActivePage.pageTitle !== 'Lyrics') changeCurrentActivePage('Lyrics');
+        else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
+        else changeCurrentActivePage('Home');
       } else if (e.ctrlKey && e.key === 'n')
         updatePlayerType(store.state.playerType === 'mini' ? 'normal' : 'mini');
       else if (e.ctrlKey && e.key === 'q') {

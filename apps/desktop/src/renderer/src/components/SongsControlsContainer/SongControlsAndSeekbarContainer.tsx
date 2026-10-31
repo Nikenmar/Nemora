@@ -35,6 +35,7 @@ const SongControlsAndSeekbarContainer = () => {
     toggleSongPlayback,
     handleSkipForwardClick,
     handleSkipBackwardClick,
+    updatePageHistoryIndex,
   } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
@@ -130,11 +131,14 @@ const SongControlsAndSeekbarContainer = () => {
             tooltipLabel={t("player.lyrics")}
             iconName="lyrics"
             isActive={currentlyActivePage.pageTitle === "Lyrics"}
-            clickHandler={() =>
-              currentlyActivePage.pageTitle === "Lyrics"
-                ? changeCurrentActivePage("Home")
-                : changeCurrentActivePage("Lyrics")
-            }
+            // Off goes back to the page Lyrics was opened from; Home only when there is none.
+            clickHandler={() => {
+              if (currentlyActivePage.pageTitle !== "Lyrics")
+                changeCurrentActivePage("Lyrics");
+              else if (store.state.navigationHistory.pageHistoryIndex > 0)
+                updatePageHistoryIndex("decrement");
+              else changeCurrentActivePage("Home");
+            }}
           />
         </div>
       </div>

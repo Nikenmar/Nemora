@@ -8,6 +8,7 @@ import {
   useRef,
   useState
 } from 'react';
+import { cn } from './ui/cn';
 import { AppUpdateContext } from '../contexts/AppUpdateContext';
 import debounce from '../utils/debounce';
 import { useStore } from '@tanstack/react-store';
@@ -147,8 +148,7 @@ const SeekBarSlider = (props: Props) => {
       type="range"
       name={name}
       id={id}
-      className={
-        className ||
+      className={cn(
         /*
           The filled part of the bar deliberately does NOT transition its width.
           `width` affects layout, so every frame of that transition cost a
@@ -163,8 +163,11 @@ const SeekBarSlider = (props: Props) => {
           The played part is ink like the volume's, and turns echo blue under
           the pointer, so the colour says "you can grab this".
         */
-        "seek-bar-slider relative float-left m-0 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-ink before:transition-[background] before:content-[''] hover:before:bg-echo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo "
-      }
+        "seek-bar-slider relative float-left m-0 h-6 w-full appearance-none bg-[transparent] p-0 outline-none outline-1 outline-offset-1 before:absolute before:left-0 before:top-1/2 before:h-1 before:w-[var(--seek-before-width)] before:-translate-y-1/2 before:cursor-pointer before:rounded-3xl before:bg-ink before:transition-[background] before:content-[''] hover:before:bg-echo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo",
+        // Additions, not a replacement: the full-screen player used to swap the whole look away and
+        // got a bare native slider.
+        className
+      )}
       min={0}
       max={(currentSongData.duration || 0) >= songPos ? currentSongData.duration || 0 : songPos}
       value={songPos || 0}

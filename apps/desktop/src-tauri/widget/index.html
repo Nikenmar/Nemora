@@ -7,7 +7,7 @@
       Served from `src-tauri/src/widget_server.rs` at http://127.0.0.1:41237/.
 
       This page is a copy of the player bar's left block (cover, title, artist
-      line, "UP NEXT" pill) rebuilt in plain CSS. It deliberately does NOT
+      line, "Up next") rebuilt in plain CSS, in the redesign's black theme. It deliberately does NOT
       import the app's Tailwind build: the widget must stay a single file the
       Rust server can embed with `include_str!`, and the app's stylesheet drags
       in the whole theme system for four elements' worth of styling.
@@ -44,22 +44,23 @@
       }
 
       :root {
-        /* The app's echo blue (`--echo` in styles.css, black theme). */
-        --highlight: rgb(99 151 241);
-        --pill-bg: hsl(225 8% 20% / 0.92);
-        --text: hsl(0 0% 100% / 0.9);
-        /* Everything below is sized in rem, so one root font-size is the only
-           knob the `scale` option has to turn. That makes a bigger widget a
-           real re-render at the larger size - crisp text, crisp edges - rather
-           than a bitmap stretched after the fact, which is what scaling the
-           source inside OBS does. */
+        /* The black theme's tokens (styles.css). `--echo` follows the accent the user chose: the
+           renderer sends it with every state. */
+        --ink: 239 240 243;
+        --ink-dim: 148 150 160;
+        --echo: 99 151 241;
+        /* The player bar's block, measured in its own pixels, at 1rem = 12 of them: its 48px
+           cover is 4rem here. Everything is in rem, so one root font-size is the only knob the
+           scale has to turn. That makes a bigger widget a real re-render at the larger size -
+           crisp text, crisp edges - rather than a bitmap stretched after the fact, which is what
+           scaling the source inside OBS does. */
         --cover-size: 4rem;
         --gap: 1rem;
         /* Drawn in CSS rather than swapped in by script, so the cover slot is
            never empty: an <img> waiting for its first src is a broken-image
            box on stream, and a cover file that has been moved or deleted would
            be one too. Real artwork is layered on top of this. */
-        --cover-placeholder: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect width="64" height="64" fill="%23212226"/%3E%3Cpath d="M25 41.5a4.5 4.5 0 1 0 4.5-4.5V22l14-3v14.5a4.5 4.5 0 1 0 3 4.24V16l-20 4.3V37a4.5 4.5 0 0 0-1.5 4.5z" fill="%23c5d9f2" opacity=".7"/%3E%3C/svg%3E');
+        --cover-placeholder: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect width="64" height="64" fill="%2318181b"/%3E%3Cpath d="M25 41.5a4.5 4.5 0 1 0 4.5-4.5V22l14-3v14.5a4.5 4.5 0 1 0 3 4.24V16l-20 4.3V37a4.5 4.5 0 0 0-1.5 4.5z" fill="%23efeff3" opacity=".55"/%3E%3C/svg%3E');
       }
 
       html,
@@ -73,6 +74,7 @@
       body {
         font-family: 'Geologica', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         -webkit-font-smoothing: antialiased;
+        font-feature-settings: 'calt' 1;
       }
 
       #bar {
@@ -95,16 +97,14 @@
         flex: 0 0 auto;
         width: var(--cover-size);
         height: var(--cover-size);
+        /* rounded-cover-sm, 6px on the 48px cover. */
         border-radius: 0.5rem;
         background-image: var(--cover-placeholder);
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        /* The app uses Tailwind's shadow-xl here, which reaches 40px below the
-           cover - four times the room this layout has. Same intent, kept
-           inside the padding: 0.25 + 0.75 - 0.125 = 0.875rem of reach against
-           1rem of space. */
-        box-shadow: 0 0.25rem 0.75rem -0.125rem rgb(0 0 0 / 0.5);
+        /* The player's 0 4px 14px, kept inside the 1rem of padding. */
+        box-shadow: 0 0.25rem 0.75rem -0.125rem rgb(0 0 0 / 0.45);
       }
 
       #info {
@@ -112,62 +112,67 @@
         flex-direction: column;
         align-items: flex-start;
         justify-content: center;
+        /* gap-0.5 between the lines, gap-3 from the cover. */
+        gap: 0.1667rem;
         margin-left: var(--gap);
         min-width: 0;
-        /* The app uses drop-shadow-lg here; over video it needs to be heavier. */
+        /* Over video the text carries its own shadow: a stream can be any colour at all. */
         filter: drop-shadow(0 0.125rem 0.3125rem rgb(0 0 0 / 0.75));
       }
 
+      /* 14px semibold, leading 20px: the player's title. */
       #title {
         max-width: 100%;
-        font-size: 1.5rem;
-        font-weight: 500;
-        line-height: 1.35;
-        color: var(--highlight);
+        font-size: 1.1667rem;
+        font-weight: 600;
+        line-height: 1.6667rem;
+        color: rgb(var(--ink));
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      /* The second line is either the artists or the UP NEXT pill, never both,
-         exactly as `CurrentlyPlayingSongInfoContainer` swaps them. */
+      /* The second line is either the artists or Up next, never both, exactly
+         as `CurrentlyPlayingSongInfoContainer` swaps them. */
       #line2 {
         max-width: 100%;
-        min-height: 1.375rem;
+        min-height: 1.3333rem;
         display: flex;
         align-items: center;
       }
 
+      /* text-small, ink-dim. */
       .artists {
         max-width: 100%;
-        font-size: 0.75rem;
-        font-weight: 400;
-        color: var(--text);
+        font-size: 1rem;
+        line-height: 1.3333rem;
+        color: rgb(var(--ink-dim));
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
+      /* `UpNextSongPopup`: text-micro, the labels in echo, the song in ink. */
       .next-song {
         max-width: 100%;
-        display: flex;
-        align-items: center;
-        padding: 0.1875rem 0.75rem;
-        border-radius: 9999px;
-        background: var(--pill-bg);
-        font-size: 0.75rem;
-        color: #fff;
+        font-size: 0.9583rem;
+        line-height: 1.1667rem;
+        color: rgb(var(--ink-dim));
         overflow: hidden;
         text-overflow: ellipsis;
         /* `pre`, not `nowrap`: the line is built from separate spans, and the
            single spaces that separate them sit at element boundaries, where
-           normal white-space collapsing eats them ("UP NEXT:ketaminabyYaego"). */
+           normal white-space collapsing eats them ("Up next:ketaminabyYaego"). */
         white-space: pre;
       }
 
       .next-song .label {
         font-weight: 500;
-        color: var(--highlight);
+        color: rgb(var(--echo));
+      }
+
+      .next-song .song {
+        color: rgb(var(--ink));
       }
 
       .next-song .extra {
@@ -275,10 +280,11 @@
 
           const label = document.createElement('span');
           label.className = 'label';
-          label.textContent = 'UP NEXT: ';
+          label.textContent = 'Up next: ';
           pill.appendChild(label);
 
           const name = document.createElement('span');
+          name.className = 'song';
           name.textContent = upNext.title;
           pill.appendChild(name);
 
@@ -309,6 +315,9 @@
         let failures = 0;
 
         const apply = (state) => {
+          // The accent the user chose in Nemora; blue when an older app sends none.
+          if (state.accent) document.documentElement.style.setProperty('--echo', state.accent);
+          else document.documentElement.style.removeProperty('--echo');
           const visible = Boolean(state.title) && !(hideWhenPaused && !state.playing);
           bar.classList.toggle('is-visible', visible);
           if (!visible) return;

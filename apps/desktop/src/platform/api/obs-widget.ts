@@ -30,6 +30,8 @@ export type ObsWidgetState = {
    * server turns back into a path and reads - the image bytes never cross IPC.
    */
   art?: string;
+  /** The chosen accent's echo for the black theme, `r g b`; the widget's "Up next" label. */
+  accent?: string;
 };
 
 export const obsWidget = {
