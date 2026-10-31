@@ -145,15 +145,23 @@
   --cover-glow-strength: 45%;
 }
 
-/* The playing cover's colour (other/coverLight.ts); registered so a song change crossfades it. */
+/* The playing cover's two tones (other/coverLight.ts, other/coverTone.ts); registered so a song
+   change crossfades them. */
 @property --cover-glow {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --cover-glow-2 {
   syntax: '<color>';
   inherits: true;
   initial-value: transparent;
 }
 :root,
 .light {
-  transition: --cover-glow 600ms ease;
+  transition:
+    --cover-glow 600ms ease,
+    --cover-glow-2 600ms ease;
 }
 
 /* ? BASE */

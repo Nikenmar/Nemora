@@ -1,11 +1,15 @@
+import { readCoverTone } from './coverTone';
+
 /**
- * Cover light: one colour taken from the playing song's cover and set as `--cover-glow` on the
- * document. The page glow, the player tint and the Hero backgrounds read it; it changes per song and
- * crossfades (a registered `@property` in styles.css).
+ * Cover light: the playing song's cover tones, set as `--cover-glow` (primary) and `--cover-glow-2`
+ * (secondary) on the document. The page glow, the player tint and the Hero backgrounds read them; they
+ * change per song and crossfade (registered `@property`s in styles.css).
  *
- * The colour is the cover palette's DarkVibrant (else Vibrant, else Muted), brought in OKLCH to a
- * fixed lightness and a capped chroma, so an acid cover does not shout and a grey cover gives grey
- * light instead of an invented hue.
+ * The tones come from the cover's own pixels (other/coverTone.ts, the Android app's algorithm), so a
+ * grey cover gives grey light instead of an invented hue and a pastel one a muted tone.
+ *
+ * `coverGlow` below, from a stored palette, is kept for the genre tiles, which have no single cover
+ * to read at the moment they draw.
  */
 
 const GLOW_LIGHTNESS = 0.35;
@@ -58,11 +62,36 @@ export function coverGlow(palette?: NodeVibrantPalette | null): string | null {
   return `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
 }
 
-/** Sets or clears the cover light; returns the function that clears it. */
-export function applyCoverLight(palette?: NodeVibrantPalette | null): () => void {
+let request = 0;
+
+const clear = () => {
   const root = document.documentElement;
-  const glow = coverGlow(palette);
-  if (glow) root.style.setProperty('--cover-glow', glow);
-  else root.style.removeProperty('--cover-glow');
-  return () => root.style.removeProperty('--cover-glow');
+  root.style.removeProperty('--cover-glow');
+  root.style.removeProperty('--cover-glow-2');
+};
+
+/**
+ * Sets the cover light from the cover at `artworkPath`, or clears it without one; returns the
+ * function that clears it. Reading is asynchronous, so only the latest call may set the colours.
+ */
+export function applyCoverLight(artworkPath?: string | null): () => void {
+  const ticket = ++request;
+  if (!artworkPath) clear();
+  else
+    readCoverTone(artworkPath)
+      .then((tone) => {
+        if (ticket !== request) return undefined;
+        if (!tone) return clear();
+        const root = document.documentElement;
+        root.style.setProperty('--cover-glow', tone.primary);
+        root.style.setProperty('--cover-glow-2', tone.secondary);
+        return undefined;
+      })
+      .catch(() => ticket === request && clear());
+  return () => {
+    if (ticket === request) {
+      request++;
+      clear();
+    }
+  };
 }

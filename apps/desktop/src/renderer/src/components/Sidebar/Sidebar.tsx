@@ -131,7 +131,7 @@ const Sidebar = memo(() => {
                     <button
                       type="button"
                       className={cn(
-                        'flex h-8 w-full items-center gap-2.5 rounded-xl px-3 text-left text-[12.5px] text-ink outline-none transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-echo',
+                        'flex h-8 w-full items-center gap-2.5 rounded-full px-3 text-left text-[12.5px] text-ink outline-none transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-echo',
                         activePlaylist === playlist.playlistId && 'bg-surface-2'
                       )}
                       onClick={() => go('PlaylistInfo', { playlistId: playlist.playlistId })}

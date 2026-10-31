@@ -750,9 +750,9 @@ export default function App() {
     []
   );
 
-  /** Cover light (other/coverLight.ts): the playing cover's colour under the page and the player. */
+  /** Cover light (other/coverLight.ts): the playing cover's tones under the page and the player. */
   const setDynamicThemesFromSongPalette = useCallback(
-    (palette?: NodeVibrantPalette) => applyCoverLight(palette),
+    (artworkPath?: string) => applyCoverLight(artworkPath),
     []
   );
 
@@ -764,11 +764,8 @@ export default function App() {
 
   useEffect(() => {
     setDynamicThemesFromSongPalette(undefined);
-    const isDynamicThemesEnabled =
-      isImageBasedDynamicThemesEnabled && store.state.currentSongData.paletteData;
-
     const resetStyles = setDynamicThemesFromSongPalette(
-      isDynamicThemesEnabled ? store.state.currentSongData.paletteData : undefined
+      isImageBasedDynamicThemesEnabled ? store.state.currentSongData.artworkPath : undefined
     );
 
     return () => {
@@ -805,8 +802,8 @@ export default function App() {
 
               if (isStartPlay) toggleSongPlayback();
 
-              if (songData.paletteData && isImageBasedDynamicThemesEnabled)
-                setDynamicThemesFromSongPalette(songData.paletteData);
+              if (isImageBasedDynamicThemesEnabled)
+                setDynamicThemesFromSongPalette(songData.artworkPath);
 
               recordListeningData(songId, songData.duration);
 

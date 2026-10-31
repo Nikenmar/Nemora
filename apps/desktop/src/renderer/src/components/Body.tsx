@@ -89,15 +89,23 @@ const Body = memo(() => {
 
   return (
     // A panel inset in the frame, rounded like everything inside it: the frame (title bar, sidebar,
-    // player) shows around it, so its corners have the frame's own colour behind them.
+    // player) shows around it, so its corners have the frame's own colour behind them. It sits right
+    // on the player, with no gap or line between: the corners alone mark the edge.
     <div
-      className="body relative order-2 mb-2 mr-2 !h-[calc(100%-0.5rem)] min-w-0 flex-1 overflow-hidden rounded-[16px] bg-canvas"
+      className="body relative order-2 mr-2 !h-full min-w-0 flex-1 overflow-hidden rounded-[16px] bg-canvas"
       ref={bodyRef}
     >
-      {/* Cover light: the playing cover's colour over the top of every page (other/coverLight.ts). */}
+      {/* Cover light: the cover's primary tone over the top of every page, its secondary one in the
+          far corner, as the Android player lights its own (other/coverLight.ts). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[24rem] bg-[radial-gradient(ellipse_70%_100%_at_18%_-12%,color-mix(in_srgb,var(--cover-glow)_var(--cover-glow-strength),transparent),transparent_72%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[24rem]"
+        style={{
+          backgroundImage: [
+            'radial-gradient(ellipse 70% 100% at 18% -12%, color-mix(in srgb, var(--cover-glow) var(--cover-glow-strength), transparent), transparent 72%)',
+            'radial-gradient(ellipse 45% 80% at 100% -20%, color-mix(in srgb, var(--cover-glow-2) calc(var(--cover-glow-strength) * 0.6), transparent), transparent 70%)'
+          ].join(', ')
+        }}
       />
       <ErrorBoundary>
         <div
