@@ -119,20 +119,14 @@
         gap: 0.1667rem;
         margin-left: var(--gap);
         min-width: 0;
-        /* Over video the text carries its own edge: a crisp dark outline in eight directions that
-           holds light text on a white or busy frame, then a soft glow that lifts it off a dark one.
-           In rem, so it thickens with the scale. text-shadow, not a stroke: every Chromium OBS has
-           shipped draws it. */
+        /* Over video the text carries its own shadow: a close, dense one that gives light text a
+           dark bed on a white or busy frame, then a wide, faint one that lifts it off a dark one.
+           Soft on purpose; an outline reads as a sticker. In rem, so it grows with the scale. */
         text-shadow:
-          0.1rem 0 0 rgb(0 0 0 / 0.85),
-          -0.1rem 0 0 rgb(0 0 0 / 0.85),
-          0 0.1rem 0 rgb(0 0 0 / 0.85),
-          0 -0.1rem 0 rgb(0 0 0 / 0.85),
-          0.0707rem 0.0707rem 0 rgb(0 0 0 / 0.85),
-          -0.0707rem 0.0707rem 0 rgb(0 0 0 / 0.85),
-          0.0707rem -0.0707rem 0 rgb(0 0 0 / 0.85),
-          -0.0707rem -0.0707rem 0 rgb(0 0 0 / 0.85),
-          0 0 0.4rem rgb(0 0 0 / 0.6);
+          0 0 0.2rem rgb(0 0 0 / 0.9),
+          0 0 0.2rem rgb(0 0 0 / 0.6),
+          0 0.0833rem 0.4rem rgb(0 0 0 / 0.6),
+          0 0.1667rem 1rem rgb(0 0 0 / 0.4);
       }
 
       /* 14px semibold, leading 20px: the player's title. */
