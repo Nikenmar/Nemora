@@ -199,6 +199,7 @@ export type ReasonKey =
   | 'scrubbed'
   | 'rotation'
   | 'fatigue'
+  | 'exploring'
   | 'plain';
 export type Reason = { key: ReasonKey; values?: Record<string, string | number>; strength: number };
 
@@ -240,6 +241,9 @@ export function reasonsOf(e: ShuffleExplanation): Reason[] {
   if (e.freshness < 0.75) reasons.push({ key: 'recent', strength: 1.5 });
   // A placed song below the unplaced median got a little lift (PLAN/15 F1).
   if (e.nudge > 0) reasons.push({ key: 'nudged', strength: 0.11 });
+  // The adaptive model gave a little-known song a chance this time (PLAN/15 L2).
+  if (e.confidence !== null && e.confidence < 0.5 && e.explored > 0.05)
+    reasons.push({ key: 'exploring', strength: 0.15 });
   // Variety (PLAN/15 V2, V3).
   if (e.rotation >= 1.3) reasons.push({ key: 'rotation', strength: 0.2 });
   if (e.fatigue < 0.8) reasons.push({ key: 'fatigue', strength: 1.1 });

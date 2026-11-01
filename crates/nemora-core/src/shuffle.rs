@@ -90,7 +90,11 @@ pub struct Parts {
     pub engagement: Option<f64>,
     /// What the tierlist nudge added to the score (PLAN/15 F1), 0 when none.
     pub nudge: f64,
-    /// The smart score before blending with randomness, the nudge included.
+    /// L2: how sure the model is of this song, 0..1; None unless the adaptive model is on.
+    pub confidence: Option<f64>,
+    /// L2: how far this queue's draw strayed from the song's mean score (within +-0.15).
+    pub explored: f64,
+    /// The smart score before blending with randomness, the nudge (and L2's draw) included.
     pub score: f64,
 }
 
@@ -174,6 +178,38 @@ pub struct Signals {
     /// V2, V3: their factors per song; a song missing from them is at 1.
     pub rotation: HashMap<String, f64>,
     pub fatigue: HashMap<String, f64>,
+    /// L2: listening evidence per song (own picks, replays, rewinds, scrub-skips, Guessr rounds).
+    pub evidence: HashMap<String, f64>,
+    /// L4: net faint duels per song (picked minus left) in the last 90 days.
+    pub implicit: HashMap<String, i64>,
+    /// L2: the draw's seed; the same for ten minutes, so a queue and its explanations agree.
+    pub seed: u64,
+}
+
+/// L2: a draw strays at most this far from a song's mean score, and this is its spread when
+/// nothing is known about the song.
+pub const ADAPTIVE_SPREAD: f64 = 0.15;
+/// L2: a song with 20 duels or more gets up to this much more of its ELO than 3.0's 10 %.
+pub const ADAPTIVE_ELO: f64 = 0.15;
+/// L4: one faint duel moves the mean this much (an eighth of a duel), all of them at most 0.05.
+pub const IMPLICIT_STEP: f64 = 0.005;
+pub const IMPLICIT_MAX: f64 = 0.05;
+const DRAW_WINDOW_MS: i64 = 10 * 60_000;
+
+/// A standard normal number for `song` under `seed` (SplitMix64, then Box-Muller): the same pair
+/// always draws the same number.
+fn draw(seed: u64, song: &str) -> f64 {
+    let mut state =
+        seed ^ song.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3));
+    let mut next = || {
+        state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
+    };
+    let (u, v) = (next().max(1e-12), next());
+    (-2.0 * u.ln()).sqrt() * (2.0 * std::f64::consts::PI * v).cos()
 }
 
 /// V1: the push back of a song heard `days` ago: x0.4 just after, half way back in about a day
@@ -300,6 +336,8 @@ pub fn parts_with(
             rotation: if options.fair_rotation { signals.rotation.get(id).copied().unwrap_or(1.0) } else { 1.0 },
             fatigue: if options.artist_fatigue { signals.fatigue.get(id).copied().unwrap_or(1.0) } else { 1.0 },
             nudge: 0.0,
+            confidence: None,
+            explored: 0.0,
             score,
         }
     };
@@ -333,6 +371,32 @@ pub fn parts_with(
             {
                 p.nudge = (NUDGE_SHARE * (median - p.score)).min(NUDGE_MAX);
                 p.score += p.nudge;
+            }
+            if options.adaptive {
+                // The mean starts at the score above; duels weigh by their number, faint duels a
+                // little; then a draw around the mean, wide when little is known.
+                let games = inputs.ratings.get(id).map_or(0, |r| r.games);
+                let duels = match (has_elo, inputs.ratings.get(id)) {
+                    (true, Some(r)) if r.games >= 1 => {
+                        ADAPTIVE_ELO * (games.min(20) as f64 / 20.0) * (normalized_score(r) - 0.5)
+                    }
+                    _ => 0.0,
+                };
+                let implicit = if options.implicit_duels {
+                    (IMPLICIT_STEP * signals.implicit.get(id).copied().unwrap_or(0) as f64)
+                        .clamp(-IMPLICIT_MAX, IMPLICIT_MAX)
+                } else {
+                    0.0
+                };
+                let mean = (p.score + duels + implicit).clamp(0.0, 1.0);
+                let known = inputs.full_listens.get(id).copied().unwrap_or(0) as f64
+                    + games as f64
+                    + signals.evidence.get(id).copied().unwrap_or(0.0)
+                    + if song_tier.contains_key(id) { 3.0 } else { 0.0 };
+                let spread = ADAPTIVE_SPREAD / (1.0 + known / 3.0).sqrt();
+                p.explored = (draw(signals.seed, id) * spread).clamp(-ADAPTIVE_SPREAD, ADAPTIVE_SPREAD);
+                p.confidence = Some(1.0 - spread / ADAPTIVE_SPREAD);
+                p.score = (mean + p.explored).clamp(0.0, 1.0);
             }
             (id.clone(), p)
         })
@@ -601,6 +665,9 @@ pub struct Explanation {
     /// V2, V3: the rotation and fatigue factors, 1 when off.
     pub rotation: f64,
     pub fatigue: f64,
+    /// L2: how sure the model is, and how far this queue's draw strayed from the mean.
+    pub confidence: Option<f64>,
+    pub explored: f64,
     /// L1's engagement, when learning is on; and the plays behind it.
     pub engagement: Option<f64>,
     pub own_picks: i64,
@@ -687,6 +754,8 @@ pub fn explain(
                 nudge: p.nudge,
                 rotation: p.rotation,
                 fatigue: p.fatigue,
+                confidence: p.confidence,
+                explored: p.explored,
                 engagement: p.engagement,
                 own_picks: counts.get(&id).map_or(0, |c| c.0),
                 replays: counts.get(&id).map_or(0, |c| c.1),
@@ -723,6 +792,24 @@ pub(crate) fn stored_signals(db: &crate::db::Db, options: &Options) -> crate::Re
     }
     if options.artist_fatigue {
         signals.fatigue = fatigue(db, now)?;
+    }
+    if options.adaptive {
+        signals.seed = (now / DRAW_WINDOW_MS) as u64;
+        let mut stmt = db.conn().prepare(
+            "SELECT song_id, own_picks + replays + rewinds + scrub_skips + guessed + missed FROM song_signals",
+        )?;
+        for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
+            let (id, n) = row?;
+            if n > 0 {
+                signals.evidence.insert(id, n as f64);
+            }
+        }
+        if options.implicit_duels {
+            for (picked, left, _) in crate::signals::implicit_duels(db, now - 90 * DAY_MS)? {
+                *signals.implicit.entry(picked).or_insert(0) += 1;
+                *signals.implicit.entry(left).or_insert(0) -= 1;
+            }
+        }
     }
     Ok(signals)
 }
@@ -1198,6 +1285,57 @@ mod tests {
         // Off, the three are the same song to the model, as in 3.0.
         assert_eq!(off["loved"].score, off["scrubbed"].score);
         assert!(off.values().all(|p| p.engagement.is_none()));
+    }
+
+    #[test]
+    fn the_adaptive_model_starts_at_the_classic_score_and_explores_what_it_knows_little() {
+        let songs: Vec<(String, Vec<String>)> =
+            ["known", "unknown", "dueled"].iter().map(|id| (id.to_string(), vec!["x".to_string()])).collect();
+        let full: HashMap<String, i64> = [("known".to_string(), 30)].into();
+        let ratings: HashMap<String, Rating> =
+            [("dueled".to_string(), Rating { rating: 1350.0, games: 25, wins: 20, losses: 5, ..Default::default() })]
+                .into();
+        let inputs = Inputs {
+            songs: &songs,
+            tierlists: &[],
+            full_listens: &full,
+            recent: &[],
+            ratings: &ratings,
+            total_duels: 25,
+        };
+        let classic: HashMap<String, Parts> = parts(&inputs, &[], &Options::CLASSIC).into_iter().collect();
+        let mut spread_known = 0.0f64;
+        let mut spread_unknown = 0.0f64;
+        let adaptive = Options { adaptive: true, ..Options::CLASSIC };
+        for seed in 0..200 {
+            let signals = Signals { seed, ..Signals::default() };
+            let p: HashMap<String, Parts> = parts_with(&inputs, &[], &adaptive, &signals).into_iter().collect();
+            for id in ["known", "unknown"] {
+                // Every draw stays within 0.15 of the classic score.
+                assert!((p[id].score - classic[id].score).abs() <= ADAPTIVE_SPREAD + 1e-12, "{id}");
+            }
+            spread_known += (p["known"].score - classic["known"].score).abs() / 200.0;
+            spread_unknown += (p["unknown"].score - classic["unknown"].score).abs() / 200.0;
+            // The same seed draws the same.
+            let again: HashMap<String, Parts> = parts_with(&inputs, &[], &adaptive, &signals).into_iter().collect();
+            assert_eq!(p["unknown"].score, again["unknown"].score);
+        }
+        // What is little known strays further, on average.
+        assert!(spread_unknown > 2.0 * spread_known, "{spread_unknown} vs {spread_known}");
+        // A song with 25 duels won mostly gets more of its ELO than 3.0 gave it.
+        let mean: f64 = (0..200)
+            .map(|seed| {
+                let signals = Signals { seed, ..Signals::default() };
+                parts_with(&inputs, &[], &adaptive, &signals)
+                    .into_iter()
+                    .find(|(id, _)| id == "dueled")
+                    .unwrap()
+                    .1
+                    .score
+            })
+            .sum::<f64>()
+            / 200.0;
+        assert!(mean > classic["dueled"].score + 0.02, "{mean} vs {}", classic["dueled"].score);
     }
 
     #[test]

@@ -868,6 +868,9 @@ declare global {
     /** V2, V3: the rotation and fatigue factors, 1 when off. */
     rotation: number;
     fatigue: number;
+    /** L2: how sure the model is (null when off), and how far this queue's draw strayed. */
+    confidence: number | null;
+    explored: number;
     /** L1: how listening engages with it, and the plays behind it. */
     engagement: number | null;
     ownPicks: number;

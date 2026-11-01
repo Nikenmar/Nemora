@@ -1390,7 +1390,8 @@
       "replays": "You keep coming back to it",
       "scrubbed": "Scrubbed through and skipped lately, so later",
       "rotation": "Its turn in its tier: the longest waiting",
-      "fatigue": "Its artist played a lot tonight, so later"
+      "fatigue": "Its artist played a lot tonight, so later",
+      "exploring": "Little known yet, so given a chance"
     },
     "whyThisSong": "Why this song?",
     "whyTitle": "Why {{title}} is here",
@@ -1403,7 +1404,8 @@
       "freshness": "Not played lately",
       "skip": "Not skipped lately",
       "weight": "Chance of coming up",
-      "engagement": "How you listen to it"
+      "engagement": "How you listen to it",
+      "confidence": "How well Smart Shuffle knows it"
     },
     "lessArtist": "Less of {{artist}} today",
     "moreLike": "More like this",

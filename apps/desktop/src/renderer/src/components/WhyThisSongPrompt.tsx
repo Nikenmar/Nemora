@@ -3,7 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { explainSong, reasonsOf } from '../other/smartShuffle';
 
 type Part = {
-  key: 'tier' | 'artist' | 'elo' | 'listens' | 'engagement' | 'freshness' | 'skip' | 'weight';
+  key:
+    | 'tier'
+    | 'artist'
+    | 'elo'
+    | 'listens'
+    | 'engagement'
+    | 'confidence'
+    | 'freshness'
+    | 'skip'
+    | 'weight';
   value: number;
 };
 
@@ -34,6 +43,9 @@ const WhyThisSongPrompt = ({ songId, title }: { songId: string; title: string })
         ...(explanation.engagement === null
           ? []
           : [{ key: 'engagement' as const, value: explanation.engagement }]),
+        ...(explanation.confidence === null
+          ? []
+          : [{ key: 'confidence' as const, value: explanation.confidence }]),
         { key: 'freshness', value: explanation.freshness },
         { key: 'skip', value: explanation.skip },
         { key: 'weight', value: explanation.weight }

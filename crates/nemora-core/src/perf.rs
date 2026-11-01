@@ -338,6 +338,13 @@ fn where_the_signals_go() {
         ("freshness by days", only(&|o| o.freshness_by_days = true)),
         ("fair rotation", only(&|o| o.fair_rotation = true)),
         ("artist fatigue", only(&|o| o.artist_fatigue = true)),
+        (
+            "adaptive with implicit duels",
+            only(&|o| {
+                o.adaptive = true;
+                o.implicit_duels = true;
+            }),
+        ),
     ] {
         eprintln!("SIGNAL {label}: {:.1} ms", best(3, || shuffle::stored_signals(&db, &options).unwrap()));
     }
