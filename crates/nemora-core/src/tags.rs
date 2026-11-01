@@ -161,6 +161,33 @@ pub fn write_tags(path: &Path, edit: &TagEdit) -> Result<()> {
     Ok(())
 }
 
+/// Copies the tags and pictures of `from` into `to` (a file Nemora just wrote, such as a rendered
+/// version), with `title` as the title. Fields the target's tag format cannot hold are left out.
+pub fn copy_tags(from: &Path, to: &Path, title: &str) -> Result<()> {
+    use lofty::config::WriteOptions;
+
+    let open = |path: &Path| {
+        Probe::open(path)
+            .and_then(|p| p.options(ParseOptions::new().parsing_mode(ParsingMode::Relaxed)).read())
+            .map_err(|e| Error::Tags(format!("{}: {e}", path.display())))
+    };
+    let source = open(from)?;
+    let mut target = open(to)?;
+    let mut tag = Tag::new(target.primary_tag_type());
+    if let Some(original) = source.primary_tag().or_else(|| source.first_tag()) {
+        for item in original.items() {
+            tag.insert(item.clone());
+        }
+        for picture in original.pictures() {
+            tag.push_picture(picture.clone());
+        }
+    }
+    tag.insert_text(ItemKey::TrackTitle, title.to_owned());
+    target.insert_tag(tag);
+    target.save_to_path(to, WriteOptions::default()).map_err(|e| Error::Tags(format!("{}: {e}", to.display())))?;
+    Ok(())
+}
+
 fn title(tag: Option<&Tag>, file_name: &str) -> String {
     if let Some(title) = tag.and_then(|t| t.title()).map(|t| t.trim().to_owned()).filter(|t| !t.is_empty()) {
         return title;

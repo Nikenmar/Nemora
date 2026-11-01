@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import { PRESETS, REVERB_CHIP, effectName, soundPanelStore, soundStore, versionStore } from './soundEffects';
 import RenameVersionPrompt from '../components/SongsPage/RenameVersionPrompt';
 import { store } from '../store';
+import { saveSoundAsFile } from './saveSoundFile';
 
 /** The version a view id names (`<song>:v<id>`), if it is one. */
 export const versionIdOf = (songId: string): number | null => {
@@ -11,15 +12,25 @@ export const versionIdOf = (songId: string): number | null => {
 };
 
 type Prompt = (isVisible: boolean, content?: ReactNode, className?: string) => void;
+type Notify = (notifications: AppNotification[]) => void;
 
 /**
  * Versions in a song's menu (PLAN/18 D6): "Make version" with the presets and the current sound;
- * on a version's own row, Rename, Change sound and Remove.
+ * on a version's own row, Rename, Change sound, Save as file (WAV 24-bit or 32-bit float) and Remove.
  */
-export const versionMenuItems = (songId: string, title: string, t: TFunction, prompt: Prompt): ContextMenuItem[] => {
+export const versionMenuItems = (
+  songId: string,
+  title: string,
+  t: TFunction,
+  prompt: Prompt,
+  notify: Notify
+): ContextMenuItem[] => {
   const version = versionIdOf(songId);
   if (version !== null) {
     const isPlaying = store.state.currentSongData.songId === songId;
+    // The row reads "Title - Name"; the file is "Title (Name)".
+    const cut = title.lastIndexOf(' - ');
+    const [base, name] = cut > 0 ? [title.slice(0, cut), title.slice(cut + 3)] : [title, ''];
     return [
       {
         label: t('versions.rename'),
@@ -31,6 +42,16 @@ export const versionMenuItems = (songId: string, title: string, t: TFunction, pr
         iconName: 'speed',
         isDisabled: !isPlaying,
         handlerFunction: () => soundPanelStore.setState(() => true)
+      },
+      {
+        label: t('versions.saveFile'),
+        iconName: 'save',
+        handlerFunction: null,
+        innerContextMenus: (['wav24', 'float'] as const).map((format) => ({
+          label: t(`versions.format.${format}`),
+          handlerFunction: () =>
+            saveSoundAsFile(songId, base, name, format, t, notify).catch((error) => console.error(error))
+        }))
       },
       {
         label: t('versions.remove'),

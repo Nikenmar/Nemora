@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useContext, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import { AppUpdateContext } from '../../contexts/AppUpdateContext';
+import { saveSoundAsFile } from '../../other/saveSoundFile';
 import Checkbox from '../Checkbox';
 import Icon from '../ui/Icon';
 import {
   PRESETS,
   RANGE,
+  effectName,
   REVERB_CHIP,
   factorOf,
   isEffectOn,
@@ -43,6 +46,9 @@ const SoundPanel = () => {
   const sound = playing?.sound ?? globalSound;
   const isOpen = useStore(soundPanelStore, (s) => s);
   const duration = useStore(store, (state) => state.currentSongData.duration ?? 0);
+  const songId = useStore(store, (state) => state.currentSongData.songId);
+  const songTitle = useStore(store, (state) => state.currentSongData.title ?? '');
+  const { addNewNotifications } = useContext(AppUpdateContext);
   const [clipped, setClipped] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +106,20 @@ const SoundPanel = () => {
   const units: Unit[] = ['st', 'x', '%'];
   const sizes: Size[] = ['room', 'hall', 'vast'];
   const hasReverbChip = Math.abs(sound.reverb - REVERB_CHIP.reverb) < 1e-6 && sound.size === REVERB_CHIP.size;
+  // Save as file (PLAN/18 D4): the song with this sound, named after the version or the effect.
+  const fileName = playing?.name ?? effectName(sound, (id) => t(`sound.preset.${id}`));
+  const fileTitle =
+    playing && songTitle.endsWith(` - ${playing.name}`)
+      ? songTitle.slice(0, -` - ${playing.name}`.length)
+      : songTitle;
+  const saveFile = (format: 'wav24' | 'float') =>
+    saveSoundAsFile(songId, fileTitle, fileName, format, t, addNewNotifications, {
+      name: fileName,
+      semitones: sound.semitones,
+      keepPitch: sound.keepPitch,
+      reverb: sound.reverb,
+      size: sound.size
+    }).catch((error) => console.error(error));
 
   return (
     <div
@@ -247,6 +267,23 @@ const SoundPanel = () => {
             {t('sound.length', { length: formatLength(duration / factor), original: formatLength(duration) })}
           </div>
         )}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3 text-small">
+        <span className="text-ink-dim">{t('versions.saveFile')}</span>
+        <div className="flex gap-1.5">
+          {(['wav24', 'float'] as const).map((format) => (
+            <button
+              key={format}
+              type="button"
+              disabled={!songId || !fileName}
+              className={`${chip(false)} disabled:opacity-40`}
+              onClick={() => saveFile(format)}
+            >
+              {t(`versions.format.${format}`)}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

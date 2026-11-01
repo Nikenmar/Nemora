@@ -1501,7 +1501,14 @@
     "changeSoundPlayFirst": "Change sound (play it first)",
     "remove": "Remove version",
     "editing": "Version: {{name}}",
-    "saveSound": "Save to version"
+    "saveSound": "Save to version",
+    "saveFile": "Save as file",
+    "format": { "wav24": "WAV 24-bit", "float": "WAV 32-bit float" },
+    "saving": "Saving {{name}}...",
+    "saved": "{{name}} saved as a file",
+    "savedClipped_one": "{{name}} saved; {{count}} sample went past full scale and was clipped (32-bit float keeps it)",
+    "savedClipped_other": "{{name}} saved; {{count}} samples went past full scale and were clipped (32-bit float keeps them)",
+    "saveFailed": "Could not save the file: {{error}}"
   },
   "sound": {
     "title": "Slowed & reverb",

@@ -433,7 +433,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         }
       },
       // Versions (PLAN/18 D6), for one song at a time.
-      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData)),
+      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications)),
       {
         label: t(`common.${isAMultipleSelection ? 'unselect' : 'select'}`),
         iconName: 'checklist',

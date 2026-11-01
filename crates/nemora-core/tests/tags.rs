@@ -42,3 +42,32 @@ fn an_edit_changes_the_tags_and_never_the_song() {
 
     let _ = std::fs::remove_dir_all(&root);
 }
+
+#[test]
+fn a_rendered_wav_gets_the_songs_tags_cover_and_its_versions_title() {
+    if !common::ffmpeg_available() {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let root = common::temp_dir("tags-copy");
+    let song = root.join("a.flac");
+    common::flac(&song, 5, 2);
+    let cover = common::png(4);
+    common::set_tags(&song, "Song", "Someone", Some("Album"), Some(cover.clone()));
+    let wav = root.join("a (Slowed).wav");
+    let status = std::process::Command::new("ffmpeg")
+        .args(["-v", "error", "-y", "-i"])
+        .arg(&song)
+        .args(["-map_metadata", "-1", "-c:a", "pcm_f32le"])
+        .arg(&wav)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    nemora_core::tags::copy_tags(&song, &wav, "Song (Slowed)").unwrap();
+    let tags = read_tags(&wav).unwrap();
+    assert_eq!(tags.title, "Song (Slowed)");
+    assert_eq!(tags.artists, ["Someone"]);
+    assert_eq!(tags.album.as_deref(), Some("Album"));
+    assert_eq!(tags.cover.map(|c| c.data), Some(cover));
+    let _ = std::fs::remove_dir_all(&root);
+}

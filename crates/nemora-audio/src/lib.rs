@@ -5,6 +5,7 @@ pub mod decode;
 pub mod dsp;
 pub mod output;
 pub mod player;
+pub mod render;
 pub mod resample;
 pub mod reverb;
 pub mod source;

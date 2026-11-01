@@ -193,6 +193,7 @@ pub fn run() {
             versions::version_rename,
             versions::version_update,
             versions::version_remove,
+            versions::version_render,
             smtc::smtc_update,
             duels::duel_pair,
             duels::tier_suggestions,
