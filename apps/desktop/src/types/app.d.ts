@@ -548,13 +548,13 @@ declare global {
     isFreshnessByDaysDisabled?: boolean;
     isFairRotationDisabled?: boolean;
     isForgottenFavouritesDisabled?: boolean;
+    isTeachingDuelsDisabled?: boolean;
     /** ...and the optional ones, off unless switched on. */
     isArtistFatigueEnabled?: boolean;
     isFavouriteMomentsEnabled?: boolean;
     isNightShuffleEnabled?: boolean;
     isEnergyFlowEnabled?: boolean;
     isFollowTasteMapEnabled?: boolean;
-    isTeachingDuelsEnabled?: boolean;
     /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
     accentColor?: string;
     autoTranslateLyrics: boolean;

@@ -202,7 +202,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
             // PLAN/15 T1: some duels teach Smart Shuffle, when the user switched it on.
             window.api.eloDuels.getDuelPair(
               undefined,
-              !!store.state.localStorage.preferences.isTeachingDuelsEnabled
+              !store.state.localStorage.preferences.isTeachingDuelsDisabled
             ))
         .then((nextPair) => (nextPair ? preloadPairArtwork(nextPair) : nextPair))
         .then((nextPair) => {

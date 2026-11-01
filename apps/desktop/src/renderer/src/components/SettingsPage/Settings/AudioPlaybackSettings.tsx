@@ -58,7 +58,7 @@ const SMART_SHUFFLE = [
   },
   {
     group: 'groupDuels',
-    items: [{ key: 'isTeachingDuelsEnabled', label: 'teachingDuels', inverted: false, reorders: false }]
+    items: [{ key: 'isTeachingDuelsDisabled', label: 'teachingDuels', inverted: true, reorders: false }]
   }
 ] as const;
 
@@ -71,15 +71,15 @@ const NEW_DEFAULTS = [
   'isImplicitDuelsDisabled',
   'isFreshnessByDaysDisabled',
   'isFairRotationDisabled',
-  'isForgottenFavouritesDisabled'
+  'isForgottenFavouritesDisabled',
+  'isTeachingDuelsDisabled'
 ] as const;
 const NEW_OPTIONAL = [
   'isArtistFatigueEnabled',
   'isFavouriteMomentsEnabled',
   'isNightShuffleEnabled',
   'isEnergyFlowEnabled',
-  'isFollowTasteMapEnabled',
-  'isTeachingDuelsEnabled'
+  'isFollowTasteMapEnabled'
 ] as const;
 
 /** Classic: every new part off (3.0's shuffle). Recommended: the new defaults on, the rest off. */
