@@ -281,15 +281,6 @@
         const title = document.getElementById('title');
         const line2 = document.getElementById('line2');
 
-        /** Restarts a CSS animation that is already on the element. */
-        const replay = (node, className) => {
-          node.classList.remove(className);
-          // Reading offsetWidth is what forces the restart; without it the
-          // browser coalesces the remove/add and nothing animates.
-          void node.offsetWidth;
-          node.classList.add(className);
-        };
-
         const renderArtists = (artists) => {
           const span = document.createElement('span');
           span.className = 'artists';
@@ -331,6 +322,85 @@
           return pill;
         };
 
+        const quiet = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // A calm out-quint for what arrives, a short ease-in for what leaves (as in the app).
+        const ARRIVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+        const LEAVE = 'cubic-bezier(0.4, 0, 1, 1)';
+
+        /** Swaps a line's content: the old rises away, then the new rises in (`delay` staggers). */
+        const handOverText = (node, swap, immediate, delay) => {
+          node.getAnimations().forEach((a) => a.cancel());
+          if (immediate || quiet) {
+            swap();
+            if (!quiet)
+              node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: ARRIVE, fill: 'backwards' });
+            return;
+          }
+          const out = node.animate(
+            [
+              { opacity: 1, transform: 'none' },
+              { opacity: 0, transform: 'translateY(-0.45rem)' }
+            ],
+            { duration: 170, easing: LEAVE, delay, fill: 'forwards' }
+          );
+          out.finished
+            .then(() => {
+              swap();
+              out.cancel();
+              node.animate(
+                [
+                  { opacity: 0, transform: 'translateY(0.5rem)' },
+                  { opacity: 1, transform: 'none' }
+                ],
+                { duration: 360, easing: ARRIVE, fill: 'backwards' }
+              );
+            })
+            .catch(() => undefined);
+        };
+
+        let coverChange = 0;
+        /** Swaps the cover: the old dims away where it is, then the new one settles in, one at a
+         * time, once its picture has loaded (at most 300 ms of waiting). The placeholder stays as
+         * the bottom layer: a cover whose file has been moved or deleted simply fails to paint over
+         * it, with no broken-image glyph and no empty hole in the bar. */
+        const handOverCover = (art, immediate) => {
+          const change = (coverChange += 1);
+          const paint = () => {
+            cover.style.backgroundImage = art ? `url("${encodeURI(art)}"), var(--cover-placeholder)` : '';
+          };
+          cover.getAnimations().forEach((a) => a.cancel());
+          if (immediate || quiet) {
+            paint();
+            if (!quiet)
+              cover.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: ARRIVE, fill: 'backwards' });
+            return;
+          }
+          const ready = new Promise((resolve) => {
+            if (!art) return resolve();
+            const image = new Image();
+            image.onload = image.onerror = () => resolve();
+            image.src = encodeURI(art);
+            setTimeout(resolve, 300);
+          });
+          const out = cover.animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: 140,
+            easing: LEAVE,
+            fill: 'forwards'
+          });
+          Promise.all([out.finished.catch(() => undefined), ready]).then(() => {
+            if (change !== coverChange) return;
+            paint();
+            out.cancel();
+            cover.animate(
+              [
+                { opacity: 0, transform: 'scale(0.97)' },
+                { opacity: 1, transform: 'none' }
+              ],
+              { duration: 300, easing: ARRIVE, fill: 'backwards' }
+            );
+          });
+        };
+
         let lastVersion = -1;
         let lastTitle = null;
         let lastArt = null;
@@ -345,26 +415,25 @@
           bar.classList.toggle('is-visible', visible);
           if (!visible) return;
 
+          // The very first song simply appears with the bar; every later change is a hand-over,
+          // the same as the player's own bar: the old text rises away and the new one rises in, the
+          // old cover dims away where it is and the new one settles in once its picture is there.
+          const isFirst = lastTitle === null;
+
           if (state.title !== lastTitle) {
             lastTitle = state.title;
-            title.textContent = state.title;
-            replay(title, 'anim-fade');
+            const text = state.title;
+            handOverText(title, () => (title.textContent = text), isFirst, 0);
           }
 
           const art = state.art || '';
           if (art !== lastArt) {
             lastArt = art;
-            // The placeholder stays as the bottom layer: a cover whose file
-            // has been moved or deleted simply fails to paint over it, with no
-            // broken-image glyph and no empty hole in the bar.
-            cover.style.backgroundImage = art
-              ? `url("${encodeURI(art)}"), var(--cover-placeholder)`
-              : '';
-            replay(cover, 'anim-fade');
+            handOverCover(art, isFirst);
           }
 
-          // One key for "what the second line should be", so the entrance
-          // animation replays on a real change and not on every poll.
+          // One key for "what the second line should be", so the hand-over plays on a real change
+          // and not on every poll.
           const key = state.upNext
             ? `next:${state.upNext.title}|${state.upNext.artist || ''}|${state.upNext.extra || 0}`
             : `artists:${state.artists || ''}`;
@@ -372,8 +441,7 @@
           if (key !== lastSecondLine) {
             lastSecondLine = key;
             const node = state.upNext ? renderUpNext(state.upNext) : renderArtists(state.artists);
-            line2.replaceChildren(node);
-            replay(node, 'anim-up');
+            handOverText(line2, () => line2.replaceChildren(node), isFirst, 55);
           }
         };
 

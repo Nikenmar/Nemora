@@ -35,12 +35,14 @@ export function animateIn(
 /** A calm out-quint for what arrives, a short ease-in for what leaves. */
 const ARRIVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const LEAVE = 'cubic-bezier(0.4, 0, 1, 1)';
+/** For the heart: an ease-in-out-ish curve, smooth at both ends. */
+const GLIDE = 'cubic-bezier(0.33, 0, 0.2, 1)';
 const GHOST = 'track-ghost';
 /** How long the old cover takes to go before the new one comes. */
 const COVER_OUT = 140;
 
 /** A copy of what the player bar shows, taken while it shows it, for the hand-over. */
-type Snapshot = { cover: HTMLElement | null; lines: HTMLElement[]; width: number; heartLeft: number | null };
+type Snapshot = { cover: HTMLElement | null; lines: HTMLElement[]; width: number };
 
 const quietCopy = (node: Element): HTMLElement => {
   const copy = node.cloneNode(true) as HTMLElement;
@@ -84,10 +86,45 @@ export function useTrackChangeMotion(
       lines: text
         ? [...text.querySelectorAll(':scope > .song-title, :scope > .song-artists')].map(quietCopy)
         : [],
-      width: text?.getBoundingClientRect().width ?? 0,
-      heartLeft: heartOf(text)?.getBoundingClientRect().left ?? null
+      width: text?.getBoundingClientRect().width ?? 0
     };
   });
+
+  // The heart sits right after the title, so it moves whenever the text's width does: on a song
+  // change, and again as the artists or Up next fill in. Each move glides from wherever the heart
+  // shows at that moment (a move during a move continues, it does not restart from a jump), with no
+  // delay and an easing without a sharp start.
+  useEffect(() => {
+    const text = textRef.current;
+    if (!text) return undefined;
+    let last: number | null = null;
+    const follow = () => {
+      const heart = heartOf(text);
+      if (!heart) return;
+      const layout = heart.offsetLeft;
+      if (last === null || isMotionReduced()) {
+        last = layout;
+        return;
+      }
+      if (Math.abs(layout - last) < 0.5) return;
+      const shown = getComputedStyle(heart).transform;
+      const drift = shown && shown !== 'none' ? new DOMMatrixReadOnly(shown).m41 : 0;
+      const from = last + drift - layout;
+      last = layout;
+      heart.getAnimations().forEach((a) => a.cancel());
+      heart.animate([{ transform: `translateX(${from}px)` }, { transform: 'none' }], {
+        duration: 460,
+        easing: GLIDE
+      });
+    };
+    // Called after layout and before paint, so the heart never shows a frame at its new place.
+    const observer = new ResizeObserver(follow);
+    observer.observe(text);
+    follow();
+    return () => observer.disconnect();
+    // The refs are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
 
 /** The like button that follows the title in the bar. */
@@ -126,20 +163,6 @@ function handOver(cover: Element | null, text: Element | null, old: Snapshot) {
       fresh.addEventListener('error', start, { once: true });
       setTimeout(start, 300);
     } else start();
-  }
-
-  // The heart sits right after the title: it glides from the old title's end to the new one's
-  // instead of jumping over the text that is still leaving.
-  const heart = heartOf(text);
-  if (heart && old.heartLeft !== null) {
-    const shift = old.heartLeft - heart.getBoundingClientRect().left;
-    if (Math.abs(shift) > 0.5)
-      heart.animate([{ transform: `translateX(${shift}px)` }, { transform: 'none' }], {
-        duration: 420,
-        easing: ARRIVE,
-        delay: 120,
-        fill: 'backwards'
-      });
   }
 
   if (text && old.lines.length > 0) {
