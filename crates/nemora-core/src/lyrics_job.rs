@@ -177,7 +177,7 @@ mod tests {
         // b: a failed request leaves it pending; LRCLIB knowing nothing is remembered.
         let mut failing = |_: &Query| -> Result<Option<String>, String> { Err("offline".into()) };
         assert_eq!(fill(&db, &b, NOW, &mut failing).unwrap(), Err("offline".into()));
-        assert_eq!(pending(&db, NOW, 10).unwrap(), [b.clone()]);
+        assert_eq!(pending(&db, NOW, 10).unwrap(), std::slice::from_ref(&b));
         let mut nothing = |q: &Query| {
             asked.push(q.clone());
             Ok(None)
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(asked[0].title, "Title b");
         assert_eq!(asked[0].duration_sec, 180.0);
         assert!(pending(&db, NOW + 29 * DAY_MS, 10).unwrap().is_empty(), "not asked again within 30 days");
-        assert_eq!(pending(&db, NOW + 31 * DAY_MS, 10).unwrap(), [b.clone()], "asked again after");
+        assert_eq!(pending(&db, NOW + 31 * DAY_MS, 10).unwrap(), std::slice::from_ref(&b), "asked again after");
         let mut found = |_: &Query| Ok(Some("[00:02.00]found online".to_owned()));
         assert_eq!(fill(&db, &b, NOW + 31 * DAY_MS, &mut found).unwrap(), Ok(Outcome::Found));
         assert_eq!(lyrics::stored(&db, &b).unwrap().unwrap().1, "lrclib");
