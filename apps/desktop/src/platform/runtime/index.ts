@@ -713,6 +713,11 @@ export class NemoraRuntime {
     return call('tier_suggestion_dismiss', { tierlistId, songId, to });
   }
 
+  /** Energy flow's background measuring (PLAN/15 C2): starts it, stops it or only asks how far it got. */
+  energyAnalysis(start?: boolean): Promise<EnergyAnalysis> {
+    return call('energy_analysis', { start });
+  }
+
   selectDuelAnchor(candidates: DuelAnchorCandidate[], excluded?: string[]): Promise<string | null> {
     return call('duel_select_anchor', { candidates, excluded });
   }

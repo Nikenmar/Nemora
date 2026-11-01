@@ -1394,7 +1394,8 @@
       "rotation": "Its turn in its tier: the longest waiting",
       "fatigue": "Its artist played a lot tonight, so later",
       "exploring": "Little known yet, so given a chance",
-      "forgotten": "A favourite you have not heard in a long while"
+      "forgotten": "A favourite you have not heard in a long while",
+      "night": "You often play it at this time of day"
     },
     "whyThisSong": "Why this song?",
     "whyTitle": "Why {{title}} is here",
@@ -1469,7 +1470,20 @@
     "followMap": "Follow the taste map",
     "followMapDescription": "The next song leans to the ones near the current one on the taste map.",
     "teachingDuels": "Duels that teach Smart Shuffle",
-    "teachingDuelsDescription": "Some duels pick songs Smart Shuffle is least sure about, so each answer helps it most."
+    "teachingDuelsDescription": "Some duels pick songs Smart Shuffle is least sure about, so each answer helps it most.",
+    "energyProgress": "Analysed {{analysed}} of {{total}} songs",
+    "energyRunning": "Analysing in the background: {{analysed}} of {{total}}",
+    "modes": "Smart Shuffle mode",
+    "modeClassic": "Classic",
+    "modeComfort": "Comfort",
+    "modeDiscovery": "Discovery",
+    "modeRediscover": "Rediscover",
+    "modeFlow": "Flow",
+    "chipMode": "Mode: {{name}}",
+    "lens": "Lean to a tierlist",
+    "lensNone": "No tierlist",
+    "noTierlists": "No tierlists yet",
+    "chipLens": "Leaning to {{name}}"
   },
   "tasteMap": {
     "title": "Taste map",

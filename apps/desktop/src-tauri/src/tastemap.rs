@@ -24,6 +24,33 @@ impl TasteMapCache {
         }
     }
 
+    /// Like `warm`, and builds the map when none was ever built: following the map (PLAN/15 C3) and
+    /// a lens (S2) need one even if the user never opened it.
+    /// `db` is the caller's reader: the reader is a mutex, so this must not lock it again.
+    pub fn ensure(&self, app: &App, db: &nemora_core::db::Db) {
+        self.warm(app);
+        let Ok(mut map) = self.0.lock() else { return };
+        if map.is_none()
+            && let Ok(built) = nemora_core::tastemap::build(db, None)
+        {
+            if let Ok(text) = serde_json::to_string(&built) {
+                let _ = std::fs::write(app.profile.join(FILE), text);
+            }
+            *map = Some(built);
+        }
+    }
+
+    /// Every song's neighbours on the last map built, for following the map (PLAN/15 C3).
+    pub fn all_neighbours(&self) -> std::collections::HashMap<String, Vec<String>> {
+        self.0
+            .lock()
+            .ok()
+            .and_then(|map| {
+                map.as_ref().map(|m| m.points.iter().map(|p| (p.song_id.clone(), p.neighbours.clone())).collect())
+            })
+            .unwrap_or_default()
+    }
+
     /// The neighbours of `song_id` on the last map built, for "More like this" (C2).
     pub fn neighbours(&self, song_id: &str) -> Vec<String> {
         self.0

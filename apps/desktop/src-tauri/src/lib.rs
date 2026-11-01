@@ -10,6 +10,7 @@ mod commands;
 mod discord;
 mod dragout;
 mod duels;
+mod energy;
 mod engine;
 mod folders;
 mod guessr;
@@ -175,6 +176,7 @@ pub fn run() {
             commands::play_record,
             engine::engine_load,
             visuals::track_visuals,
+            energy::energy_analysis,
             engine::engine_queue_next,
             engine::engine_play,
             engine::engine_pause,
@@ -242,6 +244,7 @@ pub fn run() {
         .manage(watch::FolderWatch::default())
         .manage(engine::Engine::default())
         .manage(visuals::Visuals::default())
+        .manage(energy::EnergyJob::default())
         .manage(tastemap::TasteMapCache::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;

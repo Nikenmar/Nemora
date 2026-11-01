@@ -36,6 +36,24 @@ impl Visuals {
     }
 }
 
+/// The envelope of the song at `path`: its cache file, else a fresh analysis, written to the cache
+/// when `keep` (the energy job reads three numbers out of it and keeps none: 50-80 KB a song).
+pub fn envelope(profile: &std::path::Path, song_id: &str, path: &str, keep: bool) -> Vec<u8> {
+    let file = cached(profile, song_id);
+    if let Ok(bytes) = std::fs::read(&file) {
+        return bytes;
+    }
+    let Ok(bytes) = nemora_audio::visuals::analyse(std::path::Path::new(path)) else { return Vec::new() };
+    if !keep {
+        return bytes;
+    }
+    if let Some(dir) = file.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(&file, &bytes);
+    bytes
+}
+
 fn cached(profile: &std::path::Path, song_id: &str) -> PathBuf {
     let name: String = song_id.chars().filter(char::is_ascii_alphanumeric).collect();
     profile.join("visuals").join(format!("{name}.v{}.bin", nemora_audio::visuals::VERSION))
@@ -48,25 +66,15 @@ pub async fn track_visuals(app: State<'_, App>, visuals: State<'_, Visuals>, son
     if let Some(bytes) = visuals.get(&song_id) {
         return Ok(Response::new(bytes.to_vec()));
     }
-    let file = cached(&app.profile, &song_id);
+    let profile = app.profile.clone();
+    let id = song_id.clone();
     let path = {
         let db = app.read();
         rows_for(&db, std::slice::from_ref(&song_id)).map_err(fail)?.into_iter().next().and_then(|r| r.path)
     };
     let Some(path) = path else { return Ok(Response::new(Vec::new())) };
-    let bytes = tauri::async_runtime::spawn_blocking(move || {
-        if let Ok(bytes) = std::fs::read(&file) {
-            return bytes;
-        }
-        let Ok(bytes) = nemora_audio::visuals::analyse(std::path::Path::new(&path)) else { return Vec::new() };
-        if let Some(dir) = file.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::write(&file, &bytes);
-        bytes
-    })
-    .await
-    .map_err(fail)?;
+    let bytes =
+        tauri::async_runtime::spawn_blocking(move || envelope(&profile, &id, &path, true)).await.map_err(fail)?;
     if !bytes.is_empty() {
         visuals.keep(song_id, Arc::new(bytes.clone()));
     }

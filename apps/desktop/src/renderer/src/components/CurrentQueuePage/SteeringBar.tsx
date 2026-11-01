@@ -5,7 +5,14 @@ import { store } from '@renderer/store';
 import { steer, steeringStore } from '../../other/smartShuffle';
 import Icon from '../ui/Icon';
 
-type Chip = { what: 'lessArtists' | 'moreLike' | 'notNow'; value: string; label: string };
+type Chip = { what: 'lessArtists' | 'moreLike' | 'notNow' | 'mode' | 'lens'; value: string; label: string };
+
+const MODE_LABEL = {
+  comfort: 'modeComfort',
+  discovery: 'modeDiscovery',
+  rediscover: 'modeRediscover',
+  flow: 'modeFlow'
+} as const satisfies Record<ShuffleMode, string>;
 
 const FILTERS = ['onlyUnheard', 'onlyRanked', 'boostNew'] as const;
 
@@ -24,6 +31,24 @@ const SteeringBar = memo(() => {
   const name = (id: string) => steering.titles[id] ?? id;
   const chips: Chip[] = isSteeringShown
     ? [
+        ...(steering.mode
+          ? [
+              {
+                what: 'mode' as const,
+                value: steering.mode,
+                label: t('smartShuffle.chipMode', { name: t(`smartShuffle.${MODE_LABEL[steering.mode]}`) })
+              }
+            ]
+          : []),
+        ...(steering.lens
+          ? [
+              {
+                what: 'lens' as const,
+                value: steering.lens,
+                label: t('smartShuffle.chipLens', { name: steering.lensName ?? '' })
+              }
+            ]
+          : []),
         ...steering.lessArtists.map((value) => ({
           what: 'lessArtists' as const,
           value,
@@ -57,7 +82,15 @@ const SteeringBar = memo(() => {
           type="button"
           className={`${chip} bg-accent-soft text-ink hover:bg-line/70`}
           aria-label={`${t('smartShuffle.removeSteering')}: ${c.label}`}
-          onClick={() => steer({ kind: 'remove', what: c.what, value: c.value })}
+          onClick={() =>
+            steer(
+              c.what === 'mode'
+                ? { kind: 'mode' }
+                : c.what === 'lens'
+                  ? { kind: 'lens' }
+                  : { kind: 'remove', what: c.what, value: c.value }
+            )
+          }
         >
           <span className="truncate">{c.label}</span>
           <Icon name="close" size={14} />

@@ -91,6 +91,32 @@ pub fn analyse(path: &Path) -> Result<Vec<u8>, DecodeError> {
     Ok(out)
 }
 
+/// A track's sound in three numbers, from its envelope (PLAN/15 C2), each 0..1: energy (mean
+/// loudness), brightness (the top four bands' share of all band energy) and dynamics (how much the
+/// loudness moves: its standard deviation, scaled). None for an envelope without frames.
+pub fn features(envelope: &[u8]) -> Option<(f64, f64, f64)> {
+    let frames: Vec<&[u8]> = envelope.get(4..)?.chunks_exact(RECORD).collect();
+    if frames.is_empty() {
+        return None;
+    }
+    let n = frames.len() as f64;
+    let loud: Vec<f64> = frames.iter().map(|f| f64::from(f[0]) / 255.0).collect();
+    let energy = loud.iter().sum::<f64>() / n;
+    let spread = (loud.iter().map(|l| (l - energy).powi(2)).sum::<f64>() / n).sqrt();
+    let (mut high, mut all) = (0.0, 0.0);
+    for f in &frames {
+        for (band, value) in f[1..].iter().enumerate() {
+            let v = f64::from(*value);
+            all += v;
+            if band >= BANDS - 4 {
+                high += v;
+            }
+        }
+    }
+    let brightness = if all > 0.0 { high / all } else { 0.0 };
+    Some((energy, brightness.clamp(0.0, 1.0), (spread * 4.0).clamp(0.0, 1.0)))
+}
+
 /// FFT bin ranges of the 12 log-spaced bands; every band holds at least one bin.
 fn band_bins(rate: u32, size: usize) -> Vec<(usize, usize)> {
     let nyquist = size / 2;
@@ -151,6 +177,17 @@ mod tests {
         assert_eq!(&envelope[..4], &[VERSION, 30, 12, 0]);
         assert_eq!((envelope.len() - 4) / RECORD, 60);
         assert_eq!((envelope.len() - 4) % RECORD, 0);
+    }
+
+    #[test]
+    fn a_loud_bright_track_reads_louder_and_brighter_than_a_quiet_dull_one() {
+        let tone = |hz: f32, level: f32| -> Vec<f32> {
+            (0..44_100 * 2).map(|i| level * (2.0 * std::f32::consts::PI * hz * i as f32 / 44_100.0).sin()).collect()
+        };
+        let (loud, bright, _) = features(&analyse_samples("bright", &tone(9_000.0, 0.8))).unwrap();
+        let (quiet, dull, _) = features(&analyse_samples("dull", &tone(120.0, 0.05))).unwrap();
+        assert!(loud > quiet && bright > dull, "{loud} {quiet} {bright} {dull}");
+        assert!(features(&[VERSION, 30, 12, 0]).is_none());
     }
 
     #[test]

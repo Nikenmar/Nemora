@@ -15,8 +15,11 @@ export const smartShuffleData: { current: MegaShuffleData } = {
   current: { weights: {}, pairFeedback: [] }
 };
 
-/** Plus "Not now" songs, which go to the end of the queue, and the titles the chips show for song ids. */
-export type Steering = ShuffleSteering & { notNow: string[]; titles: Record<string, string> };
+/**
+ * Plus "Not now" songs, which go to the end of the queue, the titles the chips show for song ids and
+ * the lens's tierlist name.
+ */
+export type Steering = ShuffleSteering & { notNow: string[]; titles: Record<string, string>; lensName?: string };
 
 export const NO_STEERING: Steering = {
   lessArtists: [],
@@ -32,7 +35,9 @@ export const steeringStore = new Store<Steering>(NO_STEERING);
 
 // From the store: `getPreferences` throws for a preference that was never set.
 const preferences = () => store.state.localStorage.preferences;
-const intensity = () => preferences().tierShuffleIntensity ?? 0.6;
+/** Comfort (PLAN/15 S1) leans harder on what the user already loves. */
+const intensity = () =>
+  steeringStore.state.mode === 'comfort' ? 0.9 : (preferences().tierShuffleIntensity ?? 0.6);
 /** The model's options from the user's settings (PLAN/15); the nudge has no setting. */
 export const shuffleOptions = (): ShuffleOptions => {
   const p = preferences();
@@ -47,22 +52,33 @@ export const shuffleOptions = (): ShuffleOptions => {
     forgottenFavourites: !p.isForgottenFavouritesDisabled,
     artistFatigue: !!p.isArtistFatigueEnabled,
     night: !!p.isNightShuffleEnabled,
-    followMap: !!p.isFollowTasteMapEnabled
+    followMap: !!p.isFollowTasteMapEnabled,
+    // Flow (PLAN/15 S1) is Energy flow for this session.
+    energyFlow: !!p.isEnergyFlowEnabled || steeringStore.state.mode === 'flow'
   };
 };
 
 const coreSteering = (): ShuffleSteering | undefined => {
-  const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew } = steeringStore.state;
+  const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew, mode, lens } = steeringStore.state;
   const filters = !!preferences().isSessionFiltersEnabled;
   const steering = {
     lessArtists,
     moreLike,
     onlyUnheard: filters && onlyUnheard,
     onlyRanked: filters && onlyRanked,
-    boostNew: filters && boostNew
+    boostNew: filters && boostNew,
+    // Flow works in the view's ordering only; the core has nothing to do for it.
+    mode: mode === 'flow' ? undefined : mode,
+    lens
   };
   const isEmpty =
-    lessArtists.length === 0 && moreLike.length === 0 && !steering.onlyUnheard && !steering.onlyRanked && !steering.boostNew;
+    lessArtists.length === 0 &&
+    moreLike.length === 0 &&
+    !steering.onlyUnheard &&
+    !steering.onlyRanked &&
+    !steering.boostNew &&
+    !steering.mode &&
+    !steering.lens;
   return isEmpty ? undefined : steering;
 };
 
@@ -113,6 +129,8 @@ export type SteeringAction =
   | { kind: 'notNow'; songId: string; title: string }
   | { kind: 'filter'; filter: 'onlyUnheard' | 'onlyRanked' | 'boostNew'; isOn: boolean }
   | { kind: 'remove'; what: 'lessArtists' | 'moreLike' | 'notNow'; value: string }
+  | { kind: 'mode'; mode?: ShuffleMode }
+  | { kind: 'lens'; lens?: string; name?: string }
   | { kind: 'clear' };
 
 const added = (list: string[], value: string) => (list.includes(value) ? list : [...list, value]);
@@ -140,6 +158,10 @@ export async function steer(action: SteeringAction) {
         return { ...state, [action.filter]: action.isOn };
       case 'remove':
         return { ...state, [action.what]: state[action.what].filter((v) => v !== action.value) };
+      case 'mode':
+        return { ...state, mode: action.mode };
+      case 'lens':
+        return { ...state, lens: action.lens, lensName: action.name };
       case 'clear':
         return NO_STEERING;
       default:
@@ -147,6 +169,8 @@ export async function steer(action: SteeringAction) {
     }
   });
   trace.step('steering');
+  if (action.kind === 'mode' && action.mode === 'flow')
+    window.api.tierlistsData.energyAnalysis(true).catch(() => undefined);
   if (!store.state.player.isTierShuffling) return;
   await loadShuffleData();
   trace.step('weights');
@@ -201,6 +225,7 @@ export type ReasonKey =
   | 'fatigue'
   | 'exploring'
   | 'forgotten'
+  | 'night'
   | 'plain';
 export type Reason = { key: ReasonKey; values?: Record<string, string | number>; strength: number };
 
@@ -247,6 +272,8 @@ export function reasonsOf(e: ShuffleExplanation): Reason[] {
     reasons.push({ key: 'exploring', strength: 0.15 });
   // A loved song not heard for long, or missed in Song Guessr (PLAN/15 M1).
   if (e.memory > 1.1) reasons.push({ key: 'forgotten', strength: 0.35 });
+  // Played at this time of day more than at others (PLAN/15 C1).
+  if (e.night > 1.1) reasons.push({ key: 'night', strength: 0.18 });
   // Variety (PLAN/15 V2, V3).
   if (e.rotation >= 1.3) reasons.push({ key: 'rotation', strength: 0.2 });
   if (e.fatigue < 0.8) reasons.push({ key: 'fatigue', strength: 1.1 });

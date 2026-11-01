@@ -179,6 +179,12 @@ export default function App() {
     storage.playback.setPlaybackOptions('isTierShuffling', store.state.player.isTierShuffling);
   }, []);
 
+  // Energy flow (PLAN/15 C2) measures songs added since last time, in the background.
+  useEffect(() => {
+    if (store.state.localStorage.preferences.isEnergyFlowEnabled)
+      window.api.tierlistsData.energyAnalysis(true).catch(() => undefined);
+  }, []);
+
   // The stock upstream update check (which polled Sandakan/Nora's
   // release-notes.json) was removed: upstream no longer publishes that file, and
   // the fork updates itself through electron-updater in src/main/update.ts.

@@ -79,6 +79,13 @@ impl App {
         result
     }
 
+    /// Writes cache rows that neither the lists nor the derived values read (PLAN/15 C2's features):
+    /// no generation bump, nothing dropped, so a background job does not keep emptying caches.
+    pub fn write_quiet<T>(&self, f: impl FnOnce(&mut Db) -> nemora_core::Result<T>) -> nemora_core::Result<T> {
+        let mut db = self.write.lock().unwrap_or_else(|e| e.into_inner());
+        f(&mut db)
+    }
+
     /// `build`'s result, kept until the next write.
     pub fn derived<T: Any + Send + Sync>(
         &self,

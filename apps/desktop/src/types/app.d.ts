@@ -823,6 +823,10 @@ declare global {
     held?: string[];
     /** Each song's artists as numbers, so the order keeps an artist from playing twice in a row (PLAN/15 F2). */
     artists?: Record<string, number[]>;
+    /** Each measured song's energy, when Energy flow is on (PLAN/15 C2). */
+    energy?: Record<string, number>;
+    /** Each song's taste-map neighbours, when Follow the taste map is on (PLAN/15 C3). */
+    neighbours?: Record<string, string[]>;
   }
 
   /** A song whose duels put it a tier away from where it is (core `suggest::TierSuggestion`). */
@@ -852,6 +856,7 @@ declare global {
     artistFatigue?: boolean;
     night?: boolean;
     followMap?: boolean;
+    energyFlow?: boolean;
   }
 
   /** Session steering and filters for Smart Shuffle (PLAN/14 C2, C4); `nemora_core::shuffle::Steering`. */
@@ -861,6 +866,19 @@ declare global {
     onlyUnheard: boolean;
     onlyRanked: boolean;
     boostNew: boolean;
+    /** PLAN/15 S1: the session's mode; Classic when absent. */
+    mode?: ShuffleMode;
+    /** PLAN/15 S2: lean to this tierlist (its id) and its songs' map neighbours. */
+    lens?: string;
+  }
+
+  type ShuffleMode = 'comfort' | 'discovery' | 'rediscover' | 'flow';
+
+  /** How far Energy flow's measuring got (desktop `energy::energy_analysis`). */
+  interface EnergyAnalysis {
+    analysed: number;
+    total: number;
+    running: boolean;
   }
 
   /** Why a song plays where it does (PLAN/14 C1); `nemora_core::shuffle::Explanation`. */
@@ -884,6 +902,8 @@ declare global {
     fatigue: number;
     /** M1: the forgotten-favourite lift, 1 when none. */
     memory: number;
+    /** C1: the time-of-day factor, 1 when off. */
+    night: number;
     /** L2: how sure the model is (null when off), and how far this queue's draw strayed. */
     confidence: number | null;
     explored: number;

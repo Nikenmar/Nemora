@@ -86,10 +86,44 @@ const NEW_OPTIONAL = [
 const applyPreset = (classic: boolean) => {
   for (const key of NEW_DEFAULTS) storage.preferences.setPreferences(key, classic);
   for (const key of NEW_OPTIONAL) storage.preferences.setPreferences(key, false);
+  window.api.tierlistsData.energyAnalysis(false).catch(() => undefined);
   if (store.state.player.isTierShuffling)
     loadShuffleData()
       .then(reorderRemaining)
       .catch((error) => console.error(error));
+};
+
+/** Energy flow's measuring (PLAN/15 C2): how far it got, polled while it runs. */
+const EnergyStatus = () => {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<EnergyAnalysis | null>(null);
+  useEffect(() => {
+    let isLive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = () =>
+      window.api.tierlistsData
+        .energyAnalysis()
+        .then((next) => {
+          if (!isLive) return;
+          setStatus(next);
+          if (next.running) timer = setTimeout(poll, 2000);
+        })
+        .catch(() => undefined);
+    poll();
+    return () => {
+      isLive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+  if (!status || status.total === 0) return null;
+  return (
+    <div className="ml-8 mt-1 text-small tabular-nums text-ink-dim">
+      {t(status.running ? 'smartShuffle.energyRunning' : 'smartShuffle.energyProgress', {
+        analysed: status.analysed,
+        total: status.total
+      })}
+    </div>
+  );
 };
 
 const second = i18n.t('settingsPage.second');
@@ -219,6 +253,8 @@ const AudioPlaybackSettings = () => {
                     isChecked={inverted ? !preferences?.[key] : !!preferences?.[key]}
                     checkedStateUpdateFunction={(state) => {
                       storage.preferences.setPreferences(key, inverted ? !state : state);
+                      if (key === 'isEnergyFlowEnabled')
+                        window.api.tierlistsData.energyAnalysis(state).catch(() => undefined);
                       if (reorders && store.state.player.isTierShuffling)
                         loadShuffleData()
                           .then(reorderRemaining)
@@ -229,6 +265,9 @@ const AudioPlaybackSettings = () => {
                   <div className="description ml-8 text-small text-ink-dim">
                     {t(`smartShuffle.${label}Description`)}
                   </div>
+                  {key === 'isEnergyFlowEnabled' && preferences?.isEnergyFlowEnabled && (
+                    <EnergyStatus key={String(preferences.isEnergyFlowEnabled)} />
+                  )}
                 </div>
               ))}
             </div>

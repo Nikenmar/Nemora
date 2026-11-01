@@ -88,6 +88,8 @@ pub struct Parts {
     pub fatigue: f64,
     /// M1: up to 1.6 for a loved song not heard for long or missed in Song Guessr, 1 otherwise.
     pub memory: f64,
+    /// C1: 0.8..1.2 by how much of the song's listening falls in this part of the day, 1 otherwise.
+    pub night: f64,
     /// How listening engages with the song (PLAN/15 L1), 0..1 around 0.5; None unless learning is on.
     pub engagement: Option<f64>,
     /// What the tierlist nudge added to the score (PLAN/15 F1), 0 when none.
@@ -132,6 +134,8 @@ pub struct Options {
     pub night: bool,
     /// C3: the next song leans to the taste map's neighbours of the current one.
     pub follow_map: bool,
+    /// C2: the view orders the queue without jumps in energy (the core sends the numbers).
+    pub energy_flow: bool,
 }
 
 impl Options {
@@ -148,6 +152,7 @@ impl Options {
         artist_fatigue: false,
         night: false,
         follow_map: false,
+        energy_flow: false,
     };
 }
 
@@ -190,6 +195,16 @@ pub struct Signals {
     /// (found, missed).
     pub days_unheard: HashMap<String, f64>,
     pub guessr: HashMap<String, (i64, i64)>,
+    /// C1: each song's share of plays in the part of the day it is now (songs with enough plays).
+    pub day_share: HashMap<String, f64>,
+}
+
+/// C1: a song (or failing that its artist) needs this many plays before its hours mean anything.
+pub const NIGHT_MIN_PLAYS: u32 = 5;
+
+/// C1: the factor of a song whose plays fall `share` (0..1) in the current quarter of the day.
+pub fn night_factor(share: f64) -> f64 {
+    0.8 + 0.4 * share.clamp(0.0, 1.0)
 }
 
 /// M1: a loved song unheard for this many days starts coming back...
@@ -359,6 +374,7 @@ pub fn parts_with(
             freshness: freshness(id),
             rotation: if options.fair_rotation { signals.rotation.get(id).copied().unwrap_or(1.0) } else { 1.0 },
             fatigue: if options.artist_fatigue { signals.fatigue.get(id).copied().unwrap_or(1.0) } else { 1.0 },
+            night: if options.night { night_factor(signals.day_share.get(id).copied().unwrap_or(0.25)) } else { 1.0 },
             memory: if options.forgotten_favourites {
                 // Loved: placed in a tierlist, rated above neutral in duels, or listened to gladly.
                 let loved = t > 0.0
@@ -443,7 +459,12 @@ pub fn parts_with(
 /// The weight of a song with these parts at this intensity, in [0.001 .. 1].
 pub fn weight_of(parts: &Parts, intensity: f64) -> f64 {
     let blend = intensity.clamp(0.0, 1.0);
-    (1.0 - blend + blend * parts.score).max(0.001) * parts.freshness * parts.rotation * parts.fatigue * parts.memory
+    (1.0 - blend + blend * parts.score).max(0.001)
+        * parts.freshness
+        * parts.rotation
+        * parts.fatigue
+        * parts.memory
+        * parts.night
 }
 
 /// Weight per target song (all songs when `targets` is empty), in [0.001 .. 1], by 3.0's model.
@@ -665,6 +686,39 @@ pub struct Prepared {
     engagement_sums: Vec<(String, f64, f64, i64)>,
     last_day: HashMap<String, i64>,
     guessr: HashMap<String, (i64, i64)>,
+    /// C1's plays per quarter of the day and the device's offset, read on first use: a scan of every
+    /// play, which only Night shuffle needs.
+    day_parts: std::sync::OnceLock<DayParts>,
+}
+
+/// Plays per quarter of the local day (0-6, 6-12, 12-18, 18-24), per song, and the latest play's
+/// offset from UTC in minutes.
+type DayParts = (HashMap<String, [u32; 4]>, i64);
+
+fn day_parts(db: &crate::db::Db) -> crate::Result<DayParts> {
+    // Counted here rather than with GROUP BY: SQLite sorts every play for that (about 250 ms at
+    // 200 000 plays), a map does not.
+    let mut parts: HashMap<String, [u32; 4]> = HashMap::new();
+    let mut stmt = db.conn().prepare("SELECT song_id, started_at, utc_offset_min FROM play_events")?;
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let id = row.get_ref(0)?.as_str().map_err(rusqlite::Error::from)?;
+        let minute = row.get::<_, i64>(1)? / 60_000 + row.get::<_, i64>(2)?;
+        let part = (minute.rem_euclid(1440) / 360) as usize;
+        match parts.get_mut(id) {
+            Some(counts) => counts[part] += 1,
+            None => {
+                let mut counts = [0; 4];
+                counts[part] = 1;
+                parts.insert(id.to_owned(), counts);
+            }
+        }
+    }
+    let offset = db
+        .conn()
+        .query_row("SELECT utc_offset_min FROM play_events ORDER BY ended_at DESC LIMIT 1", [], |r| r.get(0))
+        .unwrap_or(0);
+    Ok((parts, offset))
 }
 
 /// Reads [`Prepared`] (about 50 ms at 20 000 songs and 200 000 plays).
@@ -722,6 +776,7 @@ pub fn prepare(db: &crate::db::Db) -> crate::Result<Prepared> {
         engagement_sums,
         last_day,
         guessr,
+        day_parts: std::sync::OnceLock::new(),
     })
 }
 
@@ -786,6 +841,8 @@ pub struct Explanation {
     pub fatigue: f64,
     /// M1: the forgotten-favourite lift, 1 when none.
     pub memory: f64,
+    /// C1: the time-of-day factor, 1 when off.
+    pub night: f64,
     /// L2: how sure the model is, and how far this queue's draw strayed from the mean.
     pub confidence: Option<f64>,
     pub explored: f64,
@@ -887,6 +944,7 @@ pub fn explain_prepared(
                 rotation: p.rotation,
                 fatigue: p.fatigue,
                 memory: p.memory,
+                night: p.night,
                 confidence: p.confidence,
                 explored: p.explored,
                 engagement: p.engagement,
@@ -931,6 +989,37 @@ pub(crate) fn stored_signals(db: &crate::db::Db, prepared: &Prepared, options: &
     }
     if options.artist_fatigue {
         signals.fatigue = fatigue(db, now)?;
+    }
+    if options.night {
+        // The part of the day it is now, at the device's offset; a song with too few plays of its
+        // own reads its artist's.
+        if prepared.day_parts.get().is_none() {
+            let _ = prepared.day_parts.set(day_parts(db)?);
+        }
+        let (day_parts, offset) = prepared.day_parts.get().expect("set above");
+        let part = (((now / 60_000 + offset).rem_euclid(1440)) / 360) as usize;
+        let mut by_artist: HashMap<&str, [u32; 4]> = HashMap::new();
+        for (id, artists) in &prepared.stored.songs {
+            if let Some(parts) = day_parts.get(id) {
+                for artist in artists {
+                    let total = by_artist.entry(artist.as_str()).or_insert([0; 4]);
+                    for (t, p) in total.iter_mut().zip(parts) {
+                        *t += p;
+                    }
+                }
+            }
+        }
+        let share = |parts: &[u32; 4]| {
+            let total: u32 = parts.iter().sum();
+            (total >= NIGHT_MIN_PLAYS).then(|| f64::from(parts[part]) / f64::from(total))
+        };
+        for (id, artists) in &prepared.stored.songs {
+            let own = day_parts.get(id).and_then(share);
+            let theirs = || artists.iter().filter_map(|a| by_artist.get(a.as_str()).and_then(share)).reduce(f64::max);
+            if let Some(s) = own.or_else(theirs) {
+                signals.day_share.insert(id.clone(), s);
+            }
+        }
     }
     if options.forgotten_favourites {
         let today = now.div_euclid(DAY_MS);
@@ -1109,7 +1198,21 @@ pub struct Steering {
     /// Only songs placed in a tierlist; the others wait at the end.
     pub only_ranked: bool,
     pub boost_new: bool,
+    /// S1: the session's mode: `comfort`, `discovery`, `rediscover` or `flow` (Classic when None).
+    pub mode: Option<String>,
+    /// S2: lean to this tierlist (its id) and its songs' map neighbours.
+    pub lens: Option<String>,
 }
+
+/// S1 Comfort: unplaced songs with no evidence at all are pushed back this much.
+pub const COMFORT_UNKNOWN: f64 = 0.3;
+/// S1 Discovery: songs with little evidence, or outside every tierlist, come up this much more.
+pub const DISCOVERY_LIFT: f64 = 2.0;
+/// S1 Rediscover: loved songs unheard for a month come up this much more.
+pub const REDISCOVER_LIFT: f64 = 1.6;
+/// S2: the lens's songs and their map neighbours.
+pub const LENS_SONG: f64 = 1.8;
+pub const LENS_NEIGHBOUR: f64 = 1.3;
 
 impl Steering {
     pub fn is_empty(&self) -> bool {
@@ -1165,6 +1268,42 @@ pub fn steer(
         HashSet::new()
     };
 
+    // S1: what a mode needs: how much is known of each song, which are placed, which are loved.
+    let mode = steering.mode.as_deref();
+    let (mut known, mut placed, mut loved_unheard) = (HashMap::new(), HashSet::new(), HashSet::new());
+    if matches!(mode, Some("comfort" | "discovery" | "rediscover")) {
+        let ratings = crate::elo::ratings(db)?;
+        for t in stored_tierlists(db)?.into_iter().filter(|t| t.influences_shuffle) {
+            placed.extend(t.tiers.into_iter().flatten());
+        }
+        let month_ago = crate::time::local_day(now - 30 * DAY_MS, 0);
+        let mut stmt = db.conn().prepare("SELECT song_id, full, last_day FROM song_totals")?;
+        for row in
+            stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, Option<String>>(2)?)))?
+        {
+            let (id, full, last_day) = row?;
+            *known.entry(id.clone()).or_insert(0) += full;
+            let loved =
+                placed.contains(&id) || ratings.get(&id).is_some_and(|r| r.games >= 1 && normalized_score(r) > 0.55);
+            if loved && last_day.is_some_and(|d| d < month_ago) {
+                loved_unheard.insert(id);
+            }
+        }
+        for (id, r) in &ratings {
+            *known.entry(id.clone()).or_insert(0) += r.games;
+        }
+    }
+    // S2: the lens's songs and their neighbours on the taste map.
+    let (mut lens_songs, mut lens_near) = (HashSet::new(), HashSet::new());
+    if let Some(lens) = &steering.lens
+        && let Some((_, doc)) = crate::playlists::tierlists(db)?.into_iter().find(|(id, _)| id == lens)
+    {
+        lens_songs.extend(tierlist_of(&doc).tiers.into_iter().flatten());
+        for id in &lens_songs {
+            lens_near.extend(neighbours(id));
+        }
+    }
+
     for (id, weight) in weights.iter_mut() {
         let own = artists.get(id).map(Vec::as_slice).unwrap_or_default();
         let mut factor = 1.0;
@@ -1178,6 +1317,18 @@ pub fn steer(
         }
         if new_songs.contains(id) {
             factor *= BOOST_NEW;
+        }
+        let evidence = known.get(id).copied().unwrap_or(0);
+        match mode {
+            Some("comfort") if evidence == 0 && !placed.contains(id) => factor *= COMFORT_UNKNOWN,
+            Some("discovery") if evidence < 3 || !placed.contains(id) => factor *= DISCOVERY_LIFT,
+            Some("rediscover") if loved_unheard.contains(id) => factor *= REDISCOVER_LIFT,
+            _ => {}
+        }
+        if lens_songs.contains(id) {
+            factor *= LENS_SONG;
+        } else if lens_near.contains(id) {
+            factor *= LENS_NEIGHBOUR;
         }
         *weight = (*weight * factor).max(0.001);
         if (steering.only_unheard && heard_lately.contains(id)) || (steering.only_ranked && !ranked.contains(id)) {
@@ -1490,6 +1641,43 @@ mod tests {
                 assert!(memory_factor(true, Some(10.0), (found, missed)) >= 1.0);
             }
         }
+    }
+
+    #[test]
+    fn modes_and_the_lens_lean_where_they_say() {
+        let db = seeded();
+        let now = crate::db::now_ms();
+        let (a, b, c) = ("a".repeat(26), "b".repeat(26), "c".repeat(26));
+        let base: HashMap<String, f64> = [(a.clone(), 0.5), (b.clone(), 0.5), (c.clone(), 0.5)].into();
+        let none = |_: &str| Vec::new();
+        let with = |mode: &str| {
+            let mut w = base.clone();
+            let steering = Steering { mode: Some(mode.into()), ..Default::default() };
+            steer(&db, &mut w, &steering, &none, now).unwrap();
+            w
+        };
+        // a and b are placed ("best"), c is not and nothing is known of it.
+        let comfort = with("comfort");
+        assert_eq!(comfort[&a], 0.5);
+        assert!((comfort[&c] - 0.5 * COMFORT_UNKNOWN).abs() < 1e-12);
+        let discovery = with("discovery");
+        assert!((discovery[&c] - 0.5 * DISCOVERY_LIFT).abs() < 1e-12);
+        // Flow changes no weight (the view orders by energy).
+        assert_eq!(with("flow"), base);
+        // The lens: its tierlist's songs x1.8, a neighbour of one of them x1.3.
+        let (lens, _) = crate::playlists::tierlists(&db).unwrap().into_iter().next().unwrap();
+        let near = |id: &str| if id == "a".repeat(26) { vec!["c".repeat(26)] } else { Vec::new() };
+        let mut w = base.clone();
+        steer(&db, &mut w, &Steering { lens: Some(lens), ..Default::default() }, &near, now).unwrap();
+        assert!((w[&a] - 0.5 * LENS_SONG).abs() < 1e-12);
+        assert!((w[&c] - 0.5 * LENS_NEIGHBOUR).abs() < 1e-12);
+    }
+
+    #[test]
+    fn night_leans_to_the_hours_a_song_is_played() {
+        assert!((night_factor(0.0) - 0.8).abs() < 1e-12);
+        assert!((night_factor(1.0) - 1.2).abs() < 1e-12);
+        assert!((night_factor(0.25) - 0.9).abs() < 1e-12);
     }
 
     #[test]

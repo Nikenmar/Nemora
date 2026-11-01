@@ -416,8 +416,10 @@ pub async fn shuffle_data(
     .map_err(fail)?;
     trace.step("weights");
     // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue. "More
-    // like this" leans on the taste map's neighbours when a map was ever built.
-    if steering.as_ref().is_some_and(|s| !s.more_like.is_empty()) {
+    // like this" and a lens (PLAN/15 S2) lean on the taste map's neighbours when a map was ever built.
+    if steering.as_ref().is_some_and(|s| s.lens.is_some()) {
+        taste_map.ensure(&app, &db);
+    } else if steering.as_ref().is_some_and(|s| !s.more_like.is_empty()) {
         taste_map.warm(&app);
     }
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
@@ -446,6 +448,16 @@ pub async fn shuffle_data(
     } else {
         song_ids.iter().zip(&songs).filter(|(_, song)| held.contains(*song)).map(|(view_id, _)| view_id).collect()
     };
+    // Energy (C2) and the taste map's neighbours (C3) for the view's ordering, when asked for.
+    let wanted = options.unwrap_or_default();
+    let energy: HashMap<String, f64> =
+        if wanted.energy_flow { nemora_core::features::energy(&db).map_err(fail)? } else { HashMap::new() };
+    let neighbours: HashMap<String, Vec<String>> = if wanted.follow_map {
+        taste_map.ensure(&app, &db);
+        taste_map.all_neighbours()
+    } else {
+        HashMap::new()
+    };
     // Artists by number for the view's ordering (PLAN/15 F2), keyed like the weights.
     let artist_ids = nemora_core::shuffle::artist_ids(&db).map_err(fail)?;
     let artists: HashMap<&String, &Vec<u32>> = if song_ids.is_empty() {
@@ -454,7 +466,14 @@ pub async fn shuffle_data(
         song_ids.iter().zip(&songs).filter_map(|(view_id, song)| Some((view_id, artist_ids.get(song)?))).collect()
     };
     trace.step("artists");
-    Ok(json!({ "weights": by_view, "pairFeedback": feedback, "held": held, "artists": artists }))
+    Ok(json!({
+        "weights": by_view,
+        "pairFeedback": feedback,
+        "held": held,
+        "artists": artists,
+        "energy": energy,
+        "neighbours": neighbours
+    }))
 }
 
 /// Why each of `song_ids` plays where it does (PLAN/14 C1), keyed by the ids as given. Async, so the

@@ -11,6 +11,7 @@ pub mod covers;
 pub mod db;
 pub mod elo;
 pub mod error;
+pub mod features;
 pub mod guessr;
 pub mod identity;
 pub mod ids;

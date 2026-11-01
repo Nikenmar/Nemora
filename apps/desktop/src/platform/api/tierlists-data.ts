@@ -38,5 +38,6 @@ export const tierlistsData = {
     intensity?: number,
     options?: ShuffleOptions
   ): Promise<Record<string, ShuffleExplanation>> =>
-    getRuntime().explainShuffle(songIds, intensity, options)
+    getRuntime().explainShuffle(songIds, intensity, options),
+  energyAnalysis: async (start?: boolean): Promise<EnergyAnalysis> => getRuntime().energyAnalysis(start)
 };

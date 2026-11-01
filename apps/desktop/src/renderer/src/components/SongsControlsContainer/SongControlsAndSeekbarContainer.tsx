@@ -6,6 +6,7 @@ import Icon from "../ui/Icon";
 import SeekBarContainer from "./SeekBarContainer";
 import { useStore } from "@tanstack/react-store";
 import { store } from "@renderer/store";
+import { steer, steeringStore, type SteeringAction } from "../../other/smartShuffle";
 
 const SongControlsAndSeekbarContainer = () => {
   const currentlyActivePage = useStore(
@@ -36,6 +37,7 @@ const SongControlsAndSeekbarContainer = () => {
     handleSkipForwardClick,
     handleSkipBackwardClick,
     updatePageHistoryIndex,
+    updateContextMenuData,
   } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
@@ -46,6 +48,74 @@ const SongControlsAndSeekbarContainer = () => {
       updateQueueData(undefined, undefined, true, undefined, false);
     }
   }, [isShuffling, toggleTierShuffle, updateQueueData]);
+
+  // Right-click on Smart Shuffle: the session's mode and lens (PLAN/15 S1, S2). Picking one turns
+  // Smart Shuffle on when it is off.
+  const openModesMenu = useCallback(
+    (pageX: number, pageY: number) => {
+      const apply = (action: SteeringAction) => {
+        steer(action).catch((error) => console.error(error));
+        if (!store.state.player.isTierShuffling) toggleTierShuffle(true);
+      };
+      const current = steeringStore.state;
+      const check = (isOn: boolean) => (isOn ? "check" : undefined);
+      window.api.tierlistsData
+        .getTierlistData()
+        .catch(() => [] as SavableTierlist[])
+        .then((tierlists) => {
+          const modes: [
+            ShuffleMode | undefined,
+            "modeClassic" | "modeComfort" | "modeDiscovery" | "modeRediscover" | "modeFlow",
+          ][] = [
+            [undefined, "modeClassic"],
+            ["comfort", "modeComfort"],
+            ["discovery", "modeDiscovery"],
+            ["rediscover", "modeRediscover"],
+            ["flow", "modeFlow"],
+          ];
+          const lenses: ContextMenuItem[] =
+            tierlists.length === 0
+              ? [{ label: t("smartShuffle.noTierlists"), handlerFunction: null, isDisabled: true }]
+              : [
+                  {
+                    label: t("smartShuffle.lensNone"),
+                    iconName: check(!current.lens),
+                    iconClassName: "ms-icon mr-2",
+                    handlerFunction: () => apply({ kind: "lens" }),
+                  },
+                  ...tierlists.map((tl) => ({
+                    label: tl.name,
+                    iconName: check(current.lens === tl.tierlistId),
+                    iconClassName: "ms-icon mr-2",
+                    handlerFunction: () =>
+                      apply({ kind: "lens", lens: tl.tierlistId, name: tl.name }),
+                  })),
+                ];
+          updateContextMenuData(
+            true,
+            [
+              ...modes.map(([mode, label]) => ({
+                label: t(`smartShuffle.${label}`),
+                iconName: check(current.mode === mode),
+                iconClassName: "ms-icon mr-2",
+                handlerFunction: () => apply({ kind: "mode", mode }),
+              })),
+              { label: "", isContextMenuItemSeperator: true, handlerFunction: () => true },
+              {
+                label: t("smartShuffle.lens"),
+                iconName: "filter_center_focus",
+                iconClassName: "ms-icon mr-2",
+                handlerFunction: null,
+                innerContextMenus: lenses,
+              },
+            ],
+            pageX,
+            pageY,
+          );
+        });
+    },
+    [t, toggleTierShuffle, updateContextMenuData],
+  );
 
   const toggleLook = (isOn: boolean) =>
     `!m-0 !h-8 !w-8 ${isOn ? "!text-echo hover:!text-echo" : ""}`;
@@ -66,6 +136,10 @@ const SongControlsAndSeekbarContainer = () => {
             iconName="auto_fix"
             isActive={isTierShuffling}
             clickHandler={() => toggleTierShuffle()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openModesMenu(e.pageX, e.pageY);
+            }}
           />
           <Button
             className={`shuffle-btn ${toggleLook(isShuffling)}`}
