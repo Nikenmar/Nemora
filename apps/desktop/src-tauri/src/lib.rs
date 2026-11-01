@@ -16,6 +16,7 @@ mod engine;
 mod folders;
 mod foryou;
 mod guessr;
+mod lyrics_library;
 mod protocol;
 mod secrets;
 // Win32 code carried over from 1.1.9 (edition 2021), where an unsafe fn body was one unsafe block.
@@ -180,6 +181,7 @@ pub fn run() {
             engine::engine_load,
             visuals::track_visuals,
             energy::energy_analysis,
+            lyrics_library::lyrics_library,
             engine::engine_queue_next,
             engine::engine_play,
             engine::engine_pause,
@@ -266,6 +268,7 @@ pub fn run() {
         .manage(engine::Engine::default())
         .manage(visuals::Visuals::default())
         .manage(energy::EnergyJob::default())
+        .manage(lyrics_library::LyricsJob::default())
         .manage(tastemap::TasteMapCache::default())
         .setup(|tauri_app| {
             let roaming = tauri_app.path().data_dir()?;

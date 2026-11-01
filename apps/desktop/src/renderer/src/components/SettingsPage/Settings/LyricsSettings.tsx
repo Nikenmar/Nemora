@@ -7,6 +7,7 @@ import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
 import Button from '../../Button';
 import Checkbox from '../../Checkbox';
 import Dropdown, { type DropdownOption } from '../../Dropdown';
+import LyricsLibrary from './LyricsLibrary';
 
 import i18n from '../../../i18n';
 import { useStore } from '@tanstack/react-store';
@@ -221,6 +222,8 @@ const LyricsSettings = () => {
             labelContent={t('settingsPage.autoTranslateLyrics')}
           />
         </li>
+
+        <LyricsLibrary />
 
         <li className="secondary-container auto-convert-lyrics mb-4">
           <div className="description">{t('settingsPage.autoConvertLyricsDescription')}</div>

@@ -20,6 +20,7 @@ pub mod import;
 pub mod library;
 pub mod listening;
 pub mod lyrics;
+pub mod lyrics_job;
 pub mod m3u;
 pub mod palette;
 #[cfg(test)]

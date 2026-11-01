@@ -569,6 +569,8 @@ declare global {
     isNightShuffleEnabled?: boolean;
     isEnergyFlowEnabled?: boolean;
     isFollowTasteMapEnabled?: boolean;
+    /** Lyrics for the whole library from LRCLIB in the background (PLAN/19 D5), off unless switched on. */
+    isLyricsLibraryEnabled?: boolean;
     /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
     accentColor?: string;
     autoTranslateLyrics: boolean;

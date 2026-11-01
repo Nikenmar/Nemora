@@ -71,6 +71,7 @@ import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import { rememberedPosition, rememberPosition } from './other/resumePosition';
 import { registerSoundPlayer, setPlayingVersion } from './other/soundEffects';
 import { applySavedCorrection } from './other/headphoneCorrection';
+import { lyricsLibrary } from './components/SettingsPage/Settings/LyricsLibrary';
 import { startTrace } from './other/trace';
 import AudioPlayer from './other/player';
 import {
@@ -212,6 +213,9 @@ export default function App() {
   useEffect(() => {
     if (store.state.localStorage.preferences.isEnergyFlowEnabled)
       window.api.tierlistsData.energyAnalysis(true).catch(() => undefined);
+    // Lyrics for the library (PLAN/19 D5) go on where they stopped, when the user has it on.
+    if (store.state.localStorage.preferences.isLyricsLibraryEnabled)
+      lyricsLibrary(true).catch(() => undefined);
   }, []);
 
   // The stock upstream update check (which polled Sandakan/Nora's

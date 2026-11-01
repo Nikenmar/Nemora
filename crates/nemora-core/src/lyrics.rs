@@ -587,12 +587,12 @@ pub fn refresh(db: &crate::db::Db, song_id: &str) -> crate::Result<bool> {
 }
 
 /// What a lyrics search needs to know about a song: its file, and the tags LRCLIB matches on.
-struct SongLookup {
-    uri: String,
-    title: String,
-    album: Option<String>,
-    duration_ms: i64,
-    artist: Option<String>,
+pub(crate) struct SongLookup {
+    pub(crate) uri: String,
+    pub(crate) title: String,
+    pub(crate) album: Option<String>,
+    pub(crate) duration_ms: i64,
+    pub(crate) artist: Option<String>,
 }
 
 impl SongLookup {
@@ -608,7 +608,7 @@ impl SongLookup {
     }
 }
 
-fn lookup(db: &crate::db::Db, song_id: &str) -> crate::Result<Option<SongLookup>> {
+pub(crate) fn lookup(db: &crate::db::Db, song_id: &str) -> crate::Result<Option<SongLookup>> {
     Ok(rusqlite::OptionalExtension::optional(db.conn().query_row(
         "SELECT l.uri, v.title, v.album, t.duration_ms,
                 (SELECT name FROM variant_artists a WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position LIMIT 1)
