@@ -213,10 +213,15 @@ pub fn engagement(db: &Db, now: i64) -> Result<HashMap<String, f64>> {
         Ok((r.get::<_, String>(0)?, r.get::<_, f64>(1)?, r.get::<_, f64>(2)?, r.get::<_, i64>(3)?))
     })? {
         let (song, positive, negative, at) = row?;
-        let net = decayed(positive, at, now) - decayed(negative, at, now);
-        out.insert(song, 0.5 + 0.5 * (net / 4.0).tanh());
+        out.insert(song, engagement_of(positive, negative, at, now));
     }
     Ok(out)
+}
+
+/// One song's engagement from its sums at `at`, as of `now`.
+pub fn engagement_of(positive: f64, negative: f64, at: i64, now: i64) -> f64 {
+    let net = decayed(positive, at, now) - decayed(negative, at, now);
+    0.5 + 0.5 * (net / 4.0).tanh()
 }
 
 /// Faint duels from listening (PLAN/15 L4): the user left a song early and, within 30 s, picked

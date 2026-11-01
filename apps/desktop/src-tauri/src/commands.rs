@@ -7,7 +7,7 @@ use nemora_core::db::Db;
 use nemora_core::library::{self, Group, NameSort, SongRow, SongScope, SongSort};
 use nemora_core::playlists;
 use serde_json::{Value, json};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::app::{App, DefaultArtwork};
 use crate::user_data;
@@ -1019,6 +1019,12 @@ pub async fn play_record(handle: AppHandle, app: State<'_, App>, session: Sessio
     let recorded = app.write(|db| record_with(db, &session, start)).map_err(fail)?;
     let e = &recorded.evaluation;
     notify(&handle, &["songs/listeningData", "playlists/history", "userData/recentlyPlayedSongs"]);
+    // The play dropped Smart Shuffle's prepared inputs; read them again now, off the main thread, so
+    // turning it on or reordering the queue never waits for them (PLAN/15 performance).
+    let warm = handle.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _ = warm.state::<App>().derived("shuffle", nemora_core::shuffle::prepare);
+    });
     Ok(json!({
         "isPlay": e.is_play, "isFull": e.is_full, "isSkip": e.is_skip, "heardMs": e.heard_ms, "scrobble": e.scrobble,
     }))

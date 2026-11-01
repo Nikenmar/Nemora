@@ -617,6 +617,45 @@ impl StoredInputs {
     }
 }
 
+/// What the model reads from the database and nothing else, kept by a caller between writes
+/// (PLAN/15 performance): the library, tierlists, ratings, V2's rotation, L2's evidence and L4's
+/// faint duels, L1's undecayed sums. The parts that follow the clock are computed per call.
+pub struct Prepared {
+    stored: StoredInputs,
+    rotation: HashMap<String, f64>,
+    evidence: HashMap<String, f64>,
+    implicit: HashMap<String, i64>,
+    engagement_sums: Vec<(String, f64, f64, i64)>,
+}
+
+/// Reads [`Prepared`] (about 50 ms at 20 000 songs and 200 000 plays).
+pub fn prepare(db: &crate::db::Db) -> crate::Result<Prepared> {
+    let now = crate::db::now_ms();
+    let mut evidence = HashMap::new();
+    let mut engagement_sums = Vec::new();
+    let mut stmt = db.conn().prepare(
+        "SELECT song_id, own_picks + replays + rewinds + scrub_skips + guessed + missed, positive, negative, decayed_to
+         FROM song_signals",
+    )?;
+    for row in stmt.query_map([], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, f64>(2)?, r.get::<_, f64>(3)?, r.get::<_, i64>(4)?))
+    })? {
+        let (id, n, positive, negative, at) = row?;
+        if n > 0 {
+            evidence.insert(id.clone(), n as f64);
+        }
+        if positive != 0.0 || negative != 0.0 {
+            engagement_sums.push((id, positive, negative, at));
+        }
+    }
+    let mut implicit = HashMap::new();
+    for (picked, left, _) in crate::signals::implicit_duels(db, now - 90 * DAY_MS)? {
+        *implicit.entry(picked).or_insert(0) += 1;
+        *implicit.entry(left).or_insert(0) -= 1;
+    }
+    Ok(Prepared { stored: stored_inputs(db)?, rotation: rotation(db)?, evidence, implicit, engagement_sums })
+}
+
 /// Shuffle weights for `targets` from the database; `skip_aware` applies the early-skip factors.
 pub fn stored_weights(
     db: &crate::db::Db,
@@ -624,8 +663,19 @@ pub fn stored_weights(
     intensity: f64,
     options: &Options,
 ) -> crate::Result<HashMap<String, f64>> {
-    let stored = stored_inputs(db)?;
-    let signals = stored_signals(db, options)?;
+    weights_prepared(db, &prepare(db)?, targets, intensity, options)
+}
+
+/// [`stored_weights`] from a [`Prepared`] the caller kept.
+pub fn weights_prepared(
+    db: &crate::db::Db,
+    prepared: &Prepared,
+    targets: &[String],
+    intensity: f64,
+    options: &Options,
+) -> crate::Result<HashMap<String, f64>> {
+    let stored = &prepared.stored;
+    let signals = stored_signals(db, prepared, options)?;
     let mut out: HashMap<String, f64> = parts_with(&stored.inputs(), targets, options, &signals)
         .into_iter()
         .map(|(id, p)| (id, weight_of(&p, intensity)))
@@ -683,7 +733,18 @@ pub fn explain(
     intensity: f64,
     options: &Options,
 ) -> crate::Result<Vec<Explanation>> {
-    let stored = stored_inputs(db)?;
+    explain_prepared(db, &prepare(db)?, targets, intensity, options)
+}
+
+/// [`explain`] from a [`Prepared`] the caller kept.
+pub fn explain_prepared(
+    db: &crate::db::Db,
+    prepared: &Prepared,
+    targets: &[String],
+    intensity: f64,
+    options: &Options,
+) -> crate::Result<Vec<Explanation>> {
+    let stored = &prepared.stored;
     let skips = if options.skip_aware { skip_factors(db, crate::db::now_ms())? } else { HashMap::new() };
 
     // Best placement per song, by tierlist and tier name, among tierlists that influence the shuffle.
@@ -726,7 +787,7 @@ pub fn explain(
         last_days.insert(id, day);
     }
 
-    let signals = stored_signals(db, options)?;
+    let signals = stored_signals(db, prepared, options)?;
     let mut counts: HashMap<String, (i64, i64, i64)> = HashMap::new();
     let mut stmt = db.conn().prepare("SELECT song_id, own_picks, replays, scrub_skips FROM song_signals")?;
     for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))? {
@@ -767,12 +828,18 @@ pub fn explain(
         .collect())
 }
 
-/// The signals the options ask for (only what they use is read).
-pub(crate) fn stored_signals(db: &crate::db::Db, options: &Options) -> crate::Result<Signals> {
+/// The signals the options ask for: the prepared ones copied, the clock-bound ones read now.
+pub(crate) fn stored_signals(db: &crate::db::Db, prepared: &Prepared, options: &Options) -> crate::Result<Signals> {
     let now = crate::db::now_ms();
     let mut signals = Signals { now, ..Signals::default() };
     if options.learn {
-        signals.engagement = crate::signals::engagement(db, now)?;
+        signals.engagement = prepared
+            .engagement_sums
+            .iter()
+            .map(|(id, positive, negative, at)| {
+                (id.clone(), crate::signals::engagement_of(*positive, *negative, *at, now))
+            })
+            .collect();
     }
     if options.freshness_by_days {
         // Three weeks is where the push back has faded to nothing. By time only, so SQLite walks the
@@ -788,27 +855,16 @@ pub(crate) fn stored_signals(db: &crate::db::Db, options: &Options) -> crate::Re
         }
     }
     if options.fair_rotation {
-        signals.rotation = rotation(db)?;
+        signals.rotation = prepared.rotation.clone();
     }
     if options.artist_fatigue {
         signals.fatigue = fatigue(db, now)?;
     }
     if options.adaptive {
         signals.seed = (now / DRAW_WINDOW_MS) as u64;
-        let mut stmt = db.conn().prepare(
-            "SELECT song_id, own_picks + replays + rewinds + scrub_skips + guessed + missed FROM song_signals",
-        )?;
-        for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
-            let (id, n) = row?;
-            if n > 0 {
-                signals.evidence.insert(id, n as f64);
-            }
-        }
+        signals.evidence = prepared.evidence.clone();
         if options.implicit_duels {
-            for (picked, left, _) in crate::signals::implicit_duels(db, now - 90 * DAY_MS)? {
-                *signals.implicit.entry(picked).or_insert(0) += 1;
-                *signals.implicit.entry(left).or_insert(0) -= 1;
-            }
+            signals.implicit = prepared.implicit.clone();
         }
     }
     Ok(signals)

@@ -368,12 +368,20 @@ pub async fn shuffle_data(
     steering: Option<nemora_core::shuffle::Steering>,
 ) -> Res<Value> {
     let mut trace = crate::trace::Trace::start("shuffle_data");
+    // The database-only inputs, kept until the next write and warmed after every play.
+    let prepared = app.derived("shuffle", nemora_core::shuffle::prepare).map_err(fail)?;
+    trace.step("prepare");
     let db = app.read();
     trace.step("lock");
     let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
-    let mut weights =
-        nemora_core::shuffle::stored_weights(&db, &songs, intensity.unwrap_or(0.6), &options.unwrap_or_default())
-            .map_err(fail)?;
+    let mut weights = nemora_core::shuffle::weights_prepared(
+        &db,
+        &prepared,
+        &songs,
+        intensity.unwrap_or(0.6),
+        &options.unwrap_or_default(),
+    )
+    .map_err(fail)?;
     trace.step("weights");
     // Session steering and filters (PLAN/14 C2, C4); held songs wait at the end of the queue. "More
     // like this" leans on the taste map's neighbours when a map was ever built.
@@ -426,10 +434,17 @@ pub async fn shuffle_explain(
     intensity: Option<f64>,
     options: Option<nemora_core::shuffle::Options>,
 ) -> Res<Value> {
+    let prepared = app.derived("shuffle", nemora_core::shuffle::prepare).map_err(fail)?;
     let db = app.read();
     let songs: Vec<String> = song_ids.iter().map(|id| parse_view_id(id).0.to_owned()).collect();
-    let explained = nemora_core::shuffle::explain(&db, &songs, intensity.unwrap_or(0.6), &options.unwrap_or_default())
-        .map_err(fail)?;
+    let explained = nemora_core::shuffle::explain_prepared(
+        &db,
+        &prepared,
+        &songs,
+        intensity.unwrap_or(0.6),
+        &options.unwrap_or_default(),
+    )
+    .map_err(fail)?;
     let by_view: serde_json::Map<String, Value> = song_ids
         .into_iter()
         .zip(explained)

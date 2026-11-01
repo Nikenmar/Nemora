@@ -169,6 +169,10 @@ fn measure(db: &mut Db, label: &str) -> Measured {
         .unwrap()
         .collect::<rusqlite::Result<_>>()
         .unwrap();
+    let prepare = best(3, || shuffle::prepare(db).unwrap());
+    let prepared = shuffle::prepare(db).unwrap();
+    let cached = best(3, || shuffle::weights_prepared(db, &prepared, &[], 0.6, &shuffle::Options::default()).unwrap());
+    eprintln!("PERF {label}: prepare {prepare:.1} ms, weights from it {cached:.1} ms");
     let weights = best(3, || shuffle::stored_weights(db, &[], 0.6, &shuffle::Options::default()).unwrap());
     let some: Vec<String> = songs.iter().step_by((songs.len() / 20).max(1)).take(20).cloned().collect();
     let explain = best(3, || shuffle::explain(db, &some, 0.6, &shuffle::Options::default()).unwrap());
@@ -346,6 +350,7 @@ fn where_the_signals_go() {
             }),
         ),
     ] {
-        eprintln!("SIGNAL {label}: {:.1} ms", best(3, || shuffle::stored_signals(&db, &options).unwrap()));
+        let prepared = shuffle::prepare(&db).unwrap();
+        eprintln!("SIGNAL {label}: {:.1} ms", best(3, || shuffle::stored_signals(&db, &prepared, &options).unwrap()));
     }
 }
