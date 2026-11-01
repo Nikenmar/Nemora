@@ -113,6 +113,12 @@ pub fn engine_equalizer(handle: AppHandle, engine: State<'_, Engine>, gains: [f6
     with_player(&handle, &engine, |p| p.set_equalizer(gains))
 }
 
+/// Varispeed (PLAN/18): the speed with the pitch going with it, a factor 0.5 to 2 (1 is off).
+#[tauri::command]
+pub fn engine_varispeed(handle: AppHandle, engine: State<'_, Engine>, factor: f64) -> Res<()> {
+    with_player(&handle, &engine, |p| p.set_varispeed(factor))
+}
+
 /// Playback speed with the pitch kept (0.25 to 4; 1 leaves the sound untouched).
 #[tauri::command]
 pub fn engine_speed(handle: AppHandle, engine: State<'_, Engine>, speed: f64) -> Res<()> {

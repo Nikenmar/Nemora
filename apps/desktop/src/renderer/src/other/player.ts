@@ -87,6 +87,8 @@ class AudioPlayer extends EventTarget {
   private hasEnded = false;
   private isSeeking = false;
   private rate = 1;
+  /** Varispeed (PLAN/18): the pitch goes with it; 1 is off. */
+  private factor = 1;
   private volumePercent = 100;
   private isMuted = false;
   private lastEqualizer = '';
@@ -406,7 +408,7 @@ class AudioPlayer extends EventTarget {
 
   get currentTime(): number {
     if (this.isPaused || this.isSeeking) return this.position;
-    const now = this.position + ((performance.now() - this.positionAt) / 1000) * this.rate;
+    const now = this.position + ((performance.now() - this.positionAt) / 1000) * this.rate * this.factor;
     return Number.isFinite(this.length) ? Math.min(now, this.length) : now;
   }
 
@@ -481,6 +483,20 @@ class AudioPlayer extends EventTarget {
     this.setPosition(this.currentTime);
     this.rate = speed;
     void invoke('engine_speed', { speed }).catch(() => undefined);
+    this.fireLater('ratechange');
+  }
+
+  get varispeed(): number {
+    return this.factor;
+  }
+
+  /** Varispeed (PLAN/18): faster or slower with the pitch going with it, 0.5x to 2x. */
+  set varispeed(factor: number) {
+    const value = Math.min(Math.max(Number.isFinite(factor) ? factor : 1, 0.5), 2);
+    if (value === this.factor) return;
+    this.setPosition(this.currentTime);
+    this.factor = value;
+    void invoke('engine_varispeed', { factor: value }).catch(() => undefined);
     this.fireLater('ratechange');
   }
 }

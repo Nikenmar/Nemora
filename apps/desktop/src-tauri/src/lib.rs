@@ -185,6 +185,7 @@ pub fn run() {
             engine::engine_volume,
             engine::engine_equalizer,
             engine::engine_speed,
+            engine::engine_varispeed,
             smtc::smtc_update,
             duels::duel_pair,
             duels::tier_suggestions,

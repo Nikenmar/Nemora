@@ -6,6 +6,7 @@
 //! end, the following one continues in the same buffer from the very next frame, and its events
 //! begin when the device plays its first frame.
 
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
@@ -17,11 +18,14 @@ use crate::dsp::perceptual_gain;
 use crate::output::{Control, Output};
 use crate::source::Source;
 use crate::stretch::SPEED_RANGE;
+use crate::vari;
 
 /// About how much audio waits in the device buffer.
 const BUFFER_SECONDS: f64 = 0.2;
 /// 1.x faded play and pause over 250 ms.
 const FADE_SECONDS: f64 = 0.25;
+/// The dip around a rebuilt stream (a varispeed change that cannot glide).
+const DIP_SECONDS: f64 = 0.008;
 const POSITION_EVERY: Duration = Duration::from_millis(250);
 
 /// What the player tells its owner. `token` is the one given with the track's `Load`, so events of
@@ -70,6 +74,7 @@ enum Command {
     Volume { percent: f64, muted: bool },
     Equalizer([f64; 10]),
     Speed(f64),
+    Varispeed(f64),
     Shutdown,
 }
 
@@ -124,6 +129,11 @@ impl Player {
     pub fn set_speed(&self, speed: f64) {
         self.send(Command::Speed(speed));
     }
+    /// Varispeed (PLAN/18): the speed with the pitch going with it, a factor within
+    /// `vari::RANGE` (1 is off); see `vari::factor_of_semitones`.
+    pub fn set_varispeed(&self, factor: f64) {
+        self.send(Command::Varispeed(factor));
+    }
 }
 
 impl Drop for Player {
@@ -145,11 +155,61 @@ struct Current {
     /// Frames pushed since `starts_at`.
     pushed: u64,
     drained: bool,
+    /// The pushed frames in runs of equal pace: (end, as a count of pushed frames; music seconds
+    /// per device frame). The pace changes with the speed and with varispeed, which glides while
+    /// earlier frames still wait in the buffer, so the position is summed run by run (PLAN/18).
+    runs: VecDeque<(u64, f64)>,
 }
 
 impl Current {
     fn new(token: u64, source: Source) -> Self {
-        Self { token, source, starts_at: 0, start_position: 0.0, pushed: 0, drained: false }
+        Self { token, source, starts_at: 0, start_position: 0.0, pushed: 0, drained: false, runs: VecDeque::new() }
+    }
+
+    /// Starts over at `start_position`, heard from device frame `starts_at`.
+    fn restart(&mut self, starts_at: u64, start_position: f64) {
+        self.starts_at = starts_at;
+        self.start_position = start_position;
+        self.pushed = 0;
+        self.drained = false;
+        self.runs.clear();
+    }
+
+    /// `frames` more pushed, each `pace` music seconds long.
+    fn record(&mut self, frames: u64, pace: f64) {
+        self.pushed += frames;
+        match self.runs.back_mut() {
+            Some(last) if last.1 == pace => last.0 = self.pushed,
+            _ => self.runs.push_back((self.pushed, pace)),
+        }
+    }
+
+    /// Music seconds in the first `played` pushed frames.
+    fn music(&self, played: u64) -> f64 {
+        let (mut seconds, mut from) = (0.0, 0);
+        for &(end, pace) in &self.runs {
+            let to = end.min(played);
+            if to <= from {
+                break;
+            }
+            seconds += (to - from) as f64 * pace;
+            from = to;
+        }
+        seconds
+    }
+
+    /// Folds the runs the device has finished playing into the start, so the list stays short.
+    fn compact(&mut self, consumed: u64) {
+        let played = consumed.saturating_sub(self.starts_at).min(self.pushed);
+        while self.runs.len() > 1 && self.runs[0].0 <= played {
+            let (end, pace) = self.runs.pop_front().unwrap_or_default();
+            self.start_position += end as f64 * pace;
+            self.starts_at += end;
+            self.pushed -= end;
+            for run in &mut self.runs {
+                run.0 -= end;
+            }
+        }
     }
 }
 
@@ -163,6 +223,8 @@ struct Engine {
     volume: (f64, bool),
     equalizer: [f64; 10],
     speed: f64,
+    /// Varispeed (PLAN/18): 1 is off.
+    factor: f64,
     last_position: Instant,
 }
 
@@ -177,6 +239,7 @@ impl Engine {
             volume: (100.0, false),
             equalizer: [0.0; 10],
             speed: 1.0,
+            factor: 1.0,
             last_position: Instant::now(),
         }
     }
@@ -193,13 +256,15 @@ impl Engine {
         let Some(c) = &self.current else { return 0.0 };
         let consumed = self.output.shared.consumed.load(Ordering::SeqCst);
         let played = consumed.saturating_sub(c.starts_at).min(c.pushed);
-        // Everything waiting in the buffer was made at the current speed (a change restarts it).
-        c.start_position + played as f64 * self.speed / self.output.sample_rate as f64
+        c.start_position + c.music(played)
     }
 
     fn open(&self, path: &Path) -> Result<Source, DecodeError> {
         let mut source = Source::open(path, self.output.sample_rate, self.output.channels)?;
         source.set_speed(self.speed);
+        if self.factor != 1.0 {
+            source.set_factor(self.factor)?;
+        }
         Ok(source)
     }
 
@@ -244,8 +309,9 @@ impl Engine {
                     Ok(mut source) => {
                         let start_position = if at > 0.0 { source.seek(at).unwrap_or(0.0) } else { 0.0 };
                         let duration = source.duration().unwrap_or(0.0);
-                        self.current =
-                            Some(Current { token, source, starts_at, start_position, pushed: 0, drained: false });
+                        let mut current = Current::new(token, source);
+                        current.restart(starts_at, start_position);
+                        self.current = Some(current);
                         self.emit(Event::Loaded { token, duration });
                         if play {
                             self.start_playing();
@@ -288,10 +354,7 @@ impl Engine {
                 if let Some(c) = &mut self.current {
                     match c.source.seek(seconds) {
                         Ok(landed) => {
-                            c.starts_at = starts_at;
-                            c.start_position = landed;
-                            c.pushed = 0;
-                            c.drained = false;
+                            c.restart(starts_at, landed);
                             let token = c.token;
                             self.rewind_next();
                             self.emit(Event::Seeked { token, position: landed });
@@ -328,10 +391,7 @@ impl Engine {
                     c.source.set_speed(speed);
                     match c.source.seek(position) {
                         Ok(landed) => {
-                            c.starts_at = starts_at;
-                            c.start_position = landed;
-                            c.pushed = 0;
-                            c.drained = false;
+                            c.restart(starts_at, landed);
                         }
                         Err(error) => {
                             let token = c.token;
@@ -343,6 +403,47 @@ impl Engine {
                     next.source.set_speed(speed);
                 }
                 self.rewind_next();
+            }
+            Command::Varispeed(factor) => {
+                let factor = factor.clamp(vari::RANGE.0, vari::RANGE.1);
+                if (factor - self.factor).abs() < 1e-12 {
+                    return;
+                }
+                self.factor = factor;
+                // A queued track not yet heard is simply rebuilt at the new factor.
+                if let Some(next) = &mut self.next
+                    && next.pushed == 0
+                    && let Err(error) = next.source.set_factor(factor)
+                {
+                    eprintln!("[nemora-audio] varispeed on the queued track: {error}");
+                }
+                // Gliding: the pitch moves from the next chunk on; the runs keep the position exact.
+                if self.current.as_mut().is_none_or(|c| c.source.change_factor(factor)) {
+                    return;
+                }
+                // Otherwise the stream is rebuilt from what is heard now, behind a dip of a few
+                // milliseconds so the cut is not a click.
+                let position = self.position();
+                let dip = self.frames(DIP_SECONDS);
+                if self.playing {
+                    self.output.send(Control::Fade { to: 0.0, frames: dip, pause_after: false });
+                    std::thread::sleep(Duration::from_secs_f64(DIP_SECONDS * 1.5));
+                }
+                let starts_at = self.clear_buffer();
+                if let Some(c) = &mut self.current {
+                    match c.source.seek(position) {
+                        Ok(landed) => c.restart(starts_at, landed),
+                        Err(error) => {
+                            let token = c.token;
+                            self.emit(Event::Error { token, message: error.to_string() });
+                        }
+                    }
+                }
+                self.rewind_next();
+                if self.playing {
+                    self.top_up();
+                    self.output.send(Control::Fade { to: 1.0, frames: dip, pause_after: false });
+                }
             }
             Command::Equalizer(gains) => {
                 self.equalizer = gains;
@@ -391,6 +492,11 @@ impl Engine {
     /// from the frame right after the current track's last.
     fn top_up(&mut self) {
         let channels = self.output.channels;
+        let pace = self.speed / self.output.sample_rate as f64;
+        let consumed = self.output.shared.consumed.load(Ordering::SeqCst);
+        if let Some(c) = &mut self.current {
+            c.compact(consumed);
+        }
         let target = self.frames(BUFFER_SECONDS) as usize * channels;
         let waiting = self.output.shared.buffer.lock().map_or(0, |b| b.len());
         if waiting >= target {
@@ -413,7 +519,8 @@ impl Engine {
         let mut block = Vec::with_capacity(target - waiting);
         match track.source.fill(&mut block, (target - waiting) / channels) {
             Ok(more) => {
-                track.pushed += (block.len() / channels) as u64;
+                let factor = track.source.factor();
+                track.record((block.len() / channels) as u64, pace * factor);
                 track.drained = !more;
                 self.output.shared.buffer.lock().unwrap_or_else(|e| e.into_inner()).extend(block);
             }
@@ -495,3 +602,5 @@ impl Engine {
 mod gapless;
 #[cfg(test)]
 mod speed;
+#[cfg(test)]
+mod varispeed;
