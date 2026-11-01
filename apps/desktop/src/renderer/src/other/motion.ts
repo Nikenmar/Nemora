@@ -36,6 +36,8 @@ export function animateIn(
 const ARRIVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const LEAVE = 'cubic-bezier(0.4, 0, 1, 1)';
 const GHOST = 'track-ghost';
+/** How long the old cover takes to go before the new one comes. */
+const COVER_OUT = 140;
 
 /** A copy of what the player bar shows, taken while it shows it, for the hand-over. */
 type Snapshot = { cover: HTMLElement | null; lines: HTMLElement[]; width: number; heartLeft: number | null };
@@ -53,28 +55,27 @@ const quietCopy = (node: Element): HTMLElement => {
 };
 
 /**
- * Track change (A4): a hand-over rather than a cut. The moment the song changes, a copy of the old
- * cover and text sits over the new one and leaves (fades, the cover drifting a little towards where
- * the queue came from, the text rising away), while the new cover comes in from the side the queue
- * moved to once its picture has loaded and the new title, then the artists, rise in under it. Not
- * on the first song (the restored session) and not under reduced motion.
+ * Track change (A4): a hand-over rather than a cut, kept quiet. The moment the song changes, a copy
+ * of the old cover and text sits over the new one: the old cover dims away where it is, then the new
+ * one (once its picture has loaded) settles in, so only one cover shows at a time; the old text rises
+ * away while the new title, then the artists, rise in under it; the heart glides to the new title's
+ * end. Not on the first song (the restored session) and not under reduced motion.
  */
 export function useTrackChangeMotion(
   coverRef: RefObject<Element | null>,
   textRef: RefObject<Element | null>
 ) {
   const songId = useStore(store, (state) => state.currentSongData.songId);
-  const index = useStore(store, (state) => state.localStorage.queue.currentSongIndex ?? 0);
-  const previous = useRef<{ songId: string; index: number } | null>(null);
+  const previous = useRef<{ songId: string } | null>(null);
   const snapshot = useRef<Snapshot | null>(null);
 
   // Every commit, before paint: hand over if the song changed, then keep a copy of what shows now.
   useLayoutEffect(() => {
     const before = previous.current;
     const old = snapshot.current;
-    previous.current = { songId, index };
+    previous.current = { songId };
     if (before?.songId && before.songId !== songId && old && !isMotionReduced()) {
-      handOver(coverRef.current, textRef.current, old, index < before.index ? -1 : 1);
+      handOver(coverRef.current, textRef.current, old);
     }
     const cover = coverRef.current?.querySelector(`img:not(.${GHOST})`);
     const text = textRef.current;
@@ -92,7 +93,7 @@ export function useTrackChangeMotion(
 /** The like button that follows the title in the bar. */
 const heartOf = (text: Element | null) => text?.parentElement?.querySelector<HTMLElement>(':scope > .like-btn');
 
-function handOver(cover: Element | null, text: Element | null, old: Snapshot, direction: number) {
+function handOver(cover: Element | null, text: Element | null, old: Snapshot) {
   // A change during a change: the newest one wins, the older copies go at once.
   for (const host of [cover, text]) host?.querySelectorAll(`.${GHOST}`).forEach((g) => g.remove());
 
@@ -106,22 +107,17 @@ function handOver(cover: Element | null, text: Element | null, old: Snapshot, di
     const start = () => {
       if (started) return;
       started = true;
+      // One cover at a time: the old one dims away where it is, then the new one settles in.
       ghost
-        .animate(
-          [
-            { opacity: 1, transform: 'none' },
-            { opacity: 0, transform: `translateX(${-direction * 6}px) scale(0.96)` }
-          ],
-          { duration: 240, easing: LEAVE, fill: 'forwards' }
-        )
+        .animate([{ opacity: 1 }, { opacity: 0 }], { duration: COVER_OUT, easing: LEAVE, fill: 'forwards' })
         .finished.catch(() => undefined)
         .finally(() => ghost.remove());
       fresh?.animate(
         [
-          { opacity: 0, transform: `translateX(${direction * 10}px) scale(1.04)` },
+          { opacity: 0, transform: 'scale(0.97)' },
           { opacity: 1, transform: 'none' }
         ],
-        { duration: 420, easing: ARRIVE, delay: 30, fill: 'backwards' }
+        { duration: 300, easing: ARRIVE, delay: COVER_OUT, fill: 'backwards' }
       );
     };
     // The new picture comes in when it is there, not as an empty frame (at most 300 ms of waiting).
