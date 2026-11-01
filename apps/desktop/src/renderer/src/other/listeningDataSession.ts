@@ -87,7 +87,10 @@ class ListeningDataSession {
       'seeking',
       () => {
         const to = ms(player.currentTime);
-        this.push({ kind: 'seek', atMs: Date.now(), fromMs: this.lastPosition, toMs: to });
+        // Before the song first plays, a seek only sets where it starts (resuming where the app
+        // stopped, or the bar dragged before pressing play): not something the user did to it.
+        if (this.facts.some((f) => f.kind === 'play'))
+          this.push({ kind: 'seek', atMs: Date.now(), fromMs: this.lastPosition, toMs: to });
         this.lastPosition = to;
       },
       { signal }

@@ -68,6 +68,7 @@ import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
+import { rememberedPosition, rememberPosition } from './other/resumePosition';
 import { startTrace } from './other/trace';
 import AudioPlayer from './other/player';
 import {
@@ -172,7 +173,29 @@ export default function App() {
     []
   );
 
+  // Where the song is, for the next start: every few seconds while it plays, at once on a pause, a
+  // seek or the window closing (the app can quit without a pause or a quit event).
+  useEffect(() => {
+    const remember = (now: boolean) => () =>
+      rememberPosition(store.state.currentSongData.songId, player.currentTime, now);
+    const often = remember(false);
+    const atOnce = remember(true);
+    player.addEventListener('timeupdate', often);
+    player.addEventListener('pause', atOnce);
+    player.addEventListener('seeked', atOnce);
+    window.addEventListener('pagehide', atOnce);
+    window.addEventListener('beforeunload', atOnce);
+    return () => {
+      player.removeEventListener('timeupdate', often);
+      player.removeEventListener('pause', atOnce);
+      player.removeEventListener('seeked', atOnce);
+      window.removeEventListener('pagehide', atOnce);
+      window.removeEventListener('beforeunload', atOnce);
+    };
+  }, []);
+
   const handleBeforeQuitEvent = useCallback(async () => {
+    rememberPosition(store.state.currentSongData.songId, player.currentTime, true);
     storage.playback.setCurrentSongOptions('stoppedPosition', player.currentTime);
     storage.playback.setPlaybackOptions('isRepeating', store.state.player.isRepeating);
     storage.playback.setPlaybackOptions('isShuffling', store.state.player.isShuffling);
@@ -406,15 +429,26 @@ export default function App() {
         if (startUpSongData) playSongFromUnknownSource(startUpSongData, true);
         else if (playback?.currentSong.songId) {
           setStartReason('resume');
-          playSong(playback?.currentSong.songId, false);
-
-          const currSongPosition = Number(playback?.currentSong.stoppedPosition);
-          player.currentTime = currSongPosition;
-          // store.sta.player.songPosition = currSongPosition;
-          dispatch({
-            type: 'UPDATE_SONG_POSITION',
-            data: currSongPosition
-          });
+          const songId = playback.currentSong.songId;
+          // Where it stopped: the small resume key, else what the last quit saved.
+          const resumeAt = rememberedPosition(songId) ?? (Number(playback.currentSong.stoppedPosition) || 0);
+          // The position can only be set once the engine has the track: `playSong` loads it
+          // asynchronously, and a seek before that is dropped (the old code lost it every time).
+          Promise.resolve(playSong(songId, false))
+            .then(() => {
+              if (!(resumeAt > 1)) return;
+              const seek = () => {
+                const length = player.duration;
+                // A song that was over starts again from the top.
+                if (Number.isFinite(length) && resumeAt > length - 3) return;
+                player.currentTime = resumeAt;
+                dispatch({ type: 'UPDATE_SONG_POSITION', data: resumeAt });
+                document.dispatchEvent(new CustomEvent('player/positionChange', { detail: resumeAt }));
+              };
+              if (player.readyState >= 1) seek();
+              else player.addEventListener('loadedmetadata', seek, { once: true });
+            })
+            .catch((err) => console.error(err));
         }
         return undefined;
       })
