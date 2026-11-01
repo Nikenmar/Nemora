@@ -75,6 +75,7 @@ enum Command {
     Equalizer([f64; 10]),
     Speed(f64),
     Varispeed(f64),
+    Reverb { amount: f64, size: crate::reverb::Size },
     Shutdown,
 }
 
@@ -133,6 +134,10 @@ impl Player {
     /// `vari::RANGE` (1 is off); see `vari::factor_of_semitones`.
     pub fn set_varispeed(&self, factor: f64) {
         self.send(Command::Varispeed(factor));
+    }
+    /// The reverb (PLAN/18): `amount` 0..1 (0 is off), `size` room, hall or vast.
+    pub fn set_reverb(&self, amount: f64, size: crate::reverb::Size) {
+        self.send(Command::Reverb { amount, size });
     }
 }
 
@@ -225,6 +230,8 @@ struct Engine {
     speed: f64,
     /// Varispeed (PLAN/18): 1 is off.
     factor: f64,
+    /// The reverb (PLAN/18): amount 0..1 and size.
+    reverb: (f64, crate::reverb::Size),
     last_position: Instant,
 }
 
@@ -240,6 +247,7 @@ impl Engine {
             equalizer: [0.0; 10],
             speed: 1.0,
             factor: 1.0,
+            reverb: (0.0, crate::reverb::Size::Hall),
             last_position: Instant::now(),
         }
     }
@@ -445,6 +453,10 @@ impl Engine {
                     self.output.send(Control::Fade { to: 1.0, frames: dip, pause_after: false });
                 }
             }
+            Command::Reverb { amount, size } => {
+                self.reverb = (amount, size);
+                self.output.send(Control::Reverb { amount, size });
+            }
             Command::Equalizer(gains) => {
                 self.equalizer = gains;
                 self.output.send(Control::Equalizer(gains));
@@ -587,6 +599,8 @@ impl Engine {
         self.output = output;
         self.apply_volume();
         self.output.send(Control::Equalizer(self.equalizer));
+        let (amount, size) = self.reverb;
+        self.output.send(Control::Reverb { amount, size });
         let next = self.next.take().map(|n| (n.token, n.source.path().to_owned()));
         if let Some(c) = self.current.take() {
             let (token, path) = (c.token, c.source.path().to_owned());

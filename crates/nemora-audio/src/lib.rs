@@ -6,6 +6,7 @@ pub mod dsp;
 pub mod output;
 pub mod player;
 pub mod resample;
+pub mod reverb;
 pub mod source;
 pub mod stretch;
 #[cfg(test)]

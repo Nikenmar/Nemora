@@ -18,6 +18,11 @@ use crate::dsp::Chain;
 pub enum Control {
     Volume(f64),
     Equalizer([f64; 10]),
+    /// PLAN/18: the reverb's amount (0..1) and size.
+    Reverb {
+        amount: f64,
+        size: crate::reverb::Size,
+    },
     /// Ramp the gain to `to` over `frames`; with `pause_after`, stop consuming once silent.
     Fade {
         to: f64,
@@ -136,6 +141,7 @@ impl Callback {
             match control {
                 Control::Volume(gain) => self.chain.set_volume(gain),
                 Control::Equalizer(gains) => self.chain.equalizer.set_gains(gains),
+                Control::Reverb { amount, size } => self.chain.reverb.set(amount, size),
                 Control::Fade { to, frames, pause_after } => {
                     self.chain.start_fade(to, frames);
                     self.pause_after_fade = pause_after;

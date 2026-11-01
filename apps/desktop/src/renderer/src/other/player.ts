@@ -490,6 +490,11 @@ class AudioPlayer extends EventTarget {
     return this.factor;
   }
 
+  /** The reverb (PLAN/18): `amount` 0..1 (0 is off) and the size of the space. */
+  setReverb(amount: number, size: 'room' | 'hall' | 'vast') {
+    void invoke('engine_reverb', { amount: Math.min(Math.max(amount, 0), 1), size }).catch(() => undefined);
+  }
+
   /** Varispeed (PLAN/18): faster or slower with the pitch going with it, 0.5x to 2x. */
   set varispeed(factor: number) {
     const value = Math.min(Math.max(Number.isFinite(factor) ? factor : 1, 0.5), 2);

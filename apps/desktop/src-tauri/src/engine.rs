@@ -119,6 +119,13 @@ pub fn engine_varispeed(handle: AppHandle, engine: State<'_, Engine>, factor: f6
     with_player(&handle, &engine, |p| p.set_varispeed(factor))
 }
 
+/// The reverb (PLAN/18): `amount` 0..1 (0 is off), `size` "room", "hall" or "vast".
+#[tauri::command]
+pub fn engine_reverb(handle: AppHandle, engine: State<'_, Engine>, amount: f64, size: String) -> Res<()> {
+    let size = nemora_audio::reverb::Size::named(&size);
+    with_player(&handle, &engine, |p| p.set_reverb(amount, size))
+}
+
 /// Playback speed with the pitch kept (0.25 to 4; 1 leaves the sound untouched).
 #[tauri::command]
 pub fn engine_speed(handle: AppHandle, engine: State<'_, Engine>, speed: f64) -> Res<()> {
