@@ -5,7 +5,11 @@ import { store } from '@renderer/store';
 import { steer, steeringStore } from '../../other/smartShuffle';
 import Icon from '../ui/Icon';
 
-type Chip = { what: 'lessArtists' | 'moreLike' | 'notNow' | 'mode' | 'lens'; value: string; label: string };
+type Chip = {
+  what: 'lessArtists' | 'moreLike' | 'notNow' | 'mode' | 'lens' | 'follow';
+  value: string;
+  label: string;
+};
 
 const MODE_LABEL = {
   comfort: 'modeComfort',
@@ -40,12 +44,21 @@ const SteeringBar = memo(() => {
               }
             ]
           : []),
-        ...(steering.lens
+        ...(steering.lens || (steering.lensSongs?.length ?? 0) > 0
           ? [
               {
                 what: 'lens' as const,
-                value: steering.lens,
+                value: steering.lens ?? 'songs',
                 label: t('smartShuffle.chipLens', { name: steering.lensName ?? '' })
+              }
+            ]
+          : []),
+        ...(steering.follow
+          ? [
+              {
+                what: 'follow' as const,
+                value: 'follow',
+                label: t('smartShuffle.chipRadio', { name: steering.followName ?? '' })
               }
             ]
           : []),
@@ -88,7 +101,9 @@ const SteeringBar = memo(() => {
                 ? { kind: 'mode' }
                 : c.what === 'lens'
                   ? { kind: 'lens' }
-                  : { kind: 'remove', what: c.what, value: c.value }
+                  : c.what === 'follow'
+                    ? { kind: 'follow', on: false }
+                    : { kind: 'remove', what: c.what, value: c.value }
             )
           }
         >

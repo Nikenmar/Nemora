@@ -870,6 +870,8 @@ declare global {
     mode?: ShuffleMode;
     /** PLAN/15 S2: lean to this tierlist (its id) and its songs' map neighbours. */
     lens?: string;
+    /** PLAN/17: lean to these songs (an island or a selection on the taste map) and their neighbours. */
+    lensSongs?: string[];
   }
 
   type ShuffleMode = 'comfort' | 'discovery' | 'rediscover' | 'flow';

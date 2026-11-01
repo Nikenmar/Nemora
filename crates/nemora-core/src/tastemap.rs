@@ -93,6 +93,8 @@ pub struct Island {
     /// Its middle, 0..1.
     pub x: f64,
     pub y: f64,
+    /// The songs not linked into any island, scattered over the map: never labelled.
+    pub loose: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -249,6 +251,16 @@ fn scaled(steps: usize, n: usize, floor: usize) -> usize {
     ((steps as f64 * (2000.0 / n.max(1) as f64).sqrt().min(1.0)) as usize).max(floor)
 }
 
+/// Islands pull their songs towards their middle this hard, and push apart where they overlap (each
+/// a disc of about its songs' area, plus a shore), so they read as land masses rather than
+/// interleaved colours (PLAN/17 D6).
+const COHESION: f64 = 0.015;
+const ISLAND_SHORE: f64 = 1.5;
+const ISLANDS_APART: f64 = 0.15;
+
+/// Each song's island and the loose group's number, for an island-aware layout.
+pub type Groups<'a> = (&'a [usize], Option<usize>);
+
 /// Where songs were (0..1) and the layout units per map width they were drawn at.
 pub type Previous<'a> = (&'a HashMap<String, (f64, f64)>, f64);
 
@@ -261,6 +273,7 @@ pub fn layout(
     songs: &[String],
     links: &BTreeMap<String, Vec<(String, f64)>>,
     previous: Option<Previous<'_>>,
+    groups: Option<Groups<'_>>,
 ) -> (Vec<(f64, f64)>, f64) {
     let n = songs.len();
     if n == 0 {
@@ -375,6 +388,52 @@ pub fn layout(
             force[j].0 -= x * f;
             force[j].1 -= y * f;
         }
+        // Islands: each song towards its island's middle, and the islands apart from each other.
+        if let Some((group, loose)) = groups {
+            let count = group.iter().max().map_or(0, |m| m + 1);
+            let mut middle = vec![(0.0f64, 0.0f64, 0usize); count];
+            for (i, &g) in group.iter().enumerate() {
+                middle[g].0 += pos[i].0;
+                middle[g].1 += pos[i].1;
+                middle[g].2 += 1;
+            }
+            for m in &mut middle {
+                let n = m.2.max(1) as f64;
+                m.0 /= n;
+                m.1 /= n;
+            }
+            let mut push = vec![(0.0f64, 0.0f64); count];
+            for a in 0..count {
+                if Some(a) == loose || middle[a].2 < MIN_ISLAND {
+                    continue;
+                }
+                for b in a + 1..count {
+                    if Some(b) == loose || middle[b].2 < MIN_ISLAND {
+                        continue;
+                    }
+                    let (x, y) = (middle[a].0 - middle[b].0, middle[a].1 - middle[b].1);
+                    let d = (x * x + y * y).sqrt().max(1e-6);
+                    let (na, nb) = (middle[a].2 as f64, middle[b].2 as f64);
+                    let overlap = 0.6 * (na.sqrt() + nb.sqrt()) + ISLAND_SHORE - d;
+                    if overlap <= 0.0 {
+                        continue;
+                    }
+                    // The smaller island gives way more.
+                    let (ux, uy) = (x / d * overlap * ISLANDS_APART, y / d * overlap * ISLANDS_APART);
+                    push[a].0 += ux * nb / (na + nb);
+                    push[a].1 += uy * nb / (na + nb);
+                    push[b].0 -= ux * na / (na + nb);
+                    push[b].1 -= uy * na / (na + nb);
+                }
+            }
+            for (i, &g) in group.iter().enumerate() {
+                if Some(g) == loose {
+                    continue;
+                }
+                force[i].0 += (middle[g].0 - pos[i].0) * COHESION + push[g].0;
+                force[i].1 += (middle[g].1 - pos[i].1) * COHESION + push[g].1;
+            }
+        }
         // A weak pull to the middle keeps islands on the map. Placed songs only settle.
         for (i, p) in pos.iter_mut().enumerate() {
             let (fx, fy) = (force[i].0 + (centre - p.0) * 0.01, force[i].1 + (centre - p.1) * 0.01);
@@ -404,8 +463,9 @@ pub fn layout(
 /// Communities of the link graph (Louvain: local moves, then the communities as nodes, until
 /// nothing moves). Deterministic: nodes in index order, ties to the lowest community. One id per
 /// song, numbered by size, largest first; communities smaller than [`MIN_ISLAND`] join the one
-/// they link to most.
-pub fn communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<usize> {
+/// they link to most, and what is still smaller forms one loose group, numbered last (its number is
+/// returned too).
+pub fn communities(n: usize, edges: &[(usize, usize, f64)]) -> (Vec<usize>, Option<usize>) {
     let mut membership: Vec<usize> = (0..n).collect();
     let mut nodes = n;
     let mut graph: Vec<(usize, usize, f64)> = edges.to_vec();
@@ -511,8 +571,13 @@ pub fn communities(n: usize, edges: &[(usize, usize, f64)]) -> Vec<usize> {
     }
     let mut order: Vec<(usize, usize, usize)> = members.into_iter().map(|(c, (s, first))| (c, s, first)).collect();
     order.sort_by(|a, b| b.1.cmp(&a.1).then(a.2.cmp(&b.2)));
-    let rank: HashMap<usize, usize> = order.iter().enumerate().map(|(r, (c, _, _))| (*c, r)).collect();
-    membership.iter().map(|m| rank[m]).collect()
+    // What is still smaller (songs with no links, pairs linked only to each other) is one loose
+    // group, numbered last: not an island one could name.
+    let islands = order.iter().filter(|o| o.1 >= MIN_ISLAND).count();
+    let rank: HashMap<usize, usize> =
+        order.iter().enumerate().map(|(r, (c, size, _))| (*c, if *size >= MIN_ISLAND { r } else { islands })).collect();
+    let loose = (islands < order.len()).then_some(islands);
+    (membership.iter().map(|m| rank[m]).collect(), loose)
 }
 
 /// The user's names for islands: for each island (its songs), the name whose songs it shares most
@@ -742,8 +807,9 @@ pub fn build(db: &Db, cached: Option<&TasteMap>, fresh: bool) -> crate::Result<T
             .filter(|m| m.span > 0.0)
             .map(|m| (m.points.iter().map(|p| (p.song_id.clone(), (p.x, p.y))).collect(), m.span))
     };
-    let (positions, span) = layout(&inputs.songs, &links, previous.as_ref().map(|(p, s)| (p, *s)));
-    let island_of = communities(inputs.songs.len(), &edges_of(&inputs.songs, &links));
+    let (island_of, loose) = communities(inputs.songs.len(), &edges_of(&inputs.songs, &links));
+    let (positions, span) =
+        layout(&inputs.songs, &links, previous.as_ref().map(|(p, s)| (p, *s)), Some((&island_of, loose)));
 
     let points: Vec<Point> = inputs
         .songs
@@ -773,8 +839,12 @@ pub fn build(db: &Db, cached: Option<&TasteMap>, fresh: bool) -> crate::Result<T
         })
         .collect();
     let count = island_of.iter().max().map_or(0, |m| m + 1);
-    let mut islands: Vec<Island> =
-        (0..count).map(|id| Island { id, name: None, user_name: None, size: 0, x: 0.0, y: 0.0 }).collect();
+    let mut islands: Vec<Island> = (0..count)
+        .map(|id| Island { id, name: None, user_name: None, size: 0, x: 0.0, y: 0.0, loose: false })
+        .collect();
+    if let Some(island) = loose.and_then(|l| islands.get_mut(l)) {
+        island.loose = true;
+    }
     for p in &points {
         let island = &mut islands[p.island];
         island.size += 1;
@@ -873,8 +943,8 @@ pub fn annotate(db: &Db, map: &mut TasteMap, weights: &HashMap<String, f64>) -> 
     let user = match_names(&members, &named);
     let auto: Vec<Option<String>> = artists.iter().map(|a| auto_name(a)).collect();
     for (island, (user, auto)) in map.islands.iter_mut().zip(user.into_iter().zip(auto)) {
-        island.user_name = user;
-        island.name = auto;
+        island.user_name = if island.loose { None } else { user };
+        island.name = if island.loose { None } else { auto };
     }
     Ok(())
 }
@@ -910,8 +980,8 @@ mod tests {
         let plain = plain(&linked);
         let prev: Option<(HashMap<String, (f64, f64)>, f64)> =
             previous.map(|m| (m.points.iter().map(|p| (p.song_id.clone(), (p.x, p.y))).collect(), m.span));
-        let (pos, span) = layout(&inputs.songs, &plain, prev.as_ref().map(|(p, s)| (p, *s)));
-        let island = communities(inputs.songs.len(), &edges_of(&inputs.songs, &plain));
+        let (island, loose) = communities(inputs.songs.len(), &edges_of(&inputs.songs, &plain));
+        let (pos, span) = layout(&inputs.songs, &plain, prev.as_ref().map(|(p, s)| (p, *s)), Some((&island, loose)));
         let points = inputs
             .songs
             .iter()
@@ -942,7 +1012,7 @@ mod tests {
     fn the_same_inputs_draw_the_same_map() {
         let inputs = two_habits();
         let links = neighbours(&inputs);
-        assert_eq!(layout(&inputs.songs, &links, None), layout(&inputs.songs, &links, None));
+        assert_eq!(layout(&inputs.songs, &links, None, None), layout(&inputs.songs, &links, None, None));
         assert_eq!(hash(&inputs.songs, &links), hash(&inputs.songs, &neighbours(&inputs)));
     }
 
@@ -956,7 +1026,7 @@ mod tests {
             // Every neighbour comes from the same habit: sessions a day apart never link.
             assert!(list.iter().all(|(other, _)| (other.as_str() < "s020") == group), "{song}: {list:?}");
         }
-        let pos = layout(&inputs.songs, &links, None).0;
+        let pos = layout(&inputs.songs, &links, None, None).0;
         let centre = |range: std::ops::Range<usize>| {
             let n = range.len() as f64;
             let (x, y) = range.fold((0.0, 0.0), |(x, y), i| (x + pos[i].0, y + pos[i].1));
@@ -1016,8 +1086,9 @@ mod tests {
         let inputs = two_habits();
         let links = neighbours(&inputs);
         let edges = edges_of(&inputs.songs, &links);
-        let a = communities(40, &edges);
-        assert_eq!(a, communities(40, &edges));
+        let (a, loose) = communities(40, &edges);
+        assert_eq!(a, communities(40, &edges).0);
+        assert_eq!(loose, None);
         // No island mixes the two habits, and none is a crumb.
         let first: HashSet<usize> = a[..20].iter().copied().collect();
         let second: HashSet<usize> = a[20..].iter().copied().collect();

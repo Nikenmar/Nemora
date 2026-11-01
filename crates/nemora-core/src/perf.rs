@@ -314,10 +314,10 @@ fn where_the_weights_go() {
     eprintln!("PART taste map: links {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
     let plain = crate::tastemap::plain(&linked);
     let clock = std::time::Instant::now();
-    crate::tastemap::layout(&inputs.songs, &plain, None);
+    crate::tastemap::layout(&inputs.songs, &plain, None, None);
     eprintln!("PART taste map: layout {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
     let clock = std::time::Instant::now();
-    crate::tastemap::communities(inputs.songs.len(), &crate::tastemap::edges_of(&inputs.songs, &plain));
+    let _ = crate::tastemap::communities(inputs.songs.len(), &crate::tastemap::edges_of(&inputs.songs, &plain));
     eprintln!("PART taste map: communities {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
     let started = std::time::Instant::now();
     let map = crate::tastemap::build(&db, None, true).unwrap();

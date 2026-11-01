@@ -19,7 +19,14 @@ export const smartShuffleData: { current: MegaShuffleData } = {
  * Plus "Not now" songs, which go to the end of the queue, the titles the chips show for song ids and
  * the lens's tierlist name.
  */
-export type Steering = ShuffleSteering & { notNow: string[]; titles: Record<string, string>; lensName?: string };
+export type Steering = ShuffleSteering & {
+  notNow: string[];
+  titles: Record<string, string>;
+  lensName?: string;
+  /** Radio from a song on the taste map (PLAN/17): Follow the taste map for this session. */
+  follow?: boolean;
+  followName?: string;
+};
 
 export const NO_STEERING: Steering = {
   lessArtists: [],
@@ -38,6 +45,8 @@ const preferences = () => store.state.localStorage.preferences;
 /** Comfort (PLAN/15 S1) leans harder on what the user already loves. */
 const intensity = () =>
   steeringStore.state.mode === 'comfort' ? 0.9 : (preferences().tierShuffleIntensity ?? 0.6);
+/** The intensity Smart Shuffle runs at now (the taste map sizes its dots by it). */
+export const currentIntensity = intensity;
 /** The model's options from the user's settings (PLAN/15); the nudge has no setting. */
 export const shuffleOptions = (): ShuffleOptions => {
   const p = preferences();
@@ -52,14 +61,14 @@ export const shuffleOptions = (): ShuffleOptions => {
     forgottenFavourites: !p.isForgottenFavouritesDisabled,
     artistFatigue: !!p.isArtistFatigueEnabled,
     night: !!p.isNightShuffleEnabled,
-    followMap: !!p.isFollowTasteMapEnabled,
+    followMap: !!p.isFollowTasteMapEnabled || !!steeringStore.state.follow,
     // Flow (PLAN/15 S1) is Energy flow for this session.
     energyFlow: !!p.isEnergyFlowEnabled || steeringStore.state.mode === 'flow'
   };
 };
 
 const coreSteering = (): ShuffleSteering | undefined => {
-  const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew, mode, lens } = steeringStore.state;
+  const { lessArtists, moreLike, onlyUnheard, onlyRanked, boostNew, mode, lens, lensSongs } = steeringStore.state;
   const filters = !!preferences().isSessionFiltersEnabled;
   const steering = {
     lessArtists,
@@ -69,7 +78,8 @@ const coreSteering = (): ShuffleSteering | undefined => {
     boostNew: filters && boostNew,
     // Flow works in the view's ordering only; the core has nothing to do for it.
     mode: mode === 'flow' ? undefined : mode,
-    lens
+    lens,
+    lensSongs: lensSongs ?? []
   };
   const isEmpty =
     lessArtists.length === 0 &&
@@ -78,7 +88,8 @@ const coreSteering = (): ShuffleSteering | undefined => {
     !steering.onlyRanked &&
     !steering.boostNew &&
     !steering.mode &&
-    !steering.lens;
+    !steering.lens &&
+    steering.lensSongs.length === 0;
   return isEmpty ? undefined : steering;
 };
 
@@ -130,7 +141,8 @@ export type SteeringAction =
   | { kind: 'filter'; filter: 'onlyUnheard' | 'onlyRanked' | 'boostNew'; isOn: boolean }
   | { kind: 'remove'; what: 'lessArtists' | 'moreLike' | 'notNow'; value: string }
   | { kind: 'mode'; mode?: ShuffleMode }
-  | { kind: 'lens'; lens?: string; name?: string }
+  | { kind: 'lens'; lens?: string; songs?: string[]; name?: string }
+  | { kind: 'follow'; on: boolean; name?: string }
   | { kind: 'clear' };
 
 const added = (list: string[], value: string) => (list.includes(value) ? list : [...list, value]);
@@ -161,7 +173,9 @@ export async function steer(action: SteeringAction) {
       case 'mode':
         return { ...state, mode: action.mode };
       case 'lens':
-        return { ...state, lens: action.lens, lensName: action.name };
+        return { ...state, lens: action.lens, lensSongs: action.songs ?? [], lensName: action.name };
+      case 'follow':
+        return { ...state, follow: action.on, followName: action.on ? action.name : undefined };
       case 'clear':
         return NO_STEERING;
       default:
