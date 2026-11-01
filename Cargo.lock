@@ -2891,6 +2891,7 @@ dependencies = [
  "cpal",
  "realfft",
  "rubato",
+ "serde",
  "symphonia",
  "thiserror 2.0.21",
 ]

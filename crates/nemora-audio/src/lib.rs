@@ -4,6 +4,7 @@
 pub mod decode;
 pub mod dsp;
 pub mod output;
+pub mod parametric;
 pub mod player;
 pub mod render;
 pub mod resample;

@@ -70,6 +70,7 @@ import megaShuffleQueue from './other/megaShuffleQueue';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import { rememberedPosition, rememberPosition } from './other/resumePosition';
 import { registerSoundPlayer, setPlayingVersion } from './other/soundEffects';
+import { applySavedCorrection } from './other/headphoneCorrection';
 import { startTrace } from './other/trace';
 import AudioPlayer from './other/player';
 import {
@@ -88,6 +89,8 @@ const DURATION = 1000;
 const player = new AudioPlayer();
 // Slowed & reverb (PLAN/18): the saved sound applies from the start.
 registerSoundPlayer(player);
+// Headphone correction (PLAN/18 D5), when the user turned it on.
+applySavedCorrection();
 setPlaybackClock(() => player.currentTime);
 /**
  * What has already been tried for the track that is failing right now.

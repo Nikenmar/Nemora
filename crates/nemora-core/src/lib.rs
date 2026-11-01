@@ -7,6 +7,7 @@
 // SQL rows are read as tuples; naming every one of them would not make the queries clearer.
 #![allow(clippy::type_complexity)]
 
+pub mod autoeq;
 pub mod covers;
 pub mod db;
 pub mod elo;

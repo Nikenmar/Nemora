@@ -28,7 +28,7 @@ fn event_json(event: &Event) -> serde_json::Value {
 }
 
 /// Runs `f` on the player, starting it on first use.
-fn with_player(handle: &AppHandle, engine: &Engine, f: impl FnOnce(&Player)) -> Res<()> {
+pub(crate) fn with_player(handle: &AppHandle, engine: &Engine, f: impl FnOnce(&Player)) -> Res<()> {
     let mut guard = engine.0.lock().unwrap_or_else(|e| e.into_inner());
     if guard.is_none() {
         let events = handle.clone();

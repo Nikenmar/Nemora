@@ -7,6 +7,7 @@ mod appdata;
 mod audio_session;
 mod bench;
 mod commands;
+mod correction;
 mod discord;
 mod dragout;
 mod duels;
@@ -188,6 +189,10 @@ pub fn run() {
             engine::engine_speed,
             engine::engine_varispeed,
             engine::engine_reverb,
+            correction::autoeq_index,
+            correction::autoeq_profile,
+            correction::correction_preview,
+            correction::engine_correction,
             engine::engine_clipped,
             versions::version_create,
             versions::version_rename,

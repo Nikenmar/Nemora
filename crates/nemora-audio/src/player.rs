@@ -76,6 +76,7 @@ enum Command {
     Speed(f64),
     Varispeed(f64),
     Reverb { amount: f64, size: crate::reverb::Size },
+    Correction(Option<crate::parametric::Profile>),
     Shutdown,
 }
 
@@ -142,6 +143,10 @@ impl Player {
     /// The reverb (PLAN/18): `amount` 0..1 (0 is off), `size` room, hall or vast.
     pub fn set_reverb(&self, amount: f64, size: crate::reverb::Size) {
         self.send(Command::Reverb { amount, size });
+    }
+    /// Headphone correction (PLAN/18 D5): a parsed profile, or `None` for off.
+    pub fn set_correction(&self, profile: Option<crate::parametric::Profile>) {
+        self.send(Command::Correction(profile));
     }
 }
 
@@ -236,6 +241,8 @@ struct Engine {
     factor: f64,
     /// The reverb (PLAN/18): amount 0..1 and size.
     reverb: (f64, crate::reverb::Size),
+    /// Headphone correction (PLAN/18 D5).
+    correction: Option<crate::parametric::Profile>,
     last_position: Instant,
 }
 
@@ -252,6 +259,7 @@ impl Engine {
             speed: 1.0,
             factor: 1.0,
             reverb: (0.0, crate::reverb::Size::Hall),
+            correction: None,
             last_position: Instant::now(),
         }
     }
@@ -465,6 +473,10 @@ impl Engine {
                 self.equalizer = gains;
                 self.output.send(Control::Equalizer(gains));
             }
+            Command::Correction(profile) => {
+                self.correction = profile.clone();
+                self.output.send(Control::Correction(profile));
+            }
             Command::Shutdown => {}
         }
     }
@@ -603,6 +615,7 @@ impl Engine {
         self.output = output;
         self.apply_volume();
         self.output.send(Control::Equalizer(self.equalizer));
+        self.output.send(Control::Correction(self.correction.clone()));
         let (amount, size) = self.reverb;
         self.output.send(Control::Reverb { amount, size });
         let next = self.next.take().map(|n| (n.token, n.source.path().to_owned()));

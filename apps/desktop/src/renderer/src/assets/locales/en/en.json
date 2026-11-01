@@ -1510,6 +1510,25 @@
     "savedClipped_other": "{{name}} saved; {{count}} samples went past full scale and were clipped (32-bit float keeps them)",
     "saveFailed": "Could not save the file: {{error}}"
   },
+  "correction": {
+    "title": "Headphone correction",
+    "description": "Evens out your headphones' frequency response with an AutoEQ profile, before the equalizer. The profile's own preamp lowers the level so its boosts cannot clip.",
+    "import": "Import file",
+    "imported": "imported file",
+    "loadList": "Find my headphones",
+    "listNote": "Downloads the AutoEQ list (about 0.9 MB) from GitHub",
+    "loading": "Loading...",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search {{count}} headphones",
+    "summary_one": "{{count}} filter, preamp {{preamp}} dB",
+    "summary_other": "{{count}} filters, preamp {{preamp}} dB",
+    "skipped_one": "{{count}} line of the file is a filter type Nemora does not run and was left out",
+    "skipped_other": "{{count}} lines of the file are filter types Nemora does not run and were left out",
+    "listFailed": "Could not load the AutoEQ list: {{error}}",
+    "profileFailed": "Could not load this profile: {{error}}",
+    "unreadable": "This file is not a ParametricEQ or Equalizer APO file: {{error}}",
+    "credit": "Profiles from AutoEQ by Jaakko Pasanen (github.com/jaakkopasanen/AutoEq), from measurements by their named sources. Nemora does not ship them; the one you pick is downloaded."
+  },
   "sound": {
     "title": "Slowed & reverb",
     "speed": "Speed",

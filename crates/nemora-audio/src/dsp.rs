@@ -152,6 +152,8 @@ impl Fade {
 
 /// The chain for one output format.
 pub struct Chain {
+    /// PLAN/18 D5: headphone correction, before the equalizer.
+    pub correction: crate::parametric::Correction,
     pub equalizer: Equalizer,
     /// PLAN/18: added after the equalizer, before volume and fades (so a pause fades its tail too).
     pub reverb: crate::reverb::Reverb,
@@ -166,6 +168,7 @@ pub struct Chain {
 impl Chain {
     pub fn new(sample_rate: u32, channels: usize) -> Self {
         Self {
+            correction: crate::parametric::Correction::new(sample_rate, channels),
             equalizer: Equalizer::new(sample_rate, channels),
             reverb: crate::reverb::Reverb::new(sample_rate, channels),
             channels,
@@ -197,7 +200,8 @@ impl Chain {
 
     /// Whether the chain would leave samples untouched.
     pub fn is_neutral(&self) -> bool {
-        self.equalizer.is_flat()
+        self.correction.is_off()
+            && self.equalizer.is_flat()
             && self.reverb.is_off()
             && self.volume == 1.0
             && self.fade.is_none()
@@ -211,6 +215,7 @@ impl Chain {
         }
         self.scratch.clear();
         self.scratch.extend(samples.iter().map(|&s| s as f64));
+        self.correction.process(&mut self.scratch);
         self.equalizer.process(&mut self.scratch);
         self.reverb.process(&mut self.scratch);
         for frame in self.scratch.chunks_exact_mut(self.channels) {

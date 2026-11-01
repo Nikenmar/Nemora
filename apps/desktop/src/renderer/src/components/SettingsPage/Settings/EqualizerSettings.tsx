@@ -8,6 +8,7 @@ import { equalizerBandHertzData, equalizerPresetsData } from '../../../other/equ
 import i18n from '../../../i18n';
 
 import EqualierBand from './EqualierBand';
+import HeadphoneCorrection from './HeadphoneCorrection';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 import { LOCAL_STORAGE_DEFAULT_TEMPLATE } from '@renderer/other/appReducer';
@@ -146,6 +147,7 @@ const EqualizerSettings = () => {
           </div>
           {equalizerBands}
         </div>
+        <HeadphoneCorrection />
       </div>
     </li>
   );
