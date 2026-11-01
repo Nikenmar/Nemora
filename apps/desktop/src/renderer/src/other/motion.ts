@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from '@tanstack/react-store';
 
 import { store } from '@renderer/store';
@@ -32,10 +32,32 @@ export function animateIn(
   });
 }
 
+/** A calm out-quint for what arrives, a short ease-in for what leaves. */
+const ARRIVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const LEAVE = 'cubic-bezier(0.4, 0, 1, 1)';
+const GHOST = 'track-ghost';
+
+/** A copy of what the player bar shows, taken while it shows it, for the hand-over. */
+type Snapshot = { cover: HTMLElement | null; lines: HTMLElement[]; width: number; heartLeft: number | null };
+
+const quietCopy = (node: Element): HTMLElement => {
+  const copy = node.cloneNode(true) as HTMLElement;
+  for (const el of [copy, ...copy.querySelectorAll<HTMLElement>('*')]) {
+    el.removeAttribute('id');
+    el.removeAttribute('tabindex');
+    // A copy must not play the line's own entrance again.
+    el.classList.remove('appear-from-bottom');
+  }
+  copy.setAttribute('aria-hidden', 'true');
+  return copy;
+};
+
 /**
- * Track change (A4): when the current song changes, the cover slides in from the side the queue
- * moved to (from the right on next, from the left on previous) and the text rises in. Not on the
- * first song: that one is the restored session.
+ * Track change (A4): a hand-over rather than a cut. The moment the song changes, a copy of the old
+ * cover and text sits over the new one and leaves (fades, the cover drifting a little towards where
+ * the queue came from, the text rising away), while the new cover comes in from the side the queue
+ * moved to once its picture has loaded and the new title, then the artists, rise in under it. Not
+ * on the first song (the restored session) and not under reduced motion.
  */
 export function useTrackChangeMotion(
   coverRef: RefObject<Element | null>,
@@ -44,31 +66,126 @@ export function useTrackChangeMotion(
   const songId = useStore(store, (state) => state.currentSongData.songId);
   const index = useStore(store, (state) => state.localStorage.queue.currentSongIndex ?? 0);
   const previous = useRef<{ songId: string; index: number } | null>(null);
+  const snapshot = useRef<Snapshot | null>(null);
 
-  useEffect(() => {
+  // Every commit, before paint: hand over if the song changed, then keep a copy of what shows now.
+  useLayoutEffect(() => {
     const before = previous.current;
+    const old = snapshot.current;
     previous.current = { songId, index };
-    if (!before || !before.songId || before.songId === songId) return;
-    const direction = index < before.index ? -1 : 1;
-    animateIn(
-      coverRef.current,
-      [
-        { opacity: 0, transform: `translateX(${direction * 16}px) scale(0.94)` },
-        { opacity: 1, transform: 'none' }
-      ],
-      { token: 3, easing: 'spring' }
+    if (before?.songId && before.songId !== songId && old && !isMotionReduced()) {
+      handOver(coverRef.current, textRef.current, old, index < before.index ? -1 : 1);
+    }
+    const cover = coverRef.current?.querySelector(`img:not(.${GHOST})`);
+    const text = textRef.current;
+    snapshot.current = {
+      cover: cover ? quietCopy(cover) : null,
+      lines: text
+        ? [...text.querySelectorAll(':scope > .song-title, :scope > .song-artists')].map(quietCopy)
+        : [],
+      width: text?.getBoundingClientRect().width ?? 0,
+      heartLeft: heartOf(text)?.getBoundingClientRect().left ?? null
+    };
+  });
+}
+
+/** The like button that follows the title in the bar. */
+const heartOf = (text: Element | null) => text?.parentElement?.querySelector<HTMLElement>(':scope > .like-btn');
+
+function handOver(cover: Element | null, text: Element | null, old: Snapshot, direction: number) {
+  // A change during a change: the newest one wins, the older copies go at once.
+  for (const host of [cover, text]) host?.querySelectorAll(`.${GHOST}`).forEach((g) => g.remove());
+
+  if (cover && old.cover) {
+    const ghost = old.cover;
+    ghost.classList.add(GHOST);
+    Object.assign(ghost.style, { position: 'absolute', inset: '0', zIndex: '1', pointerEvents: 'none' });
+    cover.appendChild(ghost);
+    const fresh = cover.querySelector<HTMLImageElement>(`img:not(.${GHOST})`);
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      ghost
+        .animate(
+          [
+            { opacity: 1, transform: 'none' },
+            { opacity: 0, transform: `translateX(${-direction * 6}px) scale(0.96)` }
+          ],
+          { duration: 240, easing: LEAVE, fill: 'forwards' }
+        )
+        .finished.catch(() => undefined)
+        .finally(() => ghost.remove());
+      fresh?.animate(
+        [
+          { opacity: 0, transform: `translateX(${direction * 10}px) scale(1.04)` },
+          { opacity: 1, transform: 'none' }
+        ],
+        { duration: 420, easing: ARRIVE, delay: 30, fill: 'backwards' }
+      );
+    };
+    // The new picture comes in when it is there, not as an empty frame (at most 300 ms of waiting).
+    if (fresh && !fresh.complete) {
+      fresh.addEventListener('load', start, { once: true });
+      fresh.addEventListener('error', start, { once: true });
+      setTimeout(start, 300);
+    } else start();
+  }
+
+  // The heart sits right after the title: it glides from the old title's end to the new one's
+  // instead of jumping over the text that is still leaving.
+  const heart = heartOf(text);
+  if (heart && old.heartLeft !== null) {
+    const shift = old.heartLeft - heart.getBoundingClientRect().left;
+    if (Math.abs(shift) > 0.5)
+      heart.animate([{ transform: `translateX(${shift}px)` }, { transform: 'none' }], {
+        duration: 420,
+        easing: ARRIVE,
+        delay: 120,
+        fill: 'backwards'
+      });
+  }
+
+  if (text && old.lines.length > 0) {
+    const ghost = document.createElement('div');
+    ghost.className = GHOST;
+    ghost.setAttribute('aria-hidden', 'true');
+    Object.assign(ghost.style, {
+      position: 'absolute',
+      left: '0',
+      top: '0',
+      bottom: '0',
+      width: `${old.width}px`,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      gap: '2px',
+      overflow: 'hidden',
+      pointerEvents: 'none'
+    });
+    old.lines.forEach((line) => ghost.appendChild(line));
+    text.appendChild(ghost);
+    ghost
+      .animate(
+        [
+          { opacity: 1, transform: 'none' },
+          { opacity: 0, transform: 'translateY(-7px)' }
+        ],
+        { duration: 220, easing: LEAVE, fill: 'forwards' }
+      )
+      .finished.catch(() => undefined)
+      .finally(() => ghost.remove());
+    text.querySelectorAll(':scope > .song-title, :scope > .song-artists').forEach((line, k) =>
+      line.animate(
+        [
+          { opacity: 0, transform: 'translateY(8px)' },
+          { opacity: 1, transform: 'none' }
+        ],
+        { duration: 380, easing: ARRIVE, delay: 110 + k * 55, fill: 'backwards' }
+      )
     );
-    animateIn(
-      textRef.current,
-      [
-        { opacity: 0, transform: 'translateY(6px)' },
-        { opacity: 1, transform: 'none' }
-      ],
-      { token: 3, delay: 40 }
-    );
-    // Only the song decides; the refs are stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [songId]);
+  }
 }
 
 /** Covers a click can come from, in tiles and rows (A2). */
