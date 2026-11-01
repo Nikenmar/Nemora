@@ -107,7 +107,7 @@ const SoundPanel = () => {
         <h2 className="text-base font-semibold">{t('sound.title')}</h2>
         <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full ${clipped ? 'bg-[rgb(236_72_72)]' : 'bg-line'}`}
+            className={`h-2 w-2 rounded-full ${clipped ? 'bg-danger' : 'bg-line'}`}
             title={t('sound.peak')}
             aria-label={clipped ? t('sound.peakOn') : t('sound.peak')}
           />
