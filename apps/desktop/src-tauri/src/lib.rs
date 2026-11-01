@@ -188,6 +188,7 @@ pub fn run() {
             smtc::smtc_update,
             duels::duel_pair,
             duels::tier_suggestions,
+            duels::skip_context,
             duels::tier_suggestion_apply,
             duels::tier_suggestion_dismiss,
             duels::duel_pair_by_ids,

@@ -338,25 +338,9 @@ pub fn record_with(db: &mut Db, session: &Session, start: StartReason) -> Result
             (!raw_seeks.is_empty()).then(|| serde_json::to_string(&raw_seeks)).transpose()?
         ],
     )?;
-    // Smart Shuffle's per-song evidence, kept current in the same transaction (PLAN/15 L1).
-    let previous_end = crate::signals::last_heard(&tx, &session.song_id)?;
-    let replay_soon = previous_end
-        .is_some_and(|t| session.started_at >= t && session.started_at - t < crate::signals::REPLAY_WINDOW_MS);
-    crate::signals::add_play(
-        &tx,
-        &session.song_id,
-        session.started_at,
-        evaluation.ended_at,
-        &crate::signals::Play {
-            start_reason: start.as_str(),
-            end_reason: evaluation.end_reason.as_str(),
-            heard_ms: evaluation.heard_ms,
-            duration_ms: session.duration_ms,
-            source_kind: session.source_kind.as_deref(),
-            seeks: &raw_seeks,
-            replay_soon,
-        },
-    )?;
+    // Smart Shuffle's per-song evidence (PLAN/15 L1): the plays whose context this one settles
+    // (PLAN/16), in the same transaction.
+    crate::signals::settle(&tx, evaluation.ended_at)?;
     add_to_rollups(&tx, &session.song_id, session.started_at, session.utc_offset_min, &evaluation)?;
     tx.commit()?;
     db.touch();

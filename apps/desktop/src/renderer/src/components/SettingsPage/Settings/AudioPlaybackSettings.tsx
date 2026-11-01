@@ -93,6 +93,32 @@ const applyPreset = (classic: boolean) => {
       .catch((error) => console.error(error));
 };
 
+/** Skips in context (PLAN/16 D7): no setting, one line saying how skips are read, and the week. */
+const SkipContextLine = () => {
+  const { t } = useTranslation();
+  const [context, setContext] = useState<SkipContext | null>(null);
+  useEffect(() => {
+    let isLive = true;
+    window.api.tierlistsData
+      .skipContext()
+      .then((next) => isLive && setContext(next))
+      .catch(() => undefined);
+    return () => {
+      isLive = false;
+    };
+  }, []);
+  return (
+    <div className="ml-8 mt-1 text-small text-ink-dim">
+      <div>{t('smartShuffle.skipContext')}</div>
+      {context && (context.counted > 0 || context.ignored > 0) && (
+        <div className="tabular-nums">
+          {t('smartShuffle.skipContextCount', { counted: context.counted, ignored: context.ignored })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** Energy flow's measuring (PLAN/15 C2): how far it got, polled while it runs. */
 const EnergyStatus = () => {
   const { t } = useTranslation();
@@ -265,6 +291,7 @@ const AudioPlaybackSettings = () => {
                   <div className="description ml-8 text-small text-ink-dim">
                     {t(`smartShuffle.${label}Description`)}
                   </div>
+                  {key === 'isSkipAwareDisabled' && <SkipContextLine />}
                   {key === 'isEnergyFlowEnabled' && preferences?.isEnergyFlowEnabled && (
                     <EnergyStatus key={String(preferences.isEnergyFlowEnabled)} />
                   )}

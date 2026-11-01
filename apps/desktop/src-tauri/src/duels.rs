@@ -81,6 +81,19 @@ pub async fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>, teac
     Ok(found)
 }
 
+/// Skips in context (PLAN/16 D7): the last week's skips counted and ignored, and whether the session
+/// going on now reads as listening (`null` when none is).
+#[tauri::command]
+pub async fn skip_context(app: State<'_, App>) -> Res<Value> {
+    let db = app.read();
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
+    let (counted, ignored) = nemora_core::listening::summary(&db, now).map_err(fail)?;
+    let current = nemora_core::listening::current(&db, now)
+        .map_err(fail)?
+        .map(|c| json!({ "browsing": c.browsing, "listening": c.listening }));
+    Ok(json!({ "counted": counted, "ignored": ignored, "current": current }))
+}
+
 /// Songs whose duels put them a tier away from where the user placed them (PLAN/15 T2).
 #[tauri::command]
 pub async fn tier_suggestions(app: State<'_, App>) -> Res<Vec<nemora_core::suggest::TierSuggestion>> {

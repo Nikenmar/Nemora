@@ -874,6 +874,13 @@ declare global {
 
   type ShuffleMode = 'comfort' | 'discovery' | 'rediscover' | 'flow';
 
+  /** Skips in context (PLAN/16; desktop `duels::skip_context`). */
+  interface SkipContext {
+    counted: number;
+    ignored: number;
+    current: { browsing: boolean; listening: number } | null;
+  }
+
   /** How far Energy flow's measuring got (desktop `energy::energy_analysis`). */
   interface EnergyAnalysis {
     analysed: number;

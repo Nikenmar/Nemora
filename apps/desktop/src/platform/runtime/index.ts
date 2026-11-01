@@ -713,6 +713,11 @@ export class NemoraRuntime {
     return call('tier_suggestion_dismiss', { tierlistId, songId, to });
   }
 
+  /** Skips in context (PLAN/16): the last week's skips counted and ignored, and the session now. */
+  skipContext(): Promise<SkipContext> {
+    return call('skip_context');
+  }
+
   /** Energy flow's background measuring (PLAN/15 C2): starts it, stops it or only asks how far it got. */
   energyAnalysis(start?: boolean): Promise<EnergyAnalysis> {
     return call('energy_analysis', { start });

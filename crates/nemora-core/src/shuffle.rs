@@ -188,7 +188,7 @@ pub struct Signals {
     /// L2: listening evidence per song (own picks, replays, rewinds, scrub-skips, Guessr rounds).
     pub evidence: HashMap<String, f64>,
     /// L4: net faint duels per song (picked minus left) in the last 90 days.
-    pub implicit: HashMap<String, i64>,
+    pub implicit: HashMap<String, f64>,
     /// L2: the draw's seed; the same for ten minutes, so a queue and its explanations agree.
     pub seed: u64,
     /// M1: days since each song was last heard (1.x history included), and its Song Guessr rounds
@@ -436,7 +436,7 @@ pub fn parts_with(
                     _ => 0.0,
                 };
                 let implicit = if options.implicit_duels {
-                    (IMPLICIT_STEP * signals.implicit.get(id).copied().unwrap_or(0) as f64)
+                    (IMPLICIT_STEP * signals.implicit.get(id).copied().unwrap_or(0.0))
                         .clamp(-IMPLICIT_MAX, IMPLICIT_MAX)
                 } else {
                     0.0
@@ -482,10 +482,23 @@ pub fn weights_with(
     parts(inputs, targets, options).into_iter().map(|(id, p)| (id, weight_of(&p, intensity))).collect()
 }
 
-/// Skip-aware factor from a song's early skips (times in ms, oldest first): x0.5 for 14 days after
-/// the second of two early skips within 14 days, then back to 1 linearly over the next 14 days.
-pub fn skip_factor(early_skips: &[i64], now: i64) -> f64 {
-    let Some(paired) = early_skips.windows(2).rev().find(|w| w[1] - w[0] <= SKIP_PAIR_WINDOW_MS).map(|w| w[1]) else {
+/// Weighted skips this heavy within [`SKIP_PAIR_WINDOW_MS`], from at least two sessions, push a
+/// song back (PLAN/16: one bad evening proves nothing; every skip is softened by its kind).
+pub const SKIP_ENOUGH: f64 = 1.5;
+
+/// Skip-aware factor from a song's weighted skips `(when, weight, session)`, oldest first: x0.5 for
+/// 14 days after enough skips within 14 days (from two sessions or more), then back to 1 linearly
+/// over the next 14 days.
+pub fn skip_factor(skips: &[(i64, f64, usize)], now: i64) -> f64 {
+    let enough_at = |end: usize| {
+        let t = skips[end].0;
+        let window: Vec<&(i64, f64, usize)> =
+            skips[..=end].iter().filter(|(at, _, _)| t - at <= SKIP_PAIR_WINDOW_MS).collect();
+        let weight: f64 = window.iter().map(|(_, w, _)| w).sum();
+        let first = window.first().map(|s| s.2);
+        weight >= SKIP_ENOUGH - 1e-9 && window.iter().any(|s| Some(s.2) != first)
+    };
+    let Some(paired) = (0..skips.len()).rev().find(|&end| enough_at(end)).map(|end| skips[end].0) else {
         return 1.0;
     };
     let age = (now - paired).max(0);
@@ -600,9 +613,33 @@ pub fn tierlist_of(doc: &serde_json::Value) -> Tierlist {
 
 /// The last `limit` distinct songs played, newest first.
 pub fn recent_songs(db: &crate::db::Db, limit: usize) -> crate::Result<Vec<String>> {
-    let mut stmt = db.conn().prepare("SELECT song_id FROM play_events ORDER BY ended_at DESC, seq DESC LIMIT ?1")?;
+    recent_heard(db, None, limit)
+}
+
+/// [`recent_songs`] skipping plays made while browsing (PLAN/16 D4): the classified plays first,
+/// then the plays before them unclassified.
+fn recent_heard(db: &crate::db::Db, heard: Option<&Listening>, limit: usize) -> crate::Result<Vec<String>> {
     let mut out: Vec<String> = Vec::new();
-    for id in stmt.query_map([(limit * 10) as i64], |r| r.get::<_, String>(0))? {
+    let mut before = i64::MAX;
+    if let Some(l) = heard {
+        before = l.since;
+        for i in (0..l.classified.plays.len()).rev() {
+            if l.classified.contexts[i].browsing {
+                continue;
+            }
+            let id = &l.classified.plays[i].song_id;
+            if !out.contains(id) {
+                out.push(id.clone());
+                if out.len() == limit {
+                    return Ok(out);
+                }
+            }
+        }
+    }
+    let mut stmt = db
+        .conn()
+        .prepare("SELECT song_id FROM play_events WHERE ended_at < ?2 ORDER BY ended_at DESC, seq DESC LIMIT ?1")?;
+    for id in stmt.query_map(rusqlite::params![(limit * 10) as i64, before], |r| r.get::<_, String>(0))? {
         let id = id?;
         if !out.contains(&id) {
             out.push(id);
@@ -629,28 +666,94 @@ pub fn recent_songs(db: &crate::db::Db, limit: usize) -> crate::Result<Vec<Strin
 }
 
 /// Skip-aware factors (below 1 only) per song: an early skip is a "next" before 30 s or before a
-/// quarter of the song.
+/// quarter of the song, weighed in its context (PLAN/16).
 pub fn skip_factors(db: &crate::db::Db, now: i64) -> crate::Result<HashMap<String, f64>> {
-    let since = now - SKIP_PAIR_WINDOW_MS - SKIP_HOLD_MS - SKIP_RECOVER_MS;
-    let mut stmt = db.conn().prepare(
-        // By time only, so SQLite walks the recent end of `play_events_ended`; ordering by song made
-        // it scan every play through the song index (110 ms at 200 000 plays).
-        "SELECT song_id, ended_at FROM play_events
-         WHERE ended_at >= ?1 AND end_reason = 'user_next' AND (heard_ms < 30000 OR heard_ms * 4 < duration_ms)",
-    )?;
-    let mut skips: HashMap<String, Vec<i64>> = HashMap::new();
-    for row in stmt.query_map([since], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
-        let (id, at) = row?;
-        skips.entry(id).or_default().push(at);
+    Ok(skip_factors_in(&Listening::load(db, now)?, now))
+}
+
+fn skip_factors_in(listening: &Listening, now: i64) -> HashMap<String, f64> {
+    factors_of(&listening.classified.skips(skips_since(now)), now)
+}
+
+fn skips_since(now: i64) -> i64 {
+    now - SKIP_PAIR_WINDOW_MS - SKIP_HOLD_MS - SKIP_RECOVER_MS
+}
+
+fn factors_of(skips: &HashMap<String, Vec<(i64, f64, usize)>>, now: i64) -> HashMap<String, f64> {
+    skips.iter().map(|(id, skips)| (id.clone(), skip_factor(skips, now))).filter(|(_, factor)| *factor < 1.0).collect()
+}
+
+/// `YYYY-MM-DD` of a day counted from the epoch.
+fn day_string(days: i64) -> String {
+    let (y, m, d) = crate::time::civil_from_days(days);
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// The plays of the last [`HORIZON_MS`] in their context (PLAN/16), read once per [`Prepared`].
+pub struct Listening {
+    pub classified: crate::listening::Classified,
+    /// Where the classified plays start; older plays are read unclassified.
+    pub since: i64,
+}
+
+/// How far back the shuffle reads plays in their context: the longest look-back of its parts
+/// (implicit duels, 90 days).
+pub const HORIZON_MS: i64 = 90 * DAY_MS;
+
+impl Listening {
+    pub fn load(db: &crate::db::Db, now: i64) -> crate::Result<Self> {
+        let since = now - HORIZON_MS;
+        Ok(Listening { classified: crate::listening::Classified::load(db.conn(), since)?, since })
     }
-    Ok(skips
-        .into_iter()
-        .map(|(id, mut times)| {
-            times.sort_unstable();
-            (id, skip_factor(&times, now))
-        })
-        .filter(|(_, factor)| *factor < 1.0)
-        .collect())
+
+    /// The day each song was last heard, not browsed (PLAN/16 D4), as local days since the epoch:
+    /// from the classified plays. A song only browsed within the horizon reads its last real play
+    /// before it (a day with a play of 30 s or more before the horizon, or a 1.x day); every other
+    /// song, its totals (1.x included).
+    pub fn last_days(&self, db: &crate::db::Db) -> crate::Result<HashMap<String, i64>> {
+        let c = &self.classified;
+        let local = |ms: i64, offset: i64| (ms + offset * 60_000).div_euclid(DAY_MS);
+        let offset = c.plays.last().map_or(0, |p| p.utc_offset_min);
+        let horizon = crate::time::local_day(self.since, offset);
+        let mut out: HashMap<String, i64> = HashMap::with_capacity(c.plays.len());
+        let mut seen: HashSet<&str> = HashSet::with_capacity(c.plays.len());
+        for i in (0..c.plays.len()).rev() {
+            let p = &c.plays[i];
+            seen.insert(&p.song_id);
+            if !c.contexts[i].browsing && !out.contains_key(&p.song_id) {
+                out.insert(p.song_id.clone(), local(p.started_at, p.utc_offset_min));
+            }
+        }
+        let browsed: Vec<&str> = seen.iter().copied().filter(|id| !out.contains_key(*id)).collect();
+        let browsed_set: HashSet<&str> = browsed.iter().copied().collect();
+        let mut stmt = db.conn().prepare("SELECT song_id, last_day FROM song_totals WHERE last_day IS NOT NULL")?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let id = row.get_ref(0)?.as_str().map_err(rusqlite::Error::from)?;
+            if out.contains_key(id) || browsed_set.contains(id) {
+                continue;
+            }
+            if let Some(day) = crate::time::parse_day(row.get_ref(1)?.as_str().map_err(rusqlite::Error::from)?) {
+                out.insert(id.to_owned(), day);
+            }
+        }
+        if !browsed.is_empty() {
+            let list = browsed.iter().map(|id| format!("'{}'", id.replace('\'', "''"))).collect::<Vec<_>>().join(",");
+            let mut stmt = db.conn().prepare(&format!(
+                "SELECT song_id, max(day) FROM (
+                   SELECT song_id, day FROM play_daily WHERE plays > 0 AND day < ?1 AND song_id IN ({list})
+                   UNION ALL SELECT song_id, day FROM legacy_daily WHERE plays > 0 AND song_id IN ({list}))
+                 GROUP BY song_id"
+            ))?;
+            for row in stmt.query_map([&horizon], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+                let (id, day) = row?;
+                if let Some(day) = crate::time::parse_day(&day) {
+                    out.insert(id, day);
+                }
+            }
+        }
+        Ok(out)
+    }
 }
 
 pub(crate) struct StoredInputs {
@@ -682,25 +785,40 @@ pub struct Prepared {
     stored: StoredInputs,
     rotation: HashMap<String, f64>,
     evidence: HashMap<String, f64>,
-    implicit: HashMap<String, i64>,
+    implicit: HashMap<String, f64>,
     engagement_sums: Vec<(String, f64, f64, i64)>,
     last_day: HashMap<String, i64>,
     guessr: HashMap<String, (i64, i64)>,
     /// C1's plays per quarter of the day and the device's offset, read on first use: a scan of every
     /// play, which only Night shuffle needs.
     day_parts: std::sync::OnceLock<DayParts>,
+    /// The plays of the horizon in their context (PLAN/16), for Night shuffle's day parts.
+    listening: Listening,
+    /// From them, once: each song's weighted skips, when it was last heard (not browsed), the day
+    /// it was last heard, and the plays heard in the last day (for artist fatigue).
+    skips: HashMap<String, Vec<(i64, f64, usize)>>,
+    last_heard_at: HashMap<String, i64>,
+    last_days: HashMap<String, i64>,
+    heard_today: Vec<(String, i64)>,
 }
 
 /// Plays per quarter of the local day (0-6, 6-12, 12-18, 18-24), per song, and the latest play's
 /// offset from UTC in minutes.
 type DayParts = (HashMap<String, [u32; 4]>, i64);
 
-fn day_parts(db: &crate::db::Db) -> crate::Result<DayParts> {
+fn day_parts(db: &crate::db::Db, listening: &Listening) -> crate::Result<DayParts> {
     // Counted here rather than with GROUP BY: SQLite sorts every play for that (about 250 ms at
-    // 200 000 plays), a map does not.
+    // 200 000 plays), a map does not. Plays of the horizon count unless browsed (PLAN/16).
     let mut parts: HashMap<String, [u32; 4]> = HashMap::new();
-    let mut stmt = db.conn().prepare("SELECT song_id, started_at, utc_offset_min FROM play_events")?;
-    let mut rows = stmt.query([])?;
+    let c = &listening.classified;
+    for i in c.heard() {
+        let p = &c.plays[i];
+        let part = ((p.started_at / 60_000 + p.utc_offset_min).rem_euclid(1440) / 360) as usize;
+        parts.entry(p.song_id.clone()).or_insert([0; 4])[part] += 1;
+    }
+    let mut stmt =
+        db.conn().prepare("SELECT song_id, started_at, utc_offset_min FROM play_events WHERE ended_at < ?1")?;
+    let mut rows = stmt.query([listening.since])?;
     while let Some(row) = rows.next()? {
         let id = row.get_ref(0)?.as_str().map_err(rusqlite::Error::from)?;
         let minute = row.get::<_, i64>(1)? / 60_000 + row.get::<_, i64>(2)?;
@@ -754,29 +872,41 @@ pub fn prepare(db: &crate::db::Db) -> crate::Result<Prepared> {
             engagement_sums.push((id, positive, negative, at));
         }
     }
+    let listening = Listening::load(db, now)?;
     let mut implicit = HashMap::new();
-    for (picked, left, _) in crate::signals::implicit_duels(db, now - 90 * DAY_MS)? {
-        *implicit.entry(picked).or_insert(0) += 1;
-        *implicit.entry(left).or_insert(0) -= 1;
+    for (picked, left, _, weight) in crate::signals::implicit_duels_in(&listening.classified, now - 90 * DAY_MS) {
+        *implicit.entry(picked).or_insert(0.0) += weight;
+        *implicit.entry(left).or_insert(0.0) -= weight;
     }
-    // When each song was last heard, by day (`song_totals` holds 1.x's history too).
-    let mut last_day = HashMap::new();
-    let mut stmt = db.conn().prepare("SELECT song_id, last_day FROM song_totals WHERE last_day IS NOT NULL")?;
-    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
-        let (id, day) = row?;
-        if let Some(days) = crate::time::parse_day(&day) {
-            last_day.insert(id, days);
+    // When each song was last heard (not browsed), by day (`song_totals` holds 1.x's history too).
+    let last_days = listening.last_days(db)?;
+    let last_day = last_days.clone();
+    let mut stored = stored_inputs(db)?;
+    stored.recent = recent_heard(db, Some(&listening), 50)?;
+    let skips = listening.classified.skips(skips_since(now));
+    let (mut last_heard_at, mut heard_today) = (HashMap::new(), Vec::new());
+    let c = &listening.classified;
+    for i in c.heard() {
+        let p = &c.plays[i];
+        last_heard_at.insert(p.song_id.clone(), p.ended_at);
+        if p.ended_at >= now - DAY_MS {
+            heard_today.push((p.song_id.clone(), p.ended_at));
         }
     }
     Ok(Prepared {
-        stored: stored_inputs(db)?,
-        rotation: rotation(db)?,
+        stored,
+        rotation: rotation(db, &last_days)?,
         evidence,
         implicit,
         engagement_sums,
         last_day,
         guessr,
         day_parts: std::sync::OnceLock::new(),
+        listening,
+        skips,
+        last_heard_at,
+        last_days,
+        heard_today,
     })
 }
 
@@ -805,7 +935,7 @@ pub fn weights_prepared(
         .map(|(id, p)| (id, weight_of(&p, intensity)))
         .collect();
     if options.skip_aware {
-        for (id, factor) in skip_factors(db, crate::db::now_ms())? {
+        for (id, factor) in factors_of(&prepared.skips, crate::db::now_ms()) {
             if let Some(w) = out.get_mut(&id) {
                 *w = (*w * factor).max(0.001);
             }
@@ -873,7 +1003,7 @@ pub fn explain_prepared(
     options: &Options,
 ) -> crate::Result<Vec<Explanation>> {
     let stored = &prepared.stored;
-    let skips = if options.skip_aware { skip_factors(db, crate::db::now_ms())? } else { HashMap::new() };
+    let skips = if options.skip_aware { factors_of(&prepared.skips, crate::db::now_ms()) } else { HashMap::new() };
 
     // Best placement per song, by tierlist and tier name, among tierlists that influence the shuffle.
     let mut best: HashMap<String, (f64, String, String)> = HashMap::new();
@@ -908,12 +1038,7 @@ pub fn explain_prepared(
         if rated.len() > 1 { below as f64 / (rated.len() - 1) as f64 } else { 0.5 }
     };
 
-    let mut last_days: HashMap<String, String> = HashMap::new();
-    let mut stmt = db.conn().prepare("SELECT song_id, last_day FROM song_totals WHERE last_day IS NOT NULL")?;
-    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
-        let (id, day) = row?;
-        last_days.insert(id, day);
-    }
+    let last_days = &prepared.last_days;
 
     let signals = stored_signals(db, prepared, options)?;
     let mut counts: HashMap<String, (i64, i64, i64)> = HashMap::new();
@@ -937,7 +1062,7 @@ pub fn explain_prepared(
                 elo_percentile: p.elo.and(rating).map(|r| percentile(normalized_score(r))),
                 listens: p.listens,
                 full_listens: stored.full.get(&id).copied().unwrap_or(0),
-                last_day: last_days.get(&id).cloned(),
+                last_day: last_days.get(&id).map(|d| day_string(*d)),
                 freshness: p.freshness,
                 skip,
                 nudge: p.nudge,
@@ -972,29 +1097,23 @@ pub(crate) fn stored_signals(db: &crate::db::Db, prepared: &Prepared, options: &
             .collect();
     }
     if options.freshness_by_days {
-        // Three weeks is where the push back has faded to nothing. By time only, so SQLite walks the
-        // recent end of `play_events_ended`; a GROUP BY made it walk every play by song (90 ms at
-        // 200 000 plays).
-        let mut stmt = db.conn().prepare("SELECT song_id, ended_at FROM play_events WHERE ended_at >= ?1")?;
-        for row in stmt.query_map([now - 21 * DAY_MS], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
-            let (id, at) = row?;
-            let latest = signals.last_played.entry(id).or_insert(at);
-            if at > *latest {
-                *latest = at;
-            }
-        }
+        // Three weeks is where the push back has faded to nothing; plays made while browsing do
+        // not count (PLAN/16), so the classified plays of the horizon are read.
+        signals.last_played.extend(
+            prepared.last_heard_at.iter().filter(|(_, at)| **at >= now - 21 * DAY_MS).map(|(id, at)| (id.clone(), *at)),
+        );
     }
     if options.fair_rotation {
         signals.rotation = prepared.rotation.clone();
     }
     if options.artist_fatigue {
-        signals.fatigue = fatigue(db, now)?;
+        signals.fatigue = fatigue(db, &prepared.heard_today, now)?;
     }
     if options.night {
         // The part of the day it is now, at the device's offset; a song with too few plays of its
         // own reads its artist's.
         if prepared.day_parts.get().is_none() {
-            let _ = prepared.day_parts.set(day_parts(db)?);
+            let _ = prepared.day_parts.set(day_parts(db, &prepared.listening)?);
         }
         let (day_parts, offset) = prepared.day_parts.get().expect("set above");
         let part = (((now / 60_000 + offset).rem_euclid(1440)) / 360) as usize;
@@ -1039,8 +1158,9 @@ pub(crate) fn stored_signals(db: &crate::db::Db, prepared: &Prepared, options: &
 
 /// V2: inside each tier (a song's best placement in a tierlist that influences the shuffle), the
 /// songs heard longest ago lean up, to x1.5 for the one that waited longest; never heard counts as
-/// longest. Day precision, from `song_totals.last_day` (1.x history included).
-fn rotation(db: &crate::db::Db) -> crate::Result<HashMap<String, f64>> {
+/// longest. Day precision, from the days songs were last heard, not browsed (PLAN/16; 1.x history
+/// included).
+fn rotation(db: &crate::db::Db, last_day: &HashMap<String, i64>) -> crate::Result<HashMap<String, f64>> {
     let mut best: HashMap<String, (f64, usize, usize)> = HashMap::new();
     for (list, tierlist) in stored_tierlists(db)?.iter().enumerate().filter(|(_, t)| t.influences_shuffle) {
         let total = tierlist.tiers.len();
@@ -1052,12 +1172,6 @@ fn rotation(db: &crate::db::Db) -> crate::Result<HashMap<String, f64>> {
                 }
             }
         }
-    }
-    let mut last_day: HashMap<String, String> = HashMap::new();
-    let mut stmt = db.conn().prepare("SELECT song_id, last_day FROM song_totals WHERE last_day IS NOT NULL")?;
-    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
-        let (id, day) = row?;
-        last_day.insert(id, day);
     }
     let mut groups: HashMap<(usize, usize), Vec<&String>> = HashMap::new();
     for (id, (_, list, tier)) in &best {
@@ -1088,20 +1202,17 @@ fn rotation(db: &crate::db::Db) -> crate::Result<HashMap<String, f64>> {
 }
 
 /// V3: every play of an artist in the last six hours slows that artist's songs, x0.85 each, to x0.5.
-fn fatigue(db: &crate::db::Db, now: i64) -> crate::Result<HashMap<String, f64>> {
-    // The recent plays by the time index, then the artists from one read of the library: a join
+fn fatigue(db: &crate::db::Db, heard: &[(String, i64)], now: i64) -> crate::Result<HashMap<String, f64>> {
+    // The recent plays not browsed (PLAN/16), then the artists from one read of the library: a join
     // over the plays walked all of them (140 ms at 200 000 plays).
-    let recent: Vec<String> = db
-        .conn()
-        .prepare("SELECT song_id FROM play_events WHERE ended_at >= ?1")?
-        .query_map([now - FATIGUE_WINDOW_MS], |r| r.get(0))?
-        .collect::<rusqlite::Result<_>>()?;
+    let recent: Vec<&String> =
+        heard.iter().filter(|(_, at)| *at >= now - FATIGUE_WINDOW_MS).map(|(id, _)| id).collect();
     if recent.is_empty() {
         return Ok(HashMap::new());
     }
     let artists = artist_names(db)?;
     let mut plays_by_artist: HashMap<&str, u32> = HashMap::new();
-    for song in &recent {
+    for song in recent {
         for artist in artists.get(song).into_iter().flatten() {
             *plays_by_artist.entry(artist.as_str()).or_insert(0) += 1;
         }
@@ -1254,13 +1365,13 @@ pub fn steer(
             new_songs.insert(id?);
         }
     }
+    // When songs were last heard, not browsed (PLAN/16), for the filters and the modes that ask.
+    let needs_days = steering.only_unheard || steering.mode.as_deref() == Some("rediscover");
+    let last_days = if needs_days { Listening::load(db, now)?.last_days(db)? } else { HashMap::new() };
     let mut heard_lately: HashSet<String> = HashSet::new();
     if steering.only_unheard {
-        let since = crate::time::local_day(now - 30 * DAY_MS, 0);
-        let mut stmt = db.conn().prepare("SELECT song_id FROM song_totals WHERE last_day >= ?1")?;
-        for id in stmt.query_map([since], |r| r.get::<_, String>(0))? {
-            heard_lately.insert(id?);
-        }
+        let since = (now - 30 * DAY_MS).div_euclid(DAY_MS);
+        heard_lately.extend(last_days.iter().filter(|(_, day)| **day >= since).map(|(id, _)| id.clone()));
     }
     let ranked: HashSet<String> = if steering.only_ranked {
         stored_tierlists(db)?.into_iter().flat_map(|t| t.tiers.into_iter().flatten()).collect()
@@ -1276,16 +1387,15 @@ pub fn steer(
         for t in stored_tierlists(db)?.into_iter().filter(|t| t.influences_shuffle) {
             placed.extend(t.tiers.into_iter().flatten());
         }
-        let month_ago = crate::time::local_day(now - 30 * DAY_MS, 0);
-        let mut stmt = db.conn().prepare("SELECT song_id, full, last_day FROM song_totals")?;
-        for row in
-            stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, Option<String>>(2)?)))?
-        {
-            let (id, full, last_day) = row?;
+        let month_ago = (now - 30 * DAY_MS).div_euclid(DAY_MS);
+        let mut stmt = db.conn().prepare("SELECT song_id, full FROM song_totals")?;
+        for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
+            let (id, full) = row?;
+            let last_day = last_days.get(&id);
             *known.entry(id.clone()).or_insert(0) += full;
             let loved =
                 placed.contains(&id) || ratings.get(&id).is_some_and(|r| r.games >= 1 && normalized_score(r) > 0.55);
-            if loved && last_day.is_some_and(|d| d < month_ago) {
+            if loved && last_day.is_some_and(|d| *d < month_ago) {
                 loved_unheard.insert(id);
             }
         }
@@ -1366,21 +1476,37 @@ mod tests {
         assert!(!scores.contains_key("b"));
     }
 
+    struct SkipKindWeight;
+    impl SkipKindWeight {
+        const EARLY: f64 = 0.6;
+    }
+
     #[test]
     fn two_early_skips_push_a_song_back_then_it_recovers() {
         let day = DAY_MS;
         let now = 100 * day;
+        // Skips at full weight, each from its own session.
+        let full =
+            |times: &[i64]| -> Vec<(i64, f64, usize)> { times.iter().enumerate().map(|(i, t)| (*t, 1.0, i)).collect() };
         // One skip, or two far apart, change nothing.
-        assert_eq!(skip_factor(&[now - day], now), 1.0);
-        assert_eq!(skip_factor(&[now - 40 * day, now - 20 * day], now), 1.0);
+        assert_eq!(skip_factor(&full(&[now - day]), now), 1.0);
+        assert_eq!(skip_factor(&full(&[now - 40 * day, now - 20 * day]), now), 1.0);
         // Two within 14 days: x0.5 for 14 days after the second...
-        assert_eq!(skip_factor(&[now - 5 * day, now - 2 * day], now), SKIP_FACTOR);
-        assert_eq!(skip_factor(&[now - 16 * day, now - 13 * day], now), SKIP_FACTOR);
+        assert_eq!(skip_factor(&full(&[now - 5 * day, now - 2 * day]), now), SKIP_FACTOR);
+        assert_eq!(skip_factor(&full(&[now - 16 * day, now - 13 * day]), now), SKIP_FACTOR);
         // ...then halfway back after 21 days, and fully back after 28.
-        assert!((skip_factor(&[now - 24 * day, now - 21 * day], now) - 0.75).abs() < 1e-9);
-        assert_eq!(skip_factor(&[now - 31 * day, now - 28 * day], now), 1.0);
+        assert!((skip_factor(&full(&[now - 24 * day, now - 21 * day]), now) - 0.75).abs() < 1e-9);
+        assert_eq!(skip_factor(&full(&[now - 31 * day, now - 28 * day]), now), 1.0);
         // The latest pair counts.
-        assert_eq!(skip_factor(&[now - 60 * day, now - 59 * day, now - 3 * day, now - day], now), SKIP_FACTOR);
+        assert_eq!(skip_factor(&full(&[now - 60 * day, now - 59 * day, now - 3 * day, now - day]), now), SKIP_FACTOR);
+        // PLAN/16: softened skips need more of them, and one session proves nothing.
+        let early = SkipKindWeight::EARLY;
+        assert_eq!(skip_factor(&[(now - 3 * day, early, 0), (now - day, early, 1)], now), 1.0);
+        assert_eq!(
+            skip_factor(&[(now - 4 * day, early, 0), (now - 3 * day, early, 1), (now - day, early, 2)], now),
+            SKIP_FACTOR
+        );
+        assert_eq!(skip_factor(&[(now - 2 * day, 1.0, 7), (now - day, 1.0, 7)], now), 1.0);
     }
 
     fn seeded() -> crate::db::Db {
@@ -1417,14 +1543,46 @@ mod tests {
             .unwrap();
     }
 
+    /// A play with its details: `heard` of a 200 s song from `started`.
+    fn play(db: &crate::db::Db, song: &str, seq: i64, started: i64, heard: i64, end: &str, start: &str) {
+        db.conn()
+            .execute(
+                "INSERT INTO play_events (event_id, device_id, seq, song_id, started_at, ended_at, utc_offset_min, heard_ms,
+                   duration_ms, max_position_ms, end_reason)
+                 VALUES ('D:' || ?1, 'D', ?1, ?2, ?3, ?3 + ?4, 0, ?4, 200000, ?4, ?5)",
+                rusqlite::params![seq, song.repeat(26), started, heard, end],
+            )
+            .unwrap();
+        db.conn()
+            .execute(
+                "INSERT INTO play_details (event_id, start_reason) VALUES ('D:' || ?1, ?2)",
+                rusqlite::params![seq, start],
+            )
+            .unwrap();
+    }
+
+    /// An early skip of `song` ending at `ended_at`, after three songs of `a` played through: a skip
+    /// made while really listening (PLAN/16).
+    fn skip_while_listening(db: &crate::db::Db, song: &str, seq: i64, ended_at: i64, heard: i64) {
+        let start = ended_at - heard;
+        let mut t = start - 3 * 200_500;
+        for k in 0..3 {
+            play(db, "a", seq * 10 + k, t, 200_000, "finished", "auto");
+            t += 200_500;
+        }
+        play(db, song, seq * 10 + 3, start, heard, "user_next", "auto");
+    }
+
     #[test]
     fn explain_names_the_best_tier_and_the_skip_push_back() {
         let db = seeded();
         let now = crate::db::now_ms();
         let (a, b, c) = ("a".repeat(26), "b".repeat(26), "c".repeat(26));
-        // b: two early skips this week; c: two late "next"s, which are not early skips.
-        skip(&db, "b", 1, now - 3 * DAY_MS, 5_000);
-        skip(&db, "b", 2, now - DAY_MS, 20_000);
+        // b: three early skips this week, each while listening (softened, so two are not enough);
+        // c: two late "next"s, which are not early skips.
+        skip_while_listening(&db, "b", 1, now - 5 * DAY_MS, 5_000);
+        skip_while_listening(&db, "b", 2, now - 3 * DAY_MS, 20_000);
+        skip_while_listening(&db, "b", 5, now - DAY_MS, 9_000);
         skip(&db, "c", 3, now - 2 * DAY_MS, 150_000);
         skip(&db, "c", 4, now - DAY_MS, 150_000);
 
@@ -1450,6 +1608,27 @@ mod tests {
         let plain = stored_weights(&db, &targets, 0.6, &Options { skip_aware: false, ..Options::default() }).unwrap();
         assert!((weights[&b] - plain[&b] * SKIP_FACTOR).abs() < 1e-6);
         assert!((weights[&c] - plain[&c]).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_browse_changes_no_weight() {
+        let db = seeded();
+        let now = crate::db::now_ms();
+        let targets = ["a".repeat(26), "b".repeat(26), "c".repeat(26)];
+        let before = stored_weights(&db, &targets, 0.6, &Options::default()).unwrap();
+        // Flicking through b and c twelve times in two minutes, two days running.
+        for day in [2, 1] {
+            let mut t = now - day * DAY_MS;
+            for k in 0..12 {
+                let song = if k % 2 == 0 { "b" } else { "c" };
+                play(&db, song, day * 100 + k, t, 2_000, "user_selected", "user_selected");
+                t += 9_000;
+            }
+        }
+        let after = stored_weights(&db, &targets, 0.6, &Options::default()).unwrap();
+        for id in &targets {
+            assert!((before[id] - after[id]).abs() < 1e-6, "{id}: {} -> {}", before[id], after[id]);
+        }
     }
 
     #[test]
@@ -1716,7 +1895,7 @@ mod tests {
                 )
                 .unwrap();
         }
-        let r = rotation(&db).unwrap();
+        let r = rotation(&db, &Listening::load(&db, now).unwrap().last_days(&db).unwrap()).unwrap();
         assert_eq!(r[&a], 1.0);
         assert!((r[&b] - 1.25).abs() < 1e-12);
         assert!((r[&c] - ROTATION_MAX).abs() < 1e-12);
@@ -1724,7 +1903,13 @@ mod tests {
         // Two plays of X (a and c) in the last hours: X's songs x0.85^2; Y's untouched.
         skip(&db, "a", 1, now - 3_600_000, 200_000);
         skip(&db, "c", 2, now - 1_800_000, 200_000);
-        let f = fatigue(&db, now).unwrap();
+        let l = Listening::load(&db, now).unwrap();
+        let heard: Vec<(String, i64)> = l
+            .classified
+            .heard()
+            .map(|i| (l.classified.plays[i].song_id.clone(), l.classified.plays[i].ended_at))
+            .collect();
+        let f = fatigue(&db, &heard, now).unwrap();
         assert!((f[&a] - FATIGUE_STEP * FATIGUE_STEP).abs() < 1e-12);
         assert!((f[&c] - FATIGUE_STEP * FATIGUE_STEP).abs() < 1e-12);
         assert!(!f.contains_key(&b));

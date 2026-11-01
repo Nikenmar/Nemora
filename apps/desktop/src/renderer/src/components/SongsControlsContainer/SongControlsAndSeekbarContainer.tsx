@@ -1,4 +1,4 @@
-import { useCallback, useContext } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppUpdateContext } from "../../contexts/AppUpdateContext";
 import Button from "../Button";
@@ -40,6 +40,36 @@ const SongControlsAndSeekbarContainer = () => {
     updateContextMenuData,
   } = useContext(AppUpdateContext);
   const { t } = useTranslation();
+  const currentSongId = useStore(store, (state) => state.currentSongData?.songId);
+
+  // Skips in context (PLAN/16 D7): the tooltip says whether this session teaches Smart Shuffle.
+  const [sessionNote, setSessionNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isTierShuffling) {
+      setSessionNote(null);
+      return undefined;
+    }
+    let isLive = true;
+    // A moment after the song changes, so the play before it has been recorded.
+    const timer = setTimeout(() => {
+      window.api.tierlistsData
+        .skipContext()
+        .then((context) => {
+          if (!isLive) return;
+          const now = context.current;
+          setSessionNote(
+            now
+              ? t(now.browsing || now.listening === 0 ? "smartShuffle.sessionBrowsing" : "smartShuffle.sessionListening")
+              : null,
+          );
+        })
+        .catch(() => undefined);
+    }, 1500);
+    return () => {
+      isLive = false;
+      clearTimeout(timer);
+    };
+  }, [isTierShuffling, currentSongId, t]);
 
   const handleQueueShuffle = useCallback(() => {
     if (isShuffling) updateQueueData(undefined, undefined, false, false, true);
@@ -132,7 +162,7 @@ const SongControlsAndSeekbarContainer = () => {
         <div className="flex items-center justify-end gap-1.5">
           <Button
             className={`tier-shuffle-btn ${toggleLook(isTierShuffling)}`}
-            tooltipLabel={t("player.tierShuffle")}
+            tooltipLabel={sessionNote ? `${t("player.tierShuffle")} · ${sessionNote}` : t("player.tierShuffle")}
             iconName="auto_fix"
             isActive={isTierShuffling}
             clickHandler={() => toggleTierShuffle()}

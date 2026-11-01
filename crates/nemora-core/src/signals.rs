@@ -3,9 +3,15 @@
 //! play's `play_events` row; plays from before v2 have no details and count only through full
 //! listens, as they always did.
 //!
-//! The sums live in the `song_signals` cache, kept current by [`add_play`] in the transaction that
-//! records a play and rebuilt from the facts by [`rebuild`] when [`VERSION`] changes. Both sums
-//! decay with a 60-day half-life, so last month's habits weigh more than last year's.
+//! The sums live in the `song_signals` cache, rebuilt from the facts by [`rebuild`] when [`VERSION`]
+//! changes. Both sums decay with a 60-day half-life, so last month's habits weigh more than last
+//! year's.
+//!
+//! **Skips in context (PLAN/16).** A play is added only once its context is settled: four more
+//! plays in its session, or its session over ([`settle`], called by the transaction that records a
+//! play and when the app opens). A play made while browsing adds nothing; a skip's disliking is
+//! weighed by its kind and by how sure the classifier is that the user was listening; the song that
+//! ended a browse gets one own pick's worth of liking.
 
 use std::collections::HashMap;
 
@@ -13,9 +19,12 @@ use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::db::Db;
 use crate::error::Result;
+use crate::listening::{Classified, Context, REACH, SESSION_GAP_MS, SkipKind, skip_kind};
 
 /// The formula's version (`meta.song_signals_version`); a change rebuilds the cache.
-pub const VERSION: i64 = 1;
+pub const VERSION: i64 = 2;
+/// `meta` key: `started_at` of the last play added to the sums.
+const SETTLED_KEY: &str = "song_signals_settled";
 const HALF_LIFE_MS: f64 = 60.0 * 86_400_000.0;
 /// A song played again this soon after it ended is a replay.
 pub const REPLAY_WINDOW_MS: i64 = 3_600_000;
@@ -95,9 +104,29 @@ fn decayed(value: f64, at: i64, now: i64) -> f64 {
     value * 0.5f64.powf((now - at).max(0) as f64 / HALF_LIFE_MS)
 }
 
-/// Adds one recorded play to the song's signals; called in the play's own transaction.
-pub fn add_play(tx: &Connection, song_id: &str, started_at: i64, ended_at: i64, play: &Play<'_>) -> Result<()> {
-    let e = evidence(play);
+/// One play's evidence in its context (PLAN/16): nothing while browsing; disliking times the
+/// skip's kind and the listening confidence; one own pick's worth of liking for a catch.
+pub fn in_context(raw: Evidence, context: &Context, kind: Option<SkipKind>) -> Evidence {
+    if context.browsing {
+        return Evidence::default();
+    }
+    let mut e = raw;
+    let weight = match kind {
+        Some(SkipKind::Accidental) => 0.0,
+        _ if raw.scrub_skip => SkipKind::Sampled.weight(),
+        Some(k) => k.weight(),
+        None => SkipKind::Early.weight(),
+    };
+    e.negative = raw.negative * weight * context.listening;
+    e.scrub_skip = raw.scrub_skip && e.negative > 0.0;
+    if context.caught {
+        e.positive += 1.0;
+    }
+    e
+}
+
+/// Adds one play's evidence to the song's signals.
+fn add(tx: &Connection, song_id: &str, started_at: i64, ended_at: i64, e: &Evidence) -> Result<()> {
     let current: Option<(f64, f64, i64)> = tx
         .query_row("SELECT positive, negative, decayed_to FROM song_signals WHERE song_id = ?1", [song_id], |r| {
             Ok((r.get(0)?, r.get(1)?, r.get(2)?))
@@ -128,57 +157,67 @@ pub fn add_play(tx: &Connection, song_id: &str, started_at: i64, ended_at: i64, 
     Ok(())
 }
 
-/// When the song last ended, for the replay test: the cache's own record, one row by key (a query
-/// over `play_events` cost 2.4 ms for a song with thousands of plays).
-pub fn last_heard(tx: &Connection, song_id: &str) -> Result<Option<i64>> {
-    Ok(tx
-        .query_row("SELECT last_heard FROM song_signals WHERE song_id = ?1", [song_id], |r| r.get(0))
+/// Adds every play whose context is settled and was not added yet, as of `now` (the end of the
+/// latest play when called while recording one). Plays without details (before schema v2) count
+/// only through full listens, as they always did.
+pub fn settle(tx: &Connection, now: i64) -> Result<()> {
+    let marker: i64 = tx
+        .query_row("SELECT value FROM meta WHERE key = ?1", [SETTLED_KEY], |r| r.get::<_, String>(0))
         .optional()?
-        .flatten())
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(i64::MIN);
+    // A few hours before the marker: the neighbours before the first unsettled play, and the hour
+    // a replay looks back.
+    let since = if marker == i64::MIN { i64::MIN } else { marker - 3 * 3_600_000 };
+    let c = Classified::load(tx, since)?;
+    let n = c.plays.len();
+    // Where each play's session ends (one pass from the end), and each song's previous end.
+    let mut session_end = vec![n; n];
+    for i in (0..n.saturating_sub(1)).rev() {
+        session_end[i] = if c.contexts[i + 1].session == c.contexts[i].session { session_end[i + 1] } else { i + 1 };
+    }
+    let mut previous_end: HashMap<&str, i64> = HashMap::new();
+    let mut settled_to = marker;
+    for (i, p) in c.plays.iter().enumerate() {
+        let before = previous_end.insert(&p.song_id, p.ended_at);
+        if p.started_at <= marker {
+            continue;
+        }
+        let later = session_end[i] - i - 1;
+        let over = session_end[i] < n || now - p.ended_at > SESSION_GAP_MS;
+        if later < REACH && !over {
+            break;
+        }
+        settled_to = p.started_at;
+        let Some(start) = p.start_reason.as_deref() else { continue };
+        let replay_soon = before.is_some_and(|t| p.started_at >= t && p.started_at - t < REPLAY_WINDOW_MS);
+        let raw = evidence(&Play {
+            start_reason: start,
+            end_reason: &p.end_reason,
+            heard_ms: p.heard_ms,
+            duration_ms: p.duration_ms,
+            source_kind: p.source_kind.as_deref(),
+            seeks: &p.seeks,
+            replay_soon,
+        });
+        let e = in_context(raw, &c.contexts[i], skip_kind(&c.plays, i));
+        add(tx, &p.song_id, p.started_at, p.ended_at, &e)?;
+    }
+    if settled_to != marker {
+        tx.execute(
+            "INSERT INTO meta (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![SETTLED_KEY, settled_to.to_string()],
+        )?;
+    }
+    Ok(())
 }
 
 /// Rebuilds `song_signals` from the facts (plays with details, Song Guessr rounds).
 pub fn rebuild(db: &mut Db) -> Result<()> {
     let tx = db.conn_mut().transaction()?;
     tx.execute("DELETE FROM song_signals", [])?;
-    let rows: Vec<(String, String, i64, i64, String, String, i64, i64, Option<String>, Option<String>)> = {
-        let mut stmt = tx.prepare(
-            "SELECT e.event_id, e.song_id, e.started_at, e.ended_at, d.start_reason, e.end_reason, e.heard_ms,
-                    e.duration_ms, e.source_kind, d.seeks
-             FROM play_events e JOIN play_details d USING (event_id) ORDER BY e.started_at, e.seq",
-        )?;
-        stmt.query_map([], |r| {
-            Ok((
-                r.get(0)?,
-                r.get(1)?,
-                r.get(2)?,
-                r.get(3)?,
-                r.get(4)?,
-                r.get(5)?,
-                r.get(6)?,
-                r.get(7)?,
-                r.get(8)?,
-                r.get(9)?,
-            ))
-        })?
-        .collect::<rusqlite::Result<_>>()?
-    };
-    let mut last_end: HashMap<String, i64> = HashMap::new();
-    for (_event, song, started, ended, start, end, heard, duration, source, seeks) in rows {
-        let seeks: Vec<[i64; 3]> = seeks.and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
-        let replay_soon = last_end.get(&song).is_some_and(|&t| started - t < REPLAY_WINDOW_MS && started >= t);
-        let play = Play {
-            start_reason: &start,
-            end_reason: &end,
-            heard_ms: heard,
-            duration_ms: duration,
-            source_kind: source.as_deref(),
-            seeks: &seeks,
-            replay_soon,
-        };
-        add_play(&tx, &song, started, ended, &play)?;
-        last_end.insert(song, ended);
-    }
+    tx.execute("DELETE FROM meta WHERE key = ?1", [SETTLED_KEY])?;
+    settle(&tx, crate::db::now_ms())?;
     tx.execute(
         "INSERT INTO song_signals (song_id, guessed, missed, last_guessed)
          SELECT song_id, count(attempts), count(*) - count(attempts), max(at) FROM guessr_rounds WHERE true GROUP BY song_id
@@ -199,6 +238,11 @@ pub fn rebuild(db: &mut Db) -> Result<()> {
 pub fn ensure_current(db: &mut Db) -> Result<()> {
     if db.meta("song_signals_version")?.and_then(|v| v.parse::<i64>().ok()) != Some(VERSION) {
         rebuild(db)?;
+    } else {
+        // The last session's tail, settled now that it is over.
+        let tx = db.conn_mut().transaction()?;
+        settle(&tx, crate::db::now_ms())?;
+        tx.commit()?;
     }
     Ok(())
 }
@@ -225,31 +269,31 @@ pub fn engagement_of(positive: f64, negative: f64, at: i64, now: i64) -> f64 {
 }
 
 /// Faint duels from listening (PLAN/15 L4): the user left a song early and, within 30 s, picked
-/// another one: (picked, left, when). Derived from the facts, never stored, never an ELO duel.
-pub fn implicit_duels(db: &Db, since: i64) -> Result<Vec<(String, String, i64)>> {
-    let mut stmt = db.conn().prepare(
-        "SELECT e.song_id, e.ended_at, e.end_reason, e.heard_ms, e.duration_ms, d.start_reason, e.started_at
-         FROM play_events e LEFT JOIN play_details d USING (event_id)
-         WHERE e.ended_at >= ?1 ORDER BY e.started_at, e.seq",
-    )?;
-    let rows: Vec<(String, i64, String, i64, i64, Option<String>, i64)> = stmt
-        .query_map([since], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)))?
-        .collect::<rusqlite::Result<_>>()?;
+/// another one: (picked, left, when, weight). Derived from the facts, never stored, never an ELO
+/// duel. Weighed like the skip it starts with (PLAN/16): nothing while browsing or by accident.
+pub fn implicit_duels(db: &Db, since: i64) -> Result<Vec<(String, String, i64, f64)>> {
+    Ok(implicit_duels_in(&Classified::load(db.conn(), since - 3 * 3_600_000)?, since))
+}
+
+/// [`implicit_duels`] from plays already classified.
+pub fn implicit_duels_in(c: &Classified, since: i64) -> Vec<(String, String, i64, f64)> {
     let mut out = Vec::new();
-    for pair in rows.windows(2) {
-        let (left, ended, end_reason, heard, duration, _, _) = &pair[0];
-        let (picked, _, _, _, _, start_reason, started) = &pair[1];
-        let early = *heard < 30_000 || (*duration > 0 && *heard * 4 < *duration);
-        if (end_reason == "user_next" || end_reason == "user_selected")
-            && early
-            && start_reason.as_deref() == Some("user_selected")
-            && (0..=30_000).contains(&(started - ended))
-            && left != picked
+    for i in 0..c.plays.len().saturating_sub(1) {
+        let (left, picked) = (&c.plays[i], &c.plays[i + 1]);
+        if left.ended_at < since
+            || !left.left_early()
+            || picked.start_reason.as_deref() != Some("user_selected")
+            || !(0..=30_000).contains(&(picked.started_at - left.ended_at))
+            || left.song_id == picked.song_id
         {
-            out.push((picked.clone(), left.clone(), *started));
+            continue;
+        }
+        let weight = crate::listening::skip_weight(&c.plays, &c.contexts, i);
+        if weight > 0.0 {
+            out.push((picked.song_id.clone(), left.song_id.clone(), picked.started_at, weight));
         }
     }
-    Ok(out)
+    out
 }
 
 #[cfg(test)]
@@ -316,6 +360,10 @@ mod tests {
             .unwrap();
         // Again within the hour: a replay.
         record_with(&mut db, &session(now - 6_900_000, EndReason::UserNext, 10_000), StartReason::Auto).unwrap();
+        // Both settle once their session is over (PLAN/16), as when the app opens.
+        let tx = db.conn_mut().transaction().unwrap();
+        settle(&tx, now).unwrap();
+        tx.commit().unwrap();
         let kept: (f64, f64, i64, i64) = db
             .conn()
             .query_row(
@@ -325,7 +373,8 @@ mod tests {
             )
             .unwrap();
         assert_eq!((kept.2, kept.3), (1, 1));
-        assert!(kept.0 > 2.9 && kept.1 > 0.9);
+        // The early next is softened by its kind and by how sure the user was listening.
+        assert!(kept.0 > 2.9 && kept.1 > 0.1 && kept.1 < 0.6, "{kept:?}");
         rebuild(&mut db).unwrap();
         let rebuilt: (f64, f64, i64, i64) = db
             .conn()

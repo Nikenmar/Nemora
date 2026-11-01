@@ -289,6 +289,38 @@ fn where_the_weights_go() {
     t("skip factors", &mut || {
         shuffle::skip_factors(&db, crate::db::now_ms()).unwrap();
     });
+    let now = crate::db::now_ms();
+    t("listening: load", &mut || {
+        crate::listening::load(db.conn(), now - shuffle::HORIZON_MS).unwrap();
+    });
+    let plays = crate::listening::load(db.conn(), now - shuffle::HORIZON_MS).unwrap();
+    eprintln!("PART listening: {} plays in the horizon", plays.len());
+    t("listening: classify", &mut || {
+        crate::listening::classify(&plays);
+    });
+    let listening = shuffle::Listening::load(&db, now).unwrap();
+    t("listening: last days", &mut || {
+        listening.last_days(&db).unwrap();
+    });
+    t("prepare", &mut || {
+        shuffle::prepare(&db).unwrap();
+    });
+    let prepared = shuffle::prepare(&db).unwrap();
+    for (label, options) in [
+        ("weights prepared: classic", shuffle::Options::CLASSIC),
+        ("weights prepared: default", shuffle::Options::default()),
+        ("weights prepared: no skip-aware", shuffle::Options { skip_aware: false, ..shuffle::Options::default() }),
+        (
+            "weights prepared: no freshness by days",
+            shuffle::Options { freshness_by_days: false, ..shuffle::Options::default() },
+        ),
+        ("weights prepared: no adaptive", shuffle::Options { adaptive: false, ..shuffle::Options::default() }),
+        ("weights prepared: no learn", shuffle::Options { learn: false, ..shuffle::Options::default() }),
+    ] {
+        t(label, &mut || {
+            shuffle::weights_prepared(&db, &prepared, &[], 0.6, &options).unwrap();
+        });
+    }
     t("all", &mut || {
         shuffle::stored_weights(&db, &[], 0.6, &shuffle::Options::default()).unwrap();
     });
