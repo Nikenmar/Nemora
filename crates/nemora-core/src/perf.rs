@@ -305,6 +305,34 @@ fn where_the_weights_go() {
     t("prepare", &mut || {
         shuffle::prepare(&db).unwrap();
     });
+    // The taste map (PLAN/17): its parts, a fresh layout, a rebuild from it, and a read's annotation.
+    let clock = std::time::Instant::now();
+    let inputs = crate::tastemap::stored_inputs(&db).unwrap();
+    eprintln!("PART taste map: inputs {:.0} ms ({} plays)", clock.elapsed().as_secs_f64() * 1000.0, inputs.plays.len());
+    let clock = std::time::Instant::now();
+    let linked = crate::tastemap::links(&inputs);
+    eprintln!("PART taste map: links {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
+    let plain = crate::tastemap::plain(&linked);
+    let clock = std::time::Instant::now();
+    crate::tastemap::layout(&inputs.songs, &plain, None);
+    eprintln!("PART taste map: layout {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
+    let clock = std::time::Instant::now();
+    crate::tastemap::communities(inputs.songs.len(), &crate::tastemap::edges_of(&inputs.songs, &plain));
+    eprintln!("PART taste map: communities {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
+    let started = std::time::Instant::now();
+    let map = crate::tastemap::build(&db, None, true).unwrap();
+    eprintln!("PART taste map: fresh build {:.0} ms", started.elapsed().as_secs_f64() * 1000.0);
+    let mut stale = map.clone();
+    stale.hash = String::new();
+    let started = std::time::Instant::now();
+    crate::tastemap::build(&db, Some(&stale), false).unwrap();
+    eprintln!("PART taste map: rebuild from the last {:.0} ms", started.elapsed().as_secs_f64() * 1000.0);
+    let weights = shuffle::stored_weights(&db, &[], 0.6, &shuffle::Options::default()).unwrap();
+    t("taste map: annotate", &mut || {
+        let mut m = map.clone();
+        crate::tastemap::annotate(&db, &mut m, &weights).unwrap();
+    });
+    eprintln!("PART taste map: {} islands", map.islands.len());
     let prepared = shuffle::prepare(&db).unwrap();
     for (label, options) in [
         ("weights prepared: classic", shuffle::Options::CLASSIC),

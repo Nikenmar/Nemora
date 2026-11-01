@@ -323,6 +323,21 @@ pub fn summary(db: &crate::db::Db, now: i64) -> Result<(usize, usize)> {
     Ok((counted, ignored))
 }
 
+/// The songs heard (not browsed) in the session going on now, oldest first; empty when none is
+/// going on. For the taste map's trail (PLAN/17).
+pub fn session(db: &crate::db::Db, now: i64) -> Result<Vec<String>> {
+    let c = Classified::load(db.conn(), now - 6 * 3_600_000)?;
+    let (Some(last), Some(ctx)) = (c.plays.last(), c.contexts.last()) else { return Ok(Vec::new()) };
+    if now - last.ended_at > SESSION_GAP_MS {
+        return Ok(Vec::new());
+    }
+    let session = ctx.session;
+    Ok((0..c.plays.len())
+        .filter(|&i| c.contexts[i].session == session && !c.contexts[i].browsing)
+        .map(|i| c.plays[i].song_id.clone())
+        .collect())
+}
+
 /// The listening confidence of the session going on now (its last play ended less than a session
 /// gap ago), None when no session is going on; for the Smart Shuffle button's tooltip.
 pub fn current(db: &crate::db::Db, now: i64) -> Result<Option<Context>> {

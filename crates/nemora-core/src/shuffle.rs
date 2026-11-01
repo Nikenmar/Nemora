@@ -1313,6 +1313,9 @@ pub struct Steering {
     pub mode: Option<String>,
     /// S2: lean to this tierlist (its id) and its songs' map neighbours.
     pub lens: Option<String>,
+    /// PLAN/17: lean to these songs (an island or a selection on the taste map) and their
+    /// neighbours, like a tierlist lens.
+    pub lens_songs: Vec<String>,
 }
 
 /// S1 Comfort: unplaced songs with no evidence at all are pushed back this much.
@@ -1409,9 +1412,10 @@ pub fn steer(
         && let Some((_, doc)) = crate::playlists::tierlists(db)?.into_iter().find(|(id, _)| id == lens)
     {
         lens_songs.extend(tierlist_of(&doc).tiers.into_iter().flatten());
-        for id in &lens_songs {
-            lens_near.extend(neighbours(id));
-        }
+    }
+    lens_songs.extend(steering.lens_songs.iter().cloned());
+    for id in &lens_songs {
+        lens_near.extend(neighbours(id));
     }
 
     for (id, weight) in weights.iter_mut() {
