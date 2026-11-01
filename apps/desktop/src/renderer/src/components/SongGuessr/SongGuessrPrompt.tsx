@@ -23,6 +23,7 @@ import SongGuessrPoolSelector, { type SongGuessrPoolSelection } from './SongGues
 import SongGuessrResult from './SongGuessrResult';
 import SongGuessrStatsPanel from './SongGuessrStatsPanel';
 import Button from '../Button';
+import Checkbox from '../Checkbox';
 import Icon from '../ui/Icon';
 import { GameHeader } from '../ui/GameWindow';
 
@@ -124,6 +125,16 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
         // needs a decode, so it runs alongside the round instead of delaying it.
         setIsAnalyzing(true);
         void getTrackStartOffset(nextRound.answer.songId, nextRound.answer.path)
+          .then(async (offset) => {
+            // PLAN/15 G2: from the song's favourite moment, when asked and it has one.
+            if (persistedStateRef.current.fromMoment) {
+              const moments = await window.api.songGuessr
+                .getMoments(nextRound.answer.songId)
+                .catch(() => [] as [number, number][]);
+              if (moments.length > 0) return Math.max(offset, moments[0][0] / 1000);
+            }
+            return offset;
+          })
           .then((offset) => {
             if (requestId !== requestIdRef.current) return;
             setStartOffset(offset);
@@ -371,6 +382,18 @@ const SongGuessrPrompt = ({ onClose, onMinimize }: SongGuessrPromptProps) => {
           disabled={phase === 'loading'}
           onChange={changePool}
         />
+        <div className="-mt-3 mb-4">
+          <Checkbox
+            id="songGuessrFromMoment"
+            isChecked={!!persistedState.fromMoment}
+            checkedStateUpdateFunction={(state) => {
+              const nextState = { ...persistedStateRef.current, fromMoment: state };
+              updatePersistedState(nextState);
+              saveSongGuessrState(nextState);
+            }}
+            labelContent={t('songGuessr.fromMoment')}
+          />
+        </div>
 
         {phase === 'loading' && (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">

@@ -155,6 +155,7 @@ pub fn run() {
             guessr::guessr_pools,
             guessr::guessr_round,
             guessr::guessr_record,
+            guessr::song_moments,
             guessr::guessr_search,
             tags_cmd::artist_duplicates,
             tags_cmd::artist_resolve_duplicates,

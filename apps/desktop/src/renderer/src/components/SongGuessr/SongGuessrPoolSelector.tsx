@@ -16,7 +16,7 @@ type SongGuessrPoolSelectorProps = {
   onChange: (selection: SongGuessrPoolSelection) => void;
 };
 
-const TARGETED_POOL_TYPES: Exclude<SongGuessrPoolType, 'library'>[] = [
+const TARGETED_POOL_TYPES: Exclude<SongGuessrPoolType, 'library' | 'unsure'>[] = [
   'artist',
   'album',
   'playlist',
@@ -55,13 +55,19 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
         : []),
       ...(poolsByType.get('genre')?.length
         ? [{ value: 'genre', label: t('songGuessr.modeGenre') }]
+        : []),
+      // PLAN/15 G1: songs Smart Shuffle is least sure about; each round teaches it.
+      ...(pools.some((pool) => pool.type === 'unsure')
+        ? [{ value: 'unsure', label: t('songGuessr.modeUnsure') }]
         : [])
     ],
-    [poolsByType, t]
+    [pools, poolsByType, t]
   );
 
   const targetPools =
-    selection.poolType === 'library' ? [] : (poolsByType.get(selection.poolType) ?? []);
+    selection.poolType === 'library' || selection.poolType === 'unsure'
+      ? []
+      : (poolsByType.get(selection.poolType) ?? []);
   const availableTargetOptions = targetPools.map((pool) => ({
     value: pool.id ?? '',
     label: t('songGuessr.poolWithCount', { name: pool.name, count: pool.count })
@@ -94,7 +100,7 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
   };
 
   const changeMode = (poolType: SongGuessrPoolType) => {
-    if (poolType === 'library') {
+    if (poolType === 'library' || poolType === 'unsure') {
       onChange({ poolType });
       return;
     }
@@ -124,7 +130,7 @@ const SongGuessrPoolSelector = (props: SongGuessrPoolSelectorProps) => {
         />
       </label>
 
-      {selection.poolType !== 'library' && (
+      {selection.poolType !== 'library' && selection.poolType !== 'unsure' && (
         <label className="flex min-w-40 flex-[1.6] flex-col gap-1.5">
           <span className={FIELD_LABEL}>
             {selection.poolType === 'artist'

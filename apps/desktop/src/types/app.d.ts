@@ -882,6 +882,8 @@ declare global {
     /** V2, V3: the rotation and fatigue factors, 1 when off. */
     rotation: number;
     fatigue: number;
+    /** M1: the forgotten-favourite lift, 1 when none. */
+    memory: number;
     /** L2: how sure the model is (null when off), and how far this queue's draw strayed. */
     confidence: number | null;
     explored: number;

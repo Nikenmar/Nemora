@@ -17,7 +17,7 @@ interface SongGuessrEntry {
 }
 
 /** Where the answers are drawn from. */
-type SongGuessrPoolType = 'library' | 'playlist' | 'genre' | 'artist' | 'album';
+type SongGuessrPoolType = 'library' | 'playlist' | 'genre' | 'artist' | 'album' | 'unsure';
 
 interface SongGuessrPoolOption {
   type: SongGuessrPoolType;
@@ -111,4 +111,6 @@ interface SongGuessrPersistedState {
   poolId?: string;
   /** answers already used, newest first — keeps rounds from repeating */
   recentSongIds: string[];
+  /** Start each song at its favourite moment when it has one (PLAN/15 G2). */
+  fromMoment?: boolean;
 }

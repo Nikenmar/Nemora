@@ -10,6 +10,7 @@ export const songGuessr = {
   ): Promise<SongGuessrSearchResult> =>
     getRuntime().searchSongGuessrCandidates(query, limit, offset),
   getPools: async (): Promise<SongGuessrPoolOption[]> => getRuntime().getSongGuessrPools(),
+  getMoments: async (songId: string): Promise<[number, number][]> => getRuntime().getSongMoments(songId),
   recordRound: async (songId: string, attempts: number | null, poolKind?: string): Promise<void> =>
     getRuntime().recordSongGuessrRound(songId, attempts, poolKind)
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isMotionReduced } from '../../other/viewTransition';
 import calculateTime from '../../utils/calculateTime';
 import SeekBarSlider from '../SeekBarSlider';
@@ -13,6 +13,22 @@ const SeekBarContainer = () => {
   // The time under the pointer while it is over the bar (PLAN/14 A17).
   const [hover, setHover] = useState<{ x: number; seconds: number } | null>(null);
   const hoverTime = hover ? calculateTime(hover.seconds) : null;
+
+  // Favourite moments (PLAN/15 M2): where the user keeps coming back to in this song.
+  const showMoments = !!preferences?.isFavouriteMomentsEnabled;
+  const [moments, setMoments] = useState<[number, number][]>([]);
+  useEffect(() => {
+    setMoments([]);
+    if (!showMoments || !currentSongData.songId) return undefined;
+    let current = true;
+    window.api.songGuessr
+      .getMoments(currentSongData.songId)
+      .then((found) => current && setMoments(found.slice(0, 5)))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [showMoments, currentSongData.songId]);
 
   const currentSongPosition = calculateTime(songPos);
   const songDuration = preferences?.showSongRemainingTime
@@ -44,6 +60,18 @@ const SeekBarContainer = () => {
             style={{ left: hover.x }}
           >
             {hoverTime.minutes}:{hoverTime.seconds}
+          </span>
+        )}
+        {moments.length > 0 && currentSongData.duration > 0 && (
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 z-[1] h-0">
+            {moments.map(([at, times]) => (
+              <span
+                key={at}
+                title={String(times)}
+                className="absolute -top-[5px] h-[10px] w-[2px] -translate-x-1/2 rounded-full bg-echo/80"
+                style={{ left: `${Math.min(100, (at / 1000 / currentSongData.duration) * 100)}%` }}
+              />
+            ))}
           </span>
         )}
         <SeekBarSlider

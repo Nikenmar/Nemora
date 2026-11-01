@@ -124,12 +124,27 @@ pub fn guessr_pools(app: State<'_, App>) -> Res<Vec<Value>> {
     let index = index(&app)?;
     let db = app.read();
     let mut pools = vec![json!({ "type": "library", "name": "library", "count": index.entries.len() })];
+    // PLAN/15 G1: the songs Smart Shuffle is least sure about.
+    let unsure = nemora_core::suggest::unsure_songs(&db, UNSURE_POOL).map_err(fail)?;
+    if unsure.len() >= MINIMUM_POOL {
+        pools.push(json!({ "type": "unsure", "name": "unsure", "count": unsure.len() }));
+    }
     for kind in ["playlist", "genre", "artist", "album"] {
         for (id, name, songs) in pools_of(&db, &index, kind).map_err(fail)? {
             pools.push(json!({ "type": kind, "id": id, "name": name, "count": songs.len() }));
         }
     }
     Ok(pools)
+}
+
+/// How many of the songs Smart Shuffle is least sure about make the "unsure" pool.
+const UNSURE_POOL: usize = 150;
+
+/// A song's favourite moments (PLAN/15 M2, G2): `[position_ms, times]`, the most visited first.
+#[tauri::command]
+pub async fn song_moments(app: State<'_, App>, song_id: String) -> Res<Vec<(i64, i64)>> {
+    let song = crate::view::parse_view_id(&song_id).0.to_owned();
+    nemora_core::plays::moments(&app.read(), &song).map_err(fail)
 }
 
 /// Remembers a finished round about one song (PLAN/15 D2): `attempts` is the attempt that found
@@ -151,6 +166,11 @@ pub fn guessr_round(app: State<'_, App>, options: Value) -> Res<Value> {
     let kind = options["poolType"].as_str().unwrap_or("");
     let pool: Vec<&Entry> = match kind {
         "library" => index.entries.iter().collect(),
+        "unsure" => {
+            let songs: HashSet<String> =
+                nemora_core::suggest::unsure_songs(&app.read(), UNSURE_POOL).map_err(fail)?.into_iter().collect();
+            index.entries.iter().filter(|e| songs.contains(&e.row.song_id)).collect()
+        }
         "playlist" | "genre" | "artist" | "album" => {
             let Some(id) = options["poolId"].as_str() else { return Ok(Value::Null) };
             let db = app.read();

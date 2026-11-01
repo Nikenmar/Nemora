@@ -24,6 +24,27 @@ pub const SUGGEST_MIN_GAMES: i64 = 5;
 pub const SUGGEST_MIN_NEIGHBOURS: usize = 3;
 const DISMISSED: &str = "tierSuggestions.dismissed";
 
+/// G1: songs Smart Shuffle is least sure about, among the top half of its scores: the pool of Song
+/// Guessr's "unsure" mode, least known first.
+pub fn unsure_songs(db: &Db, limit: usize) -> Result<Vec<String>> {
+    let ratings = elo::ratings(db)?;
+    let scores = crate::shuffle::stored_weights(db, &[], 1.0, &crate::shuffle::Options::CLASSIC)?;
+    let mut ranked: Vec<(&String, f64)> = scores.iter().map(|(id, w)| (id, *w)).collect();
+    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+    ranked.truncate(ranked.len().div_ceil(2));
+    let full: HashMap<String, i64> = db
+        .conn()
+        .prepare("SELECT song_id, full FROM song_totals")?
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut least: Vec<(&String, i64)> = ranked
+        .iter()
+        .map(|(id, _)| (*id, ratings.get(*id).map_or(0, |r| r.games) + full.get(*id).copied().unwrap_or(0)))
+        .collect();
+    least.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(b.0)));
+    Ok(least.into_iter().take(limit).map(|(id, _)| id.clone()).collect())
+}
+
 /// A song Smart Shuffle would like a duel about (T1): high in its scores, least known.
 pub fn teaching_anchor(db: &Db, random: &mut elo::Random<'_>) -> Result<Option<String>> {
     let ratings = elo::ratings(db)?;

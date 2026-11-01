@@ -1012,7 +1012,9 @@
     "tryAgain": "Try again",
     "unavailablePool": "No longer available",
     "winPercentage": "Win rate",
-    "wrongGuess": "Wrong guess"
+    "wrongGuess": "Wrong guess",
+    "modeUnsure": "Songs Smart Shuffle is unsure about",
+    "fromMoment": "Start at a favourite moment"
   },
   "renamePlaylistPrompt": {
     "renamePlaylistWithName": "Rename `{{name}}` playlist",
@@ -1391,7 +1393,8 @@
       "scrubbed": "Scrubbed through and skipped lately, so later",
       "rotation": "Its turn in its tier: the longest waiting",
       "fatigue": "Its artist played a lot tonight, so later",
-      "exploring": "Little known yet, so given a chance"
+      "exploring": "Little known yet, so given a chance",
+      "forgotten": "A favourite you have not heard in a long while"
     },
     "whyThisSong": "Why this song?",
     "whyTitle": "Why {{title}} is here",

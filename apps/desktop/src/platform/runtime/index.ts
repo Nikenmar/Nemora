@@ -761,6 +761,11 @@ export class NemoraRuntime {
     return call('guessr_pools');
   }
 
+  /** A song's favourite moments (PLAN/15 M2, G2): [position ms, times], most visited first. */
+  getSongMoments(songId: string): Promise<[number, number][]> {
+    return call('song_moments', { songId });
+  }
+
   /** One finished round about one song, for Smart Shuffle's memory (PLAN/15 D2). */
   recordSongGuessrRound(songId: string, attempts: number | null, poolKind?: string): Promise<void> {
     return call('guessr_record', { songId, attempts, poolKind });

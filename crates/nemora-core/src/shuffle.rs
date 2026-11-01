@@ -86,6 +86,8 @@ pub struct Parts {
     pub rotation: f64,
     /// V3: below 1 after several plays of its artist tonight, 1 otherwise or when off.
     pub fatigue: f64,
+    /// M1: up to 1.6 for a loved song not heard for long or missed in Song Guessr, 1 otherwise.
+    pub memory: f64,
     /// How listening engages with the song (PLAN/15 L1), 0..1 around 0.5; None unless learning is on.
     pub engagement: Option<f64>,
     /// What the tierlist nudge added to the score (PLAN/15 F1), 0 when none.
@@ -184,6 +186,28 @@ pub struct Signals {
     pub implicit: HashMap<String, i64>,
     /// L2: the draw's seed; the same for ten minutes, so a queue and its explanations agree.
     pub seed: u64,
+    /// M1: days since each song was last heard (1.x history included), and its Song Guessr rounds
+    /// (found, missed).
+    pub days_unheard: HashMap<String, f64>,
+    pub guessr: HashMap<String, (i64, i64)>,
+}
+
+/// M1: a loved song unheard for this many days starts coming back...
+pub const FORGOTTEN_AFTER_DAYS: f64 = 60.0;
+/// ...reaching the full lift this many days later; and the most the lift reaches.
+pub const FORGOTTEN_RAMP_DAYS: f64 = 120.0;
+pub const FORGOTTEN_MAX: f64 = 1.6;
+
+/// M1: the lift of a song that is loved (`loved`), by how long it went unheard and how often it was
+/// missed in Song Guessr. Recognition is not liking: a miss only ever lifts, and only a loved song.
+pub fn memory_factor(loved: bool, days_unheard: Option<f64>, guessr: (i64, i64)) -> f64 {
+    if !loved {
+        return 1.0;
+    }
+    let unheard = days_unheard.map_or(0.0, |d| ((d - FORGOTTEN_AFTER_DAYS) / FORGOTTEN_RAMP_DAYS).clamp(0.0, 1.0));
+    let (found, missed) = guessr;
+    let forgotten = if missed > found { (0.5 * (missed - found) as f64).min(1.0) } else { 0.0 };
+    1.0 + (FORGOTTEN_MAX - 1.0) * unheard.max(forgotten)
 }
 
 /// L2: a draw strays at most this far from a song's mean score, and this is its spread when
@@ -335,6 +359,19 @@ pub fn parts_with(
             freshness: freshness(id),
             rotation: if options.fair_rotation { signals.rotation.get(id).copied().unwrap_or(1.0) } else { 1.0 },
             fatigue: if options.artist_fatigue { signals.fatigue.get(id).copied().unwrap_or(1.0) } else { 1.0 },
+            memory: if options.forgotten_favourites {
+                // Loved: placed in a tierlist, rated above neutral in duels, or listened to gladly.
+                let loved = t > 0.0
+                    || inputs.ratings.get(id).is_some_and(|r| r.games >= 1 && normalized_score(r) > 0.55)
+                    || engagement.is_some_and(|g| g > 0.6);
+                memory_factor(
+                    loved,
+                    signals.days_unheard.get(id).copied(),
+                    signals.guessr.get(id).copied().unwrap_or((0, 0)),
+                )
+            } else {
+                1.0
+            },
             nudge: 0.0,
             confidence: None,
             explored: 0.0,
@@ -406,7 +443,7 @@ pub fn parts_with(
 /// The weight of a song with these parts at this intensity, in [0.001 .. 1].
 pub fn weight_of(parts: &Parts, intensity: f64) -> f64 {
     let blend = intensity.clamp(0.0, 1.0);
-    (1.0 - blend + blend * parts.score).max(0.001) * parts.freshness * parts.rotation * parts.fatigue
+    (1.0 - blend + blend * parts.score).max(0.001) * parts.freshness * parts.rotation * parts.fatigue * parts.memory
 }
 
 /// Weight per target song (all songs when `targets` is empty), in [0.001 .. 1], by 3.0's model.
@@ -626,6 +663,8 @@ pub struct Prepared {
     evidence: HashMap<String, f64>,
     implicit: HashMap<String, i64>,
     engagement_sums: Vec<(String, f64, f64, i64)>,
+    last_day: HashMap<String, i64>,
+    guessr: HashMap<String, (i64, i64)>,
 }
 
 /// Reads [`Prepared`] (about 50 ms at 20 000 songs and 200 000 plays).
@@ -634,13 +673,26 @@ pub fn prepare(db: &crate::db::Db) -> crate::Result<Prepared> {
     let mut evidence = HashMap::new();
     let mut engagement_sums = Vec::new();
     let mut stmt = db.conn().prepare(
-        "SELECT song_id, own_picks + replays + rewinds + scrub_skips + guessed + missed, positive, negative, decayed_to
+        "SELECT song_id, own_picks + replays + rewinds + scrub_skips + guessed + missed, positive, negative, decayed_to,
+                guessed, missed
          FROM song_signals",
     )?;
+    let mut guessr = HashMap::new();
     for row in stmt.query_map([], |r| {
-        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, f64>(2)?, r.get::<_, f64>(3)?, r.get::<_, i64>(4)?))
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, i64>(1)?,
+            r.get::<_, f64>(2)?,
+            r.get::<_, f64>(3)?,
+            r.get::<_, i64>(4)?,
+            r.get::<_, i64>(5)?,
+            r.get::<_, i64>(6)?,
+        ))
     })? {
-        let (id, n, positive, negative, at) = row?;
+        let (id, n, positive, negative, at, found, missed) = row?;
+        if found + missed > 0 {
+            guessr.insert(id.clone(), (found, missed));
+        }
         if n > 0 {
             evidence.insert(id.clone(), n as f64);
         }
@@ -653,7 +705,24 @@ pub fn prepare(db: &crate::db::Db) -> crate::Result<Prepared> {
         *implicit.entry(picked).or_insert(0) += 1;
         *implicit.entry(left).or_insert(0) -= 1;
     }
-    Ok(Prepared { stored: stored_inputs(db)?, rotation: rotation(db)?, evidence, implicit, engagement_sums })
+    // When each song was last heard, by day (`song_totals` holds 1.x's history too).
+    let mut last_day = HashMap::new();
+    let mut stmt = db.conn().prepare("SELECT song_id, last_day FROM song_totals WHERE last_day IS NOT NULL")?;
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+        let (id, day) = row?;
+        if let Some(days) = crate::time::parse_day(&day) {
+            last_day.insert(id, days);
+        }
+    }
+    Ok(Prepared {
+        stored: stored_inputs(db)?,
+        rotation: rotation(db)?,
+        evidence,
+        implicit,
+        engagement_sums,
+        last_day,
+        guessr,
+    })
 }
 
 /// Shuffle weights for `targets` from the database; `skip_aware` applies the early-skip factors.
@@ -715,6 +784,8 @@ pub struct Explanation {
     /// V2, V3: the rotation and fatigue factors, 1 when off.
     pub rotation: f64,
     pub fatigue: f64,
+    /// M1: the forgotten-favourite lift, 1 when none.
+    pub memory: f64,
     /// L2: how sure the model is, and how far this queue's draw strayed from the mean.
     pub confidence: Option<f64>,
     pub explored: f64,
@@ -815,6 +886,7 @@ pub fn explain_prepared(
                 nudge: p.nudge,
                 rotation: p.rotation,
                 fatigue: p.fatigue,
+                memory: p.memory,
                 confidence: p.confidence,
                 explored: p.explored,
                 engagement: p.engagement,
@@ -859,6 +931,12 @@ pub(crate) fn stored_signals(db: &crate::db::Db, prepared: &Prepared, options: &
     }
     if options.artist_fatigue {
         signals.fatigue = fatigue(db, now)?;
+    }
+    if options.forgotten_favourites {
+        let today = now.div_euclid(DAY_MS);
+        signals.days_unheard =
+            prepared.last_day.iter().map(|(id, day)| (id.clone(), (today - day).max(0) as f64)).collect();
+        signals.guessr = prepared.guessr.clone();
     }
     if options.adaptive {
         signals.seed = (now / DRAW_WINDOW_MS) as u64;
@@ -1392,6 +1470,26 @@ mod tests {
             .sum::<f64>()
             / 200.0;
         assert!(mean > classic["dueled"].score + 0.02, "{mean} vs {}", classic["dueled"].score);
+    }
+
+    #[test]
+    fn a_forgotten_favourite_comes_back_and_a_missed_guess_never_lowers() {
+        // Not loved: nothing, however long unheard or missed.
+        assert_eq!(memory_factor(false, Some(400.0), (0, 5)), 1.0);
+        // Loved: nothing before 60 days, half way at 120, all of it from 180.
+        assert_eq!(memory_factor(true, Some(30.0), (0, 0)), 1.0);
+        assert!((memory_factor(true, Some(120.0), (0, 0)) - 1.3).abs() < 1e-12);
+        assert!((memory_factor(true, Some(400.0), (0, 0)) - FORGOTTEN_MAX).abs() < 1e-12);
+        // Never heard is not forgotten.
+        assert_eq!(memory_factor(true, None, (0, 0)), 1.0);
+        // Missed in Song Guessr more than found: up; found as often: nothing; never below 1.
+        assert!((memory_factor(true, Some(10.0), (0, 2)) - FORGOTTEN_MAX).abs() < 1e-12);
+        assert_eq!(memory_factor(true, Some(10.0), (2, 2)), 1.0);
+        for found in 0..5 {
+            for missed in 0..5 {
+                assert!(memory_factor(true, Some(10.0), (found, missed)) >= 1.0);
+            }
+        }
     }
 
     #[test]

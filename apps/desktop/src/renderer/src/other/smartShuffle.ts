@@ -200,6 +200,7 @@ export type ReasonKey =
   | 'rotation'
   | 'fatigue'
   | 'exploring'
+  | 'forgotten'
   | 'plain';
 export type Reason = { key: ReasonKey; values?: Record<string, string | number>; strength: number };
 
@@ -244,6 +245,8 @@ export function reasonsOf(e: ShuffleExplanation): Reason[] {
   // The adaptive model gave a little-known song a chance this time (PLAN/15 L2).
   if (e.confidence !== null && e.confidence < 0.5 && e.explored > 0.05)
     reasons.push({ key: 'exploring', strength: 0.15 });
+  // A loved song not heard for long, or missed in Song Guessr (PLAN/15 M1).
+  if (e.memory > 1.1) reasons.push({ key: 'forgotten', strength: 0.35 });
   // Variety (PLAN/15 V2, V3).
   if (e.rotation >= 1.3) reasons.push({ key: 'rotation', strength: 0.2 });
   if (e.fatigue < 0.8) reasons.push({ key: 'fatigue', strength: 1.1 });

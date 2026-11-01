@@ -12,7 +12,7 @@ const isNonNegativeInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 const isPoolType = (value: unknown): value is SongGuessrPoolType =>
-  value === 'library' || value === 'playlist' || value === 'genre';
+  value === 'library' || value === 'playlist' || value === 'genre' || value === 'unsure';
 
 const isValidStats = (value: unknown): value is SongGuessrStats => {
   if (!isRecord(value) || !Array.isArray(value.distribution)) return false;
@@ -96,6 +96,7 @@ export const loadSongGuessrState = (): SongGuessrPersistedState => {
     };
 
     if (typeof parsed.poolId === 'string' && parsed.poolId.length > 0) state.poolId = parsed.poolId;
+    if (parsed.fromMoment === true) state.fromMoment = true;
     return state;
   } catch {
     return createEmptyState();

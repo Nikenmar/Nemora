@@ -250,6 +250,40 @@ impl StartReason {
 /// `play_details.seeks` keeps at most this many seeks of a session, the first ones.
 pub const DETAIL_SEEKS: usize = 64;
 
+/// A song's favourite moments (PLAN/15 M2, G2): where seeks keep landing (the hot spots of each
+/// play) and where rewinds of 10-40 s took the user back, clustered within 5 s; each with how many
+/// times, the most visited first, at least twice.
+pub fn moments(db: &Db, song_id: &str) -> Result<Vec<(i64, i64)>> {
+    let mut targets: Vec<(i64, i64)> = Vec::new();
+    let mut stmt = db.conn().prepare(
+        "SELECT e.seeks, d.seeks FROM play_events e LEFT JOIN play_details d USING (event_id)
+         WHERE e.song_id = ?1 AND (e.seeks IS NOT NULL OR d.seeks IS NOT NULL)",
+    )?;
+    for row in stmt.query_map([song_id], |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, Option<String>>(1)?)))? {
+        let (hot, raw) = row?;
+        let hot: Vec<[i64; 2]> = hot.and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+        targets.extend(hot.iter().map(|[at, n]| (*at, *n)));
+        let raw: Vec<[i64; 3]> = raw.and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+        targets.extend(
+            raw.iter().filter(|[_, from, to]| (10_000..=40_000).contains(&(from - to))).map(|[_, _, to]| (*to, 1)),
+        );
+    }
+    targets.sort_unstable();
+    let mut clusters: Vec<(i64, i64, i64)> = Vec::new(); // (sum of positions x count, count, first)
+    for (at, n) in targets {
+        match clusters.last_mut() {
+            Some(c) if at - c.2 < SEEK_WINDOW_MS => {
+                c.0 += at * n;
+                c.1 += n;
+            }
+            _ => clusters.push((at * n, n, at)),
+        }
+    }
+    let mut out: Vec<(i64, i64)> = clusters.into_iter().filter(|c| c.1 >= 2).map(|(sum, n, _)| (sum / n, n)).collect();
+    out.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    Ok(out)
+}
+
 /// Stores a finished session and updates the roll-ups, in one transaction.
 pub fn record(db: &mut Db, session: &Session) -> Result<Recorded> {
     record_with(db, session, StartReason::Unknown)
@@ -624,6 +658,30 @@ mod tests {
                 ("d".into(), "2026-01-01".into(), 2)
             ]
         );
+    }
+
+    #[test]
+    fn rewinds_to_the_same_place_make_a_moment() {
+        let mut db = Db::open_in_memory().unwrap();
+        let song = "s".repeat(26);
+        db.conn().execute("INSERT INTO tracks VALUES (?1, 'flac', 44100, 16, 2, 200000, NULL, 0, 0)", [&song]).unwrap();
+        // Two plays, each rewinding from about 1:30 back to about 1:00; one long jump that is no rewind.
+        for (n, to) in [(0, 60_000), (1, 62_000)] {
+            let mut s = session(
+                200_000,
+                vec![
+                    Fact::Play { at_ms: 0, position_ms: 0 },
+                    Fact::Seek { at_ms: 90_000, from_ms: 90_000, to_ms: to },
+                    Fact::Seek { at_ms: 100_000, from_ms: 120_000, to_ms: 2_000 },
+                    Fact::End { at_ms: 200_000, position_ms: 200_000, reason: EndReason::Finished },
+                ],
+            );
+            s.started_at = n * 1_000_000;
+            record_with(&mut db, &s, StartReason::Auto).unwrap();
+        }
+        let found = moments(&db, &song).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0], (61_000, 2));
     }
 
     #[test]
