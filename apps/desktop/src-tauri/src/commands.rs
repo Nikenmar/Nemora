@@ -736,7 +736,7 @@ pub fn rediscover_refresh(
 }
 
 /// The Rediscover list as last refreshed.
-fn stored_rediscover(db: &Db) -> Vec<String> {
+pub(crate) fn stored_rediscover(db: &Db) -> Vec<String> {
     nemora_core::settings::device(db, "rediscover.songs")
         .ok()
         .flatten()

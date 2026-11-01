@@ -1,6 +1,7 @@
 import { lazy, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import ContinueHero from './ContinueHero';
-import RediscoverShelf from './RediscoverShelf';
+import ForYouShelf from './ForYouShelf';
+import MixOfTheDay from './MixOfTheDay';
 import EmptyState from '../ui/EmptyState';
 import { SkeletonTiles } from '../ui/Skeleton';
 import { useTranslation } from 'react-i18next';
@@ -385,7 +386,11 @@ const HomePage = () => {
         {recentlyAddedSongsContainerRef.current && (
           <>
             {content.latestSongs[0] !== null && (
-              <ContinueHero lastPlayed={content.recentlyPlayedSongs[0]} />
+              // Today (PLAN/19 D1): what to resume and what to start fresh, side by side.
+              <div className="today-row mb-8 mr-4 flex items-stretch gap-5 xl:flex-col">
+                <ContinueHero lastPlayed={content.recentlyPlayedSongs[0]} isInRow />
+                <MixOfTheDay />
+              </div>
             )}
             {content.latestSongs[0] !== null && (
               <RecentlyAddedSongs
@@ -401,7 +406,7 @@ const HomePage = () => {
               noOfVisibleSongs={noOfRecentandLovedSongCards}
             />
             {content.latestSongs[0] !== null && (
-              <RediscoverShelf noOfVisibleSongs={noOfRecentandLovedSongCards} />
+              <ForYouShelf noOfVisibleSongs={noOfRecentandLovedSongCards} />
             )}
             <MostLovedSongs
               mostLovedSongs={content.mostLovedSongs.slice(0, noOfRecentandLovedSongCards)}

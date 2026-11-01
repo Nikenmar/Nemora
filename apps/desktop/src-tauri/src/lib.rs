@@ -14,6 +14,7 @@ mod duels;
 mod energy;
 mod engine;
 mod folders;
+mod foryou;
 mod guessr;
 mod protocol;
 mod secrets;
@@ -190,6 +191,8 @@ pub fn run() {
             engine::engine_varispeed,
             engine::engine_reverb,
             correction::autoeq_index,
+            foryou::smart_lists,
+            foryou::mix_of_day,
             correction::autoeq_profile,
             correction::correction_preview,
             correction::engine_correction,

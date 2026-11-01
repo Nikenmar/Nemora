@@ -42,6 +42,12 @@ impl TasteMapCache {
         }
     }
 
+    /// The last map built (this session's, or the one on disk), for Home's lists (PLAN/19).
+    pub fn snapshot(&self, app: &App) -> Option<TasteMap> {
+        self.warm(app);
+        self.0.lock().ok()?.clone()
+    }
+
     /// Every song's neighbours on the last map built, for following the map (PLAN/15 C3).
     pub fn all_neighbours(&self) -> std::collections::HashMap<String, Vec<String>> {
         self.0

@@ -12,13 +12,15 @@ import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
 type Props = {
   /** What was played last, for when nothing is loaded in the player yet. */
   lastPlayed?: SongData | AudioInfo;
+  /** Beside the mix of the day (PLAN/19 D1): narrower, Up next only on wide windows. */
+  isInRow?: boolean;
 };
 
 /**
  * The top of Home: the song in the player (or the last one played) with Resume, the queue, and the
  * next three songs. Its background is the cover light.
  */
-const ContinueHero = ({ lastPlayed }: Props) => {
+const ContinueHero = ({ lastPlayed, isInRow = false }: Props) => {
   const { t } = useTranslation();
   const { toggleSongPlayback, playSong, changeCurrentActivePage } = useContext(AppUpdateContext);
   const currentSongData = useStore(store, (state) => state.currentSongData);
@@ -55,7 +57,11 @@ const ContinueHero = ({ lastPlayed }: Props) => {
 
   return (
     <section
-      className="continue-hero relative mb-8 mr-4 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,17rem)] items-center gap-7 overflow-hidden rounded-panel bg-surface-1 p-5 lg:grid-cols-[auto_minmax(0,1fr)]"
+      className={`continue-hero relative grid shrink-0 items-center gap-7 overflow-hidden rounded-panel bg-surface-1 p-5 ${
+        isInRow
+          ? 'min-w-0 flex-[1.7] grid-cols-[auto_minmax(0,1fr)_minmax(0,15rem)] xl:grid-cols-[auto_minmax(0,1fr)]'
+          : 'mb-8 mr-4 grid-cols-[auto_minmax(0,1fr)_minmax(0,17rem)] lg:grid-cols-[auto_minmax(0,1fr)]'
+      }`}
       aria-label={t('homePage.continue', 'Continue where you left off')}
     >
       <div
@@ -102,7 +108,9 @@ const ContinueHero = ({ lastPlayed }: Props) => {
         </div>
       </div>
       {upNext.length > 0 && (
-        <div className="relative flex min-w-0 flex-col gap-2.5 border-l border-line pl-5 lg:hidden">
+        <div
+          className={`relative flex min-w-0 flex-col gap-2.5 border-l border-line pl-5 ${isInRow ? 'xl:hidden' : 'lg:hidden'}`}
+        >
           <p className="text-small text-ink-dim">{t('homePage.upNext', 'Up next')}</p>
           {upNext.map((song) => (
             <button

@@ -1649,6 +1649,7 @@ declare global {
     | 'TierlistEditor'
     | 'Stats'
     | 'TasteMap'
+    | 'SmartList'
     | 'AllSearchResults';
 
   type PromiseFunctionReturn = Promise<{ success: boolean; message?: string }>;

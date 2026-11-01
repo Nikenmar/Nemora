@@ -1510,6 +1510,61 @@
     "savedClipped_other": "{{name}} saved; {{count}} samples went past full scale and were clipped (32-bit float keeps them)",
     "saveFailed": "Could not save the file: {{error}}"
   },
+  "forYou": {
+    "title": "For you",
+    "mixTitle": "Mix of the day",
+    "madeToday": "Made for today",
+    "play": "Play",
+    "newMix": "New mix",
+    "saveAsPlaylist": "Save as playlist",
+    "saved": "Saved as the playlist {{name}}",
+    "saveFailed": "Could not save the playlist",
+    "empty": "Nothing here yet",
+    "songCount_one": "{{count}} song",
+    "songCount_other": "{{count}} songs",
+    "lengthMinutes": "{{minutes}} min",
+    "lengthHours": "{{hours}} h {{minutes}} min",
+    "list": {
+      "rediscover": "Rediscover",
+      "onRepeat": "On repeat",
+      "caughtYou": "Caught you",
+      "thisHour": "This hour",
+      "energetic": "Energetic",
+      "calm": "Calm",
+      "neverHeard": "Never heard",
+      "mix": "Mix of the day"
+    },
+    "summary": {
+      "forgotten": "forgotten favourites",
+      "new": "songs you have not heard",
+      "newFrom": "new from {{name}}",
+      "island": "the island {{name}}",
+      "favourites": "what Smart Shuffle favours now"
+    },
+    "part": {
+      "favourite": "Smart Shuffle favours it now",
+      "forgotten": "A forgotten favourite",
+      "new": "Not heard yet",
+      "island": "From today's island, {{island}}"
+    },
+    "reason": {
+      "rediscover": "Loved, not heard for a while",
+      "onRepeat_one": "Picked {{count}} time in two weeks",
+      "onRepeat_other": "Picked {{count}} times in two weeks",
+      "onRepeatReplayed_one": "Replayed {{count}} time in two weeks",
+      "onRepeatReplayed_other": "Replayed {{count}} times in two weeks",
+      "caught_one": "Stopped a browse {{count}} time",
+      "caught_other": "Stopped a browse {{count}} times",
+      "pickedThrough": "Picked and heard to the end {{count}} times",
+      "night": "{{count}} of {{total}} plays at night",
+      "morning": "{{count}} of {{total}} plays in the morning",
+      "afternoon": "{{count}} of {{total}} plays in the afternoon",
+      "evening": "{{count}} of {{total}} plays in the evening",
+      "energy": "Energy {{count}} %",
+      "newByArtist": "Not heard yet, by {{name}}",
+      "newNear": "Not heard yet, near {{name}} on your map"
+    }
+  },
   "correction": {
     "title": "Headphone correction",
     "description": "Evens out your headphones' frequency response with an AutoEQ profile, before the equalizer. The profile's own preamp lowers the level so its boosts cannot clip.",
