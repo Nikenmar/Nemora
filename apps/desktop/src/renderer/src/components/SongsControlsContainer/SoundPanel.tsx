@@ -11,11 +11,13 @@ import {
   factorOf,
   isEffectOn,
   presetOf,
+  saveVersionSound,
   setSound,
   soundPanelStore,
   soundStore,
   speedLabel,
   takeClipped,
+  versionStore,
   type Size,
   type Unit
 } from '../../other/soundEffects';
@@ -35,7 +37,10 @@ const formatLength = (seconds: number) => {
  */
 const SoundPanel = () => {
   const { t } = useTranslation();
-  const sound = useStore(soundStore, (s) => s);
+  const globalSound = useStore(soundStore, (s) => s);
+  // While a version plays (PLAN/18 D6) the panel shows and edits its sound.
+  const playing = useStore(versionStore, (s) => s);
+  const sound = playing?.sound ?? globalSound;
   const isOpen = useStore(soundPanelStore, (s) => s);
   const duration = useStore(store, (state) => state.currentSongData.duration ?? 0);
   const [clipped, setClipped] = useState(false);
@@ -121,6 +126,20 @@ const SoundPanel = () => {
           </button>
         </div>
       </div>
+
+      {playing && (
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 text-small">
+          <span className="truncate">{t('versions.editing', { name: playing.name })}</span>
+          <button
+            type="button"
+            disabled={!playing.isChanged}
+            className="shrink-0 rounded-full bg-accent px-3 py-1 text-on-accent outline-none focus-visible:outline-2 focus-visible:outline-echo disabled:opacity-40"
+            onClick={() => saveVersionSound().catch((error) => console.error(error))}
+          >
+            {t('versions.saveSound')}
+          </button>
+        </div>
+      )}
 
       {/* Speed */}
       <div className="mt-3 flex items-center justify-between text-small">

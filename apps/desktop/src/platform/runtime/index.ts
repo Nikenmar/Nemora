@@ -713,6 +713,23 @@ export class NemoraRuntime {
     return call('tier_suggestion_dismiss', { tierlistId, songId, to });
   }
 
+  /** Versions (PLAN/18 D6): make one of a song; answers the new row's view id. */
+  versionCreate(songId: string, version: Omit<SongVersion, 'id' | 'songId'>): Promise<string> {
+    return call('version_create', { songId, version });
+  }
+
+  versionRename(versionId: number, name: string): Promise<void> {
+    return call('version_rename', { versionId, name });
+  }
+
+  versionUpdate(versionId: number, sound: Omit<SongVersion, 'id' | 'songId'>): Promise<void> {
+    return call('version_update', { versionId, sound });
+  }
+
+  versionRemove(versionId: number): Promise<void> {
+    return call('version_remove', { versionId });
+  }
+
   /** Skips in context (PLAN/16): the last week's skips counted and ignored, and the session now. */
   skipContext(): Promise<SkipContext> {
     return call('skip_context');

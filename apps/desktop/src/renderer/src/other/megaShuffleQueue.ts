@@ -110,6 +110,22 @@ const megaShuffleQueue = (
     previousNear = nearOf(keyed[pick].id);
   }
 
+  // One song, one turn (PLAN/18 D6): a song's other rows (its versions, or the same audio under
+  // other tags) wait after everything else, so the original and its slowed version never both come
+  // up in one pass. A queue without such rows is left exactly as ordered.
+  const song = (id: string) => id.split(':')[0];
+  const first = new Set<string>();
+  const turns: string[] = [];
+  const later: string[] = [];
+  for (const id of shuffledQueue) {
+    if (first.has(song(id))) later.push(id);
+    else {
+      first.add(song(id));
+      turns.push(id);
+    }
+  }
+  if (later.length > 0) shuffledQueue.splice(0, shuffledQueue.length, ...turns, ...later);
+
   // Where each original position went; duplicates are matched in order.
   const at = new Map<string, number[]>();
   shuffledQueue.forEach((id, index) => {

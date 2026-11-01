@@ -23,6 +23,7 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Img from '../Img';
 import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
 
+import { versionMenuItems } from '../../other/versionMenu';
 const AddSongsToPlaylistsPrompt = lazy(() => import('./AddSongsToPlaylistsPrompt'));
 const BlacklistSongConfrimPrompt = lazy(() => import('./BlacklistSongConfirmPrompt'));
 const DeleteSongsFromSystemConfrimPrompt = lazy(
@@ -431,6 +432,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           );
         }
       },
+      // Versions (PLAN/18 D6), for one song at a time.
+      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData)),
       {
         label: t(`common.${isAMultipleSelection ? 'unselect' : 'select'}`),
         iconName: 'checklist',

@@ -40,6 +40,7 @@ pub mod tastemap;
 pub mod time;
 pub mod tournament;
 pub mod transfer;
+pub mod versions;
 
 pub use error::{Error, Result};
 

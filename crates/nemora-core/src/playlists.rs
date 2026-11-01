@@ -39,6 +39,8 @@ pub struct ItemRow {
     pub cover_hash: Option<String>,
     /// The file is gone (or the song was never found: an imported pending item).
     pub missing: bool,
+    /// The item is a version of the song (PLAN/18 D6).
+    pub version_id: Option<i64>,
 }
 
 fn device(db: &Db) -> Result<String> {
@@ -134,7 +136,18 @@ pub fn items(db: &Db, id: &str, include_missing: bool) -> Result<Vec<ItemRow>> {
     let mut out = Vec::new();
     for (position, song_id, hint, pending_title, pending_file) in raw {
         let row = match &song_id {
-            Some(song) => display_row(db, position, song, hint.as_deref())?,
+            Some(song) => {
+                let mut row = display_row(db, position, song, hint.as_deref())?;
+                if let Some(version) = crate::versions::from_hint(hint.as_deref())
+                    .map(|id| crate::versions::get(db, id))
+                    .transpose()?
+                    .flatten()
+                {
+                    row.title = crate::versions::title(&row.title, &version);
+                    row.version_id = Some(version.id);
+                }
+                row
+            }
             None => ItemRow {
                 position,
                 song_id: None,
@@ -144,6 +157,7 @@ pub fn items(db: &Db, id: &str, include_missing: bool) -> Result<Vec<ItemRow>> {
                 duration_ms: 0,
                 cover_hash: None,
                 missing: true,
+                version_id: None,
             },
         };
         if include_missing || !row.missing {
@@ -189,6 +203,7 @@ fn display_row(db: &Db, position: i64, song: &str, hint: Option<&str>) -> Result
         duration_ms: duration,
         cover_hash: cover,
         missing: !present,
+        version_id: None,
     })
 }
 

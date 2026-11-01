@@ -1490,6 +1490,19 @@
     "chipLens": "Leaning to {{name}}",
     "chipRadio": "Radio from {{name}}"
   },
+  "versions": {
+    "make": "Make version",
+    "fromCurrent": "From the current sound ({{name}})",
+    "fromCurrentNone": "From the current sound (nothing on)",
+    "rename": "Rename version",
+    "renameTitle": "Name this version",
+    "save": "Save",
+    "changeSound": "Change sound",
+    "changeSoundPlayFirst": "Change sound (play it first)",
+    "remove": "Remove version",
+    "editing": "Version: {{name}}",
+    "saveSound": "Save to version"
+  },
   "sound": {
     "title": "Slowed & reverb",
     "speed": "Speed",

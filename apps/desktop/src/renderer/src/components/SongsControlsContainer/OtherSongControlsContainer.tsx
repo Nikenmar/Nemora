@@ -8,7 +8,7 @@ import VolumeSlider from '../VolumeSlider';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 import SoundPanel from './SoundPanel';
-import { isEffectOn, soundPanelStore, soundStore, speedLabel } from '../../other/soundEffects';
+import { isEffectOn, soundPanelStore, soundStore, speedLabel, versionStore } from '../../other/soundEffects';
 
 const AppShortcutsPrompt = lazy(() => import('../SettingsPage/AppShortcutsPrompt'));
 const WhyThisSongPrompt = lazy(() => import('../WhyThisSongPrompt'));
@@ -17,7 +17,9 @@ const OtherSongControlsContainer = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
   const isMuted = useStore(store, (state) => state.player.volume.isMuted);
   const volume = useStore(store, (state) => state.player.volume.value);
-  const sound = useStore(soundStore, (s) => s);
+  const globalSound = useStore(soundStore, (s) => s);
+  const playingVersion = useStore(versionStore, (s) => s);
+  const sound = playingVersion?.sound ?? globalSound;
   const isSoundOpen = useStore(soundPanelStore, (s) => s);
   const isSoundOn = isEffectOn(sound);
 

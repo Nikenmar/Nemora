@@ -18,6 +18,20 @@ pub fn view_id(song_id: &str, variant_id: i64, is_primary: bool) -> String {
     if is_primary { song_id.to_owned() } else { format!("{song_id}:{variant_id}") }
 }
 
+/// A row's view id: a version (PLAN/18 D6) is `<song id>:v<version id>`, so everything that reads
+/// a song as the part before ':' treats it as its song.
+pub fn row_view_id(r: &SongRow) -> String {
+    match &r.version {
+        Some(v) => format!("{}:v{}", r.song_id, v.id),
+        None => view_id(&r.song_id, r.variant_id, r.is_primary),
+    }
+}
+
+/// The version a view id names, if it is one.
+pub fn version_of(id: &str) -> Option<i64> {
+    id.split_once(':')?.1.strip_prefix('v')?.parse().ok()
+}
+
 /// The song and, for a duplicate row, its variant.
 pub fn parse_view_id(id: &str) -> (&str, Option<i64>) {
     match id.split_once(':') {
@@ -91,7 +105,8 @@ impl View<'_> {
             "artworkPaths": self.song_artwork(r),
             "paletteData": Self::song_palette(r),
             "path": r.path,
-            "songId": view_id(&r.song_id, r.variant_id, r.is_primary),
+            "songId": row_view_id(r),
+            "version": r.version,
             "addedDate": r.added_at,
             "isAFavorite": r.is_favorite,
             "year": r.year,
@@ -101,7 +116,8 @@ impl View<'_> {
 
     pub fn song_data(&self, r: &SongRow) -> Value {
         json!({
-            "songId": view_id(&r.song_id, r.variant_id, r.is_primary),
+            "songId": row_view_id(r),
+            "version": r.version,
             "title": r.title,
             "duration": seconds(r.duration_ms),
             "artists": artists(&r.artists),
@@ -123,7 +139,8 @@ impl View<'_> {
     pub fn player_data(&self, r: &SongRow) -> Value {
         let artwork = self.song_artwork(r);
         json!({
-            "songId": view_id(&r.song_id, r.variant_id, r.is_primary),
+            "songId": row_view_id(r),
+            "version": r.version,
             "title": r.title,
             "artists": artists(&r.artists),
             "duration": seconds(r.duration_ms),

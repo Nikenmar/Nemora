@@ -13,11 +13,11 @@ use crate::error::{Error, Result};
 use crate::ids;
 
 /// The schema this build creates and understands.
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 const SCHEMA_V1: &str = include_str!("db/schema_v1.sql");
 /// Forward migrations: the one at index `i` takes a file from version `i + 1` to `i + 2`.
-const MIGRATIONS: &[&str] = &[include_str!("db/migration_v2.sql")];
+const MIGRATIONS: &[&str] = &[include_str!("db/migration_v2.sql"), include_str!("db/migration_v3.sql")];
 
 pub struct Db {
     conn: Connection,
@@ -207,6 +207,14 @@ mod tests {
         assert_eq!(&spec[start..end], MIGRATIONS[0], "src/db/migration_v2.sql drifted from spec/schema-v2.md");
     }
 
+    #[test]
+    fn migration_v3_matches_its_spec() {
+        let spec = include_str!("../spec/schema-v3.md");
+        let start = spec.find("```sql\n").expect("the spec has an SQL block") + "```sql\n".len();
+        let end = start + spec[start..].find("```").expect("the SQL block ends");
+        assert_eq!(&spec[start..end], MIGRATIONS[1], "src/db/migration_v3.sql drifted from spec/schema-v3.md");
+    }
+
     fn tables(db: &Db) -> Vec<String> {
         let mut stmt = db.conn().prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").unwrap();
         stmt.query_map([], |r| r.get(0)).unwrap().collect::<rusqlite::Result<_>>().unwrap()
@@ -232,11 +240,12 @@ mod tests {
         }
         let db = Db::open(&path).unwrap();
         let version: i64 = db.conn().pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, SCHEMA_VERSION);
         assert_eq!(db.device_id().unwrap(), "DEV");
         let tracks: i64 = db.conn().query_row("SELECT count(*) FROM tracks", [], |r| r.get(0)).unwrap();
         assert_eq!(tracks, 1);
         assert!(db.meta("migrated_v2_at").unwrap().is_some());
+        assert!(db.meta("migrated_v3_at").unwrap().is_some());
         for table in ["play_details", "guessr_rounds", "song_signals", "track_features"] {
             assert!(tables(&db).iter().any(|t| t == table), "{table}");
         }

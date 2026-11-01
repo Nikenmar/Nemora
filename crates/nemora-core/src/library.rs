@@ -48,7 +48,7 @@ pub enum SongScope {
     Folder(i64),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SongRow {
     pub variant_id: i64,
     pub song_id: String,
@@ -71,6 +71,8 @@ pub struct SongRow {
     /// The song's first present variant. A song whose audio sits in several files with different
     /// tags has one row per variant; every other row is a duplicate sharing its statistics.
     pub is_primary: bool,
+    /// A version of the song (PLAN/18 D6): the row is the song's own, retitled, with this sound.
+    pub version: Option<crate::versions::Version>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -181,16 +183,76 @@ fn ordered_ids(
         }
     };
     let mut stmt = conn.prepare(&format!("SELECT v.variant_id{joins}{filter} ORDER BY {order}"))?;
-    let ids = stmt
+    let ids: Vec<i64> = stmt
         .query_map(params_from_iter(args.iter().map(|a| a.as_ref())), |r| r.get(0))?
         .collect::<rusqlite::Result<_>>()?;
-    Ok(ids)
+    with_versions(conn, ids)
 }
 
-/// Full rows for the given variant ids, in the given order; unknown ids are skipped.
+/// Puts each song's versions (PLAN/18 D6) right after its own row, as negative ids (`-version_id`).
+fn with_versions(conn: &rusqlite::Connection, ids: Vec<i64>) -> Result<Vec<i64>> {
+    let mut stmt = conn.prepare(
+        "SELECT (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = sv.song_id AND w.present = 1),
+                sv.version_id
+         FROM song_versions sv ORDER BY sv.song_id, sv.name, sv.version_id",
+    )?;
+    let mut after: HashMap<i64, Vec<i64>> = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, Option<i64>>(0)?, r.get::<_, i64>(1)?)))? {
+        let (primary, version) = row?;
+        if let Some(primary) = primary {
+            after.entry(primary).or_default().push(-version);
+        }
+    }
+    if after.is_empty() {
+        return Ok(ids);
+    }
+    let mut out = Vec::with_capacity(ids.len());
+    for id in ids {
+        out.push(id);
+        if let Some(versions) = after.get(&id) {
+            out.extend(versions);
+        }
+    }
+    Ok(out)
+}
+
+/// Full rows for the given variant ids, in the given order; unknown ids are skipped. A negative id
+/// is a version (`-version_id`): its song's own row, retitled "Title - Version", with its sound.
 pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
     if ids.is_empty() {
         return Ok(Vec::new());
+    }
+    if ids.iter().any(|&id| id < 0) {
+        let mut versions: HashMap<i64, crate::versions::Version> = HashMap::new();
+        for &id in ids.iter().filter(|&&id| id < 0) {
+            if let Some(v) = crate::versions::get(db, -id)? {
+                versions.insert(id, v);
+            }
+        }
+        let songs: Vec<String> = versions.values().map(|v| v.song_id.clone()).collect();
+        let primary = primary_variants(db, &songs)?;
+        let wanted: Vec<i64> = ids
+            .iter()
+            .map(|&id| {
+                if id < 0 { versions.get(&id).and_then(|v| primary.get(&v.song_id)).copied().unwrap_or(0) } else { id }
+            })
+            .collect();
+        let plain: Vec<i64> = wanted.iter().copied().filter(|&id| id > 0).collect();
+        let by_id: HashMap<i64, SongRow> = rows_by_id(db, &plain)?.into_iter().map(|r| (r.variant_id, r)).collect();
+        return Ok(ids
+            .iter()
+            .zip(&wanted)
+            .filter_map(|(&id, variant)| {
+                let mut row = by_id.get(variant)?.clone();
+                if id < 0 {
+                    let version = versions.get(&id)?.clone();
+                    row.title = crate::versions::title(&row.title, &version);
+                    row.is_primary = false;
+                    row.version = Some(version);
+                }
+                Some(row)
+            })
+            .collect());
     }
     let sql = format!(
         "SELECT v.variant_id, v.song_id, v.title, v.album, v.year, v.track_no, v.disc_no, t.duration_ms, v.cover_hash,
@@ -228,6 +290,7 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
                 path: r.get(14)?,
                 is_primary: r.get::<_, Option<bool>>(15)?.unwrap_or(false),
                 palette: r.get(16)?,
+                version: None,
             })
         })?
         .map(|row| row.map(|r| (r.variant_id, r)))
@@ -638,6 +701,30 @@ pub fn search_corpus(db: &Db) -> Result<Corpus> {
             })
         })?
         .collect::<rusqlite::Result<_>>()?;
+    // Versions (PLAN/18 D6) are found by their own name too: "slowed" finds every slowed version.
+    let mut songs = songs;
+    let mut stmt = conn.prepare(&format!(
+        "SELECT sv.version_id, v.title || ' - ' || sv.name, v.album, coalesce(st.plays, 0) + coalesce(st.full, 0),
+                (SELECT group_concat(name, char(31)) FROM (SELECT name FROM variant_artists a
+                   WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position))
+         FROM song_versions sv
+         JOIN track_variants v ON v.variant_id =
+           (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = sv.song_id AND w.present = 1)
+         LEFT JOIN song_totals st ON st.song_id = sv.song_id
+         WHERE {PRESENT} ORDER BY sv.version_id"
+    ))?;
+    for row in stmt.query_map([], |r| {
+        let artists: Option<String> = r.get(4)?;
+        Ok(SongInput {
+            id: (-r.get::<_, i64>(0)?).to_string(),
+            title: r.get(1)?,
+            album: r.get(2)?,
+            popularity: r.get(3)?,
+            artists: artists.map(|a| a.split('\u{1f}').map(str::to_owned).collect()).unwrap_or_default(),
+        })
+    })? {
+        songs.push(row?);
+    }
     let named =
         |rows: Vec<NamedRow>| rows.into_iter().map(|r| NamedInput { id: r.name.clone(), name: r.name }).collect();
     let albums = albums(db, NameSort::NameAsc)?.into_iter().map(|a| NamedInput { id: a.key, name: a.title }).collect();

@@ -40,5 +40,11 @@ export const tierlistsData = {
   ): Promise<Record<string, ShuffleExplanation>> =>
     getRuntime().explainShuffle(songIds, intensity, options),
   energyAnalysis: async (start?: boolean): Promise<EnergyAnalysis> => getRuntime().energyAnalysis(start),
-  skipContext: async (): Promise<SkipContext> => getRuntime().skipContext()
+  skipContext: async (): Promise<SkipContext> => getRuntime().skipContext(),
+  versionCreate: (songId: string, version: Omit<SongVersion, 'id' | 'songId'>): Promise<string> =>
+    getRuntime().versionCreate(songId, version),
+  versionRename: (versionId: number, name: string): Promise<void> => getRuntime().versionRename(versionId, name),
+  versionUpdate: (versionId: number, sound: Omit<SongVersion, 'id' | 'songId'>): Promise<void> =>
+    getRuntime().versionUpdate(versionId, sound),
+  versionRemove: (versionId: number): Promise<void> => getRuntime().versionRemove(versionId)
 };

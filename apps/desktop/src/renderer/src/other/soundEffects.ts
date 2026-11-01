@@ -58,11 +58,13 @@ export const soundPanelStore = new Store<boolean>(false);
 type VarispeedPlayer = { varispeed: number; setReverb: (amount: number, size: Size) => void };
 let target: VarispeedPlayer | null = null;
 
-/** The sound a version plays with (PLAN/18 D6), over the panel's while it plays. */
-let override: Sound | null = null;
+/** The version playing now (PLAN/18 D6): its sound is heard instead of the panel's, and the panel
+ * edits it (Save to version keeps the change). */
+export type PlayingVersion = { id: number; name: string; sound: Sound; isChanged: boolean };
+export const versionStore = new Store<PlayingVersion | null>(null);
 
 const apply = () => {
-  const sound = override ?? soundStore.state;
+  const sound = versionStore.state?.sound ?? soundStore.state;
   const factor = factorOf(sound.semitones);
   if (target) {
     target.varispeed = sound.keepPitch ? 1 : factor;
@@ -93,6 +95,12 @@ export const registerSoundPlayer = (player: VarispeedPlayer) => {
 };
 
 export const setSound = (change: Partial<Sound>) => {
+  const playing = versionStore.state;
+  if (playing && !('unit' in change && Object.keys(change).length === 1)) {
+    versionStore.setState(() => ({ ...playing, sound: { ...playing.sound, ...change }, isChanged: true }));
+    apply();
+    return;
+  }
   soundStore.setState((state) => ({ ...state, ...change }));
   try {
     localStorage.setItem(KEY, JSON.stringify(soundStore.state));
@@ -102,10 +110,30 @@ export const setSound = (change: Partial<Sound>) => {
   apply();
 };
 
+/** The sound of a version (PLAN/18 D6). */
+export const soundOfVersion = (v: SongVersion): Sound => ({
+  semitones: v.semitones,
+  keepPitch: v.keepPitch,
+  reverb: v.reverb,
+  size: v.size,
+  unit: soundStore.state.unit
+});
+
 /** A version's own sound while it plays; `null` gives the panel's back. */
-export const setSoundOverride = (sound: Sound | null) => {
-  override = sound;
+export const setPlayingVersion = (version: SongVersion | null) => {
+  versionStore.setState(() =>
+    version ? { id: version.id, name: version.name, sound: soundOfVersion(version), isChanged: false } : null
+  );
   apply();
+};
+
+/** Keeps the panel's change to the version playing. */
+export const saveVersionSound = async () => {
+  const playing = versionStore.state;
+  if (!playing) return;
+  const { semitones, keepPitch, reverb, size } = playing.sound;
+  await window.api.tierlistsData.versionUpdate(playing.id, { name: playing.name, semitones, keepPitch, reverb, size });
+  versionStore.setState(() => ({ ...playing, isChanged: false }));
 };
 
 export const isEffectOn = (sound: Sound) => Math.abs(sound.semitones) > 1e-9 || sound.reverb > 0;

@@ -27,6 +27,7 @@ mod taskbar;
 mod tastemap;
 mod trace;
 mod user_data;
+mod versions;
 mod view;
 mod visuals;
 mod watch;
@@ -188,6 +189,10 @@ pub fn run() {
             engine::engine_varispeed,
             engine::engine_reverb,
             engine::engine_clipped,
+            versions::version_create,
+            versions::version_rename,
+            versions::version_update,
+            versions::version_remove,
             smtc::smtc_update,
             duels::duel_pair,
             duels::tier_suggestions,

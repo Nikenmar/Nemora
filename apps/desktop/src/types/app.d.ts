@@ -111,6 +111,7 @@ declare global {
   }
 
   interface SongData extends SavableSongData {
+    version?: SongVersion | null;
     artworkPaths: ArtworkPaths;
     isBlacklisted: boolean;
     paletteData?: PaletteData;
@@ -137,7 +138,19 @@ declare global {
     // titleTextColor?: string;
   }
 
+  /** A version of a song (PLAN/18 D6): the song with a sound of its own. */
+  interface SongVersion {
+    id: number;
+    songId: string;
+    name: string;
+    semitones: number;
+    keepPitch: boolean;
+    reverb: number;
+    size: 'room' | 'hall' | 'vast';
+  }
+
   interface AudioPlayerData {
+    version?: SongVersion | null;
     songId: string;
     title: string;
     artists?: {
@@ -158,6 +171,7 @@ declare global {
   }
 
   interface AudioInfo {
+    version?: SongVersion | null;
     title: string;
     artists?: { artistId: string; name: string }[];
     album?: { albumId: string; name: string };

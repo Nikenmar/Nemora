@@ -121,13 +121,19 @@ pub fn library_songs(
 
 /// Rows for view ids, in the given order; ids whose song has no file present are left out.
 pub(crate) fn rows_for(db: &Db, ids: &[String]) -> nemora_core::Result<Vec<SongRow>> {
-    let bare: Vec<String> = ids.iter().filter(|&id| matches!(parse_view_id(id), (_, None))).cloned().collect();
+    let bare: Vec<String> = ids
+        .iter()
+        .filter(|&id| matches!(parse_view_id(id), (_, None)) && crate::view::version_of(id).is_none())
+        .cloned()
+        .collect();
     let primary = library::primary_variants(db, &bare)?;
     let variants: Vec<i64> = ids
         .iter()
-        .filter_map(|id| match parse_view_id(id) {
-            (_, Some(variant)) => Some(variant),
-            (song, None) => primary.get(song).copied(),
+        .filter_map(|id| match (crate::view::version_of(id), parse_view_id(id)) {
+            // A version is its negative id (PLAN/18 D6).
+            (Some(version), _) => Some(-version),
+            (None, (_, Some(variant))) => Some(variant),
+            (None, (song, None)) => primary.get(song).copied(),
         })
         .collect();
     library::rows_by_id(db, &variants)
@@ -423,7 +429,13 @@ fn playlists_of(
     for row in playlists::list(db)? {
         let songs: Vec<String> = playlists::items(db, &row.id, show_missing)?
             .into_iter()
-            .filter_map(|i| Some(view_id(i.song_id.as_deref()?, i.variant_id?, true)))
+            .filter_map(|i| {
+                let song = i.song_id.as_deref()?;
+                Some(match i.version_id {
+                    Some(version) => format!("{song}:v{version}"),
+                    None => view_id(song, i.variant_id?, true),
+                })
+            })
             .collect();
         let count = songs.len() as i64;
         let cover = row.custom_cover.as_deref().or(row.covers.first().map(String::as_str));
@@ -514,9 +526,10 @@ fn history_cleared_at(db: &Db) -> i64 {
 /// A view id as a playlist item: the song, and the tags of the row the user picked.
 fn as_item(db: &Db, id: &str) -> nemora_core::Result<(String, Option<String>)> {
     let (song, variant) = parse_view_id(id);
-    let hint = match variant {
-        Some(v) => library::variant_signature(db, v)?,
-        None => None,
+    let hint = match (crate::view::version_of(id), variant) {
+        (Some(version), _) => Some(nemora_core::versions::hint(version)),
+        (None, Some(v)) => library::variant_signature(db, v)?,
+        (None, None) => None,
     };
     Ok((song.to_owned(), hint))
 }
@@ -1007,6 +1020,7 @@ pub async fn play_record(handle: AppHandle, app: State<'_, App>, session: Sessio
             }
         })
         .collect();
+    let version = crate::view::version_of(&session.song_id);
     let session = Session {
         song_id: parse_view_id(&session.song_id).0.to_owned(),
         started_at: session.started_at,
@@ -1016,7 +1030,16 @@ pub async fn play_record(handle: AppHandle, app: State<'_, App>, session: Sessio
         source_id: session.source_id,
         facts,
     };
-    let recorded = app.write(|db| record_with(db, &session, start)).map_err(fail)?;
+    let recorded = app
+        .write(|db| {
+            let recorded = record_with(db, &session, start)?;
+            // Which version it was (PLAN/18 D6): a fact, never a statistic of its own.
+            if let Some(version) = version {
+                nemora_core::versions::mark_play(db, &recorded.event_id, version)?;
+            }
+            Ok(recorded)
+        })
+        .map_err(fail)?;
     let e = &recorded.evaluation;
     notify(&handle, &["songs/listeningData", "playlists/history", "userData/recentlyPlayedSongs"]);
     // The play dropped Smart Shuffle's prepared inputs; read them again now, off the main thread, so
