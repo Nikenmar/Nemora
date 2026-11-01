@@ -1440,7 +1440,7 @@
     "sessionFilters": "Session filters",
     "sessionFiltersDescription": "Filters in the queue that hold back songs heard lately or unranked, or boost new ones.",
     "tasteMap": "Taste map",
-    "tasteMapDescription": "A map of your library in Stats, drawn from how you listen.",
+    "tasteMapDescription": "A map of your library in the sidebar and in Stats, drawn from how you listen.",
     "groupExplain": "Explain and steer",
     "groupLearning": "Learning",
     "groupVariety": "Variety",

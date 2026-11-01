@@ -35,6 +35,7 @@ const Sidebar = memo(() => {
   const [pill, setPill] = useState({ top: 0, height: 34, visible: false });
   const bodyBackgroundImage = useStore(store, (state) => state.bodyBackgroundImage);
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
+  const isTasteMapHidden = useStore(store, (state) => !!state.localStorage.preferences.isTasteMapHidden);
 
   const { changeCurrentActivePage, updateContextMenuData } = useContext(AppUpdateContext);
   const { t } = useTranslation();
@@ -61,11 +62,14 @@ const Sidebar = memo(() => {
         links: [
           { id: 'Playlists', icon: 'queue_music', content: t('common.playlist_other') },
           { id: 'Tierlists', icon: 'leaderboard', content: t('sideBar.tierlists') },
-          { id: 'Stats', icon: 'monitoring', content: t('sideBar.stats') }
+          { id: 'Stats', icon: 'monitoring', content: t('sideBar.stats') },
+          // The taste map is a place one plays from (PLAN/17), not only a statistic; the Taste map
+          // setting hides it here as well as in Stats.
+          ...(isTasteMapHidden ? [] : [{ id: 'TasteMap' as PageTitles, icon: 'explore', content: t('tasteMap.title') }])
         ]
       }
     ],
-    [t]
+    [t, isTasteMapHidden]
   );
 
   const [pins, setPins] = useState<Playlist[]>([]);
