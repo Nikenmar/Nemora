@@ -215,18 +215,32 @@ export const colourOf = (p: MapPoint, mode: ColourMode, palette: Palette, day: n
   }
 };
 
-/** The density terrain: a GRID x GRID field of how many songs are near, smoothed; 0..1. */
+/**
+ * The density terrain: a SIZE x SIZE field of how many songs are near, smoothed, 0..1. It covers the
+ * map with a margin of `TERRAIN_MARGIN` on every side, so the land around songs at the map's edge is
+ * not cut straight.
+ */
 export type Terrain = { size: number; field: Float32Array; contours: { level: number; segments: Float32Array }[] };
 
-export const buildTerrain = (points: MapPoint[], size = 160): Terrain => {
+/** World units of land drawn beyond the 0..1 square on every side. */
+export const TERRAIN_MARGIN = 0.1;
+const SPAN = 1 + 2 * TERRAIN_MARGIN;
+/** The shore: density from which a cell is land. */
+const SHORE = 0.07;
+/** The land bitmap's side: fine enough that the shore stays sharp when the map is zoomed in. */
+const LAND_PIXELS = 1024;
+
+export const buildTerrain = (points: MapPoint[], size = 200): Terrain => {
   const field = new Float32Array(size * size);
-  const radius = 3;
+  // A wide kernel: land masses with smooth shores rather than a bubble around every song.
+  const radius = 6;
+  const sigma = 2.6;
   const kernel: number[] = [];
   for (let dy = -radius; dy <= radius; dy += 1)
-    for (let dx = -radius; dx <= radius; dx += 1) kernel.push(Math.exp(-(dx * dx + dy * dy) / (2 * 1.6 * 1.6)));
+    for (let dx = -radius; dx <= radius; dx += 1) kernel.push(Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)));
   for (const p of points) {
-    const cx = Math.round(p.x * (size - 1));
-    const cy = Math.round(p.y * (size - 1));
+    const cx = Math.round(((p.x + TERRAIN_MARGIN) / SPAN) * (size - 1));
+    const cy = Math.round(((p.y + TERRAIN_MARGIN) / SPAN) * (size - 1));
     let k = 0;
     for (let dy = -radius; dy <= radius; dy += 1) {
       for (let dx = -radius; dx <= radius; dx += 1, k += 1) {
@@ -240,7 +254,7 @@ export const buildTerrain = (points: MapPoint[], size = 160): Terrain => {
   const sorted = Array.from(field).filter((v) => v > 0).sort((a, b) => a - b);
   const top = sorted[Math.floor(sorted.length * 0.97)] ?? 1;
   for (let i = 0; i < field.length; i += 1) field[i] = Math.min(1, field[i] / top);
-  const contours = [0.08, 0.3, 0.6].map((level) => ({ level, segments: marchingSquares(field, size, level) }));
+  const contours = [SHORE, 0.3, 0.6].map((level) => ({ level, segments: marchingSquares(field, size, level) }));
   return { size, field, contours };
 };
 
@@ -248,11 +262,11 @@ export const buildTerrain = (points: MapPoint[], size = 160): Terrain => {
 const marchingSquares = (field: Float32Array, size: number, level: number): Float32Array => {
   const out: number[] = [];
   const at = (x: number, y: number) => field[y * size + x];
-  const scale = 1 / (size - 1);
+  const scale = SPAN / (size - 1);
   const edge = (x0: number, y0: number, x1: number, y1: number) => {
     const [a, b] = [at(x0, y0), at(x1, y1)];
     const t = a === b ? 0.5 : (level - a) / (b - a);
-    return [(x0 + (x1 - x0) * t) * scale, (y0 + (y1 - y0) * t) * scale];
+    return [(x0 + (x1 - x0) * t) * scale - TERRAIN_MARGIN, (y0 + (y1 - y0) * t) * scale - TERRAIN_MARGIN];
   };
   for (let y = 0; y < size - 1; y += 1) {
     for (let x = 0; x < size - 1; x += 1) {
@@ -288,24 +302,47 @@ const marchingSquares = (field: Float32Array, size: number, level: number): Floa
   return new Float32Array(out);
 };
 
-/** The land as a bitmap (alpha from density), drawn under the dots and scaled with the camera. */
+/**
+ * The land as a bitmap, drawn under the dots and scaled with the camera. Sampled from the field
+ * bilinearly at LAND_PIXELS, with a shore one pixel wide, so it stays crisp instead of a stretched
+ * blur of the coarse field.
+ */
 export const terrainBitmap = (terrain: Terrain, palette: Palette): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
-  canvas.width = terrain.size;
-  canvas.height = terrain.size;
+  canvas.width = LAND_PIXELS;
+  canvas.height = LAND_PIXELS;
   const context = canvas.getContext('2d');
   if (!context) return canvas;
-  const image = context.createImageData(terrain.size, terrain.size);
-  const land = palette.isDark ? [58, 70, 98] : [200, 210, 228];
-  const high = palette.isDark ? [104, 118, 156] : [160, 174, 204];
-  for (let i = 0; i < terrain.field.length; i += 1) {
-    const v = terrain.field[i];
-    const shore = Math.min(1, Math.max(0, (v - 0.04) / 0.1));
-    const t = Math.min(1, v);
-    image.data[i * 4] = land[0] + (high[0] - land[0]) * t;
-    image.data[i * 4 + 1] = land[1] + (high[1] - land[1]) * t;
-    image.data[i * 4 + 2] = land[2] + (high[2] - land[2]) * t;
-    image.data[i * 4 + 3] = Math.round(shore * (palette.isDark ? 175 : 165));
+  const image = context.createImageData(LAND_PIXELS, LAND_PIXELS);
+  const land = palette.isDark ? [52, 63, 90] : [205, 214, 231];
+  const high = palette.isDark ? [92, 106, 144] : [166, 180, 208];
+  const alpha = palette.isDark ? 190 : 175;
+  const { size, field } = terrain;
+  const step = (size - 1) / (LAND_PIXELS - 1);
+  // The shore's width in field units: about one bitmap pixel.
+  const soft = 0.004;
+  for (let py = 0; py < LAND_PIXELS; py += 1) {
+    const fy = py * step;
+    const y0 = Math.min(size - 2, Math.floor(fy));
+    const ty = fy - y0;
+    for (let px = 0; px < LAND_PIXELS; px += 1) {
+      const fx = px * step;
+      const x0 = Math.min(size - 2, Math.floor(fx));
+      const tx = fx - x0;
+      const a = field[y0 * size + x0];
+      const b = field[y0 * size + x0 + 1];
+      const c = field[(y0 + 1) * size + x0];
+      const d = field[(y0 + 1) * size + x0 + 1];
+      const v = (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+      const o = (py * LAND_PIXELS + px) * 4;
+      if (v < SHORE - soft) continue;
+      const shore = Math.min(1, (v - (SHORE - soft)) / (2 * soft + 1e-6));
+      const t = Math.min(1, Math.max(0, (v - SHORE) / (1 - SHORE)));
+      image.data[o] = land[0] + (high[0] - land[0]) * t;
+      image.data[o + 1] = land[1] + (high[1] - land[1]) * t;
+      image.data[o + 2] = land[2] + (high[2] - land[2]) * t;
+      image.data[o + 3] = Math.round(shore * alpha);
+    }
   }
   context.putImageData(image, 0, 0);
   return canvas;
@@ -376,7 +413,13 @@ export const drawBase = (
     const s = camera.k;
     context.imageSmoothingEnabled = true;
     context.globalAlpha = intro;
-    context.drawImage(scene.land, camera.ox, camera.oy, s, s);
+    context.drawImage(
+      scene.land,
+      camera.ox - TERRAIN_MARGIN * s,
+      camera.oy - TERRAIN_MARGIN * s,
+      SPAN * s,
+      SPAN * s
+    );
     context.lineWidth = 1;
     for (const { level, segments } of scene.terrain.contours) {
       context.strokeStyle = palette.isDark
@@ -632,7 +675,7 @@ export const minimapBitmap = (points: MapPoint[], land: HTMLCanvasElement | null
   canvas.height = size;
   const context = canvas.getContext('2d');
   if (!context) return canvas;
-  if (land) context.drawImage(land, 0, 0, size, size);
+  if (land) context.drawImage(land, -TERRAIN_MARGIN * size, -TERRAIN_MARGIN * size, SPAN * size, SPAN * size);
   context.fillStyle = palette.ink;
   context.globalAlpha = 0.55;
   for (const p of points) context.fillRect(p.x * (size - 2), p.y * (size - 2), 1.5, 1.5);
