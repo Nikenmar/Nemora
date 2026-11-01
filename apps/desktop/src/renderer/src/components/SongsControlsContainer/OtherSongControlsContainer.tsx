@@ -7,6 +7,8 @@ import Button from '../Button';
 import VolumeSlider from '../VolumeSlider';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import SoundPanel from './SoundPanel';
+import { isEffectOn, soundPanelStore, soundStore, speedLabel } from '../../other/soundEffects';
 
 const AppShortcutsPrompt = lazy(() => import('../SettingsPage/AppShortcutsPrompt'));
 const WhyThisSongPrompt = lazy(() => import('../WhyThisSongPrompt'));
@@ -15,6 +17,9 @@ const OtherSongControlsContainer = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
   const isMuted = useStore(store, (state) => state.player.volume.isMuted);
   const volume = useStore(store, (state) => state.player.volume.value);
+  const sound = useStore(soundStore, (s) => s);
+  const isSoundOpen = useStore(soundPanelStore, (s) => s);
+  const isSoundOn = isEffectOn(sound);
 
   const {
     changeCurrentActivePage,
@@ -47,13 +52,11 @@ const OtherSongControlsContainer = () => {
               })
           },
           {
-            label: t('player.adjustPlaybackSpeed'),
-            iconName: 'avg_pace',
+            label: t('sound.title'),
+            iconName: 'speed',
             iconClassName: 'ms-icon mr-2',
-            handlerFunction: () =>
-              changeCurrentActivePage('Settings', {
-                scrollToId: '#playbackRateInterval'
-              })
+            // The speed lives in the Slowed & reverb panel now (PLAN/18), Keep pitch included.
+            handlerFunction: () => soundPanelStore.setState(() => true)
           },
           { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
           // "Why this song?" (PLAN/14 C1), while Smart Shuffle is on and its reasons are shown.
@@ -131,6 +134,22 @@ const OtherSongControlsContainer = () => {
         iconName="open_in_full"
         clickHandler={() => updatePlayerType('full')}
       />
+      {/* Slowed & reverb (PLAN/18): lit, with the speed beside it, while an effect is on. */}
+      <div className="relative flex items-center">
+        <Button
+          className={`sound-btn ${look(isSoundOn || isSoundOpen)}`}
+          tooltipLabel={t('sound.title')}
+          iconName="speed"
+          isActive={isSoundOn}
+          clickHandler={() => soundPanelStore.setState((open) => !open)}
+        />
+        {isSoundOn && Math.abs(sound.semitones) > 1e-9 && (
+          <span className="pointer-events-none -ml-1 mr-1 text-[10px] font-semibold tabular-nums text-echo">
+            {speedLabel(sound.semitones, sound.unit).replace(' st', '')}
+          </span>
+        )}
+        <SoundPanel />
+      </div>
       <Button
         className={`volume-btn ml-1 ${look(isMuted)}`}
         tooltipLabel={t('player.muteUnmute')}

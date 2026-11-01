@@ -119,6 +119,12 @@ pub fn engine_varispeed(handle: AppHandle, engine: State<'_, Engine>, factor: f6
     with_player(&handle, &engine, |p| p.set_varispeed(factor))
 }
 
+/// Whether a sample went past 0 dBFS since the last ask (PLAN/18's peak lamp).
+#[tauri::command]
+pub fn engine_clipped() -> bool {
+    nemora_audio::output::CLIPPED.swap(false, std::sync::atomic::Ordering::Relaxed)
+}
+
 /// The reverb (PLAN/18): `amount` 0..1 (0 is off), `size` "room", "hall" or "vast".
 #[tauri::command]
 pub fn engine_reverb(handle: AppHandle, engine: State<'_, Engine>, amount: f64, size: String) -> Res<()> {

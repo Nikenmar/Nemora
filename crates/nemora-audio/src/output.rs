@@ -33,6 +33,10 @@ pub enum Control {
 }
 
 /// What the renderer and the player share with the callback.
+/// Set when a sample left the chain past 0 dBFS (a resampled over, or reverb on a loud song); the
+/// panel's peak lamp reads and clears it (PLAN/18). Nothing limits: this only tells.
+pub static CLIPPED: AtomicBool = AtomicBool::new(false);
+
 pub struct Shared {
     pub buffer: Mutex<VecDeque<f32>>,
     /// Frames the device has taken from the buffer since the stream started.
@@ -157,6 +161,9 @@ impl Callback {
         data[taken..].fill(0.0);
         self.shared.consumed.fetch_add((taken / self.channels) as u64, Ordering::SeqCst);
         self.chain.process(&mut data[..taken]);
+        if !self.chain.is_neutral() && data[..taken].iter().any(|s| s.abs() > 1.0) {
+            CLIPPED.store(true, Ordering::Relaxed);
+        }
         if self.pause_after_fade && !self.chain.is_fading() && self.chain.fade_target() == 0.0 {
             self.pause_after_fade = false;
             self.shared.paused.store(true, Ordering::SeqCst);

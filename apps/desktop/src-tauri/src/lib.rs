@@ -187,6 +187,7 @@ pub fn run() {
             engine::engine_speed,
             engine::engine_varispeed,
             engine::engine_reverb,
+            engine::engine_clipped,
             smtc::smtc_update,
             duels::duel_pair,
             duels::tier_suggestions,

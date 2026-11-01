@@ -69,6 +69,7 @@ import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import { rememberedPosition, rememberPosition } from './other/resumePosition';
+import { registerSoundPlayer } from './other/soundEffects';
 import { startTrace } from './other/trace';
 import AudioPlayer from './other/player';
 import {
@@ -85,6 +86,8 @@ const DURATION = 1000;
 
 // ? INITIALIZE PLAYER
 const player = new AudioPlayer();
+// Slowed & reverb (PLAN/18): the saved sound applies from the start.
+registerSoundPlayer(player);
 setPlaybackClock(() => player.currentTime);
 /**
  * What has already been tried for the track that is failing right now.

@@ -135,6 +135,10 @@ impl Player {
     pub fn set_varispeed(&self, factor: f64) {
         self.send(Command::Varispeed(factor));
     }
+    /// Whether a sample left the chain past 0 dBFS since the last call (the panel's peak lamp).
+    pub fn take_clipped(&self) -> bool {
+        crate::output::CLIPPED.swap(false, Ordering::Relaxed)
+    }
     /// The reverb (PLAN/18): `amount` 0..1 (0 is off), `size` room, hall or vast.
     pub fn set_reverb(&self, amount: f64, size: crate::reverb::Size) {
         self.send(Command::Reverb { amount, size });

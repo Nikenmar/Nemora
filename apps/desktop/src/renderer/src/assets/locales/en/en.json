@@ -1490,6 +1490,32 @@
     "chipLens": "Leaning to {{name}}",
     "chipRadio": "Radio from {{name}}"
   },
+  "sound": {
+    "title": "Slowed & reverb",
+    "speed": "Speed",
+    "unitSt": "st",
+    "reverb": "Reverb",
+    "reset": "Reset",
+    "peak": "Peak lamp: lights when the sound goes past 0 dBFS (nothing is limited)",
+    "peakOn": "The sound went past 0 dBFS",
+    "plusReverb": "+ Reverb",
+    "keepPitch": "Keep pitch",
+    "keepPitchDescription": "Off: the pitch goes with the speed, like a record. On: the speed changes, the pitch stays.",
+    "length": "{{length}} at this speed ({{original}} as recorded)",
+    "preset": {
+      "ultraSlowed": "Ultra Slowed",
+      "superSlowed": "Super Slowed",
+      "slowed": "Slowed",
+      "original": "Original",
+      "spedUp": "Sped Up",
+      "nightcore": "Nightcore"
+    },
+    "size": {
+      "room": "Room",
+      "hall": "Hall",
+      "vast": "Vast"
+    }
+  },
   "tasteMap": {
     "title": "Taste map",
     "description": "Your library by how you listen: songs heard together, by the same artist or in the same tier sit close.",
