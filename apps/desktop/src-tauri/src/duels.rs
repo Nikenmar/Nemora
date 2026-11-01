@@ -61,11 +61,16 @@ fn result(r: &elo::DuelResult) -> Value {
 
 // ----- duels ----------------------------------------------------------------------------------
 
+/// The next duel. With `teach` (PLAN/15 T1), one duel in three is built around a song Smart Shuffle
+/// plays often but knows little about.
 #[tauri::command]
-pub fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>) -> Res<Value> {
+pub async fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>, teach: Option<bool>) -> Res<Value> {
     let db = app.read();
-    let pinned = pinned_song_id.as_deref().map(|p| parse_view_id(p).0.to_owned());
     let mut random = random_source();
+    let mut pinned = pinned_song_id.as_deref().map(|p| parse_view_id(p).0.to_owned());
+    if pinned.is_none() && teach == Some(true) && random() < 1.0 / 3.0 {
+        pinned = nemora_core::suggest::teaching_anchor(&db, &mut random).map_err(fail)?;
+    }
     let Some((a, b)) = elo::next_pair(&db, pinned.as_deref(), &mut random).map_err(fail)? else {
         return Ok(Value::Null);
     };
@@ -74,6 +79,33 @@ pub fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>) -> Res<Val
         found["ticketAnchorSongId"] = json!(p);
     }
     Ok(found)
+}
+
+/// Songs whose duels put them a tier away from where the user placed them (PLAN/15 T2).
+#[tauri::command]
+pub async fn tier_suggestions(app: State<'_, App>) -> Res<Vec<nemora_core::suggest::TierSuggestion>> {
+    nemora_core::suggest::tier_suggestions(&app.read()).map_err(fail)
+}
+
+#[tauri::command]
+pub async fn tier_suggestion_apply(
+    handle: AppHandle,
+    app: State<'_, App>,
+    tierlist_id: String,
+    song_id: String,
+    to: usize,
+) -> Res<bool> {
+    let moved =
+        app.write(|db| nemora_core::suggest::apply_tier_suggestion(db, &tierlist_id, &song_id, to)).map_err(fail)?;
+    if moved {
+        crate::commands::notify(&handle, &["tierlists"]);
+    }
+    Ok(moved)
+}
+
+#[tauri::command]
+pub async fn tier_suggestion_dismiss(app: State<'_, App>, tierlist_id: String, song_id: String, to: usize) -> Res<()> {
+    app.write(|db| nemora_core::suggest::dismiss_tier_suggestion(db, &tierlist_id, &song_id, to)).map_err(fail)
 }
 
 #[tauri::command]

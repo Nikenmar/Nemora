@@ -84,13 +84,20 @@ const PromptMenu = () => {
     };
   }, [manageDialogCloseEvent, manageKeyboardShortcuts]);
 
+  // A prompt's width classes (`!max-w-...`, `!w-...`) size the dialog itself; the rest style its
+  // content. On the content alone they could never change the dialog's width.
+  const classes = (promptMenuData.className ?? '').split(/\s+/).filter(Boolean);
+  const isWidth = (c: string) => /^!?(max-w|min-w|w)-/.test(c);
+  const dialogWidth = classes.filter(isWidth).join(' ');
+  const contentClasses = classes.filter((c) => !isWidth(c)).join(' ');
+
   return (
     <dialog
       className={`dialog-menu relative left-1/2 top-1/2 flex h-fit [&:not([open])]:hidden max-h-[86%] w-[min(56rem,92vw)] min-w-[30rem] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-dialog border border-glass-border bg-surface-1 pb-6 text-ink shadow-float open:backdrop:transition-[background-color] ${
         promptMenuData.isVisible
           ? 'open:animate-dialog-appear-ease-in-out open:backdrop:bg-scrim'
           : 'animate-dialog-dissappear-ease-in-out backdrop:bg-transparent'
-      } `}
+      } ${dialogWidth}`}
       id="prompt-menu"
       onClick={(e) => {
         e.stopPropagation();
@@ -111,9 +118,7 @@ const PromptMenu = () => {
         />
       </div>
       <MainContainer
-        className={`prompt-menu-inner relative max-h-full overflow-y-auto !pl-7 !pr-7 !pt-1 pb-2 text-body text-ink ${
-          promptMenuData.className ?? ''
-        }`}
+        className={`prompt-menu-inner relative max-h-full overflow-y-auto !pl-7 !pr-7 !pt-1 pb-2 text-body text-ink ${contentClasses}`}
       >
         <Suspense fallback={<SuspenseLoader />}>{promptMenuData.prompt}</Suspense>
       </MainContainer>

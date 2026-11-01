@@ -9,6 +9,7 @@ import Dropdown, { type DropdownOption } from '../Dropdown';
 import MainContainer from '../MainContainer';
 import Button from '../Button';
 import TierlistCard from './TierlistCard';
+import TierSuggestionsPrompt from './TierSuggestionsPrompt';
 import EmptyState from '../ui/EmptyState';
 
 
@@ -84,6 +85,16 @@ const TierlistsPage = () => {
               className="add-tierlist-btn !mr-0"
               clickHandler={openCreatePrompt}
             />
+            {tierlists.length > 0 && (
+              <Button
+                label={t('tierSuggestions.open')}
+                iconName="swap_vert"
+                className="tier-suggestions-btn !mr-0"
+                clickHandler={() =>
+                  changePromptMenuData(true, <TierSuggestionsPrompt />, '!max-w-[40rem]')
+                }
+              />
+            )}
             {tierlists.length > 0 && (
               <Dropdown
                 name="tierlistSortDropdown"

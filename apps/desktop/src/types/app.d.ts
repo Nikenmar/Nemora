@@ -825,6 +825,20 @@ declare global {
     artists?: Record<string, number[]>;
   }
 
+  /** A song whose duels put it a tier away from where it is (core `suggest::TierSuggestion`). */
+  interface TierSuggestion {
+    tierlistId: string;
+    tierlist: string;
+    songId: string;
+    from: number;
+    to: number;
+    fromName: string;
+    toName: string;
+    games: number;
+    rating: number;
+    neighbourMedian: number;
+  }
+
   /** How the Smart Shuffle model runs (core `shuffle::Options`, PLAN/15). */
   interface ShuffleOptions {
     nudge?: boolean;

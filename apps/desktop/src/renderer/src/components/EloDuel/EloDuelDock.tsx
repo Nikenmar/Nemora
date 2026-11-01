@@ -39,7 +39,12 @@ const EloDuelDock = () => {
     setIsLoading(true);
     // Earned (queued) duels first; a fresh random pair only when the backlog is empty.
     return peekFirstAliveDuelPair()
-      .then((queuedPair) => queuedPair ?? window.api.eloDuels.getDuelPair())
+      .then((queuedPair) => queuedPair ??
+            // PLAN/15 T1: some duels teach Smart Shuffle, when the user switched it on.
+            window.api.eloDuels.getDuelPair(
+              undefined,
+              !!store.state.localStorage.preferences.isTeachingDuelsEnabled
+            ))
       .then((pair) => {
         if (pair) {
           setActivePair(pair);

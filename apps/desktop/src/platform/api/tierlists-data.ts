@@ -28,6 +28,11 @@ export const tierlistsData = {
     intensity?: number,
     options?: { options?: ShuffleOptions; steering?: ShuffleSteering }
   ): Promise<MegaShuffleData> => getRuntime().getMegaShuffleData(songIds, intensity, options),
+  getTierSuggestions: async (): Promise<TierSuggestion[]> => getRuntime().getTierSuggestions(),
+  applyTierSuggestion: async (tierlistId: string, songId: string, to: number): Promise<boolean> =>
+    getRuntime().applyTierSuggestion(tierlistId, songId, to),
+  dismissTierSuggestion: async (tierlistId: string, songId: string, to: number): Promise<void> =>
+    getRuntime().dismissTierSuggestion(tierlistId, songId, to),
   explainShuffle: async (
     songIds: string[],
     intensity?: number,

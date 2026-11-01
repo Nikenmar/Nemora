@@ -696,8 +696,21 @@ export class NemoraRuntime {
     return call('stats_import', { path });
   }
 
-  getDuelPair(pinnedSongId?: string): Promise<DuelPair | null> {
-    return call('duel_pair', { pinnedSongId });
+  getDuelPair(pinnedSongId?: string, teach?: boolean): Promise<DuelPair | null> {
+    return call('duel_pair', { pinnedSongId, teach });
+  }
+
+  /** PLAN/15 T2: tier suggestions, and applying or dismissing one. */
+  getTierSuggestions(): Promise<TierSuggestion[]> {
+    return call('tier_suggestions');
+  }
+
+  applyTierSuggestion(tierlistId: string, songId: string, to: number): Promise<boolean> {
+    return call('tier_suggestion_apply', { tierlistId, songId, to });
+  }
+
+  dismissTierSuggestion(tierlistId: string, songId: string, to: number): Promise<void> {
+    return call('tier_suggestion_dismiss', { tierlistId, songId, to });
   }
 
   selectDuelAnchor(candidates: DuelAnchorCandidate[], excluded?: string[]): Promise<string | null> {

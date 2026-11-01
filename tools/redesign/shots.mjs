@@ -106,6 +106,7 @@ const SHOTS = [
     settle: 2000
   },
   { id: '30-tierlists', surface: 'Tierlists', setup: `S.go('Tierlists');` },
+  { id: '30b-tier-suggestions', surface: 'Tier suggestions', setup: `S.go('Tierlists'); await wait(1200); document.querySelector('.tier-suggestions-btn').click();`, settle: 2500 },
   { id: '31-tierlist-editor', surface: 'Tierlist editor', setup: `if (!D.tierlist) throw new Error('no tierlist in this profile'); S.go('TierlistEditor', { tierlistId: D.tierlist.tierlistId });`, settle: 2000 },
   { id: '32-stats', surface: 'Stats', setup: `S.go('Stats');`, settle: 2000 },
   { id: '33-songguessr', surface: 'SongGuessr', setup: `S.go('Songs'); await wait(400); document.querySelector('[data-shot=songguessr-dock]').click();`, settle: 1800 },

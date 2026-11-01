@@ -198,7 +198,12 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
       if (fallbackPhase !== 'result') setPhase('submitting');
       // Next earned pair from the backlog first; fresh random pair when it's empty.
       peekFirstAliveDuelPair()
-        .then((queuedPair) => queuedPair ?? window.api.eloDuels.getDuelPair())
+        .then((queuedPair) => queuedPair ??
+            // PLAN/15 T1: some duels teach Smart Shuffle, when the user switched it on.
+            window.api.eloDuels.getDuelPair(
+              undefined,
+              !!store.state.localStorage.preferences.isTeachingDuelsEnabled
+            ))
         .then((nextPair) => (nextPair ? preloadPairArtwork(nextPair) : nextPair))
         .then((nextPair) => {
           if (nextPair) {

@@ -1475,5 +1475,15 @@
     "playArea": "Play this area ({{count}})",
     "clear": "Clear",
     "unavailable": "The taste map could not be drawn"
+  },
+  "tierSuggestions": {
+    "open": "Suggestions",
+    "title": "Tier suggestions",
+    "description": "Songs whose duels say they belong a tier higher or lower. Nothing moves unless you apply it.",
+    "none": "No suggestions: your tiers agree with your duels",
+    "up": "{{tierlist}}: rates like {{to}}, placed in {{from}} ({{games}} duels)",
+    "down": "{{tierlist}}: rates like {{to}}, placed in {{from}} ({{games}} duels)",
+    "apply": "Move to {{to}}",
+    "dismiss": "Not this one"
   }
 }

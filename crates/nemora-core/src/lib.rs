@@ -32,6 +32,7 @@ pub mod settings;
 pub mod shuffle;
 pub mod signals;
 pub mod stats;
+pub mod suggest;
 pub mod tags;
 pub mod tastemap;
 pub mod time;

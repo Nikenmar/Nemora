@@ -8,8 +8,8 @@ import type {
 } from '../core/stats/tournaments';
 
 export const eloDuels = {
-  getDuelPair: async (pinnedSongId?: string): Promise<DuelPair | null> =>
-    getRuntime().getDuelPair(pinnedSongId),
+  getDuelPair: async (pinnedSongId?: string, teach?: boolean): Promise<DuelPair | null> =>
+    getRuntime().getDuelPair(pinnedSongId, teach),
   selectDuelAnchor: async (
     candidates: DuelAnchorCandidate[],
     excludedSongIds?: string[]
