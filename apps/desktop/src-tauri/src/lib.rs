@@ -16,6 +16,8 @@ mod engine;
 mod folders;
 mod foryou;
 mod guessr;
+#[cfg(test)]
+mod ipc_types;
 mod lyrics_library;
 mod protocol;
 mod secrets;
@@ -63,6 +65,7 @@ fn legacy_profile(profile: &Path) -> PathBuf {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 struct CoreInfo {
     core_version: &'static str,
     identity_algorithm: &'static str,
@@ -70,6 +73,7 @@ struct CoreInfo {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 fn core_info(app: tauri::State<'_, app::App>) -> CoreInfo {
     CoreInfo {
         core_version: nemora_core::VERSION,

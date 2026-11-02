@@ -111,6 +111,7 @@ pub const NUDGE_MAX: f64 = 0.05;
 /// 3.0's model, which `tests/shuffle_oracle.rs` pins.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Options {
     /// F1: a placed song below the unplaced median is nudged up a little.
     pub nudge: bool,
@@ -1299,6 +1300,7 @@ pub const BOOST_NEW: f64 = 1.6;
 /// The user's steering for this session (C2) and session filters (C4); nothing is stored.
 #[derive(Debug, Clone, Default, PartialEq, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Steering {
     /// Artist names to hear less of.
     pub less_artists: Vec<String>,

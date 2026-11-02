@@ -30,6 +30,7 @@ fn inputs(app: &App, cache: &TasteMapCache, options: Option<Options>, intensity:
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct SmartList {
     pub id: List,
     pub entries: Vec<Entry>,
@@ -37,6 +38,7 @@ pub struct SmartList {
 
 /// The smart lists that have songs, in their order (Rediscover first).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn smart_lists(
     app: State<'_, App>,
     cache: State<'_, TasteMapCache>,
@@ -54,6 +56,7 @@ pub async fn smart_lists(
 /// The mix of `today` (the view's local day): the one kept for the day, or a new one when there is
 /// none yet or `fresh` (New mix).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn mix_of_day(
     app: State<'_, App>,
     cache: State<'_, TasteMapCache>,
@@ -83,6 +86,7 @@ pub async fn mix_of_day(
 
 /// Stats > Insights (PLAN/20 D3): what the history supports, in Stats' order.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn stats_insights(
     app: State<'_, App>,
     cache: State<'_, TasteMapCache>,

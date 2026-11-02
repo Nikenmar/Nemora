@@ -84,6 +84,7 @@ fn library_entries(app: &App, tags: &nemora_core::tags::TrackTags) -> Res<Entrie
 
 /// 1.x `SongTags` for the editor.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tags_get(app: State<'_, App>, song_id_or_path: String, is_known_source: bool) -> Res<Value> {
     let (path, row) = resolve(&app, &song_id_or_path, is_known_source)?;
     let tags = read_tags(Path::new(&path)).map_err(fail)?;
@@ -147,6 +148,7 @@ fn new_cover(artwork_path: Option<&str>) -> Option<Vec<u8>> {
 /// Writes the editor's tags into the file, keeps its lyrics in the library, rescans, and answers
 /// with the song as the player shows it.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn tags_update(
     handle: AppHandle,
     app: State<'_, App>,
@@ -193,6 +195,7 @@ pub async fn tags_update(
 
 /// Reads a file's tags again (after an outside edit) by rescanning; answers with the song.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn song_reparse(handle: AppHandle, app: State<'_, App>, path: String) -> Res<Value> {
     app.scan().map_err(fail)?;
     notify(&handle, &["songs/updatedSong"]);
@@ -205,6 +208,7 @@ pub async fn song_reparse(handle: AppHandle, app: State<'_, App>, path: String) 
 /// Saves a cover to a file the user chose: the full-size picture from a song that carries it (the
 /// store keeps thumbnails only), converted to the format the destination's extension names.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn artwork_save(app: State<'_, App>, source: String, destination: String) -> Res<()> {
     let local = crate::protocol::local_path_from_asset_url(&source).unwrap_or(source);
     let hash = Path::new(&local)
@@ -296,6 +300,7 @@ fn replace_names(list: &mut Vec<String>, from: &[String], to: &[String]) {
 
 /// Artists whose names differ only in case, accents or spacing.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn artist_duplicates(app: State<'_, App>, artist_name: String) -> Res<Vec<Value>> {
     use nemora_core::search::fold::normalize;
     let db = app.read();
@@ -311,6 +316,7 @@ pub fn artist_duplicates(app: State<'_, App>, artist_name: String) -> Res<Vec<Va
 
 /// Merges duplicate artists into the chosen spelling, in the files of their songs.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn artist_resolve_duplicates(
     handle: AppHandle,
     app: State<'_, App>,
@@ -328,6 +334,7 @@ pub async fn artist_resolve_duplicates(
 
 /// Splits one artist credit ("A & B") into separate artists, in the files of its songs.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn artist_resolve_separate(
     handle: AppHandle,
     app: State<'_, App>,
@@ -346,6 +353,7 @@ pub async fn artist_resolve_separate(
 /// Adds the artists named in a "feat." credit to a song, optionally taking the credit out of the
 /// title (1.x's pattern).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn artist_resolve_featuring(
     handle: AppHandle,
     app: State<'_, App>,

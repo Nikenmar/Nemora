@@ -120,6 +120,7 @@ fn pools_of(db: &Db, index: &Index, kind: &str) -> nemora_core::Result<Vec<(Stri
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn guessr_pools(app: State<'_, App>) -> Res<Vec<Value>> {
     let index = index(&app)?;
     let db = app.read();
@@ -142,6 +143,7 @@ const UNSURE_POOL: usize = 150;
 
 /// A song's favourite moments (PLAN/15 M2, G2): `[position_ms, times]`, the most visited first.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn song_moments(app: State<'_, App>, song_id: String) -> Res<Vec<(i64, i64)>> {
     let song = crate::view::parse_view_id(&song_id).0.to_owned();
     nemora_core::plays::moments(&app.read(), &song).map_err(fail)
@@ -150,6 +152,7 @@ pub async fn song_moments(app: State<'_, App>, song_id: String) -> Res<Vec<(i64,
 /// Remembers a finished round about one song (PLAN/15 D2): `attempts` is the attempt that found
 /// it, none when the round ran out.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn guessr_record(
     app: State<'_, App>,
     song_id: String,
@@ -161,6 +164,7 @@ pub async fn guessr_record(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn guessr_round(app: State<'_, App>, options: Value) -> Res<Value> {
     let index = index(&app)?;
     let kind = options["poolType"].as_str().unwrap_or("");
@@ -213,6 +217,7 @@ fn best(queries: &[(Vec<u16>, f64)], keys: &[Key]) -> f64 {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn guessr_search(app: State<'_, App>, query: String, limit: Option<usize>, offset: Option<usize>) -> Res<Value> {
     if normalize(query.trim()).is_empty() {
         return Ok(json!({ "candidates": [], "total": 0 }));

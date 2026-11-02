@@ -67,6 +67,7 @@ fn run(handle: AppHandle, running: Arc<AtomicBool>) {
 
 /// Starts or stops the job and tells how far it got: `{ analysed, total, running }`.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn energy_analysis(
     handle: AppHandle,
     app: State<'_, App>,

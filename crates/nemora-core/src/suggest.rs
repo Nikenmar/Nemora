@@ -73,6 +73,7 @@ pub fn teaching_anchor(db: &Db, random: &mut elo::Random<'_>) -> Result<Option<S
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct TierSuggestion {
     pub tierlist_id: String,
     pub tierlist: String,

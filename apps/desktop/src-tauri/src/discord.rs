@@ -50,6 +50,7 @@ where
 /// or url outright — a malformed one costs the whole activity, so they are
 /// filtered rather than forwarded blindly.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct DiscordButton {
     pub label: String,
     pub url: String,
@@ -59,6 +60,7 @@ const MAX_BUTTONS: usize = 2;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct DiscordActivity {
     pub details: Option<String>,
     pub state: Option<String>,
@@ -67,8 +69,12 @@ pub struct DiscordActivity {
     pub small_image: Option<String>,
     pub small_text: Option<String>,
     #[serde(default, deserialize_with = "deserialize_millis")]
+    // Whole or fractional milliseconds on the wire (deserialize_millis); kept as whole ones.
+    #[cfg_attr(test, specta(type = Option<f64>))]
     pub start_timestamp: Option<i64>,
     #[serde(default, deserialize_with = "deserialize_millis")]
+    // Whole or fractional milliseconds on the wire (deserialize_millis); kept as whole ones.
+    #[cfg_attr(test, specta(type = Option<f64>))]
     pub end_timestamp: Option<i64>,
     /// Present in the Electron build and lost in the port: the renderer has
     /// always sent a button, and this struct simply had nowhere to put it, so
@@ -342,6 +348,7 @@ fn controller() -> Result<&'static DiscordController, String> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn discord_connect(client_id: String) -> Result<(), String> {
     let client_id = client_id.trim();
     if client_id.is_empty() {
@@ -351,11 +358,13 @@ pub async fn discord_connect(client_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn discord_set_activity(activity: DiscordActivity) -> Result<(), String> {
     controller()?.send(WorkerRequest::SetActivity(activity))
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn discord_disconnect() -> Result<(), String> {
     let (reply, response) = mpsc::channel();
     controller()?.send(WorkerRequest::Disconnect(reply))?;

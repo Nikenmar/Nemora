@@ -15,6 +15,7 @@ fn changed(handle: &AppHandle) {
 
 /// Makes a version of the song a view id names; answers the new row's view id.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn version_create(handle: AppHandle, app: State<'_, App>, song_id: String, version: Version) -> Res<String> {
     let song = parse_view_id(&song_id).0.to_owned();
     let id = app.write(|db| versions::create(db, &song, &version)).map_err(fail)?;
@@ -23,6 +24,7 @@ pub async fn version_create(handle: AppHandle, app: State<'_, App>, song_id: Str
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn version_rename(handle: AppHandle, app: State<'_, App>, version_id: i64, name: String) -> Res<()> {
     app.write(|db| versions::rename(db, version_id, &name)).map_err(fail)?;
     changed(&handle);
@@ -31,6 +33,7 @@ pub async fn version_rename(handle: AppHandle, app: State<'_, App>, version_id: 
 
 /// Changes a version's sound (speed, keep pitch, reverb, size); the name stays.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn version_update(handle: AppHandle, app: State<'_, App>, version_id: i64, sound: Version) -> Res<()> {
     app.write(|db| versions::set_sound(db, version_id, &sound)).map_err(fail)?;
     changed(&handle);
@@ -39,6 +42,7 @@ pub async fn version_update(handle: AppHandle, app: State<'_, App>, version_id: 
 
 /// Removes a version and its playlist items; the song and its statistics stay.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn version_remove(handle: AppHandle, app: State<'_, App>, version_id: i64) -> Res<()> {
     app.write(|db| versions::remove(db, version_id)).map_err(fail)?;
     changed(&handle);
@@ -47,6 +51,7 @@ pub async fn version_remove(handle: AppHandle, app: State<'_, App>, version_id: 
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct Saved {
     pub seconds: f64,
     /// Samples past full scale: clamped in 24-bit, kept in float.
@@ -57,6 +62,7 @@ pub struct Saved {
 /// panel's), otherwise the version's the view id names. `format` is "wav24" or "float"; the file
 /// carries the song's tags and cover, titled "Title (Name)".
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn version_render(
     app: State<'_, App>,
     song_id: String,

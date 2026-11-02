@@ -28,6 +28,7 @@ pub const ENERGY_MIN_MEASURED: usize = 50;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum List {
     Rediscover,
     OnRepeat,
@@ -53,6 +54,7 @@ impl List {
 /// Why a song is in a list or the mix: a key for the view's sentence and its numbers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Reason {
     pub key: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -83,6 +85,7 @@ impl Reason {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Entry {
     pub song_id: String,
     pub reason: Reason,
@@ -336,6 +339,7 @@ fn never_heard(inputs: &Inputs) -> Vec<Entry> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Part {
     Favourite,
     Forgotten,
@@ -345,6 +349,7 @@ pub enum Part {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct MixEntry {
     pub song_id: String,
     pub part: Part,
@@ -352,6 +357,7 @@ pub struct MixEntry {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Mix {
     /// The local day it is for (YYYY-MM-DD), and which mix of that day (0 first; New mix counts up).
     pub day: String,

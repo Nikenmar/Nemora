@@ -423,24 +423,28 @@ fn move_to_recycle_bin(path: &Path) -> Result<(), ShellOpsError> {
 /// written against a command that was never registered, so every "move to the
 /// recycle bin" ended in a rejected promise.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn trash_item(path: String) -> Result<(), String> {
     let path = checked_path(Path::new(&path)).map_err(|error| error.to_string())?;
     move_to_recycle_bin(&path).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn reveal_song_in_file_explorer(path: String) -> Result<(), String> {
     let path = checked_path(Path::new(&path)).map_err(|error| error.to_string())?;
     reveal_item(&path).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn reveal_folder_in_file_explorer(path: String) -> Result<(), String> {
     let path = checked_path(Path::new(&path)).map_err(|error| error.to_string())?;
     reveal_item(&path).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn open_log_file(app: AppHandle) -> Result<(), String> {
     let path = app
         .path()
@@ -497,6 +501,7 @@ fn directory_size_impl(path: &Path) -> Result<u64, ShellOpsError> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn directory_size(path: String) -> Result<u64, String> {
     let error_path = PathBuf::from(&path);
     tauri::async_runtime::spawn_blocking(move || directory_size_impl(Path::new(&path)))
@@ -544,6 +549,7 @@ fn paths_share_volume_impl(first: &Path, second: &Path) -> Result<bool, ShellOps
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn paths_share_volume(first: String, second: String) -> Result<bool, String> {
     let first_path = PathBuf::from(&first);
     let second_path = PathBuf::from(&second);
@@ -588,12 +594,14 @@ fn set_auto_launch(backend: &dyn AutoLaunchBackend, enabled: bool) -> Result<(),
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn toggle_auto_launch(app: AppHandle, enabled: bool) -> Result<(), String> {
     let manager = app.autolaunch();
     set_auto_launch(&*manager, enabled).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn open_devtools(app: AppHandle) -> Result<(), String> {
     let window = app.get_webview_window("main").ok_or_else(|| {
         ShellOpsError::new(ShellOpsErrorCode::WindowMissing, "main webview does not exist").to_string()
@@ -715,11 +723,13 @@ impl ScreenSleepState {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn stop_screen_sleeping(state: tauri::State<'_, ScreenSleepState>) -> Result<(), String> {
     state.set_preventing(true)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn allow_screen_sleeping(state: tauri::State<'_, ScreenSleepState>) -> Result<(), String> {
     state.set_preventing(false)
 }

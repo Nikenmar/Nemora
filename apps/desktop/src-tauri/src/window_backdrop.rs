@@ -130,6 +130,7 @@ pub fn colour(is_dark: bool) -> tauri::webview::Color {
 
 /// The view's theme changed: the strip painted during a resize follows it.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn window_backdrop_set(is_dark: bool) {
     #[cfg(windows)]
     windows_impl::set_dark(is_dark);

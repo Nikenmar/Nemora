@@ -45,6 +45,7 @@ pub(crate) fn with_player(handle: &AppHandle, engine: &Engine, f: impl FnOnce(&P
 
 /// Loads a file (a path, or its `nemora` URL) under `token`, optionally playing from `at` seconds.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_load(
     handle: AppHandle,
     engine: State<'_, Engine>,
@@ -61,6 +62,7 @@ pub fn engine_load(
 /// The song to continue with, gaplessly, when the current track ends; no song withdraws it.
 /// Answers the URL the view will set for that song, so it can recognise the track already playing.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_queue_next(
     handle: AppHandle,
     engine: State<'_, Engine>,
@@ -82,51 +84,60 @@ pub fn engine_queue_next(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_play(handle: AppHandle, engine: State<'_, Engine>) -> Res<()> {
     with_player(&handle, &engine, Player::play)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_pause(handle: AppHandle, engine: State<'_, Engine>) -> Res<()> {
     with_player(&handle, &engine, Player::pause)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_seek(handle: AppHandle, engine: State<'_, Engine>, seconds: f64) -> Res<()> {
     with_player(&handle, &engine, |p| p.seek(seconds))
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_stop(handle: AppHandle, engine: State<'_, Engine>) -> Res<()> {
     with_player(&handle, &engine, Player::stop)
 }
 
 /// The volume slider's value (0..100); the engine applies the 1.x taper.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_volume(handle: AppHandle, engine: State<'_, Engine>, percent: f64, muted: bool) -> Res<()> {
     with_player(&handle, &engine, |p| p.set_volume(percent, muted))
 }
 
 /// The ten equalizer bands in dB, 32 Hz first.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_equalizer(handle: AppHandle, engine: State<'_, Engine>, gains: [f64; 10]) -> Res<()> {
     with_player(&handle, &engine, |p| p.set_equalizer(gains))
 }
 
 /// Varispeed (PLAN/18): the speed with the pitch going with it, a factor 0.5 to 2 (1 is off).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_varispeed(handle: AppHandle, engine: State<'_, Engine>, factor: f64) -> Res<()> {
     with_player(&handle, &engine, |p| p.set_varispeed(factor))
 }
 
 /// Whether a sample went past 0 dBFS since the last ask (PLAN/18's peak lamp).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_clipped() -> bool {
     nemora_audio::output::CLIPPED.swap(false, std::sync::atomic::Ordering::Relaxed)
 }
 
 /// The reverb (PLAN/18): `amount` 0..1 (0 is off), `size` "room", "hall" or "vast".
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_reverb(handle: AppHandle, engine: State<'_, Engine>, amount: f64, size: String) -> Res<()> {
     let size = nemora_audio::reverb::Size::named(&size);
     with_player(&handle, &engine, |p| p.set_reverb(amount, size))
@@ -134,6 +145,7 @@ pub fn engine_reverb(handle: AppHandle, engine: State<'_, Engine>, amount: f64, 
 
 /// Playback speed with the pitch kept (0.25 to 4; 1 leaves the sound untouched).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_speed(handle: AppHandle, engine: State<'_, Engine>, speed: f64) -> Res<()> {
     with_player(&handle, &engine, |p| p.set_speed(speed))
 }

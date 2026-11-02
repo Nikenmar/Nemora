@@ -92,6 +92,7 @@ fn run(handle: AppHandle, running: Arc<AtomicBool>, error: Arc<Mutex<Option<Stri
 
 /// Starts or stops the job and tells how far it got: `{ done, total, running, error }`.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn lyrics_library(
     handle: AppHandle,
     app: State<'_, App>,
@@ -151,6 +152,7 @@ fn refresh_index(handle: &AppHandle, app: &App, index: &LyricsIndex) {
 
 /// Songs with a line matching `query`: the line, the lines around it, its time when synced.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn lyrics_search(
     handle: AppHandle,
     app: State<'_, App>,

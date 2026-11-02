@@ -71,6 +71,7 @@ pub fn write_env(profile: &Path, legacy: &Path) {
 
 /// The scenario, and the library folder as this app's add-folder call takes it.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn bench_config() -> Option<Value> {
     let dir = dir()?;
     let scenario: Value = serde_json::from_slice(&std::fs::read(dir.join("scenario.json")).ok()?).ok()?;
@@ -79,18 +80,21 @@ pub fn bench_config() -> Option<Value> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn bench_mark(name: String, at: i64, data: Option<Value>) {
     mark(&name, Some(at), data);
 }
 
 /// Whether the harness has created the file `name` in the run folder.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn bench_signal(name: String) -> bool {
     let plain = !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
     plain && dir().is_some_and(|dir| dir.join(&name).exists())
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn bench_quit(handle: AppHandle) {
     handle.exit(0);
 }
@@ -113,6 +117,7 @@ pub fn context<R: tauri::Runtime>(mut context: tauri::Context<R>) -> tauri::Cont
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn bench_background() -> bool {
     in_background()
 }

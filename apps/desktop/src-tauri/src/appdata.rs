@@ -81,6 +81,7 @@ fn disk(_path: &Path) -> (u64, u64) {
 
 /// 1.x `StorageMetrics`, from the 2.0 profile: the database, the cover thumbnails and the logs.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn storage_usage(handle: AppHandle, app: State<'_, App>) -> Res<Value> {
     let profile = app.profile.clone();
     let logs = handle.path().app_log_dir().ok();
@@ -119,6 +120,7 @@ pub async fn storage_usage(handle: AppHandle, app: State<'_, App>) -> Res<Value>
 
 /// A backup in `folder`: a consistent copy of the database and the view's local storage.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn appdata_export(app: State<'_, App>, folder: String, local_storage: String) -> Res<()> {
     let folder = PathBuf::from(folder);
     std::fs::create_dir_all(&folder).map_err(fail)?;
@@ -134,6 +136,7 @@ pub fn appdata_export(app: State<'_, App>, folder: String, local_storage: String
 /// Stages the backup in `folder` to become the database at the next start; answers with the local
 /// storage it carries, for the view to put back.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn appdata_import(app: State<'_, App>, folder: String) -> Res<Option<String>> {
     let folder = PathBuf::from(folder);
     let source = folder.join(BACKUP_DB);
@@ -145,6 +148,7 @@ pub fn appdata_import(app: State<'_, App>, folder: String) -> Res<Option<String>
 
 /// Stages a reset: the next start opens an empty library. The current database is kept aside.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn appdata_reset(app: State<'_, App>) -> Res<()> {
     std::fs::write(app.profile.join(STAGED_RESET), b"").map_err(fail)
 }
@@ -152,6 +156,7 @@ pub fn appdata_reset(app: State<'_, App>) -> Res<()> {
 /// A song from a file path: the library's own if the file is in it, else read from the file for
 /// playing without being recorded.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn song_from_path(app: State<'_, App>, path: String) -> Res<Value> {
     let path = crate::protocol::local_path_from_asset_url(&path).unwrap_or(path);
     // One read guard for both lookups: the reader is a mutex, and a second guard taken while the

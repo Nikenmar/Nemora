@@ -24,6 +24,7 @@ const KEY_LENGTH: usize = 32;
 /// Derives the 32-byte AES-256 key from the app's encryption secret, matching
 /// `crypto.scryptSync(secret, "salt", 32)` byte-for-byte.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn secrets_scrypt_key(secret: String) -> Result<Vec<u8>, String> {
     let params = Params::new(SCRYPT_LOG_N, SCRYPT_R, SCRYPT_P, KEY_LENGTH).map_err(|error| error.to_string())?;
     let mut key = vec![0u8; KEY_LENGTH];

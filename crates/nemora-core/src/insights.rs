@@ -35,6 +35,7 @@ pub struct History {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "kind")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Insight {
     /// This week against the one before: time heard (ms), songs heard, songs heard for the first time.
     Week { heard_ms: i64, before_ms: i64, songs: usize, songs_before: usize, first_time: usize },

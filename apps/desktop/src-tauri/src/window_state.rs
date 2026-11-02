@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct Rect {
     pub x: i32,
     pub y: i32,
@@ -202,6 +203,7 @@ mod platform {
 
 /// Returns a rectangle fully contained in one current monitor's work area.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn clamp_rect_to_single_monitor(window: tauri::Window, rect: Rect) -> Result<Rect, String> {
     #[cfg(windows)]
     {

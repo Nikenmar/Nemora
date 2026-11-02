@@ -24,6 +24,7 @@ fn default_true() -> bool {
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct TaskbarButtonState {
     pub is_playing: bool,
     pub has_previous: bool,
@@ -415,6 +416,7 @@ mod platform {
 
 /// Installs or updates the Previous, Play/Pause and Next thumbbar buttons.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn set_taskbar_buttons(window: tauri::Window, state: TaskbarButtonState) -> Result<(), String> {
     #[cfg(windows)]
     {
@@ -431,6 +433,7 @@ pub async fn set_taskbar_buttons(window: tauri::Window, state: TaskbarButtonStat
 /// Hides all Nora thumbbar buttons while retaining the subclass so a later
 /// update cannot violate Windows' one-time `ThumbBarAddButtons` rule.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn clear_taskbar_buttons(window: tauri::Window) -> Result<(), String> {
     #[cfg(windows)]
     {

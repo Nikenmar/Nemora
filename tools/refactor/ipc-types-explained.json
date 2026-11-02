@@ -1,0 +1,4 @@
+{
+  "playlist_remove answer": "Rust declares Res<bool> but only ever answers Ok(true) (commands.rs playlist_remove); the view's `true` is what it gets.",
+  "engine_equalizer args": "The view sends the ten band gains of its 10-band equalizer as number[]; Rust reads [f64; 10]. Equal at run time, not provable by the type of an array."
+}

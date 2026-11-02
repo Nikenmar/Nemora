@@ -14,6 +14,7 @@ const INDEX_FILE: &str = "autoeq-index.md";
 /// The headphones AutoEQ has profiles for. Read from the cached index unless `refresh` (or there is
 /// none yet), in which case INDEX.md is fetched and cached in the profile folder.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn autoeq_index(app: State<'_, App>, refresh: bool) -> Res<Vec<Headphone>> {
     let cache = app.profile.join(INDEX_FILE);
     tauri::async_runtime::spawn_blocking(move || {
@@ -34,12 +35,14 @@ pub async fn autoeq_index(app: State<'_, App>, refresh: bool) -> Res<Vec<Headpho
 
 /// One headphone's `ParametricEQ.txt`, fetched.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn autoeq_profile(headphone: Headphone) -> Res<String> {
     tauri::async_runtime::spawn_blocking(move || autoeq::fetch_profile(&headphone)).await.map_err(fail)?.map_err(fail)
 }
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct Preview {
     pub profile: Profile,
     /// (Hz, dB) at 96 points from 20 Hz to 20 kHz, preamp included, as run at 48 kHz.
@@ -48,6 +51,7 @@ pub struct Preview {
 
 /// Reads a profile's text (AutoEQ or Equalizer APO) and draws its curve; an error says why not.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn correction_preview(text: String) -> Res<Preview> {
     let profile = parametric::parse(&text).map_err(fail)?;
     let curve = (0..96)
@@ -61,6 +65,7 @@ pub fn correction_preview(text: String) -> Res<Preview> {
 
 /// Turns the correction on with a profile's text, or off with `None`.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn engine_correction(handle: AppHandle, engine: State<'_, Engine>, text: Option<String>) -> Res<()> {
     let profile = text.map(|t| parametric::parse(&t)).transpose().map_err(fail)?;
     with_player(&handle, &engine, |p| p.set_correction(profile))

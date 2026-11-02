@@ -76,6 +76,7 @@ fn from_disk(app: &App) -> Option<TasteMap> {
 /// The map of the library, annotated for the view; `fresh` lays it out again from scratch. Dots
 /// are sized by Smart Shuffle as it runs with `options` and `intensity` (the user's settings).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn taste_map(
     app: State<'_, App>,
     cache: State<'_, TasteMapCache>,
@@ -115,6 +116,7 @@ pub async fn taste_map(
 
 /// Names an island of the last map built (an empty name gives the automatic one back).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn taste_map_rename(
     app: State<'_, App>,
     cache: State<'_, TasteMapCache>,
@@ -127,6 +129,7 @@ pub async fn taste_map_rename(
 
 /// The songs heard in the session going on now, oldest first, for the map's trail.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn taste_map_session(app: State<'_, App>) -> Res<Vec<String>> {
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
     nemora_core::listening::session(&app.read(), now).map_err(fail)
@@ -134,6 +137,7 @@ pub async fn taste_map_session(app: State<'_, App>) -> Res<Vec<String>> {
 
 /// A journey across the last map built, from one song to another, about `length` songs.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn taste_map_journey(
     cache: State<'_, TasteMapCache>,
     from: String,

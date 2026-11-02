@@ -66,6 +66,7 @@ fn drag_image(artwork: Option<String>) -> Vec<u8> {
 /// Called from the renderer while the mouse button is still down; the OS takes
 /// the gesture over from there.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn start_file_drag(app: AppHandle, paths: Vec<String>, artwork: Option<String>) -> Result<(), String> {
     // A path that no longer exists must not reach `DoDragDrop`: the drop target
     // would be handed a name it cannot open, and the failure would surface in

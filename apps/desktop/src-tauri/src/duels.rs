@@ -64,6 +64,7 @@ fn result(r: &elo::DuelResult) -> Value {
 /// The next duel. With `teach` (PLAN/15 T1), one duel in three is built around a song Smart Shuffle
 /// plays often but knows little about.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>, teach: Option<bool>) -> Res<Value> {
     let db = app.read();
     let mut random = random_source();
@@ -84,6 +85,7 @@ pub async fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>, teac
 /// Skips in context (PLAN/16 D7): the last week's skips counted and ignored, and whether the session
 /// going on now reads as listening (`null` when none is).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn skip_context(app: State<'_, App>) -> Res<Value> {
     let db = app.read();
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
@@ -96,11 +98,13 @@ pub async fn skip_context(app: State<'_, App>) -> Res<Value> {
 
 /// Songs whose duels put them a tier away from where the user placed them (PLAN/15 T2).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn tier_suggestions(app: State<'_, App>) -> Res<Vec<nemora_core::suggest::TierSuggestion>> {
     nemora_core::suggest::tier_suggestions(&app.read()).map_err(fail)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn tier_suggestion_apply(
     handle: AppHandle,
     app: State<'_, App>,
@@ -117,11 +121,13 @@ pub async fn tier_suggestion_apply(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn tier_suggestion_dismiss(app: State<'_, App>, tierlist_id: String, song_id: String, to: usize) -> Res<()> {
     app.write(|db| nemora_core::suggest::dismiss_tier_suggestion(db, &tierlist_id, &song_id, to)).map_err(fail)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn duel_pair_by_ids(app: State<'_, App>, song_a_id: String, song_b_id: String) -> Res<Value> {
     let db = app.read();
     let (a, b) = (parse_view_id(&song_a_id).0, parse_view_id(&song_b_id).0);
@@ -130,6 +136,7 @@ pub fn duel_pair_by_ids(app: State<'_, App>, song_a_id: String, song_b_id: Strin
 
 /// The song to build an earned duel around, from songs the user just listened to.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn duel_select_anchor(
     app: State<'_, App>,
     candidates: Vec<Value>,
@@ -150,6 +157,7 @@ pub fn duel_select_anchor(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn duel_submit(
     handle: AppHandle,
     app: State<'_, App>,
@@ -171,6 +179,7 @@ pub fn duel_submit(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn duel_skip(app: State<'_, App>, song_a_id: String, song_b_id: String, reason: Option<String>) -> Res<()> {
     let reason = SkipReason::parse(reason.as_deref().unwrap_or("cantDecide"));
     let (a, b) = (parse_view_id(&song_a_id).0, parse_view_id(&song_b_id).0);
@@ -185,12 +194,14 @@ fn tournament_error(e: tournament::TournamentError) -> String {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tournament_start(app: State<'_, App>, size: u32) -> Res<Value> {
     let state = app.write(|db| tournament::start(db, size)).map_err(fail)?.map_err(tournament_error)?;
     serde_json::to_value(state).map_err(fail)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tournament_resume(app: State<'_, App>) -> Res<Value> {
     let resumed = app.write(|db| tournament::resume(db)).map_err(fail)?;
     Ok(match resumed {
@@ -200,6 +211,7 @@ pub fn tournament_resume(app: State<'_, App>) -> Res<Value> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tournament_overview(app: State<'_, App>) -> Res<Value> {
     let resumed = app.write(|db| tournament::resume(db)).map_err(fail)?;
     let db = app.read();
@@ -214,6 +226,7 @@ pub fn tournament_overview(app: State<'_, App>) -> Res<Value> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tournament_submit(
     handle: AppHandle,
     app: State<'_, App>,
@@ -246,6 +259,7 @@ fn without_pending(mut doc: Value) -> Value {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn tierlists_list(
     app: State<'_, App>,
     ids: Option<Vec<String>>,
@@ -287,6 +301,7 @@ fn random_id(random: &mut impl FnMut() -> f64) -> String {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tierlist_add(
     handle: AppHandle,
     app: State<'_, App>,
@@ -324,6 +339,7 @@ pub fn tierlist_add(
 
 /// Saves the view's tierlist, keeping the pending placements it never saw in their tiers.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tierlist_save(handle: AppHandle, app: State<'_, App>, tierlist: Value) -> Res<Value> {
     let Some(id) = tierlist["tierlistId"].as_str().map(str::to_owned) else {
         return Ok(json!({ "success": false, "message": "The tierlist has no id." }));
@@ -376,6 +392,7 @@ pub fn tierlist_save(handle: AppHandle, app: State<'_, App>, tierlist: Value) ->
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tierlists_remove(handle: AppHandle, app: State<'_, App>, ids: Vec<String>) -> Res<Value> {
     app.write(|db| ids.iter().try_for_each(|id| playlists::delete_tierlist(db, id))).map_err(fail)?;
     notify(&handle, &["tierlists"]);
@@ -384,6 +401,7 @@ pub fn tierlists_remove(handle: AppHandle, app: State<'_, App>, ids: Vec<String>
 
 /// Card pictures for a tierlist: the large cover thumbnail of each song.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn tierlist_artworks(app: State<'_, App>, song_ids: Vec<String>) -> Res<HashMap<String, String>> {
     let db = app.read();
     let v = view(&app);
@@ -404,6 +422,7 @@ pub fn tierlist_artworks(app: State<'_, App>, song_ids: Vec<String>) -> Res<Hash
 /// pairs to keep apart; the view orders the queue. `options` are the model's (PLAN/15), the shipped
 /// default when absent.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn shuffle_data(
     app: State<'_, App>,
     taste_map: State<'_, crate::tastemap::TasteMapCache>,
@@ -492,6 +511,7 @@ pub async fn shuffle_data(
 /// Why each of `song_ids` plays where it does (PLAN/14 C1), keyed by the ids as given. Async, so the
 /// whole-library pass it makes never holds the main thread.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn shuffle_explain(
     app: State<'_, App>,
     song_ids: Vec<String>,

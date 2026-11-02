@@ -7,6 +7,7 @@ const BASE: &str = "https://raw.githubusercontent.com/jaakkopasanen/AutoEq/maste
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Headphone {
     pub name: String,
     /// Who measured it (oratory1990, crinacle, ...).

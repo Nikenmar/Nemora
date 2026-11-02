@@ -111,6 +111,10 @@ function rustCrates() {
     if (seen.has(id)) continue;
     seen.add(id);
     for (const dep of nodes.get(id).deps) {
+      // `cargo metadata` merges a crate's features across all builds, so the `specta` feature only
+      // the desktop's tests enable (PLAN/21 P21.2) looks like a normal dependency of the core
+      // here; `cargo tree -e normal` shows it is not in the app.
+      if (byId.get(dep.pkg).name === 'specta') continue;
       if (dep.dep_kinds.some((k) => k.kind === null)) stack.push(dep.pkg);
     }
   }

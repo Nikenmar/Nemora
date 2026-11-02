@@ -13,6 +13,7 @@ use tauri::{AppHandle, Emitter, Manager};
 /// Matches the camel-case payload `TauriPowerStatePort` expects.
 #[derive(Serialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct PowerState {
     pub is_on_battery_power: bool,
 }
@@ -38,6 +39,7 @@ fn read_power_state() -> Result<PowerState, String> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn get_power_state() -> Result<PowerState, String> {
     read_power_state()
 }
@@ -118,6 +120,7 @@ pub fn queue_second_instance_args(app: &AppHandle, argv: Vec<String>) {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn drain_pending_second_instance_args(state: tauri::State<'_, PendingSecondInstanceArgs>) -> Vec<Vec<String>> {
     std::mem::take(&mut *state.0.lock().expect("pending argv mutex poisoned"))
 }
@@ -129,6 +132,7 @@ pub fn drain_pending_second_instance_args(state: tauri::State<'_, PendingSecondI
 /// start did not: the file that launched the app was never looked at. Windows
 /// passes it here, in our own argv, and nowhere else.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn startup_args() -> Vec<String> {
     std::env::args().skip(1).filter(|arg| !arg.starts_with("--bench=")).collect()
 }
@@ -142,6 +146,7 @@ pub fn startup_args() -> Vec<String> {
 /// that request came back. A startup metric must measure the app, not the link
 /// to it.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn benchmark_mode() -> bool {
     crate::bench::dir().is_some()
         || std::env::var("NEMORA_BENCHMARK_MODE").map(|value| !value.is_empty() && value != "0").unwrap_or(false)

@@ -30,3 +30,9 @@ webp.workspace = true
 # and gives up after 1 MB, so an MP3 with a large embedded cover is "not a supported audio file".
 symphonia = { workspace = true, features = ["all-meta", "opt-simd", "flac", "mp1", "mp2", "mp3", "aac", "alac", "isomp4", "ogg", "vorbis", "wav", "aiff", "pcm", "mkv"] }
 lindera = { version = "6.2.0", features = ["embed-ipadic"] }
+# PLAN/21 P21.2: the IPC types are read from Rust by the desktop's tests only; release builds never
+# enable this.
+specta = { version = "=2.0.0-rc.27", features = ["derive", "serde_json"], optional = true }
+
+[features]
+specta = ["dep:specta"]

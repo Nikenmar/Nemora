@@ -53,6 +53,7 @@ pub const ISLAND_NAMES: &str = "tasteMap.islands";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Point {
     pub song_id: String,
     /// 0..1 across the map.
@@ -83,6 +84,7 @@ pub struct Point {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Island {
     pub id: usize,
     /// Its leading artists, when they lead it; None leaves the name to the view.
@@ -99,6 +101,7 @@ pub struct Island {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct TasteMap {
     pub points: Vec<Point>,
     pub islands: Vec<Island>,

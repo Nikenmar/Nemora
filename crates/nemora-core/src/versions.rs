@@ -16,6 +16,7 @@ pub const HINT_PREFIX: &str = "version:";
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Version {
     #[serde(default)]
     pub id: i64,

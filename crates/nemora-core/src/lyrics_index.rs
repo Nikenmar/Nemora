@@ -14,6 +14,7 @@ use crate::search::fold;
 /// One found line and the lines around it.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Hit {
     pub song_id: String,
     pub line_no: i64,

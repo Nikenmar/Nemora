@@ -19,6 +19,7 @@ pub const LEGACY_PROFILE_ENV: &str = "NEMORA_LEGACY_PROFILE";
 /// Bundled pictures the view shows where there is no cover; their URLs exist only in the bundle.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct DefaultArtwork {
     pub song: String,
     pub artist: String,

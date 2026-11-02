@@ -10,6 +10,7 @@ use crate::commands::Res;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct NowPlaying {
     title: String,
     artist: String,
@@ -167,6 +168,7 @@ mod platform {
 
 /// What Windows shows as now playing; `None` clears it.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn smtc_update(handle: AppHandle, now: Option<NowPlaying>) -> Res<()> {
     let profile = handle.state::<crate::app::App>().profile.clone();
     let main = handle.clone();

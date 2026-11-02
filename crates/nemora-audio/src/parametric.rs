@@ -10,6 +10,7 @@ pub const MAX_FILTERS: usize = 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Kind {
     Peak,
     LowShelf,
@@ -18,6 +19,7 @@ pub enum Kind {
 
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Filter {
     pub kind: Kind,
     pub frequency: f64,
@@ -27,6 +29,7 @@ pub struct Filter {
 
 #[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Profile {
     pub preamp_db: f64,
     pub filters: Vec<Filter>,

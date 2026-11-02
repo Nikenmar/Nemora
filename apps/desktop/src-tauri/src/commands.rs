@@ -32,17 +32,20 @@ pub(crate) fn view(app: &App) -> View<'_> {
 
 /// The first call of the view: hands over the bundled default pictures, returns the user data.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn app_hydrate(app: State<'_, App>, defaults: DefaultArtwork) -> Res<Value> {
     let _ = app.defaults.set(defaults);
     user_data::get(&app.read()).map_err(fail)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn user_data_get(app: State<'_, App>) -> Res<Value> {
     user_data::get(&app.read()).map_err(fail)
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn user_data_set(app: State<'_, App>, key: String, value: Value) -> Res<()> {
     app.write(|db| user_data::set(db, &key, &value)).map_err(fail)
 }
@@ -50,6 +53,7 @@ pub fn user_data_set(app: State<'_, App>, key: String, value: Value) -> Res<()> 
 /// Whether the first-start import of 1.x is still running, and once it ran, old song id to new
 /// song id (null while pending) for what 1.x kept in the renderer's local storage.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn legacy_import_state(app: State<'_, App>) -> Res<Value> {
     let ids = nemora_core::settings::device(&app.read(), "import.songIds").map_err(fail)?;
     Ok(json!({ "running": app.is_importing(), "songIds": ids }))
@@ -95,6 +99,7 @@ fn month_start(today: &str) -> String {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_songs(
     app: State<'_, App>,
     sort_type: Option<String>,
@@ -176,6 +181,7 @@ fn sort_rows(rows: &mut [SongRow], sort: &SongSort) {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_song_info(
     app: State<'_, App>,
     song_ids: Vec<String>,
@@ -203,6 +209,7 @@ pub fn library_song_info(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_song_for_playback(app: State<'_, App>, song_id: String) -> Res<Value> {
     let db = app.read();
     let row = rows_for(&db, std::slice::from_ref(&song_id)).map_err(fail)?.into_iter().next();
@@ -282,6 +289,7 @@ fn liked_artists(db: &Db) -> nemora_core::Result<std::collections::HashSet<Strin
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn artists_toggle_like(
     handle: AppHandle,
     app: State<'_, App>,
@@ -312,6 +320,7 @@ pub fn artists_toggle_like(
 
 /// Keeps the pictures the network found for an artist.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn artist_set_online_artworks(
     handle: AppHandle,
     app: State<'_, App>,
@@ -341,6 +350,7 @@ pub(crate) fn genres_of(db: &Db, v: &View, wanted: &[String], sort: Option<&str>
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_artists(
     app: State<'_, App>,
     ids_or_names: Option<Vec<String>>,
@@ -377,6 +387,7 @@ pub fn library_artists(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_albums(
     app: State<'_, App>,
     ids_or_titles: Option<Vec<String>>,
@@ -386,6 +397,7 @@ pub fn library_albums(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_genres(
     app: State<'_, App>,
     ids_or_names: Option<Vec<String>>,
@@ -461,6 +473,7 @@ fn playlists_of(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_playlists(
     app: State<'_, App>,
     ids: Option<Vec<String>>,
@@ -482,6 +495,7 @@ pub fn library_playlists(
 /// Ranked search over the present library, as 1.1.9's search page reads it. The search history is
 /// the view's (it lives in the user data).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_search(app: State<'_, App>, filter: String, value: String) -> Res<Value> {
     use nemora_core::search::{Filter, search};
     let filter = match filter.as_str() {
@@ -543,6 +557,7 @@ fn message(handle: &AppHandle, code: &str, data: Value) {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_create(
     handle: AppHandle,
     app: State<'_, App>,
@@ -574,6 +589,7 @@ pub fn playlist_create(
 
 /// Adds songs to a playlist, leaving out those already in it; adding to Favorites hearts them.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_add_songs(
     handle: AppHandle,
     app: State<'_, App>,
@@ -608,6 +624,7 @@ pub fn playlist_add_songs(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_rename(handle: AppHandle, app: State<'_, App>, playlist_id: String, name: String) -> Res<()> {
     if find_playlist(&app.read(), &playlist_id).map_err(fail)?.is_none() {
         message(&handle, "PLAYLIST_NOT_FOUND", Value::Null);
@@ -620,6 +637,7 @@ pub fn playlist_rename(handle: AppHandle, app: State<'_, App>, playlist_id: Stri
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_remove(handle: AppHandle, app: State<'_, App>, playlist_ids: Vec<String>) -> Res<bool> {
     app.write(|db| playlist_ids.iter().try_for_each(|id| playlists::delete(db, id))).map_err(fail)?;
     notify(&handle, &["playlists/deletedPlaylist"]);
@@ -628,6 +646,7 @@ pub fn playlist_remove(handle: AppHandle, app: State<'_, App>, playlist_ids: Vec
 
 /// Removes every occurrence of a song from a playlist; from Favorites it takes the heart away.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_remove_song(
     handle: AppHandle,
     app: State<'_, App>,
@@ -656,6 +675,7 @@ pub fn playlist_remove_song(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_set_artwork(handle: AppHandle, app: State<'_, App>, playlist_id: String, path: String) -> Res<Value> {
     let picture = std::fs::read(&path).map_err(fail)?;
     let hash = app.write(|db| playlists::set_custom_cover(db, &app.covers, &playlist_id, &picture)).map_err(fail)?;
@@ -665,6 +685,7 @@ pub fn playlist_set_artwork(handle: AppHandle, app: State<'_, App>, playlist_id:
 
 /// Imports an M3U/M3U8 file: into the playlist of the same name if there is one, else as a new one.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_import(handle: AppHandle, app: State<'_, App>, path: String) -> Res<()> {
     let file = std::path::Path::new(&path);
     let name = file.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
@@ -699,6 +720,7 @@ pub fn playlist_import(handle: AppHandle, app: State<'_, App>, path: String) -> 
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn playlist_export(handle: AppHandle, app: State<'_, App>, playlist_id: String, path: String) -> Res<()> {
     let name = find_playlist(&app.read(), &playlist_id).map_err(fail)?.map(|p| p.name).unwrap_or_default();
     let written = playlists::export_m3u(&app.read(), &playlist_id)
@@ -713,6 +735,7 @@ pub fn playlist_export(handle: AppHandle, app: State<'_, App>, playlist_id: Stri
 
 /// Clears the History playlist. The sessions stay: they are the statistics.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn history_clear(handle: AppHandle, app: State<'_, App>, now: i64) -> Res<Value> {
     app.write(|db| nemora_core::settings::set_device(db, "history.clearedAt", &json!(now))).map_err(fail)?;
     notify(&handle, &["playlists/history"]);
@@ -721,6 +744,7 @@ pub fn history_clear(handle: AppHandle, app: State<'_, App>, now: i64) -> Res<Va
 
 /// Recomputes Rediscover: songs the user rated or loved but has not heard for `threshold_days`.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn rediscover_refresh(
     handle: AppHandle,
     app: State<'_, App>,
@@ -755,6 +779,7 @@ fn song_for_path(db: &Db, path: &str) -> nemora_core::Result<Option<String>> {
 /// The lyrics of the song at `path` as stored text: what the library has, else what the core
 /// finds (the `.lrc` file, the tags, LRCLIB when `network`), which it then keeps.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res<Value> {
     // A benchmark run is offline (bench.rs).
     let network = network && crate::bench::dir().is_none();
@@ -771,6 +796,7 @@ pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res
 /// Keeps lyrics the view found elsewhere (Musixmatch) under their source; like any found text they
 /// never replace the user's own, and replace a found text only when they are synced and it is not.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn lyrics_store_found(
     handle: AppHandle,
     app: State<'_, App>,
@@ -791,6 +817,7 @@ pub fn lyrics_store_found(
 
 /// Keeps the user's lyrics for the song at `path`; a found text never replaces them.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn lyrics_save(handle: AppHandle, app: State<'_, App>, path: String, text: String) -> Res<bool> {
     let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(false) };
     app.write(|db| nemora_core::lyrics::save(db, &song, &text, "user")).map_err(fail)?;
@@ -803,6 +830,7 @@ pub fn lyrics_save(handle: AppHandle, app: State<'_, App>, path: String, text: S
 /// The statistics page (1.x `StatsData`) over the 2.0 roll-ups. Every figure follows the range;
 /// only the calendar is the trailing 53 weeks by definition.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn stats_dashboard(app: State<'_, App>, time_range: String, today: String) -> Res<Value> {
     use nemora_core::elo::Winner;
     use nemora_core::stats::{Range, dashboard};
@@ -905,6 +933,7 @@ pub fn stats_dashboard(app: State<'_, App>, time_range: String, today: String) -
 
 /// Writes this profile as a stats export (`nora-cmr-stats-export`), readable by 1.x and Android.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn stats_export(app: State<'_, App>, path: String, tier_shuffle_intensity: Option<f64>, now: i64) -> Res<Value> {
     use nemora_core::transfer::{ExportOptions, export_stats};
     let export_id = nemora_core::ids::random();
@@ -925,6 +954,7 @@ pub fn stats_export(app: State<'_, App>, path: String, tier_shuffle_intensity: O
 /// Merges a stats export into this profile. Counters merge by maximum per source and day, so the
 /// 1.x choice between "separate devices" and "same origin" has nothing left to decide.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn stats_import(handle: AppHandle, app: State<'_, App>, path: String) -> Res<Value> {
     let text = std::fs::read_to_string(&path).map_err(fail)?;
     let preferences =
@@ -959,6 +989,7 @@ pub fn stats_import(handle: AppHandle, app: State<'_, App>, path: String) -> Res
 
 /// Recap slides of a month or a year.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn stats_recap(app: State<'_, App>, period: Value, utc_offset_min: i64) -> Res<Value> {
     use nemora_core::recap::{Period, recap};
     let year = period["year"].as_i64().ok_or("no year")?;
@@ -976,6 +1007,7 @@ pub fn stats_recap(app: State<'_, App>, period: Value, utc_offset_min: i64) -> R
 /// One thing the player saw, as the view reports it.
 #[derive(serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub enum FactInput {
     #[serde(rename_all = "camelCase")]
     Play { at_ms: i64, position_ms: i64 },
@@ -989,6 +1021,7 @@ pub enum FactInput {
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct SessionInput {
     song_id: String,
     started_at: i64,
@@ -1005,6 +1038,7 @@ pub struct SessionInput {
 /// Stores one finished session of one song; the core decides whether it was a play, a skip or a
 /// full listen (listening definitions 2.0).
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn play_record(handle: AppHandle, app: State<'_, App>, session: SessionInput) -> Res<Value> {
     use nemora_core::plays::{EndReason, Fact, Session, StartReason, record_with};
     let start = session.start_reason.as_deref().map_or(StartReason::Unknown, StartReason::parse);
@@ -1056,6 +1090,7 @@ pub async fn play_record(handle: AppHandle, app: State<'_, App>, session: Sessio
 // ----- hearts and blacklist -------------------------------------------------------------------
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn favorites_toggle(
     handle: AppHandle,
     app: State<'_, App>,
@@ -1079,6 +1114,7 @@ pub fn favorites_toggle(
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_blacklist(app: State<'_, App>) -> Res<Value> {
     let db = app.read();
     Ok(json!({
@@ -1088,6 +1124,7 @@ pub fn library_blacklist(app: State<'_, App>) -> Res<Value> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn blacklist_songs(handle: AppHandle, app: State<'_, App>, song_ids: Vec<String>, value: bool) -> Res<()> {
     app.write(|db| song_ids.iter().try_for_each(|id| playlists::set_blacklisted(db, parse_view_id(id).0, value)))
         .map_err(fail)?;
@@ -1098,6 +1135,7 @@ pub fn blacklist_songs(handle: AppHandle, app: State<'_, App>, song_ids: Vec<Str
 /// Blacklists or restores folders. A music folder itself cannot be blacklisted: that is removing
 /// it, which has its own action.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn blacklist_folders(
     handle: AppHandle,
     app: State<'_, App>,
@@ -1124,12 +1162,14 @@ pub fn blacklist_folders(
 // ----- folders and scanning -------------------------------------------------------------------
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_folder_structures(app: State<'_, App>) -> Res<Vec<Value>> {
     user_data::music_folders(&app.read()).map_err(fail)
 }
 
 /// 1.x `MusicFolder`s: all music folders, or the asked ones wherever they are in the trees.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_folders(
     app: State<'_, App>,
     folder_paths: Option<Vec<String>>,
@@ -1165,6 +1205,7 @@ pub fn library_folders(
 
 /// Adds music folders and scans them; answers with the songs found in them.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<String>) -> Res<Vec<Value>> {
     // Spelled as the scan stores paths, so `E:/Music` finds the files of `E:\Music`.
     let roots: Vec<String> = paths
@@ -1188,6 +1229,7 @@ pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<Stri
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn folders_remove(handle: AppHandle, app: State<'_, App>, path: String) -> Res<()> {
     app.write(|db| nemora_core::settings::remove_music_folder(db, std::path::Path::new(&path))).map_err(fail)?;
     notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
@@ -1197,6 +1239,7 @@ pub fn folders_remove(handle: AppHandle, app: State<'_, App>, path: String) -> R
 
 /// Moves files to the recycle bin, or deletes them for good, then lets the scan notice.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn songs_delete_files(
     handle: AppHandle,
     app: State<'_, App>,
@@ -1220,6 +1263,7 @@ pub async fn songs_delete_files(
 
 /// Brings the library in line with the music folders.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn library_rescan(handle: AppHandle, app: State<'_, App>) -> Res<Value> {
     let report = app.scan().map_err(fail)?;
     let changed = report.added + report.updated + report.restored + report.missing > 0;
@@ -1234,6 +1278,7 @@ pub async fn library_rescan(handle: AppHandle, app: State<'_, App>) -> Res<Value
 
 /// Per-song listening data in the 1.x shape: totals and day counts grouped by year.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn library_listening(app: State<'_, App>, song_ids: Vec<String>) -> Res<Vec<Value>> {
     let db = app.read();
     let mut out = Vec::with_capacity(song_ids.len());

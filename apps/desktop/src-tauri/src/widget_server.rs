@@ -52,6 +52,7 @@ const GEOLOGICA_CYRILLIC: &[u8] = include_bytes!("../../src/renderer/src/assets/
 /// What the renderer pushes on every change worth showing.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct WidgetStateInput {
     pub title: Option<String>,
     /// How it sounds (PLAN/18): "Slowed + Reverb", drawn after the title as the player bar does.
@@ -75,6 +76,7 @@ pub struct WidgetStateInput {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
 pub struct UpNext {
     pub title: String,
     pub artist: Option<String>,
@@ -209,6 +211,7 @@ fn art_source_from(url: Option<String>) -> ArtSource {
 /// `version` to decide whether to re-render, and a song that "changed" into
 /// itself would restart the entrance animation on every push.
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn widget_set_state(state: WidgetStateInput) -> Result<(), String> {
     apply_state(state)
 }
@@ -416,6 +419,7 @@ pub fn set_enabled(enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub async fn widget_set_enabled(enabled: bool) -> Result<(), String> {
     set_enabled(enabled)
 }

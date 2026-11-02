@@ -10,6 +10,13 @@ repository.workspace = true
 
 [lib]
 name = "nemora_desktop"
+# The unit tests run from the test target below instead (PLAN/21 P21.2): a test target can be given
+# the Common Controls v6 manifest (build.rs), which the IPC types test needs to start on Windows.
+test = false
+
+[[test]]
+name = "desktop"
+path = "src/lib.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -63,3 +70,14 @@ windows = { version = "0.62", features = [
 ] }
 # Discord Rich Presence speaks over a named pipe.
 discord-rich-presence = "0.2"
+
+[dev-dependencies]
+# PLAN/21 P21.2: the IPC types are read from the commands in a test (src/ipc_types.rs) and written to
+# the view; nothing of this reaches a release build.
+nemora-core = { workspace = true, features = ["specta"] }
+nemora-audio = { workspace = true, features = ["specta"] }
+tauri = { version = "2", features = ["specta"] }
+specta = { version = "=2.0.0-rc.27", features = ["derive", "function", "serde_json"] }
+specta-serde = "=0.0.14"
+specta-typescript = "=0.0.14"
+specta-util = "=0.0.14"
