@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "src/renderer/src/components/ui/Kbd.tsx"
+        ],
+        "createdAt": "2026-11-02T20:15:58.429Z",
+        "reason": "assistant decided: the 2px bottom edge is a keycap's depth in the neutral line colour, not an accent stripe; the design is a key drawn as a key"
+      }
+    ]
+  }
+}
