@@ -140,7 +140,7 @@ const SoundPanel = () => {
         <div className="min-w-0">
           <h2 className="text-body font-semibold">{t('sound.title')}</h2>
           <p className="mt-1 h-4 truncate text-small text-ink-dim">
-            {tag ? <span className="sound-tag inline-block uppercase tracking-[0.07em] text-echo">{tag}</span> : t('sound.originalSound')}
+            {tag ? <span className="sound-tag inline-block font-medium text-echo">{tag}</span> : t('sound.originalSound')}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">

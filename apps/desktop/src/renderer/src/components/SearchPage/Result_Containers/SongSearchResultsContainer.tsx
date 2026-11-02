@@ -1,11 +1,11 @@
-import { useCallback, useContext, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import Button from '../../Button';
-import SecondaryContainer from '../../SecondaryContainer';
-import Song from '../../SongsPage/Song';
-import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
-import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { useCallback, useContext, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import Button from "../../Button";
+import SecondaryContainer from "../../SecondaryContainer";
+import Song from "../../SongsPage/Song";
+import { AppUpdateContext } from "../../../contexts/AppUpdateContext";
+import { useStore } from "@tanstack/react-store";
+import { store } from "@renderer/store";
 
 type Props = {
   songs: SongData[];
@@ -15,24 +15,36 @@ type Props = {
 
 const SongSearchResultsContainer = (props: Props) => {
   const { searchInput, songs, noOfVisibleSongs = 5 } = props;
-  const multipleSelectionsData = useStore(store, (state) => state.multipleSelectionsData);
+  const multipleSelectionsData = useStore(
+    store,
+    (state) => state.multipleSelectionsData,
+  );
   const isMultipleSelectionEnabled = useStore(
     store,
-    (state) => state.multipleSelectionsData.isEnabled
+    (state) => state.multipleSelectionsData.isEnabled,
   );
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(
+    store,
+    (state) => state.localStorage.preferences,
+  );
 
-  const { toggleMultipleSelections, changeCurrentActivePage, createQueue, playSong } =
-    useContext(AppUpdateContext);
+  const {
+    toggleMultipleSelections,
+    changeCurrentActivePage,
+    createQueue,
+    playSong,
+  } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
   const handleSongPlayBtnClick = useCallback(
     (currSongId: string) => {
-      const queueSongIds = songs.filter((song) => !song.isBlacklisted).map((song) => song.songId);
-      createQueue(queueSongIds, 'songs', false, undefined, false);
+      const queueSongIds = songs
+        .filter((song) => !song.isBlacklisted)
+        .map((song) => song.songId);
+      createQueue(queueSongIds, "songs", false, undefined, false);
       playSong(currSongId, true);
     },
-    [createQueue, playSong, songs]
+    [createQueue, playSong, songs],
   );
 
   const songResults = useMemo(
@@ -56,6 +68,7 @@ const SongSearchResultsContainer = (props: Props) => {
                     isAFavorite={song.isAFavorite}
                     year={song.year}
                     isBlacklisted={song.isBlacklisted}
+                    version={"version" in song ? (song.version ?? null) : null}
                     onPlayClick={handleSongPlayBtnClick}
                   />
                 );
@@ -63,31 +76,40 @@ const SongSearchResultsContainer = (props: Props) => {
             })
             .filter((song) => song !== undefined)
         : [],
-    [handleSongPlayBtnClick, preferences?.isSongIndexingEnabled, noOfVisibleSongs, songs]
+    [
+      handleSongPlayBtnClick,
+      preferences?.isSongIndexingEnabled,
+      noOfVisibleSongs,
+      songs,
+    ],
   );
 
   return (
     <SecondaryContainer
       className={`secondary-container songs-list-container ${
-        songResults.length > 0 ? 'active relative mt-8' : 'absolute mt-4'
+        songResults.length > 0 ? "active relative mt-8" : "absolute mt-4"
       }`}
     >
       <>
         <div
           className={`title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink ${
-            songResults.length > 0 ? 'visible opacity-100' : 'invisible opacity-0'
+            songResults.length > 0
+              ? "visible opacity-100"
+              : "invisible opacity-0"
           }`}
         >
           <div className="container flex">
-            Songs{' '}
+            Songs{" "}
             <div className="other-stats-container ml-12 flex items-center text-xs">
               {songs && songs.length > 0 && (
                 <span className="no-of-songs">
                   {t(
                     `searchPage.${
-                      songs.length > noOfVisibleSongs ? 'resultAndVisibleCount' : 'resultCount'
+                      songs.length > noOfVisibleSongs
+                        ? "resultAndVisibleCount"
+                        : "resultCount"
                     }`,
-                    { count: songs.length, noVisible: noOfVisibleSongs }
+                    { count: songs.length, noVisible: noOfVisibleSongs },
                   )}
                 </span>
               )}
@@ -97,33 +119,40 @@ const SongSearchResultsContainer = (props: Props) => {
             <Button
               label={t(
                 `common.${
-                  isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs'
-                    ? 'unselectAll'
-                    : 'select'
-                }`
+                  isMultipleSelectionEnabled &&
+                  multipleSelectionsData.selectionType === "songs"
+                    ? "unselectAll"
+                    : "select"
+                }`,
               )}
               className="select-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
               iconName={
-                isMultipleSelectionEnabled && multipleSelectionsData.selectionType === 'songs'
-                  ? 'remove_done'
-                  : 'checklist'
+                isMultipleSelectionEnabled &&
+                multipleSelectionsData.selectionType === "songs"
+                  ? "remove_done"
+                  : "checklist"
               }
-              clickHandler={() => toggleMultipleSelections(!isMultipleSelectionEnabled, 'songs')}
+              clickHandler={() =>
+                toggleMultipleSelections(!isMultipleSelectionEnabled, "songs")
+              }
               isDisabled={
-                isMultipleSelectionEnabled && multipleSelectionsData.selectionType !== 'songs'
+                isMultipleSelectionEnabled &&
+                multipleSelectionsData.selectionType !== "songs"
               }
-              tooltipLabel={t(`common.${isMultipleSelectionEnabled ? 'unselectAll' : 'select'}`)}
+              tooltipLabel={t(
+                `common.${isMultipleSelectionEnabled ? "unselectAll" : "select"}`,
+              )}
             />
             {songs.length > noOfVisibleSongs && (
               <Button
-                label={t('common.showAll')}
+                label={t("common.showAll")}
                 iconName="apps"
                 className="show-all-btn text-sm font-normal"
                 clickHandler={() =>
-                  changeCurrentActivePage('AllSearchResults', {
+                  changeCurrentActivePage("AllSearchResults", {
                     searchQuery: searchInput,
-                    searchFilter: 'Songs' as SearchFilters,
-                    searchResults: songs
+                    searchFilter: "Songs" as SearchFilters,
+                    searchResults: songs,
                   })
                 }
               />
@@ -133,8 +162,8 @@ const SongSearchResultsContainer = (props: Props) => {
         <div
           className={`songs-container mb-12 ${
             songResults.length > 0
-              ? 'visible translate-y-0 opacity-100'
-              : 'invisible translate-y-8 opacity-0 transition-transform'
+              ? "visible translate-y-0 opacity-100"
+              : "invisible translate-y-8 opacity-0 transition-transform"
           }`}
         >
           {songResults}

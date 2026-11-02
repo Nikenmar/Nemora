@@ -621,7 +621,7 @@ const SongCard = (props: SongCardProp) => {
           tabIndex={0}
         >
           {title}
-          {version && <SoundTag tag={versionTag(version)} className="ml-1.5 text-[12px]" />}
+          {version && <SoundTag tag={versionTag(version)} />}
         </div>
         <div
           className="song-artists mt-0.5 truncate text-small text-ink-dim"

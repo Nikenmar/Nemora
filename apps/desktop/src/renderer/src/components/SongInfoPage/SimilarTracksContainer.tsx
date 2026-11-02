@@ -1,20 +1,26 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { AppUpdateContext } from '../../contexts/AppUpdateContext';
-import type { SimilarTracksOutput } from 'src/types/last_fm_similar_tracks_api';
-import UnAvailableTrack from './UnAvailableTrack';
-import TitleContainer from '../TitleContainer';
-import Song from '../SongsPage/Song';
-import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AppUpdateContext } from "../../contexts/AppUpdateContext";
+import type { SimilarTracksOutput } from "src/types/last_fm_similar_tracks_api";
+import UnAvailableTrack from "./UnAvailableTrack";
+import TitleContainer from "../TitleContainer";
+import Song from "../SongsPage/Song";
+import { useStore } from "@tanstack/react-store";
+import { store } from "@renderer/store";
 
 type Props = { songId: string };
 
 const SimilarTracksContainer = (props: Props) => {
-  const bodyBackgroundImage = useStore(store, (state) => state.bodyBackgroundImage);
+  const bodyBackgroundImage = useStore(
+    store,
+    (state) => state.bodyBackgroundImage,
+  );
   const queue = useStore(store, (state) => state.localStorage.queue);
   const currentSongData = useStore(store, (state) => state.currentSongData);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(
+    store,
+    (state) => state.localStorage.preferences,
+  );
 
   const { createQueue, playSong, updateQueueData, addNewNotifications } =
     useContext(AppUpdateContext);
@@ -22,9 +28,11 @@ const SimilarTracksContainer = (props: Props) => {
 
   const { songId } = props;
 
-  const [similarTracks, setSimilarTracks] = useState<NonNullable<SimilarTracksOutput>>({
+  const [similarTracks, setSimilarTracks] = useState<
+    NonNullable<SimilarTracksOutput>
+  >({
     sortedAvailTracks: [],
-    sortedUnAvailTracks: []
+    sortedUnAvailTracks: [],
   });
 
   useEffect(() => {
@@ -39,20 +47,27 @@ const SimilarTracksContainer = (props: Props) => {
 
   const handleSongPlayBtnClick = useCallback(
     (startSongId?: string) => {
-      const songs = similarTracks.sortedAvailTracks.map((song) => song.songData!);
-      const queueSongIds = songs.filter((song) => !song.isBlacklisted).map((song) => song.songId);
+      const songs = similarTracks.sortedAvailTracks.map(
+        (song) => song.songData!,
+      );
+      const queueSongIds = songs
+        .filter((song) => !song.isBlacklisted)
+        .map((song) => song.songId);
 
-      createQueue(queueSongIds, 'songs', false, undefined, !startSongId);
+      createQueue(queueSongIds, "songs", false, undefined, !startSongId);
       if (startSongId) playSong(startSongId, true);
     },
-    [similarTracks.sortedAvailTracks, createQueue, playSong]
+    [similarTracks.sortedAvailTracks, createQueue, playSong],
   );
 
   const addSongsToPlayNext = useCallback(() => {
     const songs = similarTracks.sortedAvailTracks.map((song) => song.songData!);
-    const queueSongIds = songs.filter((song) => !song.isBlacklisted).map((song) => song.songId);
+    const queueSongIds = songs
+      .filter((song) => !song.isBlacklisted)
+      .map((song) => song.songId);
 
-    let currentSongIndex = queue.currentSongIndex ?? queue.queue.indexOf(currentSongData.songId);
+    let currentSongIndex =
+      queue.currentSongIndex ?? queue.queue.indexOf(currentSongData.songId);
     const duplicateIds: string[] = [];
 
     const newQueue = queue.queue.filter((id) => {
@@ -78,11 +93,11 @@ const SimilarTracksContainer = (props: Props) => {
       {
         id: `${queueSongIds.length}PlayNext`,
         duration: 5000,
-        content: t('notifications.playingNextSongsWithCount', {
-          count: queueSongIds.length
+        content: t("notifications.playingNextSongsWithCount", {
+          count: queueSongIds.length,
         }),
-        iconName: 'shortcut'
-      }
+        iconName: "shortcut",
+      },
     ]);
   }, [
     similarTracks.sortedAvailTracks,
@@ -91,7 +106,7 @@ const SimilarTracksContainer = (props: Props) => {
     currentSongData.songId,
     updateQueueData,
     addNewNotifications,
-    t
+    t,
   ]);
 
   const availableSimilarTrackComponents = useMemo(
@@ -114,20 +129,32 @@ const SimilarTracksContainer = (props: Props) => {
             isAFavorite={song.isAFavorite}
             year={song.year}
             isBlacklisted={song.isBlacklisted}
+            version={"version" in song ? (song.version ?? null) : null}
             onPlayClick={handleSongPlayBtnClick}
           />
         );
       }),
-    [handleSongPlayBtnClick, preferences?.isSongIndexingEnabled, similarTracks.sortedAvailTracks]
+    [
+      handleSongPlayBtnClick,
+      preferences?.isSongIndexingEnabled,
+      similarTracks.sortedAvailTracks,
+    ],
   );
 
   const unAvailableSimilarTrackComponents = useMemo(
     () =>
       similarTracks.sortedUnAvailTracks.map((track) => {
         const { title, url, artists } = track;
-        return <UnAvailableTrack title={title} artists={artists} url={url} key={url} />;
+        return (
+          <UnAvailableTrack
+            title={title}
+            artists={artists}
+            url={url}
+            key={url}
+          />
+        );
       }),
-    [similarTracks.sortedUnAvailTracks]
+    [similarTracks.sortedUnAvailTracks],
   );
 
   return (
@@ -135,43 +162,43 @@ const SimilarTracksContainer = (props: Props) => {
       {availableSimilarTrackComponents.length > 0 && (
         <>
           <TitleContainer
-            title={t('songInfoPage.similarTracksInLibrary')}
+            title={t("songInfoPage.similarTracksInLibrary")}
             buttons={[
               {
-                label: t('common.play'),
+                label: t("common.play"),
                 clickHandler: () => handleSongPlayBtnClick(),
-                iconName: 'play_arrow',
-                className: '!bg-canvas/40'
+                iconName: "play_arrow",
+                className: "!bg-canvas/40",
               },
               {
-                label: t('common.playNextAll'),
+                label: t("common.playNextAll"),
                 clickHandler: addSongsToPlayNext,
-                iconName: 'shortcut',
-                className: '!bg-canvas/40'
-              }
+                iconName: "shortcut",
+                className: "!bg-canvas/40",
+              },
             ]}
             titleClassName="!text-xl text-ink !font-normal"
             className={`title-container ${
-              bodyBackgroundImage
-                ? 'text-on-media'
-                : 'text-ink'
+              bodyBackgroundImage ? "text-on-media" : "text-ink"
             } !mt-8 mb-4`}
           />
-          <div className="my-2 flex flex-wrap">{availableSimilarTrackComponents}</div>
+          <div className="my-2 flex flex-wrap">
+            {availableSimilarTrackComponents}
+          </div>
         </>
       )}
       {unAvailableSimilarTrackComponents.length > 0 && (
         <>
           <TitleContainer
-            title={t('songInfoPage.otherSimilarTracks')}
+            title={t("songInfoPage.otherSimilarTracks")}
             titleClassName="!text-xl text-ink !font-normal"
             className={`title-container ${
-              bodyBackgroundImage
-                ? 'text-on-media'
-                : 'text-ink'
+              bodyBackgroundImage ? "text-on-media" : "text-ink"
             } !my-4`}
           />
-          <div className="flex flex-wrap">{unAvailableSimilarTrackComponents}</div>
+          <div className="flex flex-wrap">
+            {unAvailableSimilarTrackComponents}
+          </div>
         </>
       )}
     </div>

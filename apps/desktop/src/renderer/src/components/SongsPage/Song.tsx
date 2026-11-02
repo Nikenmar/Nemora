@@ -735,7 +735,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           >
             {isCurrent && <EqualizerBars isPlaying={isSongPlaying} className="mr-0.5" />}
             <span className="truncate">{title}</span>
-            {version && <SoundTag tag={versionTag(version)} className="ml-1 text-[13px]" />}
+            {version && <SoundTag tag={versionTag(version)} className="-ml-1" />}
           </div>
           <div className="song-artists min-w-0 truncate text-small text-ink-dim">
             {songArtists}
