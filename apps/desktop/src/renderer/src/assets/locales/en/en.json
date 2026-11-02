@@ -1643,6 +1643,7 @@
     "unavailable": "The taste map could not be drawn",
     "searchPlaceholder": "Find a song or artist",
     "fit": "Show all",
+    "redrawing": "Redrawing...",
     "redraw": "Redraw",
     "redrawHint": "Lay the map out again from scratch. Islands may move.",
     "fullScreen": "Full screen",

@@ -321,7 +321,10 @@ fn where_the_weights_go() {
     eprintln!("PART taste map: communities {:.0} ms", clock.elapsed().as_secs_f64() * 1000.0);
     let started = std::time::Instant::now();
     let map = crate::tastemap::build(&db, None, true).unwrap();
-    eprintln!("PART taste map: fresh build {:.0} ms", started.elapsed().as_secs_f64() * 1000.0);
+    let fresh_ms = started.elapsed().as_secs_f64() * 1000.0;
+    eprintln!("PART taste map: fresh build {fresh_ms:.0} ms");
+    // PLAN/20 D2: a fresh map of 20 000 songs in islands within 2 s.
+    assert!(fresh_ms <= 2000.0, "fresh taste map {fresh_ms:.0} ms");
     let mut stale = map.clone();
     stale.hash = String::new();
     let started = std::time::Instant::now();

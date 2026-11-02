@@ -782,7 +782,7 @@ const TasteMapPage = () => {
           <Button label={t('tasteMap.fit')} iconName="fit_screen" className="!mr-0 text-sm" clickHandler={() => animateTo(fit)} />
           <Button
             tooltipLabel={t('tasteMap.redrawHint')}
-            label={t('tasteMap.redraw')}
+            label={isRedrawing ? t('tasteMap.redrawing') : t('tasteMap.redraw')}
             iconName="refresh"
             className="!mr-0 text-sm"
             isDisabled={isRedrawing}

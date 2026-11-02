@@ -460,6 +460,272 @@ pub fn layout(
     (pos.into_iter().map(|(x, y)| ((x - min_x + off_x) / span, (y - min_y + off_y) / span)).collect(), span)
 }
 
+/// An island's place in a multilevel layout (PLAN/20 D2): its middle and radius, 0..1 like the songs.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Disc {
+    pub island: usize,
+    pub x: f64,
+    pub y: f64,
+    pub r: f64,
+}
+
+/// Room between two islands' shores, in layout units (about a song apart).
+const ISLAND_GAP: f64 = 1.5;
+
+/// A fresh layout in three levels (PLAN/20 D2): the islands first, as discs sized by their songs
+/// (about one layout unit per song), linked islands drawn together and discs never overlapping;
+/// then each island's songs by the ordinary layout of their own links (islands in parallel),
+/// fitted into its disc; then the loose songs beside what they link to, outside every disc, and
+/// the unlinked ones on a ring around the map. Islands cannot overlap by construction, and the
+/// repulsion never sees more than one island at a time. `previous` (the last map) gives each island
+/// its old middle to start from, so a redraw keeps the land where it was. Deterministic.
+pub fn layout_islands(
+    songs: &[String],
+    links: &BTreeMap<String, Vec<(String, f64)>>,
+    groups: Groups<'_>,
+    previous: Option<Previous<'_>>,
+) -> (Vec<(f64, f64)>, f64, Vec<Disc>) {
+    use rayon::prelude::*;
+    let n = songs.len();
+    if n == 0 {
+        return (Vec::new(), 1.0, Vec::new());
+    }
+    let (group, loose) = groups;
+    let count = group.iter().max().map_or(0, |m| m + 1);
+    let mut members: Vec<Vec<usize>> = vec![Vec::new(); count];
+    for (i, &g) in group.iter().enumerate() {
+        members[g].push(i);
+    }
+    let islands: Vec<usize> = (0..count).filter(|&g| Some(g) != loose && !members[g].is_empty()).collect();
+    let m = islands.len();
+    let r: Vec<f64> = islands.iter().map(|&g| 0.6 * (members[g].len() as f64).sqrt() + 0.5).collect();
+
+    // Level 1: the islands. Weights between islands are the links that cross.
+    let index: HashMap<&str, usize> = songs.iter().enumerate().map(|(i, s)| (s.as_str(), i)).collect();
+    let slot: HashMap<usize, usize> = islands.iter().enumerate().map(|(k, &g)| (g, k)).collect();
+    let mut between: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    for (a, list) in links {
+        let Some(&i) = index.get(a.as_str()) else { continue };
+        for (b, w) in list {
+            let Some(&j) = index.get(b.as_str()) else { continue };
+            if let (Some(&ka), Some(&kb)) = (slot.get(&group[i]), slot.get(&group[j]))
+                && ka < kb
+            {
+                *between.entry((ka, kb)).or_default() += w;
+            }
+        }
+    }
+    // Start: the previous middles where there are some, else a spiral, the largest island first.
+    let previous = previous.filter(|(p, span)| !p.is_empty() && *span > 0.0);
+    let first = r.first().copied().unwrap_or(1.0);
+    let mut centre: Vec<(f64, f64)> = (0..m)
+        .map(|k| {
+            let angle = k as f64 * 2.399_963; // the golden angle
+            let d = 2.5 * (k as f64).sqrt() * first;
+            (d * angle.cos(), d * angle.sin())
+        })
+        .collect();
+    if let Some((prev, span)) = previous {
+        for (k, &g) in islands.iter().enumerate() {
+            let placed: Vec<(f64, f64)> =
+                members[g].iter().filter_map(|&i| prev.get(&songs[i])).map(|&(x, y)| (x * span, y * span)).collect();
+            if !placed.is_empty() {
+                let c = placed.len() as f64;
+                centre[k] = (placed.iter().map(|p| p.0).sum::<f64>() / c, placed.iter().map(|p| p.1).sum::<f64>() / c);
+            }
+        }
+    }
+    let total: f64 = between.values().sum::<f64>().max(1e-9);
+    let steps = 400;
+    for step in 0..steps {
+        let cooling = 1.0 - step as f64 / steps as f64;
+        let mut force = vec![(0.0f64, 0.0f64); m];
+        for (&(a, b), &w) in &between {
+            let (x, y) = (centre[b].0 - centre[a].0, centre[b].1 - centre[a].1);
+            let d = (x * x + y * y).sqrt().max(1e-6);
+            let rest = r[a] + r[b] + ISLAND_GAP;
+            let f = (w / total * m as f64).min(4.0) * (d - rest) / d * 0.05;
+            force[a].0 += x * f;
+            force[a].1 += y * f;
+            force[b].0 -= x * f;
+            force[b].1 -= y * f;
+        }
+        let (mx, my) = centre.iter().fold((0.0, 0.0), |a, c| (a.0 + c.0, a.1 + c.1));
+        let (mx, my) = (mx / m.max(1) as f64, my / m.max(1) as f64);
+        for k in 0..m {
+            // A pull to the middle packs islands round the main land (separation keeps them apart).
+            let (fx, fy) = (force[k].0 + (mx - centre[k].0) * 0.03, force[k].1 + (my - centre[k].1) * 0.03);
+            let limit = 0.5 + 3.0 * cooling;
+            let len = (fx * fx + fy * fy).sqrt();
+            let scale = if len > limit { limit / len } else { 1.0 };
+            centre[k].0 += fx * scale;
+            centre[k].1 += fy * scale;
+        }
+        // No two discs overlap: pushed apart along their line, the smaller giving way more.
+        separate(&mut centre, &r, if step + 1 == steps { 50 } else { 4 });
+    }
+
+    // Level 2: each island's songs by their own links, fitted into the island's disc.
+    let inner: Vec<Vec<(usize, (f64, f64))>> = islands
+        .par_iter()
+        .enumerate()
+        .map(|(k, &g)| {
+            let ids: Vec<String> = members[g].iter().map(|&i| songs[i].clone()).collect();
+            let own: HashSet<&str> = ids.iter().map(String::as_str).collect();
+            let sub: BTreeMap<String, Vec<(String, f64)>> = ids
+                .iter()
+                .filter_map(|id| {
+                    let list: Vec<(String, f64)> =
+                        links.get(id)?.iter().filter(|(b, _)| own.contains(b.as_str())).cloned().collect();
+                    (!list.is_empty()).then(|| (id.clone(), list))
+                })
+                .collect();
+            let (unit, _) = layout(&ids, &sub, None, None);
+            // Into the disc: centred on its middle, its farthest song just inside the shore.
+            let (cx, cy) = unit.iter().fold((0.0, 0.0), |a, p| (a.0 + p.0, a.1 + p.1));
+            let (cx, cy) = (cx / unit.len() as f64, cy / unit.len() as f64);
+            let far = unit.iter().map(|p| ((p.0 - cx).powi(2) + (p.1 - cy).powi(2)).sqrt()).fold(0.0, f64::max);
+            let scale = if far > 1e-9 { (r[k] - 0.3).max(0.1) / far } else { 0.0 };
+            members[g]
+                .iter()
+                .zip(unit)
+                .map(|(&i, p)| (i, (centre[k].0 + (p.0 - cx) * scale, centre[k].1 + (p.1 - cy) * scale)))
+                .collect()
+        })
+        .collect();
+    let mut pos = vec![(f64::NAN, f64::NAN); n];
+    for list in inner {
+        for (i, p) in list {
+            pos[i] = p;
+        }
+    }
+
+    // Level 3: loose songs beside what they link to, pushed off every disc; the rest on a ring.
+    let (mut min_x, mut min_y, mut max_x, mut max_y) = (0.0f64, 0.0f64, 1.0f64, 1.0f64);
+    if m > 0 {
+        (min_x, min_y, max_x, max_y) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+        for (k, c) in centre.iter().enumerate() {
+            min_x = min_x.min(c.0 - r[k]);
+            max_x = max_x.max(c.0 + r[k]);
+            min_y = min_y.min(c.1 - r[k]);
+            max_y = max_y.max(c.1 + r[k]);
+        }
+    }
+    let (mid_x, mid_y) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+    let ring = (max_x - min_x).max(max_y - min_y) / 2.0 + 3.0;
+    let off_discs = |p: (f64, f64)| -> (f64, f64) {
+        let mut p = p;
+        for _ in 0..4 {
+            for k in 0..m {
+                let (x, y) = (p.0 - centre[k].0, p.1 - centre[k].1);
+                let d = (x * x + y * y).sqrt();
+                let need = r[k] + ISLAND_GAP / 2.0;
+                if d < need {
+                    let (ux, uy) = if d > 1e-9 { (x / d, y / d) } else { (1.0, 0.0) };
+                    p = (centre[k].0 + ux * need, centre[k].1 + uy * need);
+                }
+            }
+        }
+        p
+    };
+    let mut random = Random(SEED);
+    let mut unlinked: Vec<usize> = Vec::new();
+    for i in 0..n {
+        if !pos[i].0.is_nan() {
+            continue;
+        }
+        let near: Vec<(f64, f64)> = links
+            .get(&songs[i])
+            .into_iter()
+            .flatten()
+            .filter_map(|(b, _)| index.get(b.as_str()))
+            .map(|&j| pos[j])
+            .filter(|p| !p.0.is_nan())
+            .collect();
+        if near.is_empty() {
+            unlinked.push(i);
+            continue;
+        }
+        let c = near.len() as f64;
+        let p = (
+            near.iter().map(|p| p.0).sum::<f64>() / c + (random.next() - 0.5),
+            near.iter().map(|p| p.1).sum::<f64>() / c + (random.next() - 0.5),
+        );
+        pos[i] = off_discs(p);
+    }
+    let around = unlinked.len().max(1) as f64;
+    for (k, &i) in unlinked.iter().enumerate() {
+        let angle = k as f64 / around * std::f64::consts::TAU;
+        let wobble = 1.0 + 0.08 * (random.next() - 0.5);
+        pos[i] = off_discs((mid_x + ring * wobble * angle.cos(), mid_y + ring * wobble * angle.sin()));
+    }
+
+    // Into 0..1, square and centred, the discs with them.
+    let (min_x, max_x) = pos.iter().fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.0), b.max(p.0)));
+    let (min_y, max_y) = pos.iter().fold((f64::MAX, f64::MIN), |(a, b), p| (a.min(p.1), b.max(p.1)));
+    let span = (max_x - min_x).max(max_y - min_y).max(1e-9);
+    let (off_x, off_y) = ((span - (max_x - min_x)) / 2.0, (span - (max_y - min_y)) / 2.0);
+    let to_unit = |p: (f64, f64)| ((p.0 - min_x + off_x) / span, (p.1 - min_y + off_y) / span);
+    let discs = islands
+        .iter()
+        .enumerate()
+        .map(|(k, &g)| {
+            let (x, y) = to_unit(centre[k]);
+            Disc { island: g, x, y, r: r[k] / span }
+        })
+        .collect();
+    (pos.into_iter().map(to_unit).collect(), span, discs)
+}
+
+/// Where `build` puts the songs: a fresh map (asked for, or the first one) in islands
+/// ([`layout_islands`], starting from the last map's island middles when there is one); a map
+/// whose inputs changed, settled from where its songs were ([`layout`]), so it keeps its shape.
+pub fn place(
+    songs: &[String],
+    links: &BTreeMap<String, Vec<(String, f64)>>,
+    groups: Groups<'_>,
+    previous: Option<Previous<'_>>,
+    fresh: bool,
+) -> (Vec<(f64, f64)>, f64) {
+    let previous = previous.filter(|(p, span)| !p.is_empty() && *span > 0.0);
+    if fresh || previous.is_none() {
+        let (positions, span, _) = layout_islands(songs, links, groups, previous);
+        (positions, span)
+    } else {
+        layout(songs, links, previous, Some(groups))
+    }
+}
+
+/// Pushes overlapping discs apart along the line between them, the smaller giving way more,
+/// `passes` times over every pair.
+fn separate(centre: &mut [(f64, f64)], r: &[f64], passes: usize) {
+    let m = centre.len();
+    for _ in 0..passes {
+        let mut moved = false;
+        for a in 0..m {
+            for b in a + 1..m {
+                let (x, y) = (centre[b].0 - centre[a].0, centre[b].1 - centre[a].1);
+                let d = (x * x + y * y).sqrt();
+                let need = r[a] + r[b] + ISLAND_GAP;
+                if d >= need {
+                    continue;
+                }
+                moved = true;
+                let (ux, uy) = if d > 1e-9 { (x / d, y / d) } else { (1.0, 0.0) };
+                let gap = need - d + 1e-6;
+                let (wa, wb) = (r[b] / (r[a] + r[b]), r[a] / (r[a] + r[b]));
+                centre[a].0 -= ux * gap * wa;
+                centre[a].1 -= uy * gap * wa;
+                centre[b].0 += ux * gap * wb;
+                centre[b].1 += uy * gap * wb;
+            }
+        }
+        if !moved {
+            break;
+        }
+    }
+}
+
 /// Communities of the link graph (Louvain: local moves, then the communities as nodes, until
 /// nothing moves). Deterministic: nodes in index order, ties to the lowest community. One id per
 /// song, numbered by size, largest first; communities smaller than [`MIN_ISLAND`] join the one
@@ -790,26 +1056,28 @@ pub fn stored_inputs(db: &Db) -> crate::Result<Inputs> {
 /// matches it is reused; otherwise, unless `fresh`, the new layout starts from its positions.
 /// [`annotate`] fills what changes with every read.
 pub fn build(db: &Db, cached: Option<&TasteMap>, fresh: bool) -> crate::Result<TasteMap> {
-    let inputs = stored_inputs(db)?;
-    let linked = links(&inputs);
+    Ok(build_from(&stored_inputs(db)?, cached, fresh))
+}
+
+/// [`build`] from inputs already read: the layout needs no database, so a caller can read the
+/// inputs under its lock and lay the map out after letting go (PLAN/20 D2).
+pub fn build_from(inputs: &Inputs, cached: Option<&TasteMap>, fresh: bool) -> TasteMap {
+    let linked = links(inputs);
     let links = plain(&linked);
     let hash = hash(&inputs.songs, &links);
     if !fresh
         && let Some(map) = cached
         && map.hash == hash
     {
-        return Ok(map.clone());
+        return map.clone();
     }
-    let previous: Option<(HashMap<String, (f64, f64)>, f64)> = if fresh {
-        None
-    } else {
-        cached
-            .filter(|m| m.span > 0.0)
-            .map(|m| (m.points.iter().map(|p| (p.song_id.clone(), (p.x, p.y))).collect(), m.span))
-    };
+    // The last map: where a rebuild settles from, and where a fresh one starts its islands.
+    let previous: Option<(HashMap<String, (f64, f64)>, f64)> = cached
+        .filter(|m| m.span > 0.0)
+        .map(|m| (m.points.iter().map(|p| (p.song_id.clone(), (p.x, p.y))).collect(), m.span));
     let (island_of, loose) = communities(inputs.songs.len(), &edges_of(&inputs.songs, &links));
     let (positions, span) =
-        layout(&inputs.songs, &links, previous.as_ref().map(|(p, s)| (p, *s)), Some((&island_of, loose)));
+        place(&inputs.songs, &links, (&island_of, loose), previous.as_ref().map(|(p, s)| (p, *s)), fresh);
 
     let points: Vec<Point> = inputs
         .songs
@@ -856,7 +1124,7 @@ pub fn build(db: &Db, cached: Option<&TasteMap>, fresh: bool) -> crate::Result<T
         island.x /= n;
         island.y /= n;
     }
-    Ok(TasteMap { points, islands, plays: inputs.plays.len(), hash, span })
+    TasteMap { points, islands, plays: inputs.plays.len(), hash, span }
 }
 
 /// Fills what changes with every read: each song's title, artist and tint, its Smart Shuffle
@@ -981,7 +1249,8 @@ mod tests {
         let prev: Option<(HashMap<String, (f64, f64)>, f64)> =
             previous.map(|m| (m.points.iter().map(|p| (p.song_id.clone(), (p.x, p.y))).collect(), m.span));
         let (island, loose) = communities(inputs.songs.len(), &edges_of(&inputs.songs, &plain));
-        let (pos, span) = layout(&inputs.songs, &plain, prev.as_ref().map(|(p, s)| (p, *s)), Some((&island, loose)));
+        let (pos, span) =
+            place(&inputs.songs, &plain, (&island, loose), prev.as_ref().map(|(p, s)| (p, *s)), previous.is_none());
         let points = inputs
             .songs
             .iter()
@@ -1079,6 +1348,52 @@ mod tests {
         // A fresh layout of the same inputs is free to move everything.
         let fresh = map_of(&more, None);
         assert_eq!(fresh.points.len(), after.points.len());
+    }
+
+    /// PLAN/20 D2: a fresh map's islands are discs that never overlap, every island's songs inside
+    /// its own disc, loose songs outside every disc; the same every time.
+    #[test]
+    fn islands_are_discs_apart_with_their_songs_inside() {
+        // Six habits of 12 songs, a few songs across habits, and a few heard alone.
+        let songs = ids(80);
+        let mut plays = Vec::new();
+        let mut at = 0;
+        for round in 0..4 {
+            for habit in 0..6 {
+                for k in 0..12 {
+                    plays.push((songs[habit * 12 + (k + round * 5) % 12].clone(), at));
+                    at += 4 * 60_000;
+                }
+                if habit % 2 == 0 {
+                    plays.push((songs[(habit + 1) * 12].clone(), at));
+                    at += 4 * 60_000;
+                }
+                at += 24 * 3_600_000;
+            }
+        }
+        let inputs = Inputs { songs, plays, ..Default::default() };
+        let plain = plain(&links(&inputs));
+        let (island, loose) = communities(inputs.songs.len(), &edges_of(&inputs.songs, &plain));
+        let (pos, _, discs) = layout_islands(&inputs.songs, &plain, (&island, loose), None);
+        assert!(discs.len() >= 5, "{} islands", discs.len());
+        for (a, da) in discs.iter().enumerate() {
+            for db in &discs[a + 1..] {
+                let d = ((da.x - db.x).powi(2) + (da.y - db.y).powi(2)).sqrt();
+                assert!(d >= da.r + db.r, "islands {} and {} overlap", da.island, db.island);
+            }
+        }
+        for (i, p) in pos.iter().enumerate() {
+            let inside = |d: &Disc| ((p.0 - d.x).powi(2) + (p.1 - d.y).powi(2)).sqrt() <= d.r + 1e-9;
+            match discs.iter().find(|d| d.island == island[i]) {
+                Some(own) => {
+                    assert!(inside(own), "song {i} outside its island");
+                    assert!(discs.iter().filter(|d| d.island != own.island).all(|d| !inside(d)));
+                }
+                None => assert!(discs.iter().all(|d| !inside(d)), "loose song {i} on an island"),
+            }
+            assert!((0.0..=1.0).contains(&p.0) && (0.0..=1.0).contains(&p.1));
+        }
+        assert_eq!(pos, layout_islands(&inputs.songs, &plain, (&island, loose), None).0, "the same every time");
     }
 
     #[test]

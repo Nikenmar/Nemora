@@ -85,8 +85,16 @@ pub async fn taste_map(
 ) -> Res<TasteMap> {
     let previous = cache.0.lock().map_err(fail)?.clone().or_else(|| from_disk(&app));
     let prepared = app.derived("shuffle", nemora_core::shuffle::prepare).map_err(fail)?;
+    // The inputs under the reader's lock; the layout (up to a second for a fresh map of a large
+    // library) without it, so searches and lists are not kept waiting (PLAN/20 D2).
+    let inputs = nemora_core::tastemap::stored_inputs(&app.read()).map_err(fail)?;
+    let fresh = fresh.unwrap_or(false);
+    let (mut map, previous) = tauri::async_runtime::spawn_blocking(move || {
+        (nemora_core::tastemap::build_from(&inputs, previous.as_ref(), fresh), previous)
+    })
+    .await
+    .map_err(fail)?;
     let db = app.read();
-    let mut map = nemora_core::tastemap::build(&db, previous.as_ref(), fresh.unwrap_or(false)).map_err(fail)?;
     if previous.as_ref().is_none_or(|p| p.hash != map.hash || p.points != map.points)
         && let Ok(text) = serde_json::to_string(&map)
     {
