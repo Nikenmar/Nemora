@@ -897,6 +897,9 @@
     }
   },
   "eloDuels": {
+    "keyPick": "Pick",
+    "keyPreview": "Preview",
+    "keyNext": "Next duel",
     "keysHint": "Left / Right pick · Down can't decide · Space preview",
     "picked": "{{title}} picked",
     "skipped": "Skipped",

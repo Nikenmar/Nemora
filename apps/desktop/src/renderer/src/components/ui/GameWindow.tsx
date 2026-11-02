@@ -66,9 +66,9 @@ export const GameHeader = ({
   closeLabel
 }: GameHeaderProps) => (
   <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line px-5">
-    {/* A crisp outlined glyph on the accent: a filled glyph on a pale tile read as a smudge. */}
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent text-on-accent shadow-[inset_0_1px_0_rgb(255_255_255/0.18)]">
-      <Icon name={icon} size={19} />
+    {/* Just the game's glyph, no tile behind it. */}
+    <span className="flex h-9 w-7 shrink-0 items-center justify-center text-ink">
+      <Icon name={icon} size={22} />
     </span>
     <div className="flex min-w-0 flex-1 flex-col">
       <h1 className="truncate text-section font-semibold leading-tight text-ink">{title}</h1>

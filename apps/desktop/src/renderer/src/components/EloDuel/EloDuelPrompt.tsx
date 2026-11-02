@@ -8,6 +8,7 @@ import { getDuelTickets, peekFirstAliveDuelPair, setDuelTickets } from '../../ut
 
 import Button from '../Button';
 import DuelCard, { DuelVersus } from './DuelCard';
+import Kbd from '../ui/Kbd';
 import Segmented from '../ui/Segmented';
 import { GameHeader } from '../ui/GameWindow';
 import TournamentPanel from './Tournament/TournamentPanel';
@@ -73,9 +74,6 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
   const [eligibleTrackCount, setEligibleTrackCount] = useState(0);
   // A series of ten (PLAN/20 D4): how many are done, or null when no series runs.
   const [series, setSeries] = useState<number | null>(null);
-  // A tier move this duel earned (PLAN/15 T2's suggestion, offered at the moment it is earned).
-  const [earnedMove, setEarnedMove] = useState<(TierSuggestion & { title: string }) | null>(null);
-  const [moveDone, setMoveDone] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const refreshTournament = useCallback(async () => {
@@ -220,8 +218,6 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
             setPhase('voting');
             setResult(undefined);
             setWinnerSongId(undefined);
-            setEarnedMove(null);
-            setMoveDone(false);
           } else closePrompt();
           actionLockedRef.current = false;
           return undefined;
@@ -244,7 +240,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
       setPhase('submitting');
       window.api.eloDuels
         .submitDuelResult(pair.songA.songId, pair.songB.songId, selectedSongId)
-        .then(async (duelResult) => {
+        .then((duelResult) => {
           consumeQueuedDuel();
           setResult(duelResult);
           setWinnerSongId(selectedSongId);
@@ -252,16 +248,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
           setSeries((done) => (done === null ? null : done + 1));
           const winner = selectedSongId === pair.songA.songId ? pair.songA : pair.songB;
           setAnnouncement(t('eloDuels.picked', { title: winner.title }));
-          // A tier move this duel earned holds the result until the user answers it.
-          const moves = await window.api.tierlistsData.getTierSuggestions().catch(() => []);
-          const move = moves.find((m) => m.songId === pair.songA.songId || m.songId === pair.songB.songId);
           actionLockedRef.current = false;
-          if (move) {
-            const title = move.songId === pair.songA.songId ? pair.songA.title : pair.songB.title;
-            setEarnedMove({ ...move, title });
-            setAnnouncement(t('eloDuels.moveOffer', { title, tier: move.toName }));
-            return undefined;
-          }
           completionTimeoutRef.current = setTimeout(() => {
             completionTimeoutRef.current = null;
             actionLockedRef.current = true;
@@ -306,20 +293,6 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
     fetchNextPair('result');
   }, [fetchNextPair, phase]);
 
-  const applyMove = useCallback(() => {
-    if (!earnedMove) return;
-    window.api.tierlistsData
-      .applyTierSuggestion(earnedMove.tierlistId, earnedMove.songId, earnedMove.to)
-      .then(() => {
-        setMoveDone(true);
-        setAnnouncement(t('eloDuels.moved', { title: earnedMove.title, tier: earnedMove.toName }));
-        completionTimeoutRef.current = setTimeout(() => {
-          completionTimeoutRef.current = null;
-          advanceAfterResult();
-        }, 900);
-      })
-      .catch((error: unknown) => console.error(error));
-  }, [advanceAfterResult, earnedMove, t]);
 
   // A series ends after ten.
   useEffect(() => {
@@ -346,9 +319,6 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
         else if (e.key === ' ') togglePreview(previewingSongId === pair.songA.songId ? pair.songB : pair.songA);
         else return;
       } else if (phase === 'result' && e.key === 'Enter') {
-        if (earnedMove && !moveDone) applyMove();
-        else advanceAfterResult();
-      } else if (phase === 'result' && e.key === 'ArrowRight' && earnedMove && !moveDone) {
         advanceAfterResult();
       } else return;
       e.preventDefault();
@@ -359,10 +329,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [
     advanceAfterResult,
-    applyMove,
-    earnedMove,
     isTournamentOpen,
-    moveDone,
     pair,
     phase,
     previewingSongId,
@@ -422,7 +389,6 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
               {t('eloDuels.promptTitle')}
             </h2>
             <div className="mb-5 flex items-center justify-center gap-3 text-micro text-ink-faint">
-              <span className="duel-keys-hint">{t('eloDuels.keysHint')}</span>
               {series === null ? (
                 <Button
                   label={t('eloDuels.seriesStart', { count: SERIES })}
@@ -466,6 +432,7 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
                   showResult={phase === 'result'}
                   isWinner={winnerSongId === pair.songA.songId}
                   delta={result?.deltaA}
+                  keyIcon="keyboard_arrow_left"
                 />
               }
               right={
@@ -478,33 +445,34 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
                   showResult={phase === 'result'}
                   isWinner={winnerSongId === pair.songB.songId}
                   delta={result?.deltaB}
+                  keyIcon="keyboard_arrow_right"
                 />
               }
             />
 
+            {/* The keys, where they act: picks under the cards, the rest in one line here. */}
+            <div className="duel-keys mt-5 flex items-center justify-center gap-4 text-micro font-medium text-ink-dim">
+              <span className="flex items-center gap-1.5">
+                <Kbd label="Space" />
+                {t('eloDuels.keyPreview')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Kbd icon="keyboard_arrow_down" />
+                {t('eloDuels.cantDecide')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Kbd label="Enter" />
+                {t('eloDuels.keyNext')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Kbd label="Esc" />
+                {t('eloDuels.minimize')}
+              </span>
+            </div>
+
             {/* Same height in every phase, so the dialog does not jump when a vote lands. */}
-            <div className="buttons-container mt-6 flex min-h-[4.25rem] flex-col items-center justify-center gap-2.5">
-              {phase === 'result' && earnedMove ? (
-                <div className="duel-move flex flex-col items-center gap-2">
-                  <span className="text-small text-ink-dim">
-                    {moveDone
-                      ? t('eloDuels.moved', { title: earnedMove.title, tier: earnedMove.toName })
-                      : t('eloDuels.moveOffer', { title: earnedMove.title, tier: earnedMove.toName })}
-                  </span>
-                  {!moveDone && (
-                    <div className="flex gap-2">
-                      <Button
-                        label={t('eloDuels.moveTo', { tier: earnedMove.toName })}
-                        iconName="move_up"
-                        variant="primary"
-                        className="duel-move-btn m-0"
-                        clickHandler={applyMove}
-                      />
-                      <Button label={t('eloDuels.nextDuel')} iconName="bolt" className="m-0" clickHandler={advanceAfterResult} />
-                    </div>
-                  )}
-                </div>
-              ) : phase === 'result' && showNextRetry ? (
+            <div className="buttons-container mt-4 flex min-h-[4.25rem] flex-col items-center justify-center gap-2.5">
+              {phase === 'result' && showNextRetry ? (
                 <Button
                   label={t('eloDuels.nextDuel')}
                   iconName="bolt"

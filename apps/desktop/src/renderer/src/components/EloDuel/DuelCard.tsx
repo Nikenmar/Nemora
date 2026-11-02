@@ -4,6 +4,7 @@ import { cn as twMerge } from '../ui/cn';
 
 import Img from '../Img';
 import Icon from '../ui/Icon';
+import Kbd from '../ui/Kbd';
 
 type Props = {
   entry: DuelSongEntry;
@@ -14,6 +15,8 @@ type Props = {
   showResult: boolean;
   isWinner?: boolean;
   delta?: number;
+  /** The arrow key that picks this card (PLAN/20 D4), shown under it. */
+  keyIcon?: string;
 };
 
 /** Two cards with the VS mark between them, in equal columns: the duel and a tournament match. */
@@ -31,7 +34,7 @@ export const DuelVersus = ({ left, right }: { left: ReactNode; right: ReactNode 
 );
 
 const DuelCard = (props: Props) => {
-  const { entry, onVote, onPreviewToggle, isPreviewing, isDisabled, showResult, isWinner, delta } =
+  const { entry, onVote, onPreviewToggle, isPreviewing, isDisabled, showResult, isWinner, delta, keyIcon } =
     props;
   const { t } = useTranslation();
 
@@ -94,6 +97,12 @@ const DuelCard = (props: Props) => {
       </span>
 
       <div className="mt-3 flex h-7 items-center gap-2">
+        {keyIcon && (
+          <span className="flex items-center gap-1.5 text-micro font-medium text-ink-dim">
+            <Kbd icon={keyIcon} />
+            {t('eloDuels.keyPick')}
+          </span>
+        )}
         <span className="rounded-full bg-surface-2 px-2.5 py-1 text-micro font-medium tabular-nums text-ink-dim">
           {t('eloDuels.ratingWithGames', { rating: Math.round(entry.rating), count: entry.games })}
         </span>
