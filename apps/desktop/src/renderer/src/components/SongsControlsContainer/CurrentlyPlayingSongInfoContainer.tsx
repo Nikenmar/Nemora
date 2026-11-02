@@ -322,7 +322,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
               {currentSongData.title}
             </div>
             {/* How it sounds now (a version, a preset or a speed set by hand), beside the title. */}
-            <SoundTag tag={playingTag} className="text-[14px] leading-5" />
+            <SoundTag tag={playingTag} className="text-[13px] leading-5" />
             {!currentSongData.isKnownSource && (
               <span
                 className="ms-icon ml-1.5 cursor-help text-[16px] text-warning"
