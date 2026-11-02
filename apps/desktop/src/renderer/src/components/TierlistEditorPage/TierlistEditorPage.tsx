@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -555,6 +556,71 @@ const TierlistEditorPage = () => {
     []
   );
 
+  // ? Keyboard (PLAN/20 D4): arrows move between songs, 1..9 send the focused song to that tier
+  // ? (0 to the pool), Shift+Left/Right move it within its tier; every move is announced.
+  const [announcement, setAnnouncement] = useState('');
+  const focusSong = useCallback((songId: string | undefined) => {
+    if (!songId) return;
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>(`.tier-item[data-song-id="${CSS.escape(songId)}"]`)?.focus()
+    );
+  }, []);
+  const handleBoardKeys = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+      const songId = target.dataset?.songId;
+      const tl = tierlistRef.current;
+      if (!songId || !tl || e.altKey || e.ctrlKey || e.metaKey) return;
+      const prev = boardRef.current;
+      const lists: { id: string; name: string; items: Item[] }[] = [
+        ...tl.tiers.map((tier, i) => ({ id: tier.tierId, name: tier.name || String(i + 1), items: prev.tiers[tier.tierId] ?? [] })),
+        { id: POOL_ID, name: t('tierlistsPage.pool'), items: prev.pool }
+      ];
+      const at = lists.findIndex((l) => l.items.some((i) => i.id === songId));
+      if (at < 0) return;
+      const index = lists[at].items.findIndex((i) => i.id === songId);
+      const title = songMapRef.current[songId]?.title ?? '';
+      const place = (to: number, toIndex: number) => {
+        const item = lists[at].items[index];
+        const lifted = lists.map((l) => ({ ...l, items: l.items.filter((i) => i.id !== songId) }));
+        const target = lifted[to].items;
+        target.splice(Math.max(0, Math.min(toIndex, target.length)), 0, item);
+        const next: Board = { pool: lifted[lifted.length - 1].items, tiers: { ...prev.tiers } };
+        lifted.slice(0, -1).forEach((l) => {
+          next.tiers[l.id] = l.items;
+        });
+        boardRef.current = next;
+        setBoard(next);
+        setAnnouncement(
+          t('tierlistsPage.movedTo', { title, tier: lifted[to].name, position: target.indexOf(item) + 1, count: target.length })
+        );
+        focusSong(songId);
+      };
+      const flat = lists.flatMap((l) => l.items.map((i) => i.id));
+      const here = flat.indexOf(songId);
+      if (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        place(at, index + (e.key === 'ArrowLeft' ? -1 : 1));
+      } else if (/^[0-9]$/.test(e.key)) {
+        const n = Number(e.key);
+        const to = n === 0 ? lists.length - 1 : n - 1;
+        if (to >= lists.length - 1 && n !== 0) return;
+        if (to !== at) place(to, lists[to].items.length);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        focusSong(flat[here + (e.key === 'ArrowLeft' ? -1 : 1)]);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        const step = e.key === 'ArrowUp' ? -1 : 1;
+        for (let l = at + step; l >= 0 && l < lists.length; l += step) {
+          if (lists[l].items.length > 0) {
+            focusSong(lists[l].items[Math.min(index, lists[l].items.length - 1)].id);
+            break;
+          }
+        }
+      } else return;
+      e.preventDefault();
+    },
+    [focusSong, t]
+  );
+
   const addTier = useCallback(() => {
     const tl = tierlistRef.current;
     if (!tl) return;
@@ -800,7 +866,12 @@ const TierlistEditorPage = () => {
         <div
           ref={scrollContainerRef}
           className="editor-scroll flex h-full flex-col gap-4 overflow-auto pb-6 pr-2"
+          onKeyDown={handleBoardKeys}
         >
+          <p className="sr-only" aria-live="polite">
+            {announcement}
+          </p>
+          <p className="tierlist-keys-hint text-micro text-ink-faint">{t('tierlistsPage.keysHint')}</p>
           {/* The tier board (this is what gets exported to PNG) */}
           <div
             ref={exportRef}
@@ -854,6 +925,9 @@ const TierlistEditorPage = () => {
                   {(board.tiers[tier.tierId] ?? []).map((item) => (
                     <TierItemCard
                       key={item.id}
+                      tabIndex={0}
+                      data-song-id={item.id}
+                      aria-label={songMap[item.id]?.title}
                       song={songMap[item.id]}
                       thumbSrc={thumbMap[item.id]}
                       labelMode={tierlist.labelMode}
@@ -905,6 +979,9 @@ const TierlistEditorPage = () => {
               {board.pool.map((item) => (
                 <TierItemCard
                   key={item.id}
+                  tabIndex={0}
+                  data-song-id={item.id}
+                  aria-label={songMap[item.id]?.title}
                   song={songMap[item.id]}
                   thumbSrc={thumbMap[item.id]}
                   labelMode={tierlist.labelMode}

@@ -722,6 +722,8 @@
     "stats": "Stats"
   },
   "tierlistsPage": {
+    "movedTo": "{{title}} to {{tier}}, {{position}} of {{count}}",
+    "keysHint": "Keys: arrows move between songs, 1-9 send the song to that tier, 0 to the pool, Shift+Left/Right move it within its tier",
     "excludeFromShuffle": "Keep out of Smart Shuffle",
     "includeInShuffle": "Let back into Smart Shuffle",
     "excludedFromShuffle": "Kept out of Smart Shuffle",
@@ -894,6 +896,17 @@
     }
   },
   "eloDuels": {
+    "keysHint": "Left / Right pick · Down can't decide · Space preview",
+    "picked": "{{title}} picked",
+    "skipped": "Skipped",
+    "moveOffer": "{{title}} now plays like {{tier}}: move it?",
+    "moveTo": "Move to {{tier}}",
+    "moved": "{{title}} moved to {{tier}}",
+    "seriesStart": "Series of {{count}}",
+    "seriesProgress": "{{done}} of {{count}} duels in this series",
+    "seriesDone": "Series of {{count}} done",
+    "seriesEnd": "End series",
+    "seriesAgain": "Another series",
     "sectionTitle": "ELO Duels",
     "totalDuels": "Total duels",
     "topRated": "Top rated",

@@ -92,7 +92,7 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
         title={caption}
         className={`tier-item group/item relative flex w-24 shrink-0 ${
           onToggleShuffleExcluded ? 'cursor-pointer' : 'cursor-grab'
-        } flex-col overflow-hidden rounded-lg border bg-canvas shadow-[0_2px_8px_rgba(0,0,0,0.28)] transition-shadow [contain-intrinsic-size:96px_138px] [content-visibility:auto] hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)] ${
+        } flex-col overflow-hidden rounded-lg border bg-canvas shadow-[0_2px_8px_rgba(0,0,0,0.28)] outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-echo [contain-intrinsic-size:96px_138px] [content-visibility:auto] hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)] ${
           isCurrent
             ? 'border-echo ring-1 ring-echo '
             : 'border-shade/10'

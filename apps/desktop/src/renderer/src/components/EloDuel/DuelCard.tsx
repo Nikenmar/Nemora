@@ -37,7 +37,8 @@ const DuelCard = (props: Props) => {
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (isDisabled) return;
-    if (e.key === 'Enter' || e.key === ' ') {
+    // Enter picks the focused card; Space is the duel's preview key (PLAN/20 D4).
+    if (e.key === 'Enter') {
       e.preventDefault();
       onVote();
     }
