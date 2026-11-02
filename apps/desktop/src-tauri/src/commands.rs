@@ -514,7 +514,7 @@ pub fn library_search(app: State<'_, App>, filter: String, value: String) -> Res
     };
     Ok(json!({
         "songs": songs, "artists": artists, "albums": albums, "playlists": playlists, "genres": genres,
-        "availableResults": found.suggestions,
+        "availableResults": found.suggestions, "didYouMean": found.did_you_mean,
     }))
 }
 

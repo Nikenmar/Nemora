@@ -13,6 +13,11 @@ use serde_json::Value;
 /// (see `search/romanize.rs`). Empty while no corpus entry is affected.
 const KNOWN_ROMANIZATION_DIFFERENCES: &[&str] = &[];
 
+/// Searches where Nemora finds more than 1.x by design (PLAN/20 D1: Japanese readings of kanji,
+/// words apart, and a query's words run together): here the songs 1.x found must all still be found,
+/// in 1.x's order among themselves; only the songs the readings reach may be added or move.
+const KNOWN_RESULT_ADDITIONS: &[(&str, &[&str])] = &[("ni hao", &["s20"]), ("a", &["s22"]), ("ha", &["s20"])];
+
 fn load(name: &str) -> Value {
     let path = format!("{}/../../fixtures/synthetic/oracle/{name}", env!("CARGO_MANIFEST_DIR"));
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
@@ -141,6 +146,18 @@ fn ranked_results_match_1x() {
             ("suggestions", &got.suggestions, "suggestions"),
         ] {
             let want_ids = strings(&want[key]);
+            if let Some((_, added)) = KNOWN_RESULT_ADDITIONS.iter().find(|(q, _)| *q == query) {
+                // The other songs: all still there, in 1.x's order. Suggestions are offered only when
+                // nothing is found, so a song the readings add takes them away.
+                let other = |ids: &Vec<String>| -> Vec<String> {
+                    ids.iter().filter(|id| !added.contains(&id.as_str())).cloned().collect()
+                };
+                if label != "suggestions" && other(got_ids) != other(&want_ids) {
+                    failures
+                        .push(format!("search({query:?}).{label}: {got_ids:?}, 1.x {want_ids:?} (+{added:?} allowed)"));
+                }
+                continue;
+            }
             if *got_ids != want_ids {
                 failures.push(format!("search({query:?}).{label}: {got_ids:?}, 1.x {want_ids:?}"));
             }

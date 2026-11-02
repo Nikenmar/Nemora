@@ -215,8 +215,7 @@ mod perf {
             x ^= x << 17;
             x
         };
-        let word =
-            |n: u64| -> String { (0..2 + n % 3).map(|i| syllables[((n >> (i * 4)) % 15) as usize]).collect() };
+        let word = |n: u64| -> String { (0..2 + n % 3).map(|i| syllables[((n >> (i * 4)) % 15) as usize]).collect() };
         let tx = db.conn().unchecked_transaction().unwrap();
         for s in 0..20_000 {
             let id = format!("{s:026}");

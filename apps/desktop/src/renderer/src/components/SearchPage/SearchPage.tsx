@@ -164,6 +164,19 @@ const SearchPage = () => {
         </div>
       </div>
       <div className="search-results-container relative !h-full">
+        {/* DID YOU MEAN (PLAN/20 D1): only typos matched; one click searches the spelling found */}
+        {searchResults.didYouMean && (
+          <p className="did-you-mean mb-4 text-body text-ink-dim">
+            {t('searchPage.didYouMean')}{' '}
+            <button
+              type="button"
+              className="rounded font-semibold text-accent underline-offset-2 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-echo"
+              onClick={() => updateSearchInput(searchResults.didYouMean ?? '')}
+            >
+              {searchResults.didYouMean}
+            </button>
+          </p>
+        )}
         {/* MOST RELEVANT SEARCH RESULTS */}
         <MostRelevantSearchResultsContainer searchResults={searchResults} />
         {/* SONG SEARCH RESULTS */}

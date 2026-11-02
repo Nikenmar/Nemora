@@ -1350,6 +1350,8 @@ declare global {
     playlists: Playlist[];
     genres: Genre[];
     availableResults: string[];
+    /** PLAN/20 D1: the spelling the best song matched, when only typos matched. */
+    didYouMean?: string | null;
   }
 
   // ? Prompt menu related types

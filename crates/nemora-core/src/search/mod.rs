@@ -47,7 +47,19 @@ struct Key {
 impl Key {
     fn new(value: &str) -> Self {
         let romanized = romanize::has_romanizable_script(value).then(|| romanize::romanize(value)).flatten();
-        Self::from_variants(text_keys(value, romanized.as_deref()))
+        let mut keys = text_keys(value, romanized.as_deref());
+        // Japanese readings of kanji and words apart (PLAN/20 D1), beside 1.x's keys; and `й` as
+        // `i` as well as `y` (`Мой байк` is typed `moi baik` as often as `moy bayk`).
+        let mut extra = romanize::japanese_readings(value);
+        if value.contains(['й', 'Й']) {
+            extra.push(fold::transliterate(&value.replace('й', "и").replace('Й', "И")));
+        }
+        for reading in extra {
+            if !keys.iter().any(|k| k.text == reading) {
+                keys.push(Variant { text: reading, penalty: fold::TRANSLIT_PENALTY });
+            }
+        }
+        Self::from_variants(keys)
     }
 
     fn from_variants(variants: Vec<Variant>) -> Self {
@@ -139,6 +151,9 @@ pub struct Results {
     pub genres: Vec<String>,
     /// When nothing matched: the first words of titles that a shorter query would find.
     pub suggestions: Vec<String>,
+    /// When songs matched only with typos (PLAN/20 D1): the spelling the best of them matched, as a
+    /// one-click correction (`mushku tensei` -> `mushoku tensei`).
+    pub did_you_mean: Option<String>,
 }
 
 /// Best score over every (query spelling x indexed spelling) pair.
@@ -158,6 +173,39 @@ fn score_key(query: &[(Vec<u16>, f64)], key: &Key, field: f64) -> f64 {
     if best.is_finite() { best + field } else { best }
 }
 
+/// The indexed spelling of `key` the query matched best, and that score (field not added).
+fn best_spelling(query: &[(Vec<u16>, f64)], key: &Key) -> Option<(f64, String)> {
+    let mut best: Option<(f64, &Vec<u16>)> = None;
+    for (q, q_penalty) in query {
+        if q.is_empty() {
+            continue;
+        }
+        for (k, k_penalty) in &key.variants {
+            let s = score::score(q, k) + q_penalty + k_penalty;
+            if s.is_finite() && best.is_none_or(|(b, _)| s < b) {
+                best = Some((s, k));
+            }
+        }
+    }
+    best.map(|(s, k)| (s, String::from_utf16_lossy(k)))
+}
+
+/// Did you mean (PLAN/20 D1): when the best song matched only in the typo band, the spelling it
+/// matched (its title or artist as indexed, a reading included), unless that is the query itself.
+fn did_you_mean(corpus: &Corpus, query: &str, best: usize) -> Option<String> {
+    let q = encoded(query);
+    let song = &corpus.songs[best];
+    let (score, spelling) = std::iter::once(&song.title)
+        .chain(song.artists.iter())
+        .filter_map(|key| best_spelling(&q, key))
+        .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal))?;
+    let typo = (LOOSE_SCORE_THRESHOLD..LOOSE_SCORE_THRESHOLD + 400.0).contains(&score);
+    // As many words as were typed: the correction of the query, not the whole title.
+    let words = fold::normalize(query).split(' ').filter(|w| !w.is_empty()).count().max(1);
+    let spelling = spelling.split(' ').take(words).collect::<Vec<_>>().join(" ");
+    (typo && spelling != fold::normalize(query)).then_some(spelling)
+}
+
 fn popularity_bonus(listens: i64) -> f64 {
     ((1.0 + listens.max(0) as f64).log10() * 0.3).min(MAX_POPULARITY_BONUS)
 }
@@ -173,7 +221,16 @@ fn finish<T: Clone>(mut matches: Vec<(T, f64)>) -> Vec<T> {
 }
 
 fn encoded(query: &str) -> Vec<(Vec<u16>, f64)> {
-    query_variants(query).into_iter().map(|v| (v.text.encode_utf16().collect(), v.penalty)).collect()
+    let mut variants = query_variants(query);
+    // Readings run together (`risa ga inai` for `risagainai`): words apart in a query need not be
+    // apart in a romanised title (PLAN/20 D1).
+    if let Some(first) = variants.first() {
+        let together: String = first.text.split(' ').collect();
+        if together != first.text && !variants.iter().any(|v| v.text == together) {
+            variants.push(Variant { text: together, penalty: fold::TRANSLIT_PENALTY });
+        }
+    }
+    variants.into_iter().map(|v| (v.text.encode_utf16().collect(), v.penalty)).collect()
 }
 
 fn search_songs(corpus: &Corpus, query: &str) -> Vec<usize> {
@@ -230,7 +287,13 @@ pub fn search(corpus: &Corpus, filter: Filter, value: &str) -> Results {
     let mut seen: [HashSet<String>; 5] = Default::default();
     for keyword in value.split(';') {
         if wants(Filter::Songs) {
-            let ids = search_songs(corpus, keyword).into_iter().map(|i| corpus.songs[i].input.id.clone()).collect();
+            let found = search_songs(corpus, keyword);
+            if results.did_you_mean.is_none()
+                && let Some(&best) = found.first()
+            {
+                results.did_you_mean = did_you_mean(corpus, keyword, best);
+            }
+            let ids = found.into_iter().map(|i| corpus.songs[i].input.id.clone()).collect();
             push_unique(&mut results.songs, &mut seen[0], ids);
         }
         if wants(Filter::Artists) {
@@ -269,4 +332,127 @@ pub fn search(corpus: &Corpus, filter: Filter, value: &str) -> Results {
         }
     }
     results
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn corpus() -> Corpus {
+        let song = |id: &str, title: &str, artist: &str| SongInput {
+            id: id.into(),
+            title: title.into(),
+            artists: vec![artist.into()],
+            album: None,
+            popularity: 0,
+        };
+        Corpus::build(
+            vec![
+                song("a", "無職転生", "藤澤慶昌"),
+                song("b", "夜に駆ける", "YOASOBI"),
+                song("c", "Nirvana Song", "Nirvana"),
+            ],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        )
+    }
+
+    #[test]
+    fn kanji_are_read_as_japanese_with_words_apart_and_run_together() {
+        let c = corpus();
+        assert_eq!(search(&c, Filter::Songs, "mushoku tensei").songs, ["a"]);
+        assert_eq!(search(&c, Filter::Songs, "mushokutensei").songs, ["a"]);
+        assert_eq!(search(&c, Filter::Songs, "yoru ni kakeru").songs, ["b"]);
+        assert_eq!(search(&c, Filter::Songs, "fujisawa").songs, ["a"], "an artist in kanji");
+    }
+
+    #[test]
+    fn a_typo_offers_the_spelling_it_matched() {
+        let c = corpus();
+        let r = search(&c, Filter::Songs, "mushku tensei");
+        assert_eq!(r.songs, ["a"]);
+        assert_eq!(r.did_you_mean.as_deref(), Some("mushoku tensei"));
+        let clean = search(&c, Filter::Songs, "mushoku");
+        assert_eq!(clean.did_you_mean, None, "a clean hit offers nothing");
+        assert_eq!(search(&c, Filter::Songs, "nirvnaa").did_you_mean.as_deref(), Some("nirvana"));
+        let longer = Corpus::build(
+            vec![SongInput {
+                id: "x".into(),
+                title: "無職転生 (Jobless Reincarnation)".into(),
+                artists: vec![],
+                album: None,
+                popularity: 0,
+            }],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        );
+        assert_eq!(search(&longer, Filter::Songs, "mushku tensei").did_you_mean.as_deref(), Some("mushoku tensei"));
+    }
+}
+
+#[cfg(test)]
+mod perf {
+    use super::*;
+
+    /// PLAN/20's budget: a search under 30 ms at 20 000 songs, a tenth of them Japanese (readings
+    /// indexed), typos and readings in the queries.
+    #[test]
+    #[ignore]
+    fn perf_search_at_20000_songs() {
+        let latin = [
+            "night", "drive", "ocean", "silver", "dream", "fire", "city", "lights", "echo", "winter", "heart", "glass",
+        ];
+        let japanese =
+            ["無職", "転生", "夜", "駆ける", "祈り", "天使", "時間", "少女", "静脈", "陽だまり", "鏡", "空想"];
+        let mut x: u64 = 11;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x as usize
+        };
+        let songs: Vec<SongInput> = (0..20_000)
+            .map(|i| {
+                let title = if i % 10 == 0 {
+                    format!("{}の{}", japanese[next() % 12], japanese[next() % 12])
+                } else {
+                    format!("{} {} {}", latin[next() % 12], latin[next() % 12], i)
+                };
+                SongInput {
+                    id: i.to_string(),
+                    title,
+                    artists: vec![format!("Artist {}", next() % 2000)],
+                    album: Some(format!("Album {}", next() % 3000)),
+                    popularity: (next() % 50) as i64,
+                }
+            })
+            .collect();
+        let t = std::time::Instant::now();
+        let corpus = Corpus::build(songs, vec![], vec![], vec![], vec![]);
+        let built = t.elapsed();
+        let mut worst = std::time::Duration::ZERO;
+        for q in [
+            "mushoku tensei",
+            "mushku tensei",
+            "yoru no kakeru",
+            "silver dream",
+            "slver drem",
+            "ocean",
+            "a",
+            "artist 1999",
+            "tenshi",
+        ] {
+            let t = std::time::Instant::now();
+            let r = search(&corpus, Filter::All, q);
+            let took = t.elapsed();
+            worst = worst.max(took);
+            println!("{q:16} {:5} songs in {took:?}", r.songs.len());
+        }
+        println!("PERF search 20k: corpus built in {built:?}, worst search {worst:?}");
+        assert!(worst.as_millis() < 30, "search budget 30 ms: {worst:?}");
+    }
 }

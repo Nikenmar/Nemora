@@ -26,6 +26,80 @@ pub fn has_romanizable_script(value: &str) -> bool {
     value.chars().any(|c| !(' '..='~').contains(&c))
 }
 
+static JAPANESE: std::sync::LazyLock<Option<lindera::segmenter::Segmenter>> = std::sync::LazyLock::new(|| {
+    let dictionary = lindera::dictionary::load_dictionary("embedded://ipadic").ok()?;
+    Some(lindera::segmenter::Segmenter::new(lindera::mode::Mode::Normal, dictionary, None))
+});
+
+/// Japanese readings (PLAN/20 D1) for text with kana or kanji, through IPADIC: the reading of
+/// every word, romanised, words apart (`無職転生` -> `mushoku tensei`), and the same run together
+/// (`mushokutensei`). A word the dictionary does not know keeps its own letters. Empty for text
+/// with neither; kanji-only text is read this way as well as by pinyin, as a title alone does
+/// not say whether it is Japanese or Chinese.
+/// Katakana combinations for sounds Japanese borrowed, which wana_kana spells kana by kana
+/// (`ファティマ` -> `fuateima`): written out first, as a person would type them.
+const LOAN_SOUNDS: &[(&str, &str)] = &[
+    ("ヴァ", "va"),
+    ("ヴィ", "vi"),
+    ("ヴェ", "ve"),
+    ("ヴォ", "vo"),
+    ("ヴ", "vu"),
+    ("ファ", "fa"),
+    ("フィ", "fi"),
+    ("フェ", "fe"),
+    ("フォ", "fo"),
+    ("ティ", "ti"),
+    ("ディ", "di"),
+    ("トゥ", "tu"),
+    ("ドゥ", "du"),
+    ("ウィ", "wi"),
+    ("ウェ", "we"),
+    ("ウォ", "wo"),
+    ("シェ", "she"),
+    ("ジェ", "je"),
+    ("チェ", "che"),
+    ("ツァ", "tsa"),
+];
+
+fn romaji(kana: &str) -> String {
+    let mut text = kana.to_owned();
+    for (from, to) in LOAN_SOUNDS {
+        if text.contains(from) {
+            text = text.replace(from, to);
+        }
+    }
+    text.to_romaji()
+}
+
+pub fn japanese_readings(value: &str) -> Vec<String> {
+    if !value.chars().any(|c| is_kana(c) || is_han(c)) {
+        return Vec::new();
+    }
+    let Some(segmenter) = JAPANESE.as_ref() else { return Vec::new() };
+    let Ok(mut tokens) = segmenter.segment(std::borrow::Cow::Borrowed(value)) else { return Vec::new() };
+    let mut words: Vec<String> = Vec::with_capacity(tokens.len());
+    for token in tokens.iter_mut() {
+        let surface = token.surface.to_string();
+        let reading = token.details().get(7).map(|r| r.to_string()).filter(|r| r != "*" && !r.is_empty());
+        let word = match reading {
+            Some(r) => romaji(&r),
+            None if surface.chars().any(is_kana) => romaji(&surface),
+            None => surface,
+        };
+        let word = crate::search::fold::normalize(&word);
+        if !word.is_empty() {
+            words.push(word);
+        }
+    }
+    if words.is_empty() {
+        return Vec::new();
+    }
+    let spaced = words.join(" ");
+    // `n'` before a vowel (`sain'in`) folds to a space too: run together, it reads `sainin`.
+    let together = spaced.replace(' ', "");
+    if spaced == together { vec![spaced] } else { vec![spaced, together] }
+}
+
 /// A Latin reading, or `None` when there is nothing to read. Never fails.
 pub fn romanize(value: &str) -> Option<String> {
     if value.is_empty() {

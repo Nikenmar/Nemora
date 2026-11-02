@@ -1670,7 +1670,7 @@ mod tests {
         let mut w = base.clone();
         let steering = Steering { only_unheard: true, only_ranked: true, boost_new: true, ..Default::default() };
         let held = steer(&db, &mut w, &steering, &none, now).unwrap();
-        assert_eq!(held, [a.clone(), c.clone()].into());
+        assert_eq!(held, HashSet::from([a.clone(), c.clone()]));
         assert!((w[&b] - 0.5 * BOOST_NEW).abs() < 1e-12);
     }
 
