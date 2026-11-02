@@ -464,8 +464,10 @@ const SongCard = (props: SongCardProp) => {
       }
     ];
     return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ownSound rebuilds the menu when Switch version changes the sound the menu reads
   }, [
     ownSound,
+    version,
     t,
     multipleSelectionsData,
     isAMultipleSelection,

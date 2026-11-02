@@ -54,12 +54,14 @@ export default function useAudioVisual(
       raf = requestAnimationFrame(tick);
     };
 
-    getTrackVisuals(songId).then((loaded) => {
-      if (stopped || !loaded) return;
-      visuals = loaded;
-      draw(performance.now());
-      schedule();
-    });
+    getTrackVisuals(songId)
+      .then((loaded) => {
+        if (stopped || !loaded) return;
+        visuals = loaded;
+        draw(performance.now());
+        schedule();
+      })
+      .catch((error: unknown) => console.error(error));
 
     const observer =
       target?.current &&

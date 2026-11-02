@@ -601,8 +601,11 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     if (additionalContextMenuItems) items.unshift(...additionalContextMenuItems);
 
     return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ownSound rebuilds the menu when Switch version changes the sound the menu reads
   }, [
     ownSound,
+    artists,
+    version,
     multipleSelectionsData,
     isAMultipleSelection,
     additionalContextMenuItems,

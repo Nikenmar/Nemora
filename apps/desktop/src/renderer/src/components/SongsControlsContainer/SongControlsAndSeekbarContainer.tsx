@@ -142,7 +142,8 @@ const SongControlsAndSeekbarContainer = () => {
             pageX,
             pageY,
           );
-        });
+        })
+        .catch((error: unknown) => console.error(error));
     },
     [t, toggleTierShuffle, updateContextMenuData],
   );
