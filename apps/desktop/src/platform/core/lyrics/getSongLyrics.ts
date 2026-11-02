@@ -6,7 +6,7 @@
  * in the library so it syncs with everything else. This module only parses it, and caches the
  * result: translation and romanisation work on the cached copy, as in 1.1.9.
  */
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import parseLyrics from '../../../common/parseLyrics';
 import { getLrcLyricLinesFromParsedLyrics, getLrcLyricsMetadata } from './saveLyricsToLrcFile';
@@ -89,7 +89,7 @@ const fromMusixmatch = async (
     lyricsType
   ).catch(() => undefined);
   if (!found || !isSameTrack(trackInfo, found.metadata.title, found.metadata.artist)) return undefined;
-  await invoke('lyrics_store_found', {
+  await ipc('lyrics_store_found', {
     path: trackInfo.songPath,
     text: found.lyrics,
     source: 'musixmatch'
@@ -112,7 +112,7 @@ const getSongLyrics = async (
   musixmatchToken?: string
 ): Promise<SongLyrics | undefined> => {
   const online = lyricsRequestType !== 'OFFLINE_ONLY' && navigator.onLine;
-  const stored = await invoke<StoredLyrics | null>('lyrics_get', { path: trackInfo.songPath, network: online });
+  const stored: StoredLyrics | null = await ipc('lyrics_get', { path: trackInfo.songPath, network: online });
   const lyrics = stored ? parseLyrics(stored.text) : undefined;
   const found = lyrics ? typeOf(lyrics) : undefined;
   if (stored && lyrics && found && accepts(lyricsType, found)) {

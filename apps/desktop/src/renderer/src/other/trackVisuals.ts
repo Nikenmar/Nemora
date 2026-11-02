@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 /** A track's visual envelope (PLAN/14 B0): per 1/30 s the loudness and 12 bands, 0..255 each. */
 export type TrackVisuals = {
@@ -25,7 +25,7 @@ const parse = (buffer: ArrayBuffer): TrackVisuals | null => {
 export const getTrackVisuals = (songId: string): Promise<TrackVisuals | null> => {
   let pending = kept.get(songId);
   if (!pending) {
-    pending = invoke<ArrayBuffer>('track_visuals', { songId })
+    pending = ipc('track_visuals', { songId })
       .then(parse)
       .catch(() => null);
     kept.set(songId, pending);

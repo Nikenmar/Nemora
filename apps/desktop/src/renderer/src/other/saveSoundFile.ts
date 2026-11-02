@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 export type FileFormat = 'wav24' | 'float';
 
@@ -30,7 +30,7 @@ export const saveSoundAsFile = async (
   const id = `soundFile-${Date.now()}`;
   notify([{ id, duration: 60_000, content: t('versions.saving', { name }) }]);
   try {
-    const saved = await invoke<{ seconds: number; overs: number }>('version_render', {
+    const saved = await ipc('version_render', {
       songId,
       sound: sound ?? null,
       format,

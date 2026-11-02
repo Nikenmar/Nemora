@@ -12,7 +12,7 @@
  * credentials encrypted by Nora 3.4.5 decrypt with this module unchanged.
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import { getBuildEnvVariable } from '../net/buildEnv';
 
@@ -55,7 +55,7 @@ const deriveEncryptionKey = async (secret: string): Promise<Uint8Array> => {
   // The Rust `secrets_scrypt_key` command mirrors Node's
   // `scryptSync(secret, 'salt', 32)` (salt `salt`, 32-byte key) — the format
   // contract that keeps 3.4.5 credentials readable.
-  const key = await invoke<number[]>('secrets_scrypt_key', { secret });
+  const key = await ipc('secrets_scrypt_key', { secret });
   return new Uint8Array(key);
 };
 

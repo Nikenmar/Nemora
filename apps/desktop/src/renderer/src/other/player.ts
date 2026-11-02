@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc, type IpcArgs } from '@platform/ipc';
 import { listen } from '@tauri-apps/api/event';
 
 import { store } from '../store';
@@ -190,7 +190,7 @@ class AudioPlayer extends EventTarget {
     this.adoptTimer = setTimeout(() => {
       if (this.queued !== queued) return;
       this.queued = null;
-      void invoke('engine_stop').catch(() => undefined);
+      void ipc('engine_stop').catch(() => undefined);
     }, ADOPT_WITHIN_MS);
   }
 
@@ -240,7 +240,7 @@ class AudioPlayer extends EventTarget {
     if (!songId) {
       if (this.queued) {
         this.queued = null;
-        void invoke('engine_queue_next', { token: 0, songId: null }).catch(() => undefined);
+        void ipc('engine_queue_next', { token: 0, songId: null }).catch(() => undefined);
       }
       return;
     }
@@ -256,7 +256,7 @@ class AudioPlayer extends EventTarget {
       playing: false
     };
     this.queued = queued;
-    invoke<string | null>('engine_queue_next', { token: queued.token, songId })
+    ipc('engine_queue_next', { token: queued.token, songId })
       .then((url) => {
         if (this.queued !== queued) return;
         if (url) queued.url = withoutQuery(url);
@@ -325,7 +325,7 @@ class AudioPlayer extends EventTarget {
     if (value !== this.volumePercent || isMuted !== this.isMuted) {
       this.volumePercent = value;
       this.isMuted = isMuted;
-      void invoke('engine_volume', { percent: value, muted: isMuted }).catch(() => undefined);
+      void ipc('engine_volume', { percent: value, muted: isMuted }).catch(() => undefined);
       this.fireLater('volumechange');
     }
     const preset = localStorage.equalizerPreset;
@@ -333,7 +333,8 @@ class AudioPlayer extends EventTarget {
     const key = gains.join(',');
     if (key !== this.lastEqualizer) {
       this.lastEqualizer = key;
-      void invoke('engine_equalizer', { gains }).catch(() => undefined);
+      // Ten bands in BAND_ORDER: the [f64; 10] Rust reads; an array type cannot say its length.
+      void ipc('engine_equalizer', { gains: gains as IpcArgs<'engine_equalizer'>['gains'] }).catch(() => undefined);
     }
     // The setting itself: `player.playbackRate` is only its value at startup, so in 1.x a change
     // took effect after a restart.
@@ -360,13 +361,13 @@ class AudioPlayer extends EventTarget {
     this.isPaused = true;
     this.setPosition(0);
     if (!url) {
-      void invoke('engine_stop').catch(() => undefined);
+      void ipc('engine_stop').catch(() => undefined);
       this.fireLater('emptied');
       return;
     }
     this.fireLater('emptied', 'loadstart');
     const token = this.token;
-    void invoke('engine_load', {
+    void ipc('engine_load', {
       token,
       source: url,
       play: false,
@@ -384,7 +385,7 @@ class AudioPlayer extends EventTarget {
     this.playRequested = true;
     // An ended track has left the engine; playing it again starts it over, as an element does.
     if (this.hasEnded) return this.reload(0, true);
-    return invoke<void>('engine_play');
+    return ipc('engine_play');
   }
 
   private reload(at: number, play: boolean): Promise<void> {
@@ -394,7 +395,7 @@ class AudioPlayer extends EventTarget {
     this.queuedKey = '';
     clearTimeout(this.adoptTimer);
     const token = this.token;
-    return invoke<void>('engine_load', {
+    return ipc('engine_load', {
       token,
       source: this.source,
       play,
@@ -403,7 +404,7 @@ class AudioPlayer extends EventTarget {
   }
 
   pause(): Promise<void> {
-    return invoke<void>('engine_pause');
+    return ipc('engine_pause');
   }
 
   get currentTime(): number {
@@ -427,7 +428,7 @@ class AudioPlayer extends EventTarget {
       });
       return;
     }
-    void invoke('engine_seek', { seconds: target }).catch(() => undefined);
+    void ipc('engine_seek', { seconds: target }).catch(() => undefined);
   }
 
   get duration(): number {
@@ -453,7 +454,7 @@ class AudioPlayer extends EventTarget {
 
   set volume(value: number) {
     this.volumePercent = Math.round(Math.min(Math.max(value, 0), 1) * 100);
-    void invoke('engine_volume', {
+    void ipc('engine_volume', {
       percent: this.volumePercent,
       muted: this.isMuted
     }).catch(() => undefined);
@@ -465,7 +466,7 @@ class AudioPlayer extends EventTarget {
 
   set muted(value: boolean) {
     this.isMuted = value;
-    void invoke('engine_volume', {
+    void ipc('engine_volume', {
       percent: this.volumePercent,
       muted: value
     }).catch(() => undefined);
@@ -482,7 +483,7 @@ class AudioPlayer extends EventTarget {
     // `currentTime` runs on at the new speed from here.
     this.setPosition(this.currentTime);
     this.rate = speed;
-    void invoke('engine_speed', { speed }).catch(() => undefined);
+    void ipc('engine_speed', { speed }).catch(() => undefined);
     this.fireLater('ratechange');
   }
 
@@ -492,7 +493,7 @@ class AudioPlayer extends EventTarget {
 
   /** The reverb (PLAN/18): `amount` 0..1 (0 is off) and the size of the space. */
   setReverb(amount: number, size: 'room' | 'hall' | 'vast') {
-    void invoke('engine_reverb', { amount: Math.min(Math.max(amount, 0), 1), size }).catch(() => undefined);
+    void ipc('engine_reverb', { amount: Math.min(Math.max(amount, 0), 1), size }).catch(() => undefined);
   }
 
   /** Varispeed (PLAN/18): faster or slower with the pitch going with it, 0.5x to 2x. */
@@ -501,7 +502,7 @@ class AudioPlayer extends EventTarget {
     if (value === this.factor) return;
     this.setPosition(this.currentTime);
     this.factor = value;
-    void invoke('engine_varispeed', { factor: value }).catch(() => undefined);
+    void ipc('engine_varispeed', { factor: value }).catch(() => undefined);
     this.fireLater('ratechange');
   }
 }

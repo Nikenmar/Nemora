@@ -26,7 +26,7 @@
  * the direct event listener and the controller route safe to coexist.
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import type { LastFMSessionGetResponse } from '../../types/last_fm_api';
 import { getBuildEnvVariable } from '../core/net/buildEnv';
@@ -151,7 +151,7 @@ export const ensureLastFmAuthCallbackInstalled = (): void => {
     (argv: string[]) => [argv]
   );
 
-  void invoke<string[][]>('drain_pending_second_instance_args')
+  void ipc('drain_pending_second_instance_args')
     .then((queued) => {
       for (const argv of queued) {
         for (const argument of argv) void handleLastFmAuthUri(argument);

@@ -1,5 +1,5 @@
 import { Store } from '@tanstack/react-store';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 /** Headphone correction (PLAN/18 D5): off by default; the profile is kept as its text. */
 export type Correction = { isOn: boolean; name: string; source: string; text: string };
@@ -27,7 +27,7 @@ export const correctionStore = new Store<Correction>(load());
 
 const apply = () => {
   const { isOn, text } = correctionStore.state;
-  void invoke('engine_correction', { text: isOn && text ? text : null }).catch((error) => console.error(error));
+  void ipc('engine_correction', { text: isOn && text ? text : null }).catch((error) => console.error(error));
 };
 
 /** At startup: the engine gets the saved correction (nothing when it is off). */
@@ -45,9 +45,9 @@ export const setCorrection = (change: Partial<Correction>) => {
   apply();
 };
 
-export const previewCorrection = (text: string) => invoke<CorrectionPreview>('correction_preview', { text });
+export const previewCorrection = (text: string) => ipc('correction_preview', { text });
 
 /** The AutoEQ list: the cached copy, or fetched from GitHub when `refresh` or not cached yet. */
-export const autoEqIndex = (refresh = false) => invoke<Headphone[]>('autoeq_index', { refresh });
+export const autoEqIndex = (refresh = false) => ipc('autoeq_index', { refresh });
 
-export const autoEqProfile = (headphone: Headphone) => invoke<string>('autoeq_profile', { headphone });
+export const autoEqProfile = (headphone: Headphone) => ipc('autoeq_profile', { headphone });

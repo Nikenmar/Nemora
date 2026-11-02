@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@tanstack/react-store';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import storage from '../../../utils/localStorage';
 import { store } from '@renderer/store';
@@ -10,7 +10,7 @@ import Checkbox from '../../Checkbox';
 type Status = { done: number; total: number; running: boolean; error: string | null };
 
 /** Starts or stops the background job (PLAN/19 D5), answering how far it got. */
-export const lyricsLibrary = (start?: boolean) => invoke<Status>('lyrics_library', { start: start ?? null });
+export const lyricsLibrary = (start?: boolean): Promise<Status> => ipc('lyrics_library', { start: start ?? null });
 
 /**
  * Settings > Lyrics > Fetch lyrics for my library: off by default, as it sends song names to

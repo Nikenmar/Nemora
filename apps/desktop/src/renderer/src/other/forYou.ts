@@ -1,5 +1,5 @@
 import { Store } from '@tanstack/react-store';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 import type { TFunction } from 'i18next';
 import { currentIntensity, shuffleOptions } from './smartShuffle';
 
@@ -28,7 +28,7 @@ export const mixStore = new Store<Mix | null>(null);
 export const smartListsStore = new Store<SmartList[] | null>(null);
 
 export const loadMix = async (fresh = false) => {
-  const mix = await invoke<Mix>('mix_of_day', {
+  const mix = await ipc('mix_of_day', {
     today: today(),
     fresh,
     options: shuffleOptions(),
@@ -39,7 +39,7 @@ export const loadMix = async (fresh = false) => {
 };
 
 export const loadSmartLists = async () => {
-  const lists = await invoke<SmartList[]>('smart_lists', { options: shuffleOptions(), intensity: currentIntensity() });
+  const lists = await ipc('smart_lists', { options: shuffleOptions(), intensity: currentIntensity() });
   smartListsStore.setState(() => lists);
   return lists;
 };

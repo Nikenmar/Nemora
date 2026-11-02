@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 /**
  * The one place that knows what the Windows taskbar thumbbar should show.
@@ -18,7 +18,7 @@ const prefersDark = (): MediaQueryList | undefined =>
     : undefined;
 
 const push = (): void => {
-  void invoke('set_taskbar_buttons', {
+  void ipc('set_taskbar_buttons', {
     state: {
       isPlaying,
       hasPrevious: true,

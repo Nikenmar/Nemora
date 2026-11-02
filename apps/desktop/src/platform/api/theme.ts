@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow, type Theme } from '@tauri-apps/api/window';
 
@@ -31,7 +31,7 @@ const syncWindowBackground = (isDarkMode: boolean): void => {
     .setBackgroundColor(isDarkMode ? WINDOW_BACKGROUNDS.dark : WINDOW_BACKGROUNDS.light)
     .catch((error: unknown) => console.error('Failed to set the window background color.', error));
   // The strip Windows paints during a resize, before the webview catches up.
-  void invoke('window_backdrop_set', { isDark: isDarkMode }).catch(() => undefined);
+  void ipc('window_backdrop_set', { isDark: isDarkMode }).catch(() => undefined);
 };
 
 /** Applies the stored theme to the window layers once the profile is readable. */

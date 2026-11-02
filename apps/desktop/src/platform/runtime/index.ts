@@ -29,6 +29,7 @@ import historyCover from '../../renderer/src/assets/images/webp/history-playlist
 import playlistCover from '../../renderer/src/assets/images/webp/playlist_cover_default.webp';
 import rediscoverCover from '../../renderer/src/assets/images/webp/rediscover-playlist-icon.webp';
 import songCover from '../../renderer/src/assets/images/webp/song_cover_default.webp';
+import type { ArgList, Command, IpcAnswer, JsonAnswerCommand, TypedCommand } from '../ipc';
 import { NotPortedYetError } from '../api/errors';
 import { emitLocal } from '../api/events';
 import type { PathBackedAudioPlayerData, PathBackedUpdateSongDataResult } from '../api/binary';
@@ -80,11 +81,17 @@ export interface PlayEvaluation {
 }
 
 
-/** A command call. Commands reject with a string; the view reads `error.message`, as 1.x threw. */
-const call = <T>(command: string, args?: Record<string, unknown>): Promise<T> =>
-  invoke<T>(command, args).catch((error: unknown) => {
+/**
+ * A command call, typed from Rust (`../ipc`). Commands reject with a string; the view reads
+ * `error.message`, as 1.x threw.
+ */
+function call<K extends TypedCommand>(command: K, ...args: ArgList<K>): Promise<IpcAnswer<K>>;
+function call<K extends JsonAnswerCommand, T>(command: K, ...args: ArgList<K>): Promise<T>;
+function call(command: Command, args?: Record<string, unknown>): Promise<unknown> {
+  return invoke(command, args).catch((error: unknown) => {
     throw error instanceof Error ? error : new Error(String(error));
   });
+}
 
 /** The local calendar day, which day-based statistics are counted in. */
 const today = (): string => {
@@ -125,7 +132,7 @@ const remapIds = (value: unknown, ids: Record<string, string | null>): unknown =
 const migrateLegacyLocalStorage = async (): Promise<void> => {
   try {
     if (localStorage.getItem(MIGRATED_KEY)) return;
-    const state = await call<LegacyImportState>('legacy_import_state');
+    const state: LegacyImportState = await call('legacy_import_state');
     const stored = localStorage.getItem(SET_ASIDE_KEY) ?? localStorage.getItem(LOCAL_STORAGE_KEY);
     if (state.running) {
       if (stored) localStorage.setItem(SET_ASIDE_KEY, stored);
@@ -174,7 +181,7 @@ export class NemoraRuntime {
     await this.startSingleInstance().catch((error: unknown) =>
       console.error('Opening files from outside was not set up.', error)
     );
-    this.userData = await call<UserData>('app_hydrate', {
+    this.userData = await call<'app_hydrate', UserData>('app_hydrate', {
       defaults: {
         song: songCover,
         artist: artistCover,
@@ -206,7 +213,7 @@ export class NemoraRuntime {
   }
 
   private async refreshUserData(): Promise<void> {
-    this.userData = await call<UserData>('user_data_get');
+    this.userData = await call<'user_data_get', UserData>('user_data_get');
   }
 
   /** Writes reach the core as they happen; there is nothing buffered to flush. */
@@ -301,7 +308,7 @@ export class NemoraRuntime {
   }
 
   async toggleLikeSongs(songIds: string[], like?: boolean): Promise<ToggleLikeSongReturnValue> {
-    const result = await call<ToggleLikeSongReturnValue>('favorites_toggle', { songIds, like });
+    const result: ToggleLikeSongReturnValue = await call('favorites_toggle', { songIds, like });
     if (this.getUserData().preferences.sendSongFavoritesDataToLastFM) {
       void this.sendLovesToLastFm(result).catch((error: unknown) =>
         console.error('Hearts were not sent to Last.fm.', error)
@@ -349,7 +356,7 @@ export class NemoraRuntime {
    * view asks for a startup song once it is ready; anything later plays at once.
    */
   private async startSingleInstance(): Promise<void> {
-    const initialArgv = await call<string[]>('startup_args').catch(() => [] as string[]);
+    const initialArgv = await call('startup_args').catch(() => [] as string[]);
     const liveDeliveries = new Map<string, number>();
     let draining = true;
     const events: ShellEventPort = {
@@ -364,7 +371,7 @@ export class NemoraRuntime {
           deliver(argv);
         });
         // A launch that came before this listener existed was queued by the shell.
-        for (const argv of await call<string[][]>('drain_pending_second_instance_args')) {
+        for (const argv of await call('drain_pending_second_instance_args')) {
           const key = JSON.stringify(argv);
           const live = liveDeliveries.get(key) ?? 0;
           if (live > 0) liveDeliveries.set(key, live - 1);
@@ -512,7 +519,7 @@ export class NemoraRuntime {
   private historyTimer: ReturnType<typeof setTimeout> | undefined;
 
   async search(filter: SearchFilters, value: string, updateHistory = true): Promise<SearchResult> {
-    const result = await call<SearchResult>('library_search', { filter, value });
+    const result: SearchResult = await call('library_search', { filter, value });
     // As 1.x: a query that stays put for two seconds goes to the top of the recent searches.
     if (updateHistory) {
       clearTimeout(this.historyTimer);
@@ -559,7 +566,7 @@ export class NemoraRuntime {
     return call('playlist_rename', { playlistId, name: newName });
   }
 
-  removePlaylists(ids: string[]): Promise<true> {
+  removePlaylists(ids: string[]): Promise<boolean> {
     return call('playlist_remove', { playlistIds: ids });
   }
 
@@ -761,7 +768,8 @@ export class NemoraRuntime {
   }
 
   async resumeTournament(): Promise<PreparedTournament | undefined> {
-    return (await call<PreparedTournament | null>('tournament_resume')) ?? undefined;
+    const prepared: PreparedTournament | null = await call('tournament_resume');
+    return prepared ?? undefined;
   }
 
   getTournamentOverview(): Promise<TournamentOverview> {
@@ -867,7 +875,7 @@ export class NemoraRuntime {
   /** The user's lyrics go into the library, not into the file, and sync from there. */
   async saveLyrics(songPath: string, text: SongLyrics): Promise<unknown> {
     const { toLrc, updateCachedLyrics } = await import('../core/lyrics/getSongLyrics');
-    const saved = await call<boolean>('lyrics_save', { path: songPath, text: toLrc(text) });
+    const saved = await call('lyrics_save', { path: songPath, text: toLrc(text) });
     if (saved) await updateCachedLyrics(() => text);
     return saved;
   }
@@ -889,7 +897,8 @@ export class NemoraRuntime {
   }
 
   async reParseSong(songPath: string): Promise<SavableSongData | undefined> {
-    return (await call<SavableSongData | null>('song_reparse', { path: songPath })) ?? undefined;
+    const reparsed: SavableSongData | null = await call('song_reparse', { path: songPath });
+    return reparsed ?? undefined;
   }
 
   async healSongForPlayback(_songId: string): Promise<boolean> {
@@ -1039,7 +1048,7 @@ export class NemoraRuntime {
 
   async getStorageUsage(forceRefresh = false): Promise<StorageMetrics | undefined> {
     if (!forceRefresh) return this.getUserData().storageMetrics;
-    const metrics = await call<StorageMetrics>('storage_usage');
+    const metrics: StorageMetrics = await call('storage_usage');
     if (this.userData) this.userData = { ...this.userData, storageMetrics: metrics };
     return metrics;
   }
@@ -1087,7 +1096,7 @@ export class NemoraRuntime {
   async importAppData(): Promise<void | LocalStorage> {
     const folder = await openDialog({ title: 'Select the folder of a Nemora backup', directory: true });
     if (typeof folder !== 'string') throw new Error('PROMPT_CLOSED_BEFORE_INPUT');
-    const localStorage = await call<string | null>('appdata_import', { folder });
+    const localStorage = await call('appdata_import', { folder });
     emitLocal('app/sendMessageToRendererEvent', 'APPDATA_IMPORT_SUCCESS_WITH_PENDING_RESTART');
     return localStorage ? (JSON.parse(localStorage) as LocalStorage) : undefined;
   }

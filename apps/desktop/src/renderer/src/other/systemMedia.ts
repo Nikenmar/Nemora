@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 /**
  * Tells Windows what is playing (media keys, the volume flyout, the lock screen). The webview did
@@ -24,7 +24,7 @@ export const updateSystemMedia = (
         playing: state.playing
       }
     : null;
-  void invoke('smtc_update', { now }).catch((error: unknown) =>
+  void ipc('smtc_update', { now }).catch((error: unknown) =>
     console.error('Windows media controls were not updated.', error)
   );
 };

@@ -239,6 +239,7 @@ pub(crate) fn render() -> String {
     };
     let mut lines: Vec<(String, String)> =
         TYPED_BY_HAND.iter().map(|(name, entry)| ((*name).to_owned(), format!("  {name}: {entry};"))).collect();
+    let (mut json_answer, mut json_args) = (Vec::new(), Vec::new());
     for function in &functions {
         let mut args = String::new();
         for (name, dt) in function.args() {
@@ -250,9 +251,17 @@ pub(crate) fn render() -> String {
             None => "null".to_owned(),
         };
         let args = if args.is_empty() { "Record<string, never>".to_owned() } else { format!("{{{args} }}") };
+        if mentions_json(&ret) {
+            json_answer.push(function.name().to_owned());
+        }
+        if mentions_json(&args) {
+            json_args.push(function.name().to_owned());
+        }
         lines.push((function.name().to_owned(), format!("  {}: {{ args: {args}; ret: {ret} }};", function.name())));
     }
     lines.sort();
+    json_answer.sort();
+    json_args.sort();
     out.push_str(
         "\n/** Every command the core answers: its arguments as the view sends them, and what it resolves with. */\n",
     );
@@ -262,7 +271,22 @@ pub(crate) fn render() -> String {
         out.push('\n');
     }
     out.push_str("}\n");
+    let union = |names: &[String]| names.iter().map(|name| format!("\n  | '{name}'")).collect::<String>();
+    let _ = write!(
+        out,
+        "\n/** Commands whose answer Rust gives as any JSON (`serde_json::Value`): the view states its shape. */\n\
+         export type JsonAnswerCommand ={};\n\
+         \n/** Commands taking any JSON (`serde_json::Value`) in an argument. */\n\
+         export type JsonArgsCommand ={};\n",
+        union(&json_answer),
+        union(&json_args)
+    );
     out
+}
+
+/// Whether a rendered type mentions `Value`, serde_json's any-JSON (the only named type by that name).
+fn mentions_json(rendered: &str) -> bool {
+    rendered.split(|c: char| !c.is_ascii_alphanumeric() && c != '_').any(|word| word == "Value")
 }
 
 /// Registered with Tauri but typed here by hand, each for its reason. `track_visuals` answers raw

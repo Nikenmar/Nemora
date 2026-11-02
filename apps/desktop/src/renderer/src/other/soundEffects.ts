@@ -1,5 +1,5 @@
 import { Store } from '@tanstack/react-store';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 import storage from '../utils/localStorage';
 import { store } from '../store';
 import { setBandShift } from './trackVisuals';
@@ -162,4 +162,4 @@ export const effectName = (sound: Sound, name: (id: PresetId) => string) => {
 };
 
 /** Whether the engine clipped (a sample past 0 dBFS) since the last ask. */
-export const takeClipped = () => invoke<boolean>('engine_clipped').catch(() => false);
+export const takeClipped = () => ipc('engine_clipped').catch(() => false);

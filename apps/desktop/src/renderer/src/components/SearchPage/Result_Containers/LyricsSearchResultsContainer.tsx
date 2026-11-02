@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
 import { store } from '../../../store';
@@ -46,7 +46,7 @@ const LyricsSearchResultsContainer = ({ searchInput }: { searchInput: string }) 
     if (query.length < 3) return setHits([]);
     let isLive = true;
     const timer = setTimeout(() => {
-      invoke<Hit[]>('lyrics_search', { query, limit: 6 })
+      ipc('lyrics_search', { query, limit: 6 })
         .then(async (found) => {
           const songs = found.length > 0 ? await window.api.audioLibraryControls.getSongInfo(found.map((h) => h.songId)) : [];
           if (!isLive) return;

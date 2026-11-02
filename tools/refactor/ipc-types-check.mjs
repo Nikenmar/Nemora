@@ -135,7 +135,7 @@ for (const file of program.getSourceFiles()) {
     if (ts.isCallExpression(node) && node.arguments.length > 0) {
       const callee = node.expression;
       const name = ts.isIdentifier(callee) ? callee.text : ts.isPropertyAccessExpression(callee) ? callee.name.text : '';
-      if (/^(call|invoke|invokeCommand)$/.test(name)) {
+      if (/^(call|invoke|invokeCommand|ipc)$/.test(name)) {
         const first = checker.getTypeAtLocation(node.arguments[0]);
         if (first.isStringLiteral() && generated.has(first.value)) {
           const command = first.value;

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 /**
  * The push side of the OBS now-playing widget.
@@ -44,10 +44,10 @@ export const obsWidget = {
    * shell reading it: the shell has no notion of the user profile, and the
    * profile is not even readable at the point the window is created.
    */
-  setEnabled: (enabled: boolean): Promise<void> => invoke<void>('widget_set_enabled', { enabled }),
+  setEnabled: (enabled: boolean): Promise<void> => ipc('widget_set_enabled', { enabled }),
 
   setState: (state: ObsWidgetState): void => {
-    void invoke('widget_set_state', { state }).catch((error: unknown) =>
+    void ipc('widget_set_state', { state }).catch((error: unknown) =>
       console.error('Failed to update the OBS widget state.', error)
     );
   }

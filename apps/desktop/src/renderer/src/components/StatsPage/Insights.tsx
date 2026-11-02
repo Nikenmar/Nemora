@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Button from '../Button';
@@ -41,7 +41,7 @@ const Insights = () => {
 
   useEffect(() => {
     let isLive = true;
-    invoke<Insight[]>('stats_insights')
+    ipc('stats_insights')
       .then(async (found) => {
         const ids = found.flatMap((i) => (i.kind === 'outOfRotation' || i.kind === 'rising' ? i.songs.slice(0, 3) : []));
         const songs = ids.length > 0 ? await window.api.audioLibraryControls.getSongInfo(ids) : [];

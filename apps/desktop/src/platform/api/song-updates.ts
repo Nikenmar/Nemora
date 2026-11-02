@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 
 import type { PathBackedUpdateSongDataResult } from './binary';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
@@ -68,7 +68,7 @@ export const songUpdates = {
    * becomes the image dragged under the cursor.
    */
   startFileDrag: (paths: string[], artwork?: string): void => {
-    void invoke('start_file_drag', { paths, artwork }).catch((error: unknown) =>
+    void ipc('start_file_drag', { paths, artwork }).catch((error: unknown) =>
       console.error('Failed to start dragging the song file.', error)
     );
   },

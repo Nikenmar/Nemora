@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { ipc } from '@platform/ipc';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
@@ -102,7 +102,7 @@ const TasteMapPage = () => {
 
   // Load (and reload after a rename or a redraw), sized by Smart Shuffle as it runs now.
   const load = useCallback((fresh = false) => {
-    return invoke<TasteMapData>('taste_map', { options: shuffleOptions(), intensity: currentIntensity(), fresh })
+    return ipc('taste_map', { options: shuffleOptions(), intensity: currentIntensity(), fresh })
       .then((loaded) => setMap(loaded))
       .catch(() => setMap(null));
   }, []);
@@ -155,7 +155,7 @@ const TasteMapPage = () => {
   // The session's trail, after every song change.
   useEffect(() => {
     let isLive = true;
-    invoke<string[]>('taste_map_session')
+    ipc('taste_map_session')
       .then((songs) => {
         if (!isLive) return;
         setTrail(currentSongId && songs.at(-1) !== currentSongId ? [...songs, currentSongId] : songs);
@@ -513,7 +513,7 @@ const TasteMapPage = () => {
   const endJourney = useCallback(
     (to: MapPoint) => {
       if (!journeyFrom) return;
-      invoke<string[]>('taste_map_journey', { from: journeyFrom.songId, to: to.songId, length: 20 })
+      ipc('taste_map_journey', { from: journeyFrom.songId, to: to.songId, length: 20 })
         .then((way) => {
           if (way.length === 0)
             addNewNotifications([{ id: 'tasteMapJourney', duration: 5000, content: t('tasteMap.journeyNone') }]);
@@ -687,7 +687,7 @@ const TasteMapPage = () => {
   };
   const rename = (name: string) => {
     if (summary?.island === null || summary?.island === undefined) return;
-    invoke('taste_map_rename', { island: summary.island, name })
+    ipc('taste_map_rename', { island: summary.island, name })
       .then(() => load())
       .catch(() => undefined);
     setRenaming(null);
