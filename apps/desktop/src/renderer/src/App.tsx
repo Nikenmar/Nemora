@@ -221,7 +221,7 @@ export default function App() {
 
   // The stock upstream update check (which polled Sandakan/Nora's
   // release-notes.json) was removed: upstream no longer publishes that file, and
-  // the fork updates itself through electron-updater in src/main/update.ts.
+  // Nemora updates itself through Tauri's updater plugin.
 
   useEffect(() => {
     const watchForSystemThemeChanges = (
