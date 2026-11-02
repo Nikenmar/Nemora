@@ -5,6 +5,7 @@ import { store } from '@renderer/store';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import { saveSoundAsFile } from '../../other/saveSoundFile';
 import { soundTag } from '../../other/soundTag';
+import { OWN_SOUND_ID, saveOwnSound } from '../../other/songSound';
 import Icon from '../ui/Icon';
 import {
   PRESETS,
@@ -164,12 +165,16 @@ const SoundPanel = () => {
 
       {playing && (
         <div className="mx-4 mb-3 flex items-center justify-between gap-2 rounded-lg bg-accent-soft px-3 py-2 text-small">
-          <span className="truncate text-ink">{t('versions.editing', { name: playing.name })}</span>
+          <span className="truncate text-ink">
+            {playing.id === OWN_SOUND_ID ? t('versions.editingSwitched', { name: playing.name }) : t('versions.editing', { name: playing.name })}
+          </span>
           <button
             type="button"
             disabled={!playing.isChanged}
             className="shrink-0 rounded-md bg-accent px-2.5 py-1 font-medium text-on-accent outline-none focus-visible:outline-2 focus-visible:outline-echo disabled:opacity-40"
-            onClick={() => saveVersionSound().catch((error) => console.error(error))}
+            onClick={() =>
+              playing.id === OWN_SOUND_ID ? saveOwnSound() : saveVersionSound().catch((error) => console.error(error))
+            }
           >
             {t('versions.saveSound')}
           </button>

@@ -70,6 +70,7 @@ import megaShuffleQueue from './other/megaShuffleQueue';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import { rememberedPosition, rememberPosition } from './other/resumePosition';
 import { registerSoundPlayer, setPlayingVersion } from './other/soundEffects';
+import { ownVersionOf } from './other/songSound';
 import { applySavedCorrection } from './other/headphoneCorrection';
 import { lyricsLibrary } from './components/SettingsPage/Settings/LyricsLibrary';
 import { startTrace } from './other/trace';
@@ -857,8 +858,9 @@ export default function App() {
               console.log('playSong', songId, songData.path);
 
               dispatch({ type: 'CURRENT_SONG_DATA_CHANGE', data: songData });
-              // A version (PLAN/18 D6) plays with its own sound; any other row with the panel's.
-              setPlayingVersion(songData.version ?? null);
+              // A version (PLAN/18 D6) plays with its own sound, a switched song with the sound it
+              // was given; any other row with the panel's.
+              setPlayingVersion(songData.version ?? ownVersionOf(songData.songId) ?? null);
 
               storage.playback.setCurrentSongOptions('songId', songData.songId);
 

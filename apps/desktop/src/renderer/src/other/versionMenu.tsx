@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import { PRESETS, REVERB_CHIP, soundPanelStore, soundStore, versionStore } from './soundEffects';
 import { soundTag, versionTag } from './soundTag';
+import { songOf, songSoundStore, switchSongSound } from './songSound';
 import RenameVersionPrompt from '../components/SongsPage/RenameVersionPrompt';
 import { store } from '../store';
 import { saveSoundAsFile } from './saveSoundFile';
@@ -75,6 +76,38 @@ export const versionMenuItems = (
   }));
   const current = soundStore.state;
   const currentName = soundTag(current) ?? '';
+  // Switch version: the song itself takes the sound, no second row (other/songSound.ts).
+  const switched = songSoundStore.state[songOf(songId)];
+  const switchTo = (semitones: number, reverb = 0) => () =>
+    switchSongSound(songId, { semitones, keepPitch: false, reverb, size: REVERB_CHIP.size });
+  const switchItems: ContextMenuItem[] = [
+    ...PRESETS.filter((p) => p.id !== 'original').map((p) => ({
+      label: t(`sound.preset.${p.id}`),
+      handlerFunction: switchTo(p.semitones)
+    })),
+    { label: 'Slowed + Reverb', handlerFunction: switchTo(-2, REVERB_CHIP.reverb) },
+    { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
+    {
+      label: currentName ? t('versions.fromCurrent', { name: currentName }) : t('versions.fromCurrentNone'),
+      isDisabled: !currentName,
+      handlerFunction: () =>
+        switchSongSound(songId, {
+          semitones: current.semitones,
+          keepPitch: current.keepPitch,
+          reverb: current.reverb,
+          size: current.size
+        })
+    },
+    ...(switched
+      ? [
+          {
+            label: t('versions.backToOriginal'),
+            iconName: 'undo',
+            handlerFunction: () => switchSongSound(songId, null)
+          }
+        ]
+      : [])
+  ];
   return [
     {
       label: t('versions.make'),
@@ -102,6 +135,12 @@ export const versionMenuItems = (
               .catch((error) => console.error(error))
         }
       ]
+    },
+    {
+      label: switched ? t('versions.switchedTo', { name: versionTag(switched) ?? switched.name }) : t('versions.switch'),
+      iconName: 'swap_horiz',
+      handlerFunction: null,
+      innerContextMenus: switchItems
     }
   ];
 };

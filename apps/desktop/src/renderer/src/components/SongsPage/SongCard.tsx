@@ -3,6 +3,7 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import SoundTag from '../ui/SoundTag';
 import { versionTag } from '../../other/soundTag';
+import { songOf, songSoundStore } from '../../other/songSound';
 import { lazy, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -85,6 +86,8 @@ const SongCard = (props: SongCardProp) => {
     selectAllHandler,
     version
   } = props;
+  // Switch version: the song itself sounds like a version (other/songSound.ts).
+  const ownSound = useStore(songSoundStore, (all) => (version ? undefined : all[songOf(songId)]));
 
   const [isSongAFavorite, setIsSongAFavorite] = useState(
     songId === currentSongData.songId ? currentSongData.isAFavorite : isAFavorite
@@ -462,6 +465,7 @@ const SongCard = (props: SongCardProp) => {
     ];
     return items;
   }, [
+    ownSound,
     t,
     multipleSelectionsData,
     isAMultipleSelection,
@@ -621,7 +625,7 @@ const SongCard = (props: SongCardProp) => {
           tabIndex={0}
         >
           {title}
-          {version && <SoundTag tag={versionTag(version)} className="text-[12.5px]" />}
+          <SoundTag tag={version ? versionTag(version) : ownSound ? versionTag(ownSound) : null} className="text-[12.5px]" />
         </div>
         <div
           className="song-artists mt-0.5 truncate text-small text-ink-dim"

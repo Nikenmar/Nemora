@@ -4,6 +4,7 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import SoundTag from '../ui/SoundTag';
 import { versionTag } from '../../other/soundTag';
+import { songOf, songSoundStore } from '../../other/songSound';
 import {
   type CSSProperties,
   type ForwardedRef,
@@ -128,6 +129,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     isShuffleReasonShown = false,
     version
   } = props;
+  // Switch version: the song itself sounds like a version (other/songSound.ts).
+  const ownSound = useStore(songSoundStore, (all) => (version ? undefined : all[songOf(songId)]));
 
   const [isAFavorite, setIsAFavorite] = useState(props.isAFavorite);
   const [heartPop, setHeartPop] = useState(0);
@@ -599,6 +602,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
 
     return items;
   }, [
+    ownSound,
     multipleSelectionsData,
     isAMultipleSelection,
     additionalContextMenuItems,
@@ -735,7 +739,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           >
             {isCurrent && <EqualizerBars isPlaying={isSongPlaying} className="mr-0.5" />}
             <span className="truncate">{title}</span>
-            {version && <SoundTag tag={versionTag(version)} className="-ml-1 text-[12.75px]" />}
+            <SoundTag tag={version ? versionTag(version) : ownSound ? versionTag(ownSound) : null} className="-ml-1 text-[12.75px]" />
           </div>
           <div className="song-artists min-w-0 truncate text-small text-ink-dim">
             {songArtists}

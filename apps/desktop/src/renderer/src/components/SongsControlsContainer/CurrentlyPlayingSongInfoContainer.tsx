@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
+import { versionMenuItems } from '../../other/versionMenu';
 import SoundTag from '../ui/SoundTag';
 import { usePlayingTag } from '../../other/soundTag';
 import { lazy, useCallback, useContext, useMemo, useRef, useState } from 'react';
@@ -141,6 +142,10 @@ const CurrentlyPlayingSongInfoContainer = () => {
       currentSongData;
 
     return [
+      // Make version and Switch version, as in a song's own menu (PLAN/18).
+      ...(isKnownSource
+        ? versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications, currentSongData.version)
+        : []),
       {
         label: t('song.addToPlaylists'),
         iconName: 'playlist_add',
@@ -253,6 +258,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
       }
     ];
   }, [
+    playingTag,
     addNewNotifications,
     changeCurrentActivePage,
     changePromptMenuData,

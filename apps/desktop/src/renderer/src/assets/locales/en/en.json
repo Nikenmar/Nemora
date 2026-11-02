@@ -1509,6 +1509,10 @@
     "chipRadio": "Radio from {{name}}"
   },
   "versions": {
+    "switch": "Switch version",
+    "switchedTo": "Switched to {{name}}",
+    "backToOriginal": "Back to original",
+    "editingSwitched": "This song sounds: {{name}}",
     "make": "Make version",
     "fromCurrent": "From the current sound ({{name}})",
     "fromCurrentNone": "From the current sound (nothing on)",
