@@ -2,7 +2,9 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 
 import { useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
+import { store } from '../../store';
 import Icon from '../ui/Icon';
 
 /**
@@ -17,7 +19,10 @@ const iconLook = (classes?: string) =>
 
 const ContextMenuItem = (props: ContextMenuItem) => {
   const { updateContextMenuData } = useContext(AppUpdateContext);
+  const { t } = useTranslation();
   const isDanger = props.class?.includes('menu-item-danger');
+  const inner = props.innerContextMenus ?? [];
+  const hasInner = inner.length > 0;
   return (
     <div
       role="menuitem"
@@ -35,8 +40,38 @@ const ContextMenuItem = (props: ContextMenuItem) => {
         window.api.songUpdates.startFileDrag(props.fileDrag.paths, props.fileDrag.artwork);
         updateContextMenuData(false, []);
       }}
-      onClick={() => {
-        if (!props.isContextMenuItemSeperator && props.handlerFunction) {
+      aria-haspopup={hasInner ? 'menu' : undefined}
+      onClick={(event) => {
+        if (props.isContextMenuItemSeperator || props.isDisabled) return;
+        if (hasInner) {
+          // A submenu opens in place of the menu, with a way back; the click must not reach the
+          // window, whose listener closes any open menu.
+          event.stopPropagation();
+          const { menuItems, pageX, pageY, data } = store.state.contextMenuData;
+          updateContextMenuData(
+            true,
+            [
+              {
+                label: t('common.back', 'Back'),
+                iconName: 'arrow_back',
+                handlerFunction: () => updateContextMenuData(true, menuItems, pageX, pageY, data),
+                keepOpen: true
+              },
+              { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
+              ...inner
+            ],
+            pageX,
+            pageY,
+            data
+          );
+          return;
+        }
+        if (props.handlerFunction) {
+          if (props.keepOpen) {
+            event.stopPropagation();
+            props.handlerFunction();
+            return;
+          }
           props.handlerFunction();
           updateContextMenuData(false, []);
         }
@@ -53,6 +88,7 @@ const ContextMenuItem = (props: ContextMenuItem) => {
         )}
       </span>
       <span className="truncate">{props.label}</span>
+      {hasInner && <Icon name="chevron_right" size={18} className="ml-auto text-ink-dim" />}
     </div>
   );
 };

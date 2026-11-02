@@ -45,8 +45,9 @@ const SearchPage = () => {
   const [searchInput, setSearchInput] = useState(
     (currentlyActivePage?.data?.keyword as string) || ''
   );
-  // The top bar writes the keyword into the page's data as the user types.
-  const pageKeyword = (currentlyActivePage?.data?.keyword as string) || '';
+  // The top bar writes the keyword into the page's data as the user types. Read as a string:
+  // the page object is updated in place, so selecting it would miss the change.
+  const pageKeyword = useStore(store, (state) => (state.currentlyActivePage?.data?.keyword as string) || '');
   useEffect(() => setSearchInput(pageKeyword), [pageKeyword]);
 
   const searchContainerRef = useRef(null);

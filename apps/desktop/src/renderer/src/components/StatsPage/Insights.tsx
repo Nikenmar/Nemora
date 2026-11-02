@@ -19,15 +19,13 @@ const duration = (ms: number) => {
 const hour = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
 const Card = ({ icon, title, detail, action }: { icon: string; title: ReactNode; detail?: ReactNode; action?: ReactNode }) => (
-  <div className="insight-card flex min-h-[8.5rem] flex-col gap-2 rounded-panel bg-surface-1 p-4">
-    <div className="flex items-start gap-3">
-      <span className="ms-icon mt-0.5 text-[22px] text-accent" aria-hidden>
-        {icon}
-      </span>
-      <p className="text-body font-semibold leading-snug text-ink">{title}</p>
-    </div>
-    {detail && <p className="pl-9 text-small text-ink-dim">{detail}</p>}
-    {action && <div className="mt-auto pl-7">{action}</div>}
+  <div className="insight-card flex min-w-0 flex-col gap-2 rounded-lg border-[3px] border-surface-2 p-4">
+    <span className="ms-icon text-[22px] text-accent" aria-hidden>
+      {icon}
+    </span>
+    <p className="text-body font-semibold leading-snug text-ink">{title}</p>
+    {detail && <p className="line-clamp-2 text-small text-ink-dim">{detail}</p>}
+    {action && <div className="mt-auto pt-1">{action}</div>}
   </div>
 );
 
@@ -151,7 +149,8 @@ const Insights = () => {
   return (
     <section className="insights mb-6" aria-label={t('insights.title')}>
       <h2 className="mb-3 text-section font-semibold text-ink">{t('insights.title')}</h2>
-      <div className="grid grid-cols-3 gap-3 lg:grid-cols-2 sm:grid-cols-1">{cards}</div>
+      {/* One row, the cards sharing it evenly whatever their number; narrow windows wrap. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-3">{cards}</div>
     </section>
   );
 };

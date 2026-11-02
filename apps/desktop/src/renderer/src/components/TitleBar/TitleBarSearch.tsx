@@ -16,11 +16,13 @@ export const FOCUS_SEARCH_EVENT = 'nemora:focus-search';
 const TitleBarSearch = () => {
   const { t } = useTranslation();
   const { changeCurrentActivePage, updateCurrentlyActivePageData } = useContext(AppUpdateContext);
-  const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
+  // Primitives, not the page object: the page's data is updated in place (appReducer), so a
+  // selector returning the same object would never see the keyword change.
+  const onSearchPage = useStore(store, (state) => state.currentlyActivePage.pageTitle === 'Search');
+  const pageKeyword = useStore(store, (state) => (state.currentlyActivePage.data?.keyword as string) ?? '');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const onSearchPage = currentlyActivePage.pageTitle === 'Search';
-  const keyword = onSearchPage ? ((currentlyActivePage.data?.keyword as string) ?? '') : '';
+  const keyword = onSearchPage ? pageKeyword : '';
 
   useEffect(() => {
     const focus = () => {

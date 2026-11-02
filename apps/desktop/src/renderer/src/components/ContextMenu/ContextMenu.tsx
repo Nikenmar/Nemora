@@ -87,6 +87,8 @@ const ContextMenu = memo(() => {
               class={menuItem.class}
               handlerFunction={menuItem.handlerFunction}
               fileDrag={menuItem.fileDrag}
+              innerContextMenus={menuItem.innerContextMenus}
+              keepOpen={menuItem.keepOpen}
             />
           );
         }),

@@ -1764,6 +1764,13 @@ export default function App() {
       const shiftCombinations = ['ArrowRight', 'ArrowLeft'];
       const altCombinations = ['ArrowRight', 'ArrowLeft', 'Home'];
       const functionCombinations = ['F12', 'F5'];
+      // Typing in a field keeps its keys: Space is a space there, Shift+arrows select text. Only
+      // Ctrl and Alt combinations and the function keys still reach the app.
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        !!target?.closest('input, textarea, select, [contenteditable="true"]') &&
+        !(target instanceof HTMLInputElement && ['checkbox', 'radio', 'range', 'button'].includes(target.type));
+      if (isTyping && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key)) return;
       if (
         (e.ctrlKey && ctrlCombinations.some((x) => e.key === x)) ||
         (e.shiftKey && shiftCombinations.some((x) => e.key === x)) ||

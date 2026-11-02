@@ -1551,6 +1551,8 @@ declare global {
     innerContextMenus?: ContextMenuItem[];
     handlerFunction: null | (() => void);
     isDisabled?: boolean;
+    /** The menu stays open after the item runs (a submenu's Back). */
+    keepOpen?: boolean;
     /**
      * Turns the item into a drag handle: pressing it and pulling starts a
      * native drag of these files, which can then be dropped into any other
