@@ -1,11 +1,11 @@
+import type { PowerState } from '../ipc';
 import type { InvokePort, ShellEventPort, Unlisten } from './types';
 
 export const POWER_SOURCE_CHANGED_EVENT = 'nemora://power-source-changed';
 export const GET_POWER_STATE_COMMAND = 'get_power_state';
 
-export interface PowerState {
-  isOnBatteryPower: boolean;
-}
+/** The core's answer to `get_power_state` (generated from Rust). */
+export type { PowerState };
 
 export interface PowerStatePort {
   current(): Promise<PowerState>;

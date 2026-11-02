@@ -1,15 +1,14 @@
 import { Store } from '@tanstack/react-store';
 import { ipc } from '@platform/ipc';
+import type { Filter, Headphone_Serialize, Preview_Serialize } from '@platform/ipc';
 
 /** Headphone correction (PLAN/18 D5): off by default; the profile is kept as its text. */
 export type Correction = { isOn: boolean; name: string; source: string; text: string };
 
-export type Headphone = { name: string; source: string; rig: string | null; path: string };
-export type CorrectionFilter = { kind: 'peak' | 'lowShelf' | 'highShelf'; frequency: number; gainDb: number; q: number };
-export type CorrectionPreview = {
-  profile: { preampDb: number; filters: CorrectionFilter[]; skipped: string[] };
-  curve: [number, number][];
-};
+// The core's types (generated from Rust).
+export type Headphone = Headphone_Serialize;
+export type CorrectionFilter = Filter;
+export type CorrectionPreview = Preview_Serialize;
 
 const KEY = 'nemora.correction';
 const OFF: Correction = { isOn: false, name: '', source: '', text: '' };

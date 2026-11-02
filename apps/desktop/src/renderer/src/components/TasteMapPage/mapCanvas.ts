@@ -5,34 +5,12 @@
  * queue's route, the lasso). Pure functions over a 2D context; the page owns state and events.
  */
 
-export type MapPoint = {
-  songId: string;
-  x: number;
-  y: number;
-  weight: number;
-  title: string;
-  artist: string | null;
-  tone: string | null;
-  neighbours: string[];
-  linkKinds: number[];
-  island: number;
-  plays: number;
-  heardMs: number;
-  lastDay: number | null;
-  tier: string | null;
-  tierValue: number | null;
-  energy: number | null;
-};
-export type MapIsland = {
-  id: number;
-  name: string | null;
-  userName: string | null;
-  size: number;
-  x: number;
-  y: number;
-  loose: boolean;
-};
-export type TasteMapData = { points: MapPoint[]; islands: MapIsland[]; plays: number; hash: string; span: number };
+import type { Island_Serialize, Point_Serialize, TasteMap_Serialize } from '@platform/ipc';
+
+// The core's map (generated from Rust).
+export type MapPoint = Point_Serialize;
+export type MapIsland = Island_Serialize;
+export type TasteMapData = TasteMap_Serialize;
 
 export type ColourMode = 'cover' | 'island' | 'tier' | 'shuffle' | 'fresh' | 'energy';
 export const COLOUR_MODES: ColourMode[] = ['cover', 'island', 'shuffle', 'tier', 'fresh', 'energy'];

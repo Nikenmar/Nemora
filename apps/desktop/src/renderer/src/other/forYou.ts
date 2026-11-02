@@ -1,21 +1,16 @@
 import { Store } from '@tanstack/react-store';
 import { ipc } from '@platform/ipc';
+import type { Entry_Serialize, List, Mix_Serialize, Part, Reason_Serialize, SmartList_Serialize } from '@platform/ipc';
 import type { TFunction } from 'i18next';
 import { currentIntensity, shuffleOptions } from './smartShuffle';
 
-/** Home's For you (PLAN/19): the smart lists and the mix of the day, from the core. */
-export type SmartListId = 'rediscover' | 'onRepeat' | 'caughtYou' | 'thisHour' | 'energetic' | 'calm' | 'neverHeard';
-export type SmartReason = { key: string; count?: number; total?: number; name?: string };
-export type SmartEntry = { songId: string; reason: SmartReason };
-export type SmartList = { id: SmartListId; entries: SmartEntry[] };
-export type MixPart = 'favourite' | 'forgotten' | 'new' | 'island';
-export type Mix = {
-  day: string;
-  round: number;
-  songs: { songId: string; part: MixPart }[];
-  newArtist?: string | null;
-  island?: string | null;
-};
+/** Home's For you (PLAN/19): the smart lists and the mix of the day, from the core (types from Rust). */
+export type SmartListId = List;
+export type SmartReason = Reason_Serialize;
+export type SmartEntry = Entry_Serialize;
+export type SmartList = SmartList_Serialize;
+export type MixPart = Part;
+export type Mix = Mix_Serialize;
 
 /** The local day as the core keys the mix by it. */
 export const today = () => {

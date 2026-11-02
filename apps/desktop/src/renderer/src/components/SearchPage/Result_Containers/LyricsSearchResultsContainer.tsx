@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ipc } from '@platform/ipc';
+import { ipc, type Hit_Serialize } from '@platform/ipc';
 
 import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
 import { store } from '../../../store';
@@ -10,7 +10,7 @@ import SecondaryContainer from '../../SecondaryContainer';
 
 import DefaultSongCover from '../../../assets/images/webp/song_cover_default.webp';
 
-type Hit = { songId: string; lineNo: number; start: number | null; text: string; before: string | null; after: string | null };
+type Hit = Hit_Serialize;
 
 /** Plays `songId` and, once it is the song in the player, moves to `seconds`. */
 export const playFrom = (

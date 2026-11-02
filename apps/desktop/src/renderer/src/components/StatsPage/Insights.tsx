@@ -1,16 +1,11 @@
 import { useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ipc } from '@platform/ipc';
+import { ipc, type Insight_Serialize } from '@platform/ipc';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Button from '../Button';
 
-type Insight =
-  | { kind: 'week'; heardMs: number; beforeMs: number; songs: number; songsBefore: number; firstTime: number }
-  | { kind: 'outOfRotation'; songs: string[]; plays: number[] }
-  | { kind: 'rising'; songs: string[]; recent: number[]; before: number[] }
-  | { kind: 'islands'; grew: [number, string, number, number] | null; faded: [number, string, number, number] | null }
-  | { kind: 'hours'; from: number; to: number; share: number; plays: number };
+type Insight = Insight_Serialize;
 
 const duration = (ms: number) => {
   const minutes = Math.round(ms / 60_000);
