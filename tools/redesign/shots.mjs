@@ -39,6 +39,13 @@ const SKIP_EMPTY = process.argv.includes('--skip-empty') || Boolean(option('prob
 /** `--probe file.js`: run that script in the app (after the library and queue are up) instead of shooting, and print what it returns, once per `--probe-widths`. */
 const PROBE = option('probe', '');
 /**
+ * `--ipc-trace file.json` (with `--probe`): records every command the app sends to Rust while the
+ * probe runs, from the outside (CDP Network, the `ipc.localhost` requests Tauri 2 makes on
+ * Windows), with a digest of its arguments and answer; `tools/refactor/ipc-diff.mjs` compares two
+ * traces (PLAN/21 protocol). The product is not touched.
+ */
+const IPC_TRACE = option('ipc-trace', '');
+/**
  * `--film file.js`: run that script (its last act starts the motion), then freeze every finite
  * animation and shoot it at 0, 25, 50, 75 and 100% of its run, in each `--themes` theme, into
  * `<out>/film/<name>.<pct>.<theme>.png` (name: `--film-name`, else the script's file name).
@@ -308,8 +315,10 @@ class Cdp {
       this.ws.onopen = resolve;
       this.ws.onerror = reject;
     });
+    this.listeners = [];
     this.ws.onmessage = (message) => {
       const data = JSON.parse(message.data);
+      if (data.method) for (const listen of this.listeners) listen(data);
       const waiter = this.pending.get(data.id);
       if (!waiter) return;
       this.pending.delete(data.id);
@@ -463,10 +472,66 @@ async function runOne(name, shots, copyFrom) {
     }
     if (PROBE) {
       const body = readFileSync(PROBE, 'utf8');
+      const ipc = [];
+      const answers = [];
+      if (IPC_TRACE) {
+        const volatile = /^(at|atMs|startedAt|now|updatedAt|updated_at|ts|seq|generation|elapsed|took|today)$/i;
+        const digest = (text) => {
+          // The stand's run folder (named after --label) appears in every artwork URL: one name for all.
+          let value = (text ?? '').replace(/nemora-shots(%5C|\\|\|\/)[^%\/"]+/g, 'nemora-shots$1<run>');
+          try {
+            value = JSON.stringify(JSON.parse(value), (k, v) => (volatile.test(k) ? undefined : v));
+          } catch {
+            /* not JSON: hashed as it is */
+          }
+          let h = 0x811c9dc5;
+          for (let i = 0; i < value.length; i++) h = Math.imul(h ^ value.charCodeAt(i), 0x01000193) >>> 0;
+          return `${value.length}:${h.toString(16)}`;
+        };
+        const byId = new Map();
+        cdp.listeners.push((event) => {
+          if (event.method === 'Network.requestWillBeSent') {
+            const url = event.params.request.url;
+            const m = /ipc\.localhost\/([^?]+)/.exec(url);
+            // The CORS preflight (OPTIONS, no body) precedes each call: only the POST is the call.
+            if (!m || event.params.request.method !== 'POST') return;
+            const raw = event.params.request.postData ?? '';
+            const call = { cmd: decodeURIComponent(m[1]), args: digest(raw), result: null, text: raw.slice(0, 160) };
+            byId.set(event.params.requestId, call);
+            ipc.push(call);
+          } else if (event.method === 'Network.loadingFinished' && byId.has(event.params.requestId)) {
+            const call = byId.get(event.params.requestId);
+            answers.push(
+              cdp
+                .send('Network.getResponseBody', { requestId: event.params.requestId })
+                .then((r) => {
+                  const body = r.base64Encoded ? Buffer.from(r.body, 'base64').toString('latin1') : r.body;
+                  call.result = digest(body);
+                  // `--ipc-raw dir`: every answer as it came, to find what differs between runs.
+                  if (option('ipc-raw', '')) {
+                    mkdirSync(option('ipc-raw', ''), { recursive: true });
+                    writeFileSync(join(option('ipc-raw', ''), `${String(ipc.indexOf(call)).padStart(3, '0')}-${call.cmd}.txt`), body);
+                  }
+                })
+                .catch(() => (call.result = 'unread'))
+            );
+          }
+        });
+        await cdp.send('Network.enable', { maxPostDataSize: 1 << 20 });
+      }
       for (const width of option('probe-widths', String(VIEW.width)).split(',').map(Number)) {
         await cdp.view({ width, height: VIEW.height });
         await sleep(800);
         console.log(`[probe ${width}px]`, JSON.stringify(await cdp.eval(body), null, 1));
+      }
+      if (IPC_TRACE) {
+        await sleep(500);
+        await Promise.all(answers);
+        // Polled or clocked commands: their count follows timing, not the code under test.
+        const noisy = /^(plugin:|engine_clipped$|engine_status$|lyrics_library$|energy_analysis$|widget_)/;
+        const trace = ipc.filter((c) => !noisy.test(c.cmd));
+        writeFileSync(IPC_TRACE, JSON.stringify({ commands: trace.length, trace }, null, 1));
+        console.log(`[ipc] ${trace.length} commands written to ${IPC_TRACE}`);
       }
       if (CPU_SECONDS > 0) console.log(`[cpu] ${cpuPercent(app.pid, CPU_SECONDS)}% of one core over ${CPU_SECONDS} s`);
       return failures;

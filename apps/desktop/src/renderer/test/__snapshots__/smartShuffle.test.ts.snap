@@ -1,0 +1,250 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`smartShuffle > applies every steering action to its state 1`] = `
+[
+  {
+    "boostNew": false,
+    "lessArtists": [
+      "A",
+    ],
+    "moreLike": [],
+    "notNow": [],
+    "onlyRanked": false,
+    "onlyUnheard": false,
+    "titles": {},
+  },
+  {
+    "boostNew": false,
+    "lessArtists": [
+      "A",
+    ],
+    "moreLike": [],
+    "notNow": [],
+    "onlyRanked": false,
+    "onlyUnheard": false,
+    "titles": {},
+  },
+  {
+    "boostNew": false,
+    "lessArtists": [
+      "A",
+    ],
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [],
+    "onlyRanked": false,
+    "onlyUnheard": false,
+    "titles": {
+      "s01": "One",
+    },
+  },
+  {
+    "boostNew": false,
+    "lessArtists": [
+      "A",
+    ],
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [
+      "s02",
+    ],
+    "onlyRanked": false,
+    "onlyUnheard": false,
+    "titles": {
+      "s01": "One",
+      "s02": "Two",
+    },
+  },
+  {
+    "boostNew": false,
+    "lessArtists": [
+      "A",
+    ],
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [
+      "s02",
+    ],
+    "onlyRanked": false,
+    "onlyUnheard": true,
+    "titles": {
+      "s01": "One",
+      "s02": "Two",
+    },
+  },
+  {
+    "boostNew": false,
+    "lessArtists": [],
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [
+      "s02",
+    ],
+    "onlyRanked": false,
+    "onlyUnheard": true,
+    "titles": {
+      "s01": "One",
+      "s02": "Two",
+    },
+  },
+  {
+    "boostNew": false,
+    "lessArtists": [],
+    "mode": "comfort",
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [
+      "s02",
+    ],
+    "onlyRanked": false,
+    "onlyUnheard": true,
+    "titles": {
+      "s01": "One",
+      "s02": "Two",
+    },
+  },
+  {
+    "boostNew": false,
+    "lens": "t1",
+    "lensName": "Lens",
+    "lensSongs": [
+      "s03",
+    ],
+    "lessArtists": [],
+    "mode": "comfort",
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [
+      "s02",
+    ],
+    "onlyRanked": false,
+    "onlyUnheard": true,
+    "titles": {
+      "s01": "One",
+      "s02": "Two",
+    },
+  },
+  {
+    "boostNew": false,
+    "follow": true,
+    "followName": "Map",
+    "lens": "t1",
+    "lensName": "Lens",
+    "lensSongs": [
+      "s03",
+    ],
+    "lessArtists": [],
+    "mode": "comfort",
+    "moreLike": [
+      "s01",
+    ],
+    "notNow": [
+      "s02",
+    ],
+    "onlyRanked": false,
+    "onlyUnheard": true,
+    "titles": {
+      "s01": "One",
+      "s02": "Two",
+    },
+  },
+]
+`;
+
+exports[`smartShuffle > reads its options from the preferences 1`] = `
+{
+  "adaptive": true,
+  "artistFatigue": false,
+  "energyFlow": false,
+  "fairRotation": true,
+  "followMap": false,
+  "forgottenFavourites": true,
+  "freshnessByDays": true,
+  "implicitDuels": true,
+  "learn": true,
+  "night": false,
+  "nudge": true,
+  "skipAware": true,
+}
+`;
+
+exports[`smartShuffle > reads its options from the preferences 2`] = `
+{
+  "adaptive": true,
+  "artistFatigue": false,
+  "energyFlow": true,
+  "fairRotation": true,
+  "followMap": false,
+  "forgottenFavourites": true,
+  "freshnessByDays": true,
+  "implicitDuels": true,
+  "learn": true,
+  "night": true,
+  "nudge": true,
+  "skipAware": false,
+}
+`;
+
+exports[`smartShuffle > reads reasons from an explanation 1`] = `
+[
+  {
+    "key": "neverHeard",
+    "strength": 0.08,
+  },
+]
+`;
+
+exports[`smartShuffle > reorders only what has not played yet and keeps the restore order composed 1`] = `
+{
+  "queue": [
+    "s00",
+    "s01",
+    "s02",
+    "s03",
+    "s04",
+    "s19",
+    "s08",
+    "s13",
+    "s14",
+    "s16",
+    "s12",
+    "s09",
+    "s15",
+    "s18",
+    "s17",
+    "s11",
+    "s06",
+    "s07",
+    "s05",
+    "s10",
+  ],
+  "queueBeforeShuffle": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    18,
+    16,
+    17,
+    6,
+    11,
+    19,
+    15,
+    10,
+    7,
+    8,
+    12,
+    9,
+    14,
+    13,
+    5,
+  ],
+}
+`;

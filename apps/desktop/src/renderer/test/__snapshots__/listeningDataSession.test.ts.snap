@@ -1,0 +1,69 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ListeningDataSession > ends where the player is when the user moves on 1`] = `
+{
+  "durationMs": 180000,
+  "facts": [
+    {
+      "atMs": 1793620800000,
+      "kind": "play",
+      "positionMs": 0,
+    },
+    {
+      "atMs": 1793620820000,
+      "kind": "end",
+      "positionMs": 20000,
+      "reason": "user_next",
+    },
+  ],
+  "songId": "song-b",
+  "startReason": "unknown",
+  "startedAt": 1793620800000,
+  "utcOffsetMin": -0,
+}
+`;
+
+exports[`ListeningDataSession > records play, pause, a seek and the finish, then hands the session over once 1`] = `
+{
+  "durationMs": 300000,
+  "facts": [
+    {
+      "atMs": 1793620800000,
+      "kind": "play",
+      "positionMs": 12000,
+    },
+    {
+      "atMs": 1793620830000,
+      "kind": "pause",
+      "positionMs": 42000,
+    },
+    {
+      "atMs": 1793620835000,
+      "kind": "play",
+      "positionMs": 42000,
+    },
+    {
+      "atMs": 1793620845000,
+      "fromMs": 52000,
+      "kind": "seek",
+      "toMs": 200000,
+    },
+    {
+      "atMs": 1793620944000,
+      "kind": "end",
+      "positionMs": 300000,
+      "reason": "finished",
+    },
+  ],
+  "songId": "song-a",
+  "startReason": "user_selected",
+  "startedAt": 1793620800000,
+  "utcOffsetMin": -0,
+}
+`;
+
+exports[`ListeningDataSession > records play, pause, a seek and the finish, then hands the session over once 2`] = `
+[
+  "audioLibraryControls.sendNowPlayingSongDataToLastFM",
+]
+`;

@@ -1,0 +1,94 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`utils/localStorage > writes every slice through its own setter 1`] = `
+{
+  "duels": {
+    "duelAnchorCandidates": [],
+    "frequency": "normal",
+    "lastInviteAt": 0,
+    "listensSinceInvite": 0,
+    "pendingDuelPairs": [],
+    "pendingDuelTickets": [],
+    "pendingDuels": 0,
+  },
+  "equalizerPreset": {
+    "eightThousandHertzFilter": 0,
+    "fiveHundredHertzFilter": 0,
+    "fourThousandHertzFilter": 0,
+    "hundredTwentyFiveHertzFilter": 0,
+    "sixteenThousandHertzFilter": 0,
+    "sixtyFourHertzFilter": 0,
+    "sixtyHertzFilter": 3,
+    "thirtyTwoHertzFilter": 0,
+    "thousandHertzFilter": 0,
+    "twoHundredFiftyHertzFilter": 0,
+    "twoThousandHertzFilter": 0,
+  },
+  "ignoredDuplicates": {
+    "albums": [],
+    "artists": [],
+    "genres": [],
+  },
+  "ignoredSeparateArtists": [
+    "x",
+  ],
+  "ignoredSongsWithFeatArtists": [
+    "y",
+  ],
+  "lyricsEditorSettings": {
+    "editNextAndCurrentStartAndEndTagsAutomatically": true,
+    "offset": 0,
+  },
+  "playback": {
+    "currentSong": {
+      "songId": "",
+      "stoppedPosition": 0,
+    },
+    "isRepeating": "repeat",
+    "isShuffling": false,
+    "isTierShuffling": false,
+    "playbackRate": 1,
+    "volume": {
+      "isMuted": false,
+      "value": 33,
+    },
+  },
+  "preferences": {
+    "allowToPreventScreenSleeping": true,
+    "autoConvertLyrics": false,
+    "autoTranslateLyrics": false,
+    "defaultPageOnStartUp": "Home",
+    "disableBackgroundArtworks": true,
+    "doNotShowBlacklistSongConfirm": false,
+    "doNotShowHelpPageOnLyricsEditorStartUp": false,
+    "doNotVerifyWhenOpeningLinks": false,
+    "enableArtworkFromSongCovers": false,
+    "enableImageBasedDynamicThemes": false,
+    "isReducedMotion": false,
+    "isSongIndexingEnabled": false,
+    "lyricsAutomaticallySaveState": "NONE",
+    "noUpdateNotificationForNewUpdate": "",
+    "removeAnimationsOnBatteryPower": false,
+    "seekbarScrollInterval": 5,
+    "showArtistArtworkNearSongControls": false,
+    "showSongRemainingTime": false,
+    "showTrackNumberAsSongIndex": true,
+    "shuffleArtworkFromSongCovers": false,
+    "tierShuffleIntensity": 0.6,
+  },
+  "queue": {
+    "currentSongIndex": null,
+    "queue": [],
+    "queueType": "songs",
+  },
+  "sortingStates": {
+    "albumsPage": "aToZ",
+    "artistsPage": "aToZ",
+    "genresPage": "aToZ",
+    "musicFoldersPage": "aToZ",
+    "playlistsPage": "aToZ",
+    "songsPage": "dateAddedDescending",
+    "tierlistsPage": "dateAddedDescending",
+  },
+}
+`;
