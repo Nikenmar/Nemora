@@ -1510,6 +1510,16 @@
     "savedClipped_other": "{{name}} saved; {{count}} samples went past full scale and were clipped (32-bit float keeps them)",
     "saveFailed": "Could not save the file: {{error}}"
   },
+  "moment": {
+    "share": "Share moment",
+    "title": "A moment",
+    "at": "at {{time}}",
+    "copy": "Copy image",
+    "save": "Save as file",
+    "copied": "The card is on the clipboard",
+    "saved": "The card is saved",
+    "failed": "The card could not be made"
+  },
   "lyricsSearch": {
     "title": "In lyrics",
     "playFromLine": "Play from this line",

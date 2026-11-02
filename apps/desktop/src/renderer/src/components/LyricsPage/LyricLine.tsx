@@ -7,6 +7,7 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import roundTo from '../../../../common/roundTo';
 import { syncedLyricsRegex } from './LyricsPage';
 import LyricsProgressBar from './LyricsProgressBar';
+import MomentCard from './MomentCard';
 import EnhancedSyncedLyricWord from '../LyricsEditingPage/EnhancedSyncedLyricWord';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
@@ -28,7 +29,7 @@ const LyricLine = (props: LyricProp) => {
   const playerType = useStore(store, (state) => state.playerType);
   // const preferences = useStore(store, (state) => state.localStorage.preferences);
 
-  const { updateSongPosition, updateContextMenuData } = useContext(AppUpdateContext);
+  const { updateSongPosition, updateContextMenuData, changePromptMenuData } = useContext(AppUpdateContext);
   const [isInRange, setIsInRange] = useState(false);
   const { t } = useTranslation();
 
@@ -194,6 +195,24 @@ const LyricLine = (props: LyricProp) => {
                   typeof lyric === 'string'
                     ? lyric.replaceAll(syncedLyricsRegex, '').trim()
                     : lyric.map((x) => x.text).join(' ')
+                )
+            },
+            {
+              // PLAN/19 D7: this line as a card to share.
+              label: t('moment.share'),
+              iconName: 'ios_share',
+              iconClassName: 'ms-icon',
+              handlerFunction: () =>
+                changePromptMenuData(
+                  true,
+                  <MomentCard
+                    line={
+                      typeof lyric === 'string'
+                        ? lyric.replaceAll(syncedLyricsRegex, '').trim()
+                        : lyric.map((x) => x.text).join(' ')
+                    }
+                    start={syncedLyrics?.start}
+                  />
                 )
             }
           ],
