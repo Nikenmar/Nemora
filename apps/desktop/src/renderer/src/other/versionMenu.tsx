@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
-import { PRESETS, REVERB_CHIP, effectName, soundPanelStore, soundStore, versionStore } from './soundEffects';
+import { PRESETS, REVERB_CHIP, soundPanelStore, soundStore, versionStore } from './soundEffects';
+import { soundTag, versionTag } from './soundTag';
 import RenameVersionPrompt from '../components/SongsPage/RenameVersionPrompt';
 import { store } from '../store';
 import { saveSoundAsFile } from './saveSoundFile';
@@ -23,14 +24,15 @@ export const versionMenuItems = (
   title: string,
   t: TFunction,
   prompt: Prompt,
-  notify: Notify
+  notify: Notify,
+  ownVersion?: SongVersion | null
 ): ContextMenuItem[] => {
   const version = versionIdOf(songId);
   if (version !== null) {
     const isPlaying = store.state.currentSongData.songId === songId;
     // The row reads "Title - Name"; the file is "Title (Name)".
-    const cut = title.lastIndexOf(' - ');
-    const [base, name] = cut > 0 ? [title.slice(0, cut), title.slice(cut + 3)] : [title, ''];
+    // The file is "Title (Tag)".
+    const [base, name] = [title, ownVersion ? (versionTag(ownVersion) ?? ownVersion.name) : ''];
     return [
       {
         label: t('versions.rename'),
@@ -69,10 +71,10 @@ export const versionMenuItems = (
       .catch((error) => console.error(error));
   const presets = PRESETS.filter((p) => p.id !== 'original').map((p) => ({
     label: t(`sound.preset.${p.id}`),
-    handlerFunction: make(t(`sound.preset.${p.id}`), p.semitones)
+    handlerFunction: make(soundTag({ semitones: p.semitones, reverb: 0 }) ?? t(`sound.preset.${p.id}`), p.semitones)
   }));
   const current = soundStore.state;
-  const currentName = effectName(current, (id) => t(`sound.preset.${id}`));
+  const currentName = soundTag(current) ?? '';
   return [
     {
       label: t('versions.make'),
@@ -82,7 +84,7 @@ export const versionMenuItems = (
         ...presets,
         {
           label: `${t('sound.preset.slowed')} + Reverb`,
-          handlerFunction: make(`${t('sound.preset.slowed')} + Reverb`, -2, REVERB_CHIP.reverb)
+          handlerFunction: make('Slowed + Reverb', -2, REVERB_CHIP.reverb)
         },
         { label: '', isContextMenuItemSeperator: true, handlerFunction: () => true },
         {

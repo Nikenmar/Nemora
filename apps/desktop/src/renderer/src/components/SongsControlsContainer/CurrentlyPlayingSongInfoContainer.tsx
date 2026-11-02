@@ -1,5 +1,7 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
+import SoundTag from '../ui/SoundTag';
+import { usePlayingTag } from '../../other/soundTag';
 import { lazy, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { useTrackChangeMotion } from '../../other/motion';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +24,7 @@ const DeleteSongsFromSystemConfrimPrompt = lazy(
 
 const CurrentlyPlayingSongInfoContainer = () => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
+  const playingTag = usePlayingTag();
   const coverRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   useTrackChangeMotion(coverRef, textRef);
@@ -297,7 +300,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
         {currentSongData.title && (
           <div className="song-title flex w-full items-center">
             <div
-              className={`w-fit max-w-full cursor-pointer truncate text-[14px] font-semibold leading-5 text-ink outline-none focus-visible:outline-2 focus-visible:outline-echo ${
+              className={`w-fit min-w-0 cursor-pointer truncate text-[14px] font-semibold leading-5 text-ink outline-none focus-visible:outline-2 focus-visible:outline-echo ${
                 currentSongData.isKnownSource && 'hover:underline'
               }`}
               id="currentSongTitle"
@@ -318,6 +321,8 @@ const CurrentlyPlayingSongInfoContainer = () => {
             >
               {currentSongData.title}
             </div>
+            {/* How it sounds now (a version, a preset or a speed set by hand), beside the title. */}
+            <SoundTag tag={playingTag} className="ml-2 text-[13px]" />
             {!currentSongData.isKnownSource && (
               <span
                 className="ms-icon ml-1.5 cursor-help text-[16px] text-warning"

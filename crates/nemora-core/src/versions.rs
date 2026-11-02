@@ -176,11 +176,34 @@ mod tests {
         let at = page.rows.iter().position(|r| r.song_id == song && r.version.is_none()).unwrap();
         let version = &page.rows[at + 1];
         assert_eq!(version.version.as_ref().map(|v| v.id), Some(id));
-        assert_eq!(version.title, format!("{} - Slowed", page.rows[at].title));
+        assert_eq!(version.title, page.rows[at].title, "the title stays the song's; the view adds the tag");
+        assert_eq!(version.version.as_ref().map(|v| v.name.as_str()), Some("Slowed"));
         assert_eq!((version.plays, version.is_favorite), (page.rows[at].plays, page.rows[at].is_favorite));
         let corpus = search_corpus(&db).unwrap();
         let found = crate::search::search(&corpus, crate::search::Filter::Songs, "slowed");
         assert_eq!(found.songs.first(), Some(&(-id).to_string()));
+    }
+
+    /// Sorted by when songs were added, a version made now is the newest row, first in "newest"
+    /// and last in "oldest"; other sorts keep it right after its song.
+    #[test]
+    fn a_new_version_is_the_newest_row() {
+        use crate::library::{SongScope, SongSort, songs};
+        let db =
+            crate::perf::generate(&crate::perf::Shape { songs: 30, artists: 5, plays: 300, duels: 0, tierlists: 0 });
+        let song: String = db
+            .conn()
+            .query_row("SELECT song_id FROM track_variants WHERE present = 1 ORDER BY title_sort LIMIT 1", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        let id = create(&db, &song, &slowed()).unwrap();
+        db.touch();
+        let newest = songs(&db, &SongScope::All, &SongSort::AddedDesc, 0, 100).unwrap();
+        assert_eq!(newest.rows[0].version.as_ref().map(|v| v.id), Some(id));
+        let oldest = songs(&db, &SongScope::All, &SongSort::AddedAsc, 0, 100).unwrap();
+        assert_eq!(oldest.rows.last().and_then(|r| r.version.as_ref()).map(|v| v.id), Some(id));
+        assert_eq!(oldest.total, 31);
     }
 
     #[test]

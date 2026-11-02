@@ -2,6 +2,8 @@
 
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
+import SoundTag from '../ui/SoundTag';
+import { versionTag } from '../../other/soundTag';
 import {
   type CSSProperties,
   type ForwardedRef,
@@ -64,6 +66,8 @@ interface SongProp {
   selectAllHandler?: (_upToId?: string) => void;
   /** The queue shows Smart Shuffle's reason for an upcoming song beside its artists (PLAN/14 C1). */
   isShuffleReasonShown?: boolean;
+  /** A version's row (PLAN/18 D6): the tag beside the title. */
+  version?: SongVersion | null;
 }
 
 const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => {
@@ -121,7 +125,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     provided = {} as any,
     onPlayClick,
-    isShuffleReasonShown = false
+    isShuffleReasonShown = false,
+    version
   } = props;
 
   const [isAFavorite, setIsAFavorite] = useState(props.isAFavorite);
@@ -433,7 +438,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
         }
       },
       // Versions (PLAN/18 D6), for one song at a time.
-      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications)),
+      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications, version)),
       {
         label: t(`common.${isAMultipleSelection ? 'unselect' : 'select'}`),
         iconName: 'checklist',
@@ -730,6 +735,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
           >
             {isCurrent && <EqualizerBars isPlaying={isSongPlaying} className="mr-0.5" />}
             <span className="truncate">{title}</span>
+            {version && <SoundTag tag={versionTag(version)} className="ml-1 text-[13px]" />}
           </div>
           <div className="song-artists min-w-0 truncate text-small text-ink-dim">
             {songArtists}

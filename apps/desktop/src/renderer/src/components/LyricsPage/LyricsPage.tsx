@@ -7,6 +7,7 @@ import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import useNetworkConnectivity from '../../hooks/useNetworkConnectivity';
 
 import LyricLine from './LyricLine';
+import MomentCard from './MomentCard';
 import LyricsMetadata from './LyricsMetadata';
 import NoLyrics from './NoLyrics';
 import MainContainer from '../MainContainer';
@@ -36,7 +37,7 @@ const LyricsPage = () => {
   const preferences = useStore(store, (state) => state.localStorage.preferences);
   const currentSongData = useStore(store, (state) => state.currentSongData);
 
-  const { addNewNotifications, updateCurrentlyActivePageData, changeCurrentActivePage } =
+  const { addNewNotifications, updateCurrentlyActivePageData, changeCurrentActivePage, changePromptMenuData } =
     useContext(AppUpdateContext);
   const { t } = useTranslation();
 
@@ -420,6 +421,35 @@ const LyricsPage = () => {
                   )}
                 </div>
                 <div className="buttons-container flex">
+                  {/* PLAN/19 D7: the line playing now as a card to share (any line: right-click it). */}
+                  <Button
+                    key={11}
+                    label={t('moment.share')}
+                    className="share-moment-btn text-sm md:text-lg md:[&>.button-label-text]:hidden md:[&>.icon]:mr-0"
+                    iconName="ios_share"
+                    clickHandler={() => {
+                      const parsed = lyrics?.lyrics;
+                      if (!parsed || parsed.parsedLyrics.length === 0) return;
+                      const offset = parsed.offset ?? 0;
+                      const now = store.state.player.songPosition;
+                      const textOf = (l: (typeof parsed.parsedLyrics)[number]) =>
+                        typeof l.originalText === 'string'
+                          ? l.originalText.trim()
+                          : l.originalText.map((w) => w.text).join(' ').trim();
+                      const lines = parsed.parsedLyrics.filter((l) => textOf(l));
+                      const current = parsed.isSynced
+                        ? ([...lines].reverse().find((l) => (l.start ?? 0) + offset <= now) ?? lines[0])
+                        : lines[0];
+                      if (!current) return;
+                      changePromptMenuData(
+                        true,
+                        <MomentCard
+                          line={textOf(current)}
+                          start={parsed.isSynced ? (current.start ?? 0) + offset : undefined}
+                        />
+                      );
+                    }}
+                  />
                   <Button
                     key={10}
                     tooltipLabel={t('lyricsPage.editLyrics')}

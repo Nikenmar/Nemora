@@ -8,8 +8,9 @@ use crate::app::App;
 use crate::commands::{Res, fail, notify};
 use crate::view::parse_view_id;
 
+/// A version is a row of every list: the lists refresh as for a song added or removed.
 fn changed(handle: &AppHandle) {
-    notify(handle, &["songs", "playlists"]);
+    notify(handle, &["songs", "songs/newSong", "songs/deletedSong", "playlists"]);
 }
 
 /// Makes a version of the song a view id names; answers the new row's view id.
@@ -73,11 +74,7 @@ pub async fn version_render(
     let Some(row) = row else { return Err(fail("the song is not in the library")) };
     let Some(source) = row.path.clone() else { return Err(fail("the song has no file on this device")) };
     let Some(version) = sound.or_else(|| row.version.clone()) else { return Err(fail("no sound to save")) };
-    let base = match &row.version {
-        Some(v) => row.title.strip_suffix(&format!(" - {}", v.name)).unwrap_or(&row.title).to_owned(),
-        None => row.title.clone(),
-    };
-    let title = format!("{base} ({})", version.name.trim());
+    let title = format!("{} ({})", row.title, version.name.trim());
     let sound = Sound {
         semitones: version.semitones,
         keep_pitch: version.keep_pitch,

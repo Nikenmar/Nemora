@@ -334,6 +334,8 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
   useEffect(() => {
     if (isTournamentOpen) return undefined;
     const onKey = (e: KeyboardEvent) => {
+      // Only while the duel window is open: minimised, the prompt stays mounted but keys are the app's.
+      if (!document.querySelector('dialog[open] .duel-cards-container')) return;
       const target = e.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, button, [contenteditable="true"]')) return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -350,10 +352,11 @@ const EloDuelPrompt = (props: EloDuelPromptProps) => {
         advanceAfterResult();
       } else return;
       e.preventDefault();
-      e.stopPropagation();
+      // Caught before the app's shortcuts (capture), so Space previews instead of playing.
+      e.stopImmediatePropagation();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [
     advanceAfterResult,
     applyMove,

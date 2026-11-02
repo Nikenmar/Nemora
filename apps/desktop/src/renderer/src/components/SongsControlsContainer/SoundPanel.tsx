@@ -4,12 +4,11 @@ import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import { saveSoundAsFile } from '../../other/saveSoundFile';
-import Checkbox from '../Checkbox';
+import { soundTag } from '../../other/soundTag';
 import Icon from '../ui/Icon';
 import {
   PRESETS,
   RANGE,
-  effectName,
   REVERB_CHIP,
   factorOf,
   isEffectOn,
@@ -89,7 +88,15 @@ const SoundPanel = () => {
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // Open and close with a short scale and fade from the button's corner; kept mounted while it closes.
+  const [isShown, setIsShown] = useState(isOpen);
+  useEffect(() => {
+    if (isOpen) return setIsShown(true);
+    const done = setTimeout(() => setIsShown(false), 140);
+    return () => clearTimeout(done);
+  }, [isOpen]);
+
+  if (!isShown) return null;
 
   const factor = factorOf(sound.semitones);
   const preset = presetOf(sound);
@@ -99,61 +106,69 @@ const SoundPanel = () => {
     left: `${Math.min(centre, at)}%`,
     width: `${Math.abs(at - centre)}%`
   };
-  const chip = (isActive: boolean) =>
-    `inline-flex h-7 items-center rounded-full px-2.5 text-small outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-echo ${
-      isActive ? 'bg-accent text-on-accent' : 'bg-surface-2 text-ink hover:bg-line/70'
+  const segment = (isActive: boolean) =>
+    `h-7 flex-1 rounded-md px-2 text-small font-medium outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-echo ${
+      isActive ? 'bg-accent text-on-accent shadow-sm' : 'text-ink-dim hover:bg-line/50 hover:text-ink'
     }`;
   const units: Unit[] = ['st', 'x', '%'];
   const sizes: Size[] = ['room', 'hall', 'vast'];
   const hasReverbChip = Math.abs(sound.reverb - REVERB_CHIP.reverb) < 1e-6 && sound.size === REVERB_CHIP.size;
-  // Save as file (PLAN/18 D4): the song with this sound, named after the version or the effect.
-  const fileName = playing?.name ?? effectName(sound, (id) => t(`sound.preset.${id}`));
-  const fileTitle =
-    playing && songTitle.endsWith(` - ${playing.name}`)
-      ? songTitle.slice(0, -` - ${playing.name}`.length)
-      : songTitle;
+  const tag = soundTag(sound);
+  // Save as file (PLAN/18 D4): the song with this sound, named after its tag or the version.
+  const fileName = tag ?? playing?.name ?? '';
   const saveFile = (format: 'wav24' | 'float') =>
-    saveSoundAsFile(songId, fileTitle, fileName, format, t, addNewNotifications, {
+    saveSoundAsFile(songId, songTitle, fileName, format, t, addNewNotifications, {
       name: fileName,
       semitones: sound.semitones,
       keepPitch: sound.keepPitch,
       reverb: sound.reverb,
       size: sound.size
     }).catch((error) => console.error(error));
+  const label = 'text-micro font-semibold uppercase tracking-[0.08em] text-ink-faint';
 
   return (
     <div
       ref={panelRef}
       role="dialog"
       aria-label={t('sound.title')}
-      className="sound-panel absolute bottom-[calc(100%+0.75rem)] right-0 z-50 w-[22rem] rounded-xl bg-surface-3 p-4 text-ink shadow-float"
+      className={`sound-panel absolute bottom-[calc(100%+0.75rem)] right-0 z-50 w-[22rem] origin-bottom-right rounded-xl border border-glass-border bg-surface-3 text-ink shadow-float ${
+        isOpen ? 'sound-panel-in' : 'sound-panel-out'
+      }`}
     >
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">{t('sound.title')}</h2>
-        <div className="flex items-center gap-2">
+      {/* Header: the name of the sound as it is now, the peak lamp, Reset. */}
+      <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-4">
+        <div className="min-w-0">
+          <h2 className="text-body font-semibold">{t('sound.title')}</h2>
+          <p className="mt-1 h-4 truncate text-small text-ink-dim">
+            {tag ? <span className="sound-tag inline-block uppercase tracking-[0.07em] text-echo">{tag}</span> : t('sound.originalSound')}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
           <span
-            className={`h-2 w-2 rounded-full ${clipped ? 'bg-danger' : 'bg-line'}`}
+            className={`h-2 w-2 rounded-full transition-colors duration-150 ${clipped ? 'bg-danger' : 'bg-line'}`}
             title={t('sound.peak')}
             aria-label={clipped ? t('sound.peakOn') : t('sound.peak')}
           />
           <button
             type="button"
-            className="rounded px-1.5 text-small text-ink-dim hover:text-ink focus-visible:outline-2 focus-visible:outline-echo disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-ink-dim outline-none transition-colors duration-150 hover:bg-line/50 hover:text-ink focus-visible:outline-2 focus-visible:outline-echo disabled:pointer-events-none disabled:opacity-35"
             disabled={!isEffectOn(sound) && !sound.keepPitch}
             onClick={() => setSound({ semitones: 0, reverb: 0, keepPitch: false })}
+            aria-label={t('sound.reset')}
+            data-tooltip={t('sound.reset')}
           >
-            {t('sound.reset')}
+            <Icon name="restart_alt" size={18} />
           </button>
         </div>
       </div>
 
       {playing && (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 text-small">
-          <span className="truncate">{t('versions.editing', { name: playing.name })}</span>
+        <div className="mx-4 mb-3 flex items-center justify-between gap-2 rounded-lg bg-accent-soft px-3 py-2 text-small">
+          <span className="truncate text-ink">{t('versions.editing', { name: playing.name })}</span>
           <button
             type="button"
             disabled={!playing.isChanged}
-            className="shrink-0 rounded-full bg-accent px-3 py-1 text-on-accent outline-none focus-visible:outline-2 focus-visible:outline-echo disabled:opacity-40"
+            className="shrink-0 rounded-md bg-accent px-2.5 py-1 font-medium text-on-accent outline-none focus-visible:outline-2 focus-visible:outline-echo disabled:opacity-40"
             onClick={() => saveVersionSound().catch((error) => console.error(error))}
           >
             {t('versions.saveSound')}
@@ -162,124 +177,150 @@ const SoundPanel = () => {
       )}
 
       {/* Speed */}
-      <div className="mt-3 flex items-center justify-between text-small">
-        <span className="text-ink-dim">{t('sound.speed')}</span>
-        <div className="flex items-center gap-2">
-          <span className="font-medium tabular-nums">{speedLabel(sound.semitones, sound.unit)}</span>
-          <div className="flex overflow-hidden rounded-full bg-surface-2">
-            {units.map((u) => (
-              <button
-                key={u}
-                type="button"
-                aria-pressed={sound.unit === u}
-                className={`px-2 py-0.5 text-[11px] outline-none focus-visible:outline-2 focus-visible:outline-echo ${
-                  sound.unit === u ? 'bg-accent text-on-accent' : 'text-ink-dim hover:text-ink'
-                }`}
-                onClick={() => setSound({ unit: u })}
-              >
-                {u === 'st' ? t('sound.unitSt') : u}
-              </button>
-            ))}
+      <section className="border-t border-line px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className={label}>{t('sound.speed')}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-body font-semibold tabular-nums">{speedLabel(sound.semitones, sound.unit)}</span>
+            <div className="flex rounded-md bg-surface-2 p-0.5">
+              {units.map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  aria-pressed={sound.unit === u}
+                  className={`h-6 min-w-7 rounded px-1.5 text-[11px] font-medium outline-none focus-visible:outline-2 focus-visible:outline-echo ${
+                    sound.unit === u ? 'bg-surface-3 text-ink shadow-sm' : 'text-ink-dim hover:text-ink'
+                  }`}
+                  onClick={() => setSound({ unit: u })}
+                >
+                  {u === 'st' ? t('sound.unitSt') : u}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="relative mt-1">
-        <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-3xl bg-line" />
-        <div className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-3xl bg-echo" style={fill} />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-px -translate-y-1/2 bg-ink-dim" />
-        <input
-          type="range"
-          aria-label={t('sound.speed')}
-          className={SLIDER}
-          style={{ '--seek-before-width': '0%' } as CSSProperties}
-          min={-RANGE}
-          max={RANGE}
-          step={0.1}
-          value={sound.semitones}
-          onChange={(e) => setSound({ semitones: Math.round(e.currentTarget.valueAsNumber * 10) / 10 })}
-          onDoubleClick={() => setSound({ semitones: 0 })}
-        />
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {PRESETS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            aria-pressed={preset === p.id}
-            className={chip(preset === p.id)}
-            onClick={() => setSound({ semitones: p.semitones })}
-          >
-            {t(`sound.preset.${p.id}`)}
-          </button>
-        ))}
-        <button
-          type="button"
-          aria-pressed={hasReverbChip}
-          className={chip(hasReverbChip)}
-          onClick={() => setSound(hasReverbChip ? { reverb: 0 } : { ...REVERB_CHIP })}
-        >
-          {t('sound.plusReverb')}
-        </button>
-      </div>
+        <div className="relative mt-2">
+          <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-3xl bg-line" />
+          <div className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-3xl bg-echo" style={fill} />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-px -translate-y-1/2 bg-ink-dim" />
+          <input
+            type="range"
+            aria-label={t('sound.speed')}
+            className={SLIDER}
+            style={{ '--seek-before-width': '0%' } as CSSProperties}
+            min={-RANGE}
+            max={RANGE}
+            step={0.1}
+            value={sound.semitones}
+            onChange={(e) => setSound({ semitones: Math.round(e.currentTarget.valueAsNumber * 10) / 10 })}
+            onDoubleClick={() => setSound({ semitones: 0 })}
+          />
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-surface-2 p-1">
+          {PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={preset === p.id}
+              className={segment(preset === p.id)}
+              onClick={() => setSound({ semitones: p.semitones })}
+            >
+              {t(`sound.preset.${p.id}`)}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Reverb */}
-      <div className="mt-4 flex items-center justify-between text-small">
-        <span className="text-ink-dim">{t('sound.reverb')}</span>
-        <span className="font-medium tabular-nums">{Math.round(sound.reverb * 100)} %</span>
-      </div>
-      <input
-        type="range"
-        aria-label={t('sound.reverb')}
-        className={`${SLIDER} mt-1`}
-        style={{ '--seek-before-width': `${sound.reverb * 100}%` } as CSSProperties}
-        min={0}
-        max={1}
-        step={0.01}
-        value={sound.reverb}
-        onChange={(e) => setSound({ reverb: e.currentTarget.valueAsNumber })}
-        onDoubleClick={() => setSound({ reverb: 0 })}
-      />
-      <div className="mt-2 flex gap-1.5">
-        {sizes.map((size) => (
-          <button
-            key={size}
-            type="button"
-            aria-pressed={sound.size === size}
-            className={chip(sound.size === size)}
-            onClick={() => setSound({ size })}
-          >
-            {t(`sound.size.${size}`)}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 border-t border-line pt-3">
-        <Checkbox
-          id="soundKeepPitch"
-          isChecked={sound.keepPitch}
-          checkedStateUpdateFunction={(state) => setSound({ keepPitch: state })}
-          labelContent={t('sound.keepPitch')}
+      <section className="border-t border-line px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className={label}>{t('sound.reverb')}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-body font-semibold tabular-nums">{Math.round(sound.reverb * 100)} %</span>
+            <button
+              type="button"
+              aria-pressed={hasReverbChip}
+              className={`h-6 rounded-md px-2 text-[11px] font-medium outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-echo ${
+                hasReverbChip ? 'bg-accent text-on-accent' : 'bg-surface-2 text-ink-dim hover:text-ink'
+              }`}
+              onClick={() => setSound(hasReverbChip ? { reverb: 0 } : { ...REVERB_CHIP })}
+            >
+              {t('sound.plusReverb')}
+            </button>
+          </div>
+        </div>
+        <input
+          type="range"
+          aria-label={t('sound.reverb')}
+          className={`${SLIDER} mt-2`}
+          style={{ '--seek-before-width': `${sound.reverb * 100}%` } as CSSProperties}
+          min={0}
+          max={1}
+          step={0.01}
+          value={sound.reverb}
+          onChange={(e) => setSound({ reverb: e.currentTarget.valueAsNumber })}
+          onDoubleClick={() => setSound({ reverb: 0 })}
         />
-        <div className="ml-8 text-small text-ink-dim">{t('sound.keepPitchDescription')}</div>
+        <div className="mt-2 flex gap-1 rounded-lg bg-surface-2 p-1">
+          {sizes.map((size) => (
+            <button
+              key={size}
+              type="button"
+              aria-pressed={sound.size === size}
+              className={segment(sound.size === size)}
+              onClick={() => setSound({ size })}
+            >
+              {t(`sound.size.${size}`)}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Keep pitch and the length */}
+      <section className="border-t border-line px-4 py-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={sound.keepPitch}
+          className="flex w-full items-center justify-between gap-3 rounded-md text-left outline-none focus-visible:outline-2 focus-visible:outline-echo"
+          onClick={() => setSound({ keepPitch: !sound.keepPitch })}
+        >
+          <span className="min-w-0">
+            <span className="block text-body font-medium">{t('sound.keepPitch')}</span>
+            <span className="block text-small text-ink-dim">{t('sound.keepPitchShort')}</span>
+          </span>
+          <span
+            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 ${sound.keepPitch ? 'bg-accent' : 'bg-line'}`}
+            aria-hidden
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-150 ${
+                sound.keepPitch ? 'translate-x-[1.125rem]' : 'translate-x-0.5'
+              }`}
+            />
+          </span>
+        </button>
         {duration > 0 && Math.abs(factor - 1) > 1e-6 && (
           <div className="mt-2 flex items-center gap-1.5 text-small text-ink-dim">
             <Icon name="schedule" size={14} />
             {t('sound.length', { length: formatLength(duration / factor), original: formatLength(duration) })}
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3 text-small">
-        <span className="text-ink-dim">{t('versions.saveFile')}</span>
-        <div className="flex gap-1.5">
+      {/* Save as file */}
+      <div className="flex items-center justify-between gap-2 rounded-b-xl border-t border-line bg-surface-2/50 px-4 py-2.5">
+        <span className="text-small text-ink-dim">{t('versions.saveFile')}</span>
+        <div className="flex gap-1">
           {(['wav24', 'float'] as const).map((format) => (
             <button
               key={format}
               type="button"
               disabled={!songId || !fileName}
-              className={`${chip(false)} disabled:opacity-40`}
+              className="flex h-7 items-center gap-1 rounded-md px-2 text-small font-medium text-ink outline-none transition-colors duration-150 hover:bg-line/50 focus-visible:outline-2 focus-visible:outline-echo disabled:pointer-events-none disabled:opacity-40"
               onClick={() => saveFile(format)}
             >
+              <Icon name="download" size={15} />
               {t(`versions.format.${format}`)}
             </button>
           ))}

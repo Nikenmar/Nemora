@@ -1638,6 +1638,8 @@
     "credit": "Profiles from AutoEQ by Jaakko Pasanen (github.com/jaakkopasanen/AutoEq), from measurements by their named sources. Nemora does not ship them; the one you pick is downloaded."
   },
   "sound": {
+    "originalSound": "Original sound",
+    "keepPitchShort": "The speed changes, the pitch stays",
     "title": "Slowed & reverb",
     "speed": "Speed",
     "unitSt": "st",

@@ -1,8 +1,8 @@
 import type { ObsWidgetState, ObsWidgetUpNext } from '@platform/api';
 import { store } from '../store';
 import { accentTokens, type AccentId } from './accentPalette';
-import { effectName, soundStore } from './soundEffects';
-import i18n from '../i18n';
+import { playingTag } from './soundTag';
+import { soundStore, versionStore } from './soundEffects';
 
 /**
  * Feeds the OBS widget from the renderer store.
@@ -47,7 +47,7 @@ const push = (): void => {
     .join(', ');
 
   // Slowed & reverb (PLAN/18): what the stream hears is named after the title.
-  const effect = effectName(soundStore.state, (id) => i18n.t(`sound.preset.${id}`));
+  const effect = playingTag();
   const state: ObsWidgetState = {
     title: currentSongData.title ? (effect ? `${currentSongData.title} · ${effect}` : currentSongData.title) : undefined,
     artists: artists || undefined,
@@ -91,5 +91,6 @@ export const reportUpNextToObsWidget = (song?: SongData): void => {
 export const startObsWidgetFeed = (): void => {
   store.subscribe(push);
   soundStore.subscribe(push);
+  versionStore.subscribe(push);
   push();
 };

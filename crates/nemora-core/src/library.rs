@@ -186,7 +186,64 @@ fn ordered_ids(
     let ids: Vec<i64> = stmt
         .query_map(params_from_iter(args.iter().map(|a| a.as_ref())), |r| r.get(0))?
         .collect::<rusqlite::Result<_>>()?;
-    with_versions(conn, ids)
+    match sort {
+        // Sorted by when they were added, a version is new when it was made, not when its song was.
+        SongSort::AddedAsc | SongSort::AddedDesc => with_versions_by_added(conn, ids, *sort == SongSort::AddedDesc),
+        _ => with_versions(conn, ids),
+    }
+}
+
+/// The added-date sorts (PLAN/18 D6): each version placed by when it was made, among the songs by
+/// when they were added; a version made now is the newest row.
+fn with_versions_by_added(conn: &rusqlite::Connection, ids: Vec<i64>, newest_first: bool) -> Result<Vec<i64>> {
+    let mut stmt = conn.prepare(
+        "SELECT sv.version_id, sv.created_at,
+                (SELECT min(w.variant_id) FROM track_variants w WHERE w.song_id = sv.song_id AND w.present = 1)
+         FROM song_versions sv",
+    )?;
+    let versions: Vec<(i64, i64, Option<i64>)> =
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
+    let present: std::collections::HashSet<i64> = ids.iter().copied().collect();
+    let versions: Vec<(i64, i64)> = versions
+        .into_iter()
+        .filter(|(_, _, primary)| primary.is_some_and(|p| present.contains(&p)))
+        .map(|(id, at, _)| (-id, at))
+        .collect();
+    if versions.is_empty() {
+        return Ok(ids);
+    }
+    let mut added: HashMap<i64, i64> = HashMap::with_capacity(ids.len());
+    let mut stmt = conn.prepare(
+        "SELECT v.variant_id, min(t.first_seen_at, coalesce((SELECT min(l.mtime) FROM locations l
+           WHERE l.variant_id = v.variant_id AND l.mtime > 0), t.first_seen_at))
+         FROM track_variants v JOIN tracks t ON t.song_id = v.song_id",
+    )?;
+    for row in stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)))? {
+        let (id, at) = row?;
+        if present.contains(&id) {
+            added.insert(id, at);
+        }
+    }
+    // Merge: the songs keep their order; each version goes before the first song added after it
+    // (newest first: before the first song added before it).
+    let mut versions = versions;
+    versions.sort_by_key(|(id, at)| if newest_first { (-at, *id) } else { (*at, *id) });
+    let mut out = Vec::with_capacity(ids.len() + versions.len());
+    let mut next = versions.into_iter().peekable();
+    for id in ids {
+        let at = added.get(&id).copied().unwrap_or(0);
+        while let Some(&(v, made)) = next.peek() {
+            let goes_first = if newest_first { made > at } else { made < at };
+            if !goes_first {
+                break;
+            }
+            out.push(v);
+            next.next();
+        }
+        out.push(id);
+    }
+    out.extend(next.map(|(v, _)| v));
+    Ok(out)
 }
 
 /// Puts each song's versions (PLAN/18 D6) right after its own row, as negative ids (`-version_id`).
@@ -217,7 +274,8 @@ fn with_versions(conn: &rusqlite::Connection, ids: Vec<i64>) -> Result<Vec<i64>>
 }
 
 /// Full rows for the given variant ids, in the given order; unknown ids are skipped. A negative id
-/// is a version (`-version_id`): its song's own row, retitled "Title - Version", with its sound.
+/// is a version (`-version_id`): its song's own row with the version (name and sound) attached; the
+/// title stays the song's, the view shows the version beside it.
 pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -246,7 +304,6 @@ pub fn rows_by_id(db: &Db, ids: &[i64]) -> Result<Vec<SongRow>> {
                 let mut row = by_id.get(variant)?.clone();
                 if id < 0 {
                     let version = versions.get(&id)?.clone();
-                    row.title = crate::versions::title(&row.title, &version);
                     row.is_primary = false;
                     row.version = Some(version);
                 }

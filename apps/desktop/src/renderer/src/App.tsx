@@ -1771,6 +1771,9 @@ export default function App() {
         !!target?.closest('input, textarea, select, [contenteditable="true"]') &&
         !(target instanceof HTMLInputElement && ['checkbox', 'radio', 'range', 'button'].includes(target.type));
       if (isTyping && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key)) return;
+      // A modal window (a game, a prompt) owns its plain keys: Space there never plays the song.
+      if (document.querySelector('dialog[open]') && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key))
+        return;
       if (
         (e.ctrlKey && ctrlCombinations.some((x) => e.key === x)) ||
         (e.shiftKey && shiftCombinations.some((x) => e.key === x)) ||
@@ -1804,8 +1807,10 @@ export default function App() {
       else if (e.ctrlKey && e.key === 'q') {
         const currentlyActivePage =
           store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex];
-        if (currentlyActivePage.pageTitle === 'CurrentQueue') changeCurrentActivePage('Home');
-        else changeCurrentActivePage('CurrentQueue');
+        if (currentlyActivePage.pageTitle !== 'CurrentQueue') changeCurrentActivePage('CurrentQueue');
+        // Leaving the queue goes back to the page it was opened from, as Lyrics does.
+        else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
+        else changeCurrentActivePage('Home');
       } else if (e.ctrlKey && e.key === 'f') changeCurrentActivePage('Search');
       else if (e.ctrlKey && e.key === ']') {
         let updatedPlaybackRate = store.state.localStorage.playback.playbackRate || 1;

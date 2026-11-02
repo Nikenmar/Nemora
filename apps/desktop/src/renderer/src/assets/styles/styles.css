@@ -774,6 +774,49 @@ input[type='checkbox']:checked ~ .checkmark .icon {
 }
 
 /* The game windows centre with `inset: 0; margin: auto`, not a translate: scale and fade only. */
+/* The sound tag beside a title: the new name slides in a little (PLAN/18 tags). */
+.sound-tag {
+  animation: soundTagIn 200ms var(--ease-out) both;
+}
+@keyframes soundTagIn {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-tag {
+    animation: none;
+  }
+}
+
+/* The Slowed & reverb panel opens from its button's corner and closes back into it. */
+.sound-panel-in {
+  animation: soundPanelIn 180ms var(--ease-out) both;
+}
+.sound-panel-out {
+  animation: soundPanelOut 130ms ease-in both;
+  pointer-events: none;
+}
+@keyframes soundPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+@keyframes soundPanelOut {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-panel-in,
+  .sound-panel-out {
+    animation-duration: 1ms;
+  }
+}
+
 @keyframes gameDialogIn {
   from {
     opacity: 0;

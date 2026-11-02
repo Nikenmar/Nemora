@@ -28,7 +28,8 @@ const OtherSongControlsContainer = () => {
     updatePlayerType,
     toggleMutedState,
     updateContextMenuData,
-    changePromptMenuData
+    changePromptMenuData,
+    updatePageHistoryIndex
   } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
@@ -118,11 +119,12 @@ const OtherSongControlsContainer = () => {
         tooltipLabel={t('player.currentQueue')}
         iconName="queue_music"
         isActive={currentlyActivePage.pageTitle === 'CurrentQueue'}
-        clickHandler={() =>
-          currentlyActivePage.pageTitle === 'CurrentQueue'
-            ? changeCurrentActivePage('Home')
-            : changeCurrentActivePage('CurrentQueue')
-        }
+        clickHandler={() => {
+          if (currentlyActivePage.pageTitle !== 'CurrentQueue') changeCurrentActivePage('CurrentQueue');
+          // Leaving the queue goes back to the page it was opened from, as Lyrics does.
+          else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
+          else changeCurrentActivePage('Home');
+        }}
       />
       <Button
         className={`mini-player-btn lg:hidden ${look()}`}

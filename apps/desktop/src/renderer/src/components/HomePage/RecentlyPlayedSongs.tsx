@@ -37,6 +37,7 @@ const RecentlyPlayedSongs = (props: Props) => {
               palette={song.paletteData}
               isAFavorite={song.isAFavorite}
               isBlacklisted={song.isBlacklisted}
+            version={'version' in song ? (song.version ?? null) : null}
               selectAllHandler={selectAllHandler}
             />
           );

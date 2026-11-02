@@ -1,6 +1,8 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
+import SoundTag from '../ui/SoundTag';
+import { versionTag } from '../../other/soundTag';
 import { lazy, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,6 +37,8 @@ interface SongCardProp {
   className?: string;
   isBlacklisted: boolean;
   selectAllHandler?: (_upToId?: string) => void;
+  /** A version's card (PLAN/18 D6): the tag under the title's line. */
+  version?: SongVersion | null;
 }
 
 const SongCard = (props: SongCardProp) => {
@@ -78,7 +82,8 @@ const SongCard = (props: SongCardProp) => {
     album,
     className,
     isBlacklisted,
-    selectAllHandler
+    selectAllHandler,
+    version
   } = props;
 
   const [isSongAFavorite, setIsSongAFavorite] = useState(
@@ -321,7 +326,7 @@ const SongCard = (props: SongCardProp) => {
         }
       },
       // Versions (PLAN/18 D6), for one song at a time.
-      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications)),
+      ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications, version)),
       {
         label: t(`common.${isAMultipleSelection ? 'unselect' : 'select'}`),
         iconName: 'checklist',
@@ -616,6 +621,7 @@ const SongCard = (props: SongCardProp) => {
           tabIndex={0}
         >
           {title}
+          {version && <SoundTag tag={versionTag(version)} className="ml-1.5 text-[12px]" />}
         </div>
         <div
           className="song-artists mt-0.5 truncate text-small text-ink-dim"
