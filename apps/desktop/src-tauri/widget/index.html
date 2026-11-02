@@ -142,16 +142,33 @@
         max-width: calc(100% + 1.8rem) !important;
       }
 
-      /* 14px semibold, leading 20px: the player's title. */
+      /* 14px semibold, leading 20px: the player's title; the sound tag after it ("- Slowed"),
+         13px in the artists' weight and tint, as the player bar draws it. The title gives way
+         to its ellipsis first, the tag stays whole. */
       #title {
         max-width: 100%;
+        display: flex;
+        align-items: baseline;
         font-size: 1.1667rem;
         font-weight: 600;
         line-height: 1.6667rem;
         color: rgb(var(--ink));
+        white-space: nowrap;
+      }
+      /* The name clips for its ellipsis: it gets the same room for its shadow as the lines do. */
+      #title .name {
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
+        padding: 0.6rem 0.9rem;
+        margin: -0.6rem -0.9rem;
+      }
+      #title .tag {
+        flex-shrink: 0;
+        margin-left: 0.3em;
+        font-size: 1.0833rem;
+        font-weight: 400;
+        color: rgb(var(--ink-soft));
       }
 
       /* The second line is either the artists or Up next, never both, exactly
@@ -403,6 +420,7 @@
 
         let lastVersion = -1;
         let lastTitle = null;
+        let lastTag = null;
         let lastArt = null;
         let lastSecondLine = null;
         let failures = 0;
@@ -420,10 +438,32 @@
           // old cover dims away where it is and the new one settles in once its picture is there.
           const isFirst = lastTitle === null;
 
+          const drawTitle = (text, tag) => {
+            const name = document.createElement('span');
+            name.className = 'name';
+            name.textContent = text;
+            const parts = [name];
+            if (tag) {
+              const label = document.createElement('span');
+              label.className = 'tag';
+              label.textContent = `- ${tag}`;
+              parts.push(label);
+            }
+            title.replaceChildren(...parts);
+          };
+          const tag = state.tag || '';
           if (state.title !== lastTitle) {
+            // A new song: the whole line hands over.
             lastTitle = state.title;
+            lastTag = tag;
             const text = state.title;
-            handOverText(title, () => (title.textContent = text), isFirst, 0);
+            handOverText(title, () => drawTitle(text, tag), isFirst, 0);
+          } else if (tag !== lastTag) {
+            // The same song in another sound: only the tag changes, with a short fade.
+            lastTag = tag;
+            drawTitle(state.title, tag);
+            const label = title.querySelector('.tag');
+            if (label && !quiet) label.animate([{ opacity: 0, transform: 'translateX(-4px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: ARRIVE });
           }
 
           const art = state.art || '';

@@ -54,6 +54,9 @@ const GEOLOGICA_CYRILLIC: &[u8] = include_bytes!("../../src/renderer/src/assets/
 #[serde(rename_all = "camelCase")]
 pub struct WidgetStateInput {
     pub title: Option<String>,
+    /// How it sounds (PLAN/18): "Slowed + Reverb", drawn after the title as the player bar does.
+    #[serde(default)]
+    pub tag: Option<String>,
     /// Already joined by the renderer: the widget shows one line, and who
     /// counts as an artist (and in what order) is a renderer decision.
     pub artists: Option<String>,
@@ -95,6 +98,7 @@ enum ArtSource {
 struct ServerState {
     version: u64,
     title: Option<String>,
+    tag: Option<String>,
     artists: Option<String>,
     playing: bool,
     up_next: Option<UpNext>,
@@ -143,6 +147,7 @@ fn art_token(version: u64) -> String {
 struct StatePayload<'a> {
     version: u64,
     title: Option<&'a String>,
+    tag: Option<&'a String>,
     artists: Option<&'a String>,
     playing: bool,
     up_next: Option<&'a UpNext>,
@@ -155,6 +160,7 @@ impl ServerState {
         StatePayload {
             version: self.version,
             title: self.title.as_ref(),
+            tag: self.tag.as_ref(),
             artists: self.artists.as_ref(),
             playing: self.playing,
             up_next: self.up_next.as_ref(),
@@ -216,6 +222,7 @@ fn apply_state(state: WidgetStateInput) -> Result<(), String> {
     let art_changed = current.art != art;
     let changed = art_changed
         || current.title != state.title
+        || current.tag != state.tag
         || current.artists != state.artists
         || current.playing != state.playing
         || current.up_next != state.up_next
@@ -236,6 +243,7 @@ fn apply_state(state: WidgetStateInput) -> Result<(), String> {
         }
     }
     current.title = state.title;
+    current.tag = state.tag;
     current.artists = state.artists;
     current.playing = state.playing;
     current.up_next = state.up_next;
@@ -498,6 +506,7 @@ mod tests {
 
         apply_state(WidgetStateInput {
             title: Some("Going Back".to_owned()),
+            tag: Some("Slowed + Reverb".to_owned()),
             artists: Some("Monroe".to_owned()),
             playing: true,
             up_next: Some(UpNext { title: "SLEEPLESS".to_owned(), artist: Some("enable secret".to_owned()), extra: 0 }),
@@ -510,6 +519,7 @@ mod tests {
         assert!(headers.starts_with("HTTP/1.1 200"), "{headers}");
         let state: serde_json::Value = serde_json::from_slice(&body).expect("state must be JSON");
         assert_eq!(state["title"], "Going Back");
+        assert_eq!(state["tag"], "Slowed + Reverb", "the sound tag travels apart from the title");
         assert_eq!(state["artists"], "Monroe");
         assert_eq!(state["upNext"]["title"], "SLEEPLESS");
         assert_eq!(state["upNext"]["artist"], "enable secret");
@@ -525,6 +535,7 @@ mod tests {
         // replays its entrance animation on every poll.
         apply_state(WidgetStateInput {
             title: Some("Going Back".to_owned()),
+            tag: Some("Slowed + Reverb".to_owned()),
             artists: Some("Monroe".to_owned()),
             playing: true,
             up_next: Some(UpNext { title: "SLEEPLESS".to_owned(), artist: Some("enable secret".to_owned()), extra: 0 }),
@@ -552,6 +563,7 @@ mod tests {
                 .to_string();
         apply_state(WidgetStateInput {
             title: Some("Overclocked".to_owned()),
+            tag: None,
             artists: Some("MXRCURY".to_owned()),
             playing: true,
             up_next: None,

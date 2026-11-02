@@ -46,10 +46,11 @@ const push = (): void => {
     .filter((name) => name.length > 0)
     .join(', ');
 
-  // Slowed & reverb (PLAN/18): what the stream hears is named after the title.
-  const effect = playingTag();
+  // Slowed & reverb (PLAN/18): how it sounds, after the title as in the player bar ("- Slowed").
+  const tag = playingTag() ?? undefined;
   const state: ObsWidgetState = {
-    title: currentSongData.title ? (effect ? `${currentSongData.title} · ${effect}` : currentSongData.title) : undefined,
+    title: currentSongData.title || undefined,
+    tag: currentSongData.title ? tag : undefined,
     artists: artists || undefined,
     playing: player.isCurrentSongPlaying,
     upNext,

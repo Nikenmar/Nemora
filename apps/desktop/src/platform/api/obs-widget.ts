@@ -19,6 +19,8 @@ export type ObsWidgetUpNext = {
 
 export type ObsWidgetState = {
   title?: string;
+  /** How it sounds (PLAN/18), drawn after the title: "Slowed + Reverb". */
+  tag?: string;
   /** Already joined: the widget renders one artist line, not a list. */
   artists?: string;
   playing: boolean;
