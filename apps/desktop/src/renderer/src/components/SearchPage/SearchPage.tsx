@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-autofocus */
+ 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';

@@ -67,11 +67,10 @@ const SettingsPage = () => {
               className={`flex h-8 items-center gap-2.5 rounded-full px-3 text-left text-body outline-none transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-echo ${
                 activeSection === index ? 'bg-surface-2 font-medium text-ink' : 'text-ink-dim'
               }`}
-              onClick={() =>
-                sectionsRef.current
-                  ?.querySelectorAll(':scope > li')
-                  [index]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }
+              onClick={() => {
+                const sections = sectionsRef.current?.querySelectorAll(':scope > li');
+                sections?.[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
             >
               <span className="ms-icon text-[18px]">{section.icon}</span>
               <span className="truncate">{section.title}</span>

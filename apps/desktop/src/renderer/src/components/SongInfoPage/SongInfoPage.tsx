@@ -179,6 +179,7 @@ const SongInfoPage = () => {
   return songInfo ? (
     <MainContainer className="song-information-container pt-8 [scrollbar-gutter:stable]">
       <>
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the cover's context menu (save artwork); the page's actions are buttons */}
         <div
           className="appear-from-bottom"
           onContextMenu={(e) =>

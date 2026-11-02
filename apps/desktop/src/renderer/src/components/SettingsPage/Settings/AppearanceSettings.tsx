@@ -1,5 +1,5 @@
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex */
+ 
+ 
 
 import { type KeyboardEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

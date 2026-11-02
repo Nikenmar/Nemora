@@ -14,6 +14,7 @@ const SecondaryContainer = forwardRef(
     const { children, className, onKeyDown, role, focusable = false } = props;
     return (
       <ErrorBoundary>
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- a section that passes keys to its content (role none when focusable) */}
         <div
           className={`secondary-container mb-4 h-fit w-full ${className}`}
           onKeyDown={onKeyDown}

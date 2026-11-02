@@ -788,7 +788,9 @@ const TasteMapPage = () => {
             isDisabled={isRedrawing}
             clickHandler={() => {
               setIsRedrawing(true);
-              load(true).finally(() => setIsRedrawing(false));
+              load(true)
+                .catch(() => undefined)
+                .finally(() => setIsRedrawing(false));
             }}
           />
           <Button

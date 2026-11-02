@@ -13,12 +13,9 @@
  *   MAIN_VITE_GENIUS_API_KEY
  *
  * NOTE: this module intentionally keeps the literal `import.meta.env` access so
- * Vite's static replacement applies. ts-jest compiles tests to CommonJS, where
- * the syntax is invalid, so jest tests always mock this module (see the test
- * suites) and the suppression below only ever applies under ts-jest.
+ * Vite's static replacement applies. (A `@ts-ignore` for ts-jest, which compiled
+ * to CommonJS, stood here; jest is gone and Vitest runs ESM.)
  */
-// @ts-ignore -- `import.meta` is valid only under ESNext builds (Vite replaces
-// it statically); ts-jest's CommonJS transform rejects the syntax.
 const readViteEnv = () => import.meta.env;
 
 let envOverride: Record<string, string | undefined> | undefined;

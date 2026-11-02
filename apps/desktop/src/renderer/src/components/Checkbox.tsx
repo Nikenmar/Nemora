@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
+ 
 
 import { type KeyboardEvent, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

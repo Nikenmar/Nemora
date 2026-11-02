@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex */
+ 
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import { versionMenuItems } from '../../other/versionMenu';
 import SoundTag from '../ui/SoundTag';
@@ -257,6 +257,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
         }
       }
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- playingTag rebuilds the menu when Switch version changes the sound the menu reads
   }, [
     playingTag,
     addNewNotifications,

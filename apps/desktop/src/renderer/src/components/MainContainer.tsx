@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-autofocus */
+ 
 
 import {
   type AriaRole,
@@ -47,6 +47,7 @@ const MainContainer = forwardRef((props: MainContainerProp, ref: ForwardedRef<HT
   } = props;
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- a page area that takes the page's keys and context menu; its controls are inside */}
       <div
         className={`main-container ${
           noDefaultStyles ? '' : 'flex h-fit max-h-full w-full flex-col pb-8 pl-[26px] pr-4 pt-4'

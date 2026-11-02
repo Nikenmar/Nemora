@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-autofocus */
+ 
 
 /* eslint-disable promise/catch-or-return */
 import { useContext, useState } from 'react';

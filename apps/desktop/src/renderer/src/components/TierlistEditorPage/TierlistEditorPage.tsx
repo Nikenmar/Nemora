@@ -863,6 +863,7 @@ const TierlistEditorPage = () => {
           </div>
         </header>
 
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the board takes the editor's keys for the focused card (PLAN/20 D4) */}
         <div
           ref={scrollContainerRef}
           className="editor-scroll flex h-full flex-col gap-4 overflow-auto pb-6 pr-2"

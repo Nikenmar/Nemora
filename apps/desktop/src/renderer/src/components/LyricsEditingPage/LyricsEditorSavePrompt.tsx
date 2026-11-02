@@ -1,4 +1,4 @@
-/* eslint-disable promise/catch-or-return */
+ 
 import { useCallback, useContext, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 

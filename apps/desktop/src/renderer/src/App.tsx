@@ -1213,7 +1213,7 @@ export default function App() {
       toggleShuffling(true);
       return shuffleQueueRandomly(songIds, currentSongIndex);
     },
-    [toggleShuffling]
+    [tierShuffleDataRef, toggleShuffling]
   );
 
   const createQueue = useCallback(
@@ -2113,6 +2113,7 @@ export default function App() {
     <ErrorBoundary>
       <AppUpdateContext.Provider value={appUpdateContextValues}>
         {playerType === 'normal' ? (
+          // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the app root takes drops and the window-wide keys; it is not a control
           <div
             className={`App select-none ${
               isDarkMode ? 'dark bg-chrome' : 'bg-chrome'

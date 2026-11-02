@@ -89,6 +89,7 @@ const MixOfTheDay = () => {
           {t('forYou.songCount', { count: ids.length })}
           {seconds > 0 && ` · ${formatLength(seconds, t)}`}
         </p>
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- only stops the card's click under its buttons; the buttons are the controls */}
         <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <Button
             label={t('forYou.play')}

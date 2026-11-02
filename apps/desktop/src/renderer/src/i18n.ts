@@ -23,7 +23,6 @@ export const supportedLanguagesDropdownOptions: DropdownOption<LanguageCodes>[] 
 
 const userData = await window.api.userData.getUserData();
 
-// eslint-disable-next-line import/no-named-as-default-member
 i18n.use(initReactI18next).init({
   resources,
   lng: userData.language ?? 'en',

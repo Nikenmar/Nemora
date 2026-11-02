@@ -79,7 +79,7 @@ const HeadphoneCorrection = () => {
     return list.filter((h) => words.every((w) => h.name.toLowerCase().includes(w))).slice(0, 8);
   }, [list, query]);
 
-  const use = async (text: string, name: string, source: string) => {
+  const applyProfile = async (text: string, name: string, source: string) => {
     const checked = await previewCorrection(text);
     setPreview(checked);
     setCorrection({ isOn: true, name, source, text });
@@ -98,7 +98,7 @@ const HeadphoneCorrection = () => {
     setBusy(headphone.path);
     setError('');
     autoEqProfile(headphone)
-      .then((text) => use(text, headphone.name, headphone.rig ? `${headphone.source} (${headphone.rig})` : headphone.source))
+      .then((text) => applyProfile(text, headphone.name, headphone.rig ? `${headphone.source} (${headphone.rig})` : headphone.source))
       .then(() => setQuery(''))
       .catch((e) => setError(t('correction.profileFailed', { error: String(e) })))
       .finally(() => setBusy(''));
@@ -118,7 +118,7 @@ const HeadphoneCorrection = () => {
     if (typeof path !== 'string') return;
     const text = await readTextFile(path);
     const name = path.split(/[\\/]/).pop()?.replace(/( ParametricEQ)?\.txt$/i, '') ?? '';
-    await use(text, name, t('correction.imported')).catch((e) => setError(t('correction.unreadable', { error: String(e) })));
+    await applyProfile(text, name, t('correction.imported')).catch((e) => setError(t('correction.unreadable', { error: String(e) })));
   };
 
   const skipped = preview?.profile.skipped.length ?? 0;

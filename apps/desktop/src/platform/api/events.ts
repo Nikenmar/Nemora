@@ -2,15 +2,17 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
 export type LegacyEvent = undefined;
 export type LegacyListener<Args extends unknown[]> = (event: LegacyEvent, ...args: Args) => void;
+/** Any listener, kept only to be found again by identity. */
+type AnyListener = (...args: never[]) => unknown;
 
 interface ListenerRegistration {
-  callback: Function;
+  callback: AnyListener;
   removed: boolean;
   unlisten: Promise<UnlistenFn>;
 }
 
 const registrations = new Map<string, ListenerRegistration[]>();
-const localListeners = new Map<string, Function[]>();
+const localListeners = new Map<string, AnyListener[]>();
 
 const reportSubscriptionError = (eventName: string, error: unknown): void => {
   console.error(`Unable to subscribe to Tauri event "${eventName}".`, error);
@@ -21,7 +23,7 @@ export const subscribe = <Payload, Args extends unknown[]>(
   callback: LegacyListener<Args>,
   toArgs: (payload: Payload) => Args
 ): void => {
-  const erasedCallback = callback as Function;
+  const erasedCallback = callback as AnyListener;
   const channelLocalListeners = localListeners.get(eventName) ?? [];
   channelLocalListeners.push(erasedCallback);
   localListeners.set(eventName, channelLocalListeners);
@@ -48,7 +50,7 @@ export const subscribe = <Payload, Args extends unknown[]>(
 export const subscribeNoPayload = (eventName: string, callback: LegacyListener<[]>): void =>
   subscribe<unknown, []>(eventName, callback, () => []);
 
-export const unsubscribe = (eventName: string, callback: Function): void => {
+export const unsubscribe = (eventName: string, callback: AnyListener): void => {
   const channelRegistrations = registrations.get(eventName);
   if (channelRegistrations) {
     let index = -1;

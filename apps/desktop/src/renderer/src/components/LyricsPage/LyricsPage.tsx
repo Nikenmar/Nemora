@@ -22,7 +22,6 @@ import { store } from '@renderer/store';
 
 const { metadataEditingSupportedExtensions } = appPreferences;
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const syncedLyricsRegex = /^\[\d+:\d{1,2}\.\d{1,3}]/gm;
 
 // // substracted 350 milliseconds to keep lyrics in sync with the lyrics line animations.

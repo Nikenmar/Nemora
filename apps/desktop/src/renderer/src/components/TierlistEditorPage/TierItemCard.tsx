@@ -81,6 +81,7 @@ const TierItemCard = forwardRef<HTMLDivElement, TierItemCardProps>(
     const artwork = thumbSrc || song.artworkPaths?.optimizedArtworkPath || DefaultSongCover;
 
     return (
+      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- a draggable card: SortableJS owns pointer input, the editor's keys (PLAN/20 D4) act on the focused card
       <div
         ref={ref}
         {...rest}
