@@ -13,11 +13,12 @@ use crate::error::{Error, Result};
 use crate::ids;
 
 /// The schema this build creates and understands.
-pub const SCHEMA_VERSION: i64 = 3;
+pub const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA_V1: &str = include_str!("db/schema_v1.sql");
 /// Forward migrations: the one at index `i` takes a file from version `i + 1` to `i + 2`.
-const MIGRATIONS: &[&str] = &[include_str!("db/migration_v2.sql"), include_str!("db/migration_v3.sql")];
+const MIGRATIONS: &[&str] =
+    &[include_str!("db/migration_v2.sql"), include_str!("db/migration_v3.sql"), include_str!("db/migration_v4.sql")];
 
 pub struct Db {
     conn: Connection,
@@ -213,6 +214,63 @@ mod tests {
         let start = spec.find("```sql\n").expect("the spec has an SQL block") + "```sql\n".len();
         let end = start + spec[start..].find("```").expect("the SQL block ends");
         assert_eq!(&spec[start..end], MIGRATIONS[1], "src/db/migration_v3.sql drifted from spec/schema-v3.md");
+    }
+
+    #[test]
+    fn migration_v4_matches_its_spec() {
+        let spec = include_str!("../spec/schema-v4.md");
+        let start = spec
+            .find(
+                "```sql
+",
+            )
+            .expect("the spec has an SQL block")
+            + "```sql
+"
+            .len();
+        let end = start + spec[start..].find("```").expect("the SQL block ends");
+        assert_eq!(&spec[start..end], MIGRATIONS[2], "src/db/migration_v4.sql drifted from spec/schema-v4.md");
+    }
+
+    /// A copy of a real profile (`NEMORA_REAL_DB`, migrated in place: never the profile itself)
+    /// reaches this schema with every row of every table it had.
+    #[test]
+    #[ignore]
+    fn real_profile_migrates_keeping_every_row() {
+        let Ok(path) = std::env::var("NEMORA_REAL_DB") else { return };
+        let count = |conn: &Connection| -> Vec<(String, i64)> {
+            let names: Vec<String> = conn
+                .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%' AND name NOT LIKE '%fts%' ORDER BY name")
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .collect::<rusqlite::Result<_>>()
+                .unwrap();
+            names
+                .into_iter()
+                .map(|n| {
+                    let c = conn.query_row(&format!("SELECT count(*) FROM \"{n}\""), [], |r| r.get(0)).unwrap();
+                    (n, c)
+                })
+                .collect()
+        };
+        let before = {
+            let conn = Connection::open(&path).unwrap();
+            let version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+            println!("from v{version}");
+            count(&conn)
+        };
+        let db = Db::open(Path::new(&path)).unwrap();
+        let after: HashMap<String, i64> = count(db.conn()).into_iter().collect();
+        for (table, rows) in &before {
+            // `meta` gains a `migrated_v<N>_at` row per migration.
+            if table == "meta" {
+                assert!(after[table] >= *rows);
+            } else {
+                assert_eq!(after.get(table), Some(rows), "{table}");
+            }
+        }
+        println!("REAL migration: {} tables kept, rows {}", before.len(), before.iter().map(|t| t.1).sum::<i64>());
     }
 
     fn tables(db: &Db) -> Vec<String> {

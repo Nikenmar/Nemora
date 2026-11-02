@@ -1510,6 +1510,11 @@
     "savedClipped_other": "{{name}} saved; {{count}} samples went past full scale and were clipped (32-bit float keeps them)",
     "saveFailed": "Could not save the file: {{error}}"
   },
+  "lyricsSearch": {
+    "title": "In lyrics",
+    "playFromLine": "Play from this line",
+    "play": "Play"
+  },
   "lyricsLibrary": {
     "label": "Fetch lyrics for my library",
     "description": "Finds lyrics for every song in the background, one a second, synced ones preferred. Lyrics next to your files or in their tags come first; your own edits are never replaced. This sends each song's title, artist, album and length to LRCLIB (lrclib.net).",

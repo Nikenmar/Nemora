@@ -114,3 +114,50 @@ pub async fn lyrics_library(
     let error = job.error.lock().map_err(fail)?.clone();
     Ok(json!({ "done": done, "total": total, "running": job.running.load(Ordering::Relaxed), "error": error }))
 }
+
+/// The lyrics index (PLAN/19 D6): rebuilt in the background, in steps, whenever the stored lyrics
+/// moved; a search reads whatever is indexed so far and never waits for it.
+#[derive(Default)]
+pub struct LyricsIndex {
+    seen: Mutex<Option<(i64, i64)>>,
+    building: Arc<AtomicBool>,
+}
+
+/// Songs indexed per step: about half a second of work at most.
+const INDEX_STEP: usize = 200;
+
+fn refresh_index(handle: &AppHandle, app: &App, index: &LyricsIndex) {
+    let Ok(now) = nemora_core::lyrics_index::fingerprint(&app.read()) else { return };
+    let mut seen = index.seen.lock().unwrap_or_else(|p| p.into_inner());
+    if *seen == Some(now) || index.building.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    *seen = Some(now);
+    let (handle, building) = (handle.clone(), index.building.clone());
+    let spawned = std::thread::Builder::new().name("lyrics-index".into()).spawn(move || {
+        let app = handle.state::<App>();
+        while let Ok(n) = app.write_quiet(|db| nemora_core::lyrics_index::sync(db, INDEX_STEP)) {
+            if n == 0 {
+                break;
+            }
+        }
+        building.store(false, Ordering::Relaxed);
+    });
+    if spawned.is_err() {
+        index.building.store(false, Ordering::Relaxed);
+        *seen = None;
+    }
+}
+
+/// Songs with a line matching `query`: the line, the lines around it, its time when synced.
+#[tauri::command]
+pub async fn lyrics_search(
+    handle: AppHandle,
+    app: State<'_, App>,
+    index: State<'_, LyricsIndex>,
+    query: String,
+    limit: Option<usize>,
+) -> Res<Vec<nemora_core::lyrics_index::Hit>> {
+    refresh_index(&handle, &app, &index);
+    nemora_core::lyrics_index::search(&app.read(), &query, limit.unwrap_or(20)).map_err(fail)
+}

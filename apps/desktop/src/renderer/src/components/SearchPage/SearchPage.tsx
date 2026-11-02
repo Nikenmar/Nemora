@@ -11,6 +11,7 @@ import GenreSearchResultsContainer from './Result_Containers/GenreSearchResultsC
 import PlaylistSearchResultsContainer from './Result_Containers/PlaylistSearchResultsContainer';
 import AlbumSearchResultsContainer from './Result_Containers/AlbumSearchResultsContainer';
 import SongSearchResultsContainer from './Result_Containers/SongSearchResultsContainer';
+import LyricsSearchResultsContainer from './Result_Containers/LyricsSearchResultsContainer';
 import MostRelevantSearchResultsContainer from './Result_Containers/MostRelevantSearchResultsContainer';
 import ArtistsSearchResultsContainer from './Result_Containers/ArtistsSearchResultsContainer';
 import NoSearchResultsContainer from './NoSearchResultsContainer';
@@ -167,6 +168,10 @@ const SearchPage = () => {
         <MostRelevantSearchResultsContainer searchResults={searchResults} />
         {/* SONG SEARCH RESULTS */}
         <SongSearchResultsContainer songs={searchResults.songs} searchInput={searchInput} />
+        {/* LYRICS: songs with a matching line (PLAN/19 D6) */}
+        {(activeFilter === 'All' || activeFilter === 'Songs') && (
+          <LyricsSearchResultsContainer searchInput={searchInput} />
+        )}
         {/* ARTIST SEARCH RESULTS */}
         <ArtistsSearchResultsContainer
           artists={searchResults.artists}
