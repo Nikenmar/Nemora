@@ -80,3 +80,15 @@ pub async fn mix_of_day(
     app.write_quiet(|db| nemora_core::settings::set_device(db, MIX_KEY, &value)).map_err(fail)?;
     Ok(mix)
 }
+
+/// Stats > Insights (PLAN/20 D3): what the history supports, in Stats' order.
+#[tauri::command]
+pub async fn stats_insights(
+    app: State<'_, App>,
+    cache: State<'_, TasteMapCache>,
+) -> Res<Vec<nemora_core::insights::Insight>> {
+    let map = cache.snapshot(&app);
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
+    let history = nemora_core::insights::stored(&app.read(), map.as_ref(), now).map_err(fail)?;
+    Ok(nemora_core::insights::all(&history))
+}

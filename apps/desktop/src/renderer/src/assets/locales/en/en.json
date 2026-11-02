@@ -1521,6 +1521,22 @@
     "saved": "The card is saved",
     "failed": "The card could not be made"
   },
+  "insights": {
+    "title": "Insights",
+    "week_one": "This week: {{time}} heard, {{count}} song",
+    "week_other": "This week: {{time}} heard, {{count}} songs",
+    "weekDetail": "{{first}} heard for the first time · the week before: {{before}}, {{songsBefore}} songs",
+    "outOfRotation_one": "{{count}} song you played a lot is out of rotation",
+    "outOfRotation_other": "{{count}} songs you played a lot are out of rotation",
+    "rising_one": "{{count}} song is rising",
+    "rising_other": "{{count}} songs are rising",
+    "islandGrew": "{{name}} grew this month: {{now}} plays, {{before}} the month before",
+    "islandFaded": "{{name}} faded this month: {{now}} plays, {{before}} the month before",
+    "hours": "You listen most between {{from}} and {{to}}",
+    "hoursDetail": "{{share}} % of {{plays}} plays in the last three months",
+    "playThem": "Play them",
+    "openMap": "Open the map"
+  },
   "lyricsSearch": {
     "title": "In lyrics",
     "playFromLine": "Play from this line",

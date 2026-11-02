@@ -15,6 +15,7 @@ import type { RecapPeriod, RecapSlide } from '@platform/core/stats/recap';
 import MainContainer from '../MainContainer';
 import Button from '../Button';
 import StatTile from './StatTile';
+import Insights from './Insights';
 import ActivityBarGraph from './ActivityBarGraph';
 import ActivityCalendar from './ActivityCalendar';
 import ListeningPatternCharts from './ListeningPatternCharts';
@@ -299,6 +300,8 @@ const StatsPage = () => {
 
         {hasData ? (
           <div className="stats-content-container h-full overflow-y-auto overflow-x-hidden p-1 pb-8 pr-4">
+            {/* Insights (PLAN/20 D3): sentences on top; everything below stays as it was. */}
+            <Insights />
             {/* Max-width breakpoints here: the plain class is the wide layout. The
                 tiles used to sit in a two-column grid on a desktop window, which
                 also squeezed the calendar into half a row. */}

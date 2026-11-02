@@ -677,6 +677,44 @@ pub fn layout_islands(
     (pos.into_iter().map(to_unit).collect(), span, discs)
 }
 
+/// Every island's name for a sentence (Home's mix, Stats' insights): the user's, else the map's,
+/// else its two leading artists by `first_artist` (the map as built carries no artists).
+pub fn island_names(map: &TasteMap, first_artist: &HashMap<String, String>) -> HashMap<usize, String> {
+    let mut leading: HashMap<usize, HashMap<&str, usize>> = HashMap::new();
+    for p in &map.points {
+        if let Some(a) = first_artist.get(&p.song_id) {
+            *leading.entry(p.island).or_default().entry(a.as_str()).or_default() += 1;
+        }
+    }
+    let mut out = HashMap::new();
+    for island in map.islands.iter().filter(|i| !i.loose) {
+        let automatic = || {
+            let mut counts: Vec<(&str, usize)> = leading.get(&island.id)?.iter().map(|(a, n)| (*a, *n)).collect();
+            counts.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+            Some(counts.iter().take(2).map(|(a, _)| *a).collect::<Vec<_>>().join(" & "))
+        };
+        if let Some(name) = island.user_name.clone().or_else(|| island.name.clone()).or_else(automatic) {
+            out.insert(island.id, name);
+        }
+    }
+    out
+}
+
+/// The first artist of every present song, for [`island_names`].
+pub fn first_artists(db: &Db) -> crate::Result<HashMap<String, String>> {
+    let mut stmt = db.conn().prepare(
+        "SELECT v.song_id, (SELECT name FROM variant_artists a WHERE a.variant_id = v.variant_id AND a.role = 'artist' ORDER BY position LIMIT 1)
+         FROM track_variants v WHERE v.present = 1 GROUP BY v.song_id",
+    )?;
+    let mut out = HashMap::new();
+    for row in stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?)))? {
+        if let (id, Some(artist)) = row? {
+            out.insert(id, artist);
+        }
+    }
+    Ok(out)
+}
+
 /// Where `build` puts the songs: a fresh map (asked for, or the first one) in islands
 /// ([`layout_islands`], starting from the last map's island middles when there is one); a map
 /// whose inputs changed, settled from where its songs were ([`layout`]), so it keeps its shape.

@@ -196,6 +196,7 @@ pub fn run() {
             correction::autoeq_index,
             foryou::smart_lists,
             foryou::mix_of_day,
+            foryou::stats_insights,
             correction::autoeq_profile,
             correction::correction_preview,
             correction::engine_correction,

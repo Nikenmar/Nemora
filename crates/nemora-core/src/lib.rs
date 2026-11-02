@@ -17,6 +17,7 @@ pub mod guessr;
 pub mod identity;
 pub mod ids;
 pub mod import;
+pub mod insights;
 pub mod library;
 pub mod listening;
 pub mod lyrics;

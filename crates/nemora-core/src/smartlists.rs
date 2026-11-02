@@ -560,27 +560,9 @@ pub fn stored_inputs(
     let mut island_names = HashMap::new();
     let mut neighbours = HashMap::new();
     if let Some(map) = map {
-        // An island the map leaves unnamed (no artist leads it) is named here by its two leading
-        // artists, as the subtitle needs a name.
-        // (The map as built carries no artists; the library's are used.)
-        let first: HashMap<&str, &str> =
-            songs.iter().filter_map(|(id, a)| Some((id.as_str(), a.first()?.as_str()))).collect();
-        let mut leading: HashMap<usize, HashMap<&str, usize>> = HashMap::new();
-        for p in &map.points {
-            if let Some(a) = first.get(p.song_id.as_str()) {
-                *leading.entry(p.island).or_default().entry(a).or_default() += 1;
-            }
-        }
-        for island in map.islands.iter().filter(|i| !i.loose) {
-            let automatic = || {
-                let mut counts: Vec<(&str, usize)> = leading.get(&island.id)?.iter().map(|(a, n)| (*a, *n)).collect();
-                counts.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
-                Some(counts.iter().take(2).map(|(a, _)| *a).collect::<Vec<_>>().join(" & "))
-            };
-            if let Some(name) = island.user_name.clone().or_else(|| island.name.clone()).or_else(automatic) {
-                island_names.insert(island.id, name);
-            }
-        }
+        let first: HashMap<String, String> =
+            songs.iter().filter_map(|(id, a)| Some((id.clone(), a.first()?.clone()))).collect();
+        island_names = crate::tastemap::island_names(map, &first);
         for p in &map.points {
             island_of.insert(p.song_id.clone(), p.island);
             neighbours.insert(p.song_id.clone(), p.neighbours.clone());
