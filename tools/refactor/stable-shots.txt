@@ -65,8 +65,8 @@
 36e-settings-visuals.light.png
 36f-settings-smart.dark.png
 36f-settings-smart.light.png
-36g-full-screen-bars.dark.png
-36g-full-screen-bars.light.png
+# 36g-full-screen-bars.dark.png  (dropped 2026-11-03: the spectrum bars differ between two runs of one build)
+# 36g-full-screen-bars.light.png  (dropped 2026-11-03: the spectrum bars differ between two runs of one build)
 36l-headphone-correction.dark.png
 36l-headphone-correction.light.png
 36n-home-for-you.dark.png

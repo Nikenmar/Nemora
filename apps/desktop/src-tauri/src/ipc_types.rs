@@ -163,6 +163,8 @@ fn functions(types: &mut Types) -> Vec<specta::datatype::Function> {
         crate::bench::bench_quit,
         crate::widget_server::widget_set_state,
         crate::widget_server::widget_set_enabled,
+        crate::persist::persist_write,
+        crate::persist::persist_read,
     ](types)
 }
 

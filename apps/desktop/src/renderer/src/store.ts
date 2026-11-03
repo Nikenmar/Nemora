@@ -7,6 +7,11 @@ import {
 import storage from './utils/localStorage';
 
 storage.checkLocalStorage();
+/**
+ * The blob as the last session left it, before this one changes anything: what the persistence
+ * shadow compares the core's copy with (PLAN/21 P21.4). Read only; the store starts from it below.
+ */
+export const LOADED_LOCAL_STORAGE_TEXT = localStorage.getItem('localStorage');
 export const store = new Store(DEFAULT_REDUCER_DATA);
 
 /**

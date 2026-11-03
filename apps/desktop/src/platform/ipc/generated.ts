@@ -7,6 +7,13 @@ export type CoreInfo = {
 	profileDir: string,
 };
 
+/**  The core's own queue, as `queue_items` and the `queue.*` settings hold it. */
+export type CoreQueue = {
+	songIds: string[],
+	index: number,
+	positionMs: number,
+};
+
 /**  Bundled pictures the view shows where there is no cover; their URLs exist only in the bundle. */
 export type DefaultArtwork = {
 	song: string,
@@ -301,6 +308,21 @@ export type Options_Serialize = {
 };
 
 export type Part = "favourite" | "forgotten" | "new" | "island";
+
+/**  What the core keeps of the view's state: each slice's JSON text as written, and the queue. */
+export type Persisted = Persisted_Serialize | Persisted_Deserialize;
+
+/**  What the core keeps of the view's state: each slice's JSON text as written, and the queue. */
+export type Persisted_Deserialize = {
+	slices: { [key in string]: string },
+	coreQueue?: CoreQueue | null,
+};
+
+/**  What the core keeps of the view's state: each slice's JSON text as written, and the queue. */
+export type Persisted_Serialize = {
+	slices: { [key in string]: string },
+	coreQueue: CoreQueue | null,
+};
 
 export type Point = Point_Serialize | Point_Deserialize;
 
@@ -752,6 +774,8 @@ export interface IpcCommands {
   open_devtools: { args: Record<string, never>; ret: null };
   open_log_file: { args: Record<string, never>; ret: null };
   paths_share_volume: { args: { first: string; second: string; }; ret: boolean };
+  persist_read: { args: Record<string, never>; ret: Persisted_Serialize };
+  persist_write: { args: { slices: { [key in string]: string }; }; ret: null };
   play_record: { args: { session: SessionInput_Deserialize; }; ret: Value };
   playlist_add_songs: { args: { playlistId: string; songIds: string[]; }; ret: null };
   playlist_create: { args: { name: string; songIds?: string[] | null; artworkPath?: string | null; }; ret: Value };

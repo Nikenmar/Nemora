@@ -24,7 +24,15 @@ export type IpcAnswer<K extends Command> = [IpcCommands[K]['ret']] extends [null
 /** Exactly `Value` (or `Value | null`): any JSON, where the view's declared type goes as is. */
 type IsJson<T> = [Value] extends [T] ? ([Exclude<T, undefined>] extends [Value] ? true : false) : false;
 type IsJsonList<T> = [T] extends [Value[]] ? ([Value[]] extends [T] ? true : false) : false;
-type ViewSends<T> = IsJson<T> extends true ? unknown : IsJsonList<T> extends true ? unknown[] : T;
+/** A map of any JSON (`HashMap<String, Value>`): an index signature, not an object of known fields. */
+type IsJsonRecord<T> = string extends keyof T ? ([T] extends [{ [key in string]: Value }] ? true : false) : false;
+type ViewSends<T> = IsJson<T> extends true
+  ? unknown
+  : IsJsonList<T> extends true
+    ? unknown[]
+    : IsJsonRecord<T> extends true
+      ? Record<string, unknown>
+      : T;
 
 /** What the view sends: the generated arguments, with any-JSON ones open. */
 export type IpcArgs<K extends Command> = { [P in keyof IpcCommands[K]['args']]: ViewSends<IpcCommands[K]['args'][P]> };

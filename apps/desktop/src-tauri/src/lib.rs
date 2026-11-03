@@ -19,6 +19,7 @@ mod guessr;
 #[cfg(test)]
 mod ipc_types;
 mod lyrics_library;
+mod persist;
 mod protocol;
 mod secrets;
 // Win32 code carried over from 1.1.9 (edition 2021), where an unsafe fn body was one unsafe block.
@@ -263,6 +264,8 @@ pub fn run() {
             bench::bench_quit,
             widget_server::widget_set_state,
             widget_server::widget_set_enabled,
+            persist::persist_write,
+            persist::persist_read,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Off the main thread: a cold 50 MB read must never block the UI.

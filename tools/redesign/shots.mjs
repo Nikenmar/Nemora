@@ -458,9 +458,15 @@ function prepareProfile(dir, copyFrom) {
   });
 }
 
+/**
+ * `--reuse`: start again on the run folder a previous run of the same `--label` left (its profile
+ * and webview data): an app restart, for checks across one (PLAN/21 P21.4).
+ */
+const REUSE = process.argv.includes('--reuse');
+
 async function runOne(name, shots, copyFrom) {
   const dir = join(OUT, `run-${name}`);
-  await prepareProfile(dir, copyFrom);
+  if (!(REUSE && existsSync(join(dir, 'profile', 'nemora.db')))) await prepareProfile(dir, copyFrom);
   const log = openSync(join(dir, 'stdout.log'), 'w');
   const focus = watchForeground();
   await sleep(1500);
@@ -631,7 +637,9 @@ async function runOne(name, shots, copyFrom) {
     process.stdout.write('\n');
   } finally {
     try {
-      await cdp?.eval(`S.toggleMutedState(false); api.bench.quit();`);
+      // The view's state reaches the core a moment after a change (PLAN/21 P21.4): unmute, let it
+      // land, then quit.
+      await cdp?.eval(`S.toggleMutedState(false); await wait(2000); api.bench.quit();`);
     } catch {
       /* already gone */
     }

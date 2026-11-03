@@ -31,6 +31,8 @@ import rediscoverCover from '../../renderer/src/assets/images/webp/rediscover-pl
 import songCover from '../../renderer/src/assets/images/webp/song_cover_default.webp';
 import type { ArgList, Command, IpcAnswer, JsonAnswerCommand, TypedCommand } from '../ipc';
 import { NotPortedYetError } from '../api/errors';
+import { runFlushHooks } from './flush';
+export { registerFlush } from './flush';
 import { emitLocal } from '../api/events';
 import type { PathBackedAudioPlayerData, PathBackedUpdateSongDataResult } from '../api/binary';
 import { getBuildEnvVariable } from '../core/net/buildEnv';
@@ -216,8 +218,13 @@ export class NemoraRuntime {
     this.userData = await call<'user_data_get', UserData>('user_data_get');
   }
 
-  /** Writes reach the core as they happen; there is nothing buffered to flush. */
-  async flush(): Promise<void> {}
+  /**
+   * Writes reach the core as they happen; what is buffered elsewhere in the view registers here
+   * (`registerFlush`) and is awaited before a quit, a reload or a relaunch.
+   */
+  async flush(): Promise<void> {
+    await runFlushHooks();
+  }
 
   // ----- user data -------------------------------------------------------------------------------
 

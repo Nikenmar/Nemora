@@ -76,6 +76,21 @@ pub fn load(db: &Db) -> Result<Option<Queue>> {
     Ok(Some(Queue { items, index, position_ms: number(POSITION)?.max(0) }))
 }
 
+/// Which of `song_ids` the library has: `queue_items` refers to `tracks`, so only those can be saved.
+pub fn known_songs<'a>(
+    db: &Db,
+    song_ids: impl IntoIterator<Item = &'a str>,
+) -> Result<std::collections::HashSet<String>> {
+    let mut stmt = db.conn().prepare_cached("SELECT 1 FROM tracks WHERE song_id = ?1")?;
+    let mut known = std::collections::HashSet::new();
+    for id in song_ids {
+        if stmt.exists([id])? {
+            known.insert(id.to_owned());
+        }
+    }
+    Ok(known)
+}
+
 pub fn clear(db: &mut Db) -> Result<()> {
     save(db, &Queue { items: Vec::new(), index: 0, position_ms: 0 })
 }

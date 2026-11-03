@@ -61,6 +61,8 @@ const mentionsValue = (t, seen = new Set()) => {
   if (t === valueType || t.aliasSymbol?.name === 'Value') return true;
   if (t.isUnion() || t.isIntersection()) return t.types.some((u) => mentionsValue(u, seen));
   if (checker.isArrayType(t) || checker.isTupleType(t)) return checker.getTypeArguments(t).some((u) => mentionsValue(u, seen));
+  // A map of any JSON (`HashMap<String, Value>`): its index signature's values.
+  if (checker.getIndexInfosOfType(t).some((info) => mentionsValue(info.type, seen))) return true;
   // A named type of the generated file whose field is a Value: still partly untyped.
   if (t.getSymbol()?.declarations?.some((d) => d.getSourceFile() === generatedFile) && !(t.flags & ts.TypeFlags.Primitive)) {
     return t.getProperties().some((p) => mentionsValue(checker.getTypeOfSymbolAtLocation(p, generatedFile), seen));

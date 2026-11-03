@@ -367,6 +367,12 @@ ${reason.stack ?? ''}`
 
   await import('./i18n');
   const { default: App } = await import('./App');
+  // PLAN/21 P21.4: the local state written to the core as well, and compared at each start.
+  if (isTauri) {
+    void import('./other/persistShadow')
+      .then(({ startPersistShadow }) => startPersistShadow())
+      .catch((error: unknown) => console.warn('[persist shadow] not started', error));
+  }
 
   root.render(
     <StrictMode>
