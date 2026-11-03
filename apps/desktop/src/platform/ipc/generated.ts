@@ -201,6 +201,38 @@ export type Kind = "peak" | "lowShelf" | "highShelf";
 
 export type List = "rediscover" | "onRepeat" | "caughtYou" | "thisHour" | "energetic" | "calm" | "neverHeard";
 
+/**  What the order reads, as the view's `MegaShuffleData` (Smart Shuffle's `shuffle_data` answer). */
+export type MegaData = MegaData_Serialize | MegaData_Deserialize;
+
+/**  What the order reads, as the view's `MegaShuffleData` (Smart Shuffle's `shuffle_data` answer). */
+export type MegaData_Deserialize = {
+	weights: { [key in string]: number },
+	pairFeedback?: PairFeedback_Deserialize[],
+	held?: string[] | null,
+	artists?: { [key in string]: number[] } | null,
+	energy?: { [key in string]: number } | null,
+	neighbours?: { [key in string]: string[] } | null,
+};
+
+/**  What the order reads, as the view's `MegaShuffleData` (Smart Shuffle's `shuffle_data` answer). */
+export type MegaData_Serialize = {
+	weights: { [key in string]: number },
+	pairFeedback: PairFeedback_Serialize[],
+	held: string[] | null,
+	artists: { [key in string]: number[] } | null,
+	energy: { [key in string]: number } | null,
+	neighbours: { [key in string]: string[] } | null,
+};
+
+/**
+ *  The new order, and for each original position where it went (-1: nowhere, which only a
+ *  duplicate beyond the order's copies would be).
+ */
+export type MegaOrder = {
+	shuffledQueue: string[],
+	positions: number[],
+};
+
 export type Mix = Mix_Serialize | Mix_Deserialize;
 
 export type MixEntry = {
@@ -305,6 +337,25 @@ export type Options_Serialize = {
 	followMap: boolean,
 	/**  C2: the view orders the queue without jumps in energy (the core sends the numbers). */
 	energyFlow: boolean,
+};
+
+/**  One pair the user marked in duels; only `tooDifferent` keeps two songs apart. */
+export type PairFeedback = PairFeedback_Serialize | PairFeedback_Deserialize;
+
+/**  One pair the user marked in duels; only `tooDifferent` keeps two songs apart. */
+export type PairFeedback_Deserialize = {
+	/**  Absent on records from before reasoned feedback: not `tooDifferent`. */
+	reason?: string | null,
+	songAId: string,
+	songBId: string,
+};
+
+/**  One pair the user marked in duels; only `tooDifferent` keeps two songs apart. */
+export type PairFeedback_Serialize = {
+	/**  Absent on records from before reasoned feedback: not `tooDifferent`. */
+	reason: string | null,
+	songAId: string,
+	songBId: string,
 };
 
 export type Part = "favourite" | "forgotten" | "new" | "island";
@@ -770,6 +821,7 @@ export interface IpcCommands {
   lyrics_save: { args: { path: string; text: string; }; ret: boolean };
   lyrics_search: { args: { query: string; limit?: number | null; }; ret: Hit_Serialize[] };
   lyrics_store_found: { args: { path: string; text: string; source: string; }; ret: boolean };
+  mega_order: { args: { songIds: string[]; data: MegaData_Deserialize; currentIndex?: number | null; draws53: number[]; }; ret: MegaOrder };
   mix_of_day: { args: { today: string; fresh?: boolean | null; options?: Options_Deserialize | null; intensity?: number | null; }; ret: Mix_Serialize };
   open_devtools: { args: Record<string, never>; ret: null };
   open_log_file: { args: Record<string, never>; ret: null };

@@ -24,6 +24,7 @@ pub mod lyrics;
 pub mod lyrics_index;
 pub mod lyrics_job;
 pub mod m3u;
+pub mod mega_order;
 pub mod palette;
 #[cfg(test)]
 mod perf;

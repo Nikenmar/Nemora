@@ -46,8 +46,8 @@
 29-tag-editor.light.png
 30-tierlists.dark.png
 30-tierlists.light.png
-30b-tier-suggestions.dark.png
-30b-tier-suggestions.light.png
+# 30b-tier-suggestions.dark.png  (dropped 2026-11-03: the player bar's Up next appears on a 40 s timer, wherever the shot falls)
+# 30b-tier-suggestions.light.png  (dropped 2026-11-03: the player bar's Up next appears on a 40 s timer, wherever the shot falls)
 31-tierlist-editor.dark.png
 33-songguessr.dark.png
 33b-songguessr-mode.dark.png
@@ -69,8 +69,8 @@
 # 36g-full-screen-bars.light.png  (dropped 2026-11-03: the spectrum bars differ between two runs of one build)
 36l-headphone-correction.dark.png
 36l-headphone-correction.light.png
-36n-home-for-you.dark.png
-36n-home-for-you.light.png
+# 36n-home-for-you.dark.png  (dropped 2026-11-03: the For you shelf follows the clock: two runs of one build differ (measured 2026-11-03))
+# 36n-home-for-you.light.png  (dropped 2026-11-03: the For you shelf follows the clock: two runs of one build differ (measured 2026-11-03))
 36p-settings-lyrics-library.dark.png
 36p-settings-lyrics-library.light.png
 36q-search-in-lyrics.dark.png

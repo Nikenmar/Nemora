@@ -165,6 +165,7 @@ fn functions(types: &mut Types) -> Vec<specta::datatype::Function> {
         crate::widget_server::widget_set_enabled,
         crate::persist::persist_write,
         crate::persist::persist_read,
+        crate::order::mega_order,
     ](types)
 }
 

@@ -63,7 +63,8 @@ import ListeningDataSession, { type EndReason, type StartReason } from './other/
 import { updateSystemMedia } from './other/systemMedia';
 import updateQueueOnSongPlay from './other/updateQueueOnSongPlay';
 import shuffleQueueRandomly from './other/shuffleQueueRandomly';
-import megaShuffleQueue from './other/megaShuffleQueue';
+// PLAN/21 P21.6: megaShuffleQueue as it was, with the core's port asked for the same order in shadow.
+import megaShuffleQueue from './other/megaOrderShadow';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import { rememberedPosition, rememberPosition } from './other/resumePosition';
 import { setPlayingVersion } from './other/soundEffects';

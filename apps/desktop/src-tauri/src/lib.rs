@@ -19,6 +19,7 @@ mod guessr;
 #[cfg(test)]
 mod ipc_types;
 mod lyrics_library;
+mod order;
 mod persist;
 mod protocol;
 mod secrets;
@@ -266,6 +267,7 @@ pub fn run() {
             widget_server::widget_set_enabled,
             persist::persist_write,
             persist::persist_read,
+            order::mega_order,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Off the main thread: a cold 50 MB read must never block the UI.
