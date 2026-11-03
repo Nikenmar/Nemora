@@ -6,7 +6,7 @@ import Button from '../Button';
 import ShortcutButton from '../SettingsPage/ShortcutButton';
 import Checkbox from '../Checkbox';
 import storage from '../../../src/utils/localStorage';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 import { useStore } from '@tanstack/react-store';
 
 const AppShortcutsPrompt = lazy(() => import('../SettingsPage/AppShortcutsPrompt'));
@@ -16,7 +16,7 @@ type Props = {
 };
 
 const LyricsEditorHelpPrompt = (props: Props) => {
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('doNotShowHelpPageOnLyricsEditorStartUp'));
   const { changePromptMenuData } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 

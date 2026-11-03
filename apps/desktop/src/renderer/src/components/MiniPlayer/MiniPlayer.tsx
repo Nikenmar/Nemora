@@ -10,7 +10,7 @@ import SeekBarSlider from '../SeekBarSlider';
 import TitleBarContainer from './containers/TitleBarContainer';
 import VolumeSlider from '../VolumeSlider';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type MiniPlayerProps = {
   className?: string;
@@ -21,7 +21,7 @@ export default function MiniPlayer(props: MiniPlayerProps) {
   const isAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
   const currentSongData = useStore(store, (state) => state.currentSongData);
   const isMuted = useStore(store, (state) => state.player.volume.isMuted);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isReducedMotion'));
 
   const {
     toggleSongPlayback,

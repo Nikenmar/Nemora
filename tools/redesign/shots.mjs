@@ -52,6 +52,47 @@ const IPC_TRACE = option('ipc-trace', '');
  */
 const FILM = option('film', '');
 const FILM_NAME = option('film-name', FILM ? FILM.replace(/^.*[\\/]/, '').replace(/\.js$/, '') : '');
+/**
+ * `--render-count` (with `--probe`): counts React component renders from outside the product
+ * (PLAN/21 P21.3). A React DevTools hook is installed before the page loads (the page is reloaded
+ * once for it); after each commit it walks the tree and counts every function or class component
+ * whose props or hook state object is new since its last commit, a mount included. The probe reads
+ * `window.__renders.total`, `window.__renders.commits` and calls `window.__renders.reset()`.
+ */
+const RENDER_COUNT = process.argv.includes('--render-count');
+const RENDER_HOOK = `(() => {
+  const seen = new WeakMap();
+  const counter = { total: 0, commits: 0, reset() { this.total = 0; this.commits = 0; } };
+  window.__renders = counter;
+  const COMPONENT = new Set([0, 1, 11, 14, 15]);
+  const visit = (fiber) => {
+    const stack = [fiber];
+    while (stack.length) {
+      const f = stack.pop();
+      if (!f) continue;
+      if (COMPONENT.has(f.tag)) {
+        const last = seen.get(f) ?? (f.alternate ? seen.get(f.alternate) : undefined);
+        if (!last || last.props !== f.memoizedProps || last.state !== f.memoizedState) counter.total++;
+        const record = { props: f.memoizedProps, state: f.memoizedState };
+        seen.set(f, record);
+        if (f.alternate) seen.set(f.alternate, record);
+      }
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+  };
+  let id = 0;
+  window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+    supportsFiber: true,
+    renderers: new Map(),
+    inject(renderer) { id += 1; this.renderers.set(id, renderer); return id; },
+    checkDCE() {},
+    onScheduleFiberRoot() {},
+    onCommitFiberUnmount() {},
+    onPostCommitFiberRoot() {},
+    onCommitFiberRoot(_id, root) { counter.commits++; visit(root.current); }
+  };
+})();`;
 /** `--cpu <seconds>`: after a probe or film, the app's CPU (its whole process tree) over that time, in % of one core. */
 const CPU_SECONDS = Number(option('cpu', '0'));
 
@@ -446,6 +487,11 @@ async function runOne(name, shots, copyFrom) {
   try {
     cdp = await Cdp.connect(PORT);
     await cdp.send('Page.enable');
+    if (RENDER_COUNT) {
+      await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: RENDER_HOOK });
+      await cdp.send('Page.reload', { ignoreCache: false });
+      await sleep(1500);
+    }
     // Ordinary shots must not catch a page mid-transition; motion is shot on purpose with --film.
     if (!PROBE && !FILM) await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     await cdp.view(VIEW);

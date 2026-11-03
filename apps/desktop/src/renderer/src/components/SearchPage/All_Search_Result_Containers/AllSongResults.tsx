@@ -6,13 +6,13 @@ import Song from '../../SongsPage/Song';
 import SecondaryContainer from '../../SecondaryContainer';
 import VirtualizedList from '../../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type Props = { songData: SongData[] };
 
 const AllSongResults = (prop: Props) => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isSongIndexingEnabled'));
 
   const { createQueue, playSong } = useContext(AppUpdateContext);
 

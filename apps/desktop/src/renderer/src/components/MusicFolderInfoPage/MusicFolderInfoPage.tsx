@@ -11,7 +11,7 @@ import Song from '../SongsPage/Song';
 import { songSortOptions, songFilterOptions } from '../SongsPage/SongOptions';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const MusicFolderInfoPage = () => {
   const isMultipleSelectionEnabled = useStore(
@@ -21,7 +21,7 @@ const MusicFolderInfoPage = () => {
   const multipleSelectionsData = useStore(store, (state) => state.multipleSelectionsData);
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
   const sortingStates = useStore(store, (state) => state.localStorage.sortingStates);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isSongIndexingEnabled'));
 
   const {
     updateCurrentlyActivePageData,

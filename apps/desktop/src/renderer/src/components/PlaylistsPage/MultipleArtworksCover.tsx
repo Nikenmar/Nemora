@@ -4,7 +4,7 @@ import Img from '../Img';
 
 import DefaultImgCover from '../../assets/images/webp/song_cover_default.webp';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type Props = {
   className?: string;
@@ -16,7 +16,7 @@ type Props = {
 };
 
 const MultipleArtworksCover = (props: Props) => {
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('shuffleArtworkFromSongCovers'));
   const {
     className,
     songIds,

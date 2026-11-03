@@ -6,14 +6,14 @@ import LyricLine from '../../LyricsPage/LyricLine';
 import useSkipLyricsLines from '../../../hooks/useSkipLyricsLines';
 import LyricsMetadata from '../../LyricsPage/LyricsMetadata';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type Props = { isLyricsVisible: boolean };
 
 const LyricsContainer = (props: Props) => {
   const isCurrentSongPlaying = useStore(store, (state) => state.player.isCurrentSongPlaying);
   const currentSongData = useStore(store, (state) => state.currentSongData);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('autoConvertLyrics', 'autoTranslateLyrics'));
 
   const { t } = useTranslation();
 

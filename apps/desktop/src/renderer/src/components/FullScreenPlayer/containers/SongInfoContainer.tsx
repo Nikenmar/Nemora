@@ -13,7 +13,7 @@ import DefaultSongCover from '../../../assets/images/webp/song_cover_default.web
 import VolumeSlider from '../../VolumeSlider';
 import SpectrumBars from './SpectrumBars';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type Props = {
   songPos: number;
@@ -37,7 +37,7 @@ const SongInfoContainer = (props: Props) => {
   const isCurrentSongPlaying = useStore(store, (state) => state.player.isCurrentSongPlaying);
   const isMuted = useStore(store, (state) => state.player.volume.isMuted);
   const volume = useStore(store, (state) => state.player.volume.value);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isFullScreenSpectrum', 'showArtistArtworkNearSongControls', 'showSongRemainingTime'));
 
   const {
     toggleIsFavorite,

@@ -4,7 +4,7 @@ import Checkbox from '../../Checkbox';
 import Dropdown, { type DropdownOption } from '../../Dropdown';
 import i18n from '../../../i18n';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const duelFrequencyOptions: DropdownOption<DuelInviteFrequency>[] = [
   { label: i18n.t('eloDuels.frequency_off'), value: 'off' },
@@ -15,7 +15,7 @@ const duelFrequencyOptions: DropdownOption<DuelInviteFrequency>[] = [
 
 const PreferencesSettings = () => {
   const userData = useStore(store, (state) => state.userData);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('disableBackgroundArtworks', 'enableArtworkFromSongCovers', 'isSongIndexingEnabled', 'showArtistArtworkNearSongControls', 'showTrackNumberAsSongIndex', 'shuffleArtworkFromSongCovers'));
   const duels = useStore(store, (state) => state.localStorage.duels);
   const { t } = useTranslation();
 

@@ -15,7 +15,7 @@ import SongArtist from '../SongsPage/SongArtist';
 import DefaultSongCover from '../../assets/images/webp/song_cover_default.webp';
 import UpNextSongPopup from './UpNextSongPopup';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const AddSongsToPlaylistsPrompt = lazy(() => import('../SongsPage/AddSongsToPlaylistsPrompt'));
 const BlacklistSongConfrimPrompt = lazy(() => import('../SongsPage/BlacklistSongConfirmPrompt'));
@@ -32,7 +32,7 @@ const CurrentlyPlayingSongInfoContainer = () => {
   // On its own: toggleIsFavorite sets the flag on the current object before dispatching a copy, and
   // the store compares selections shallowly, so a selection of the whole object never sees it change.
   const isAFavorite = useStore(store, (state) => state.currentSongData.isAFavorite);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('doNotShowBlacklistSongConfirm', 'showArtistArtworkNearSongControls'));
 
   const {
     changeCurrentActivePage,

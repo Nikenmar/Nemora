@@ -10,12 +10,12 @@ import GenreImgAndInfoContainer from './GenreImgAndInfoContainer';
 import { songSortOptions, songFilterOptions } from '../SongsPage/SongOptions';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const GenreInfoPage = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
   const queue = useStore(store, (state) => state.localStorage.queue);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isSongIndexingEnabled'));
 
   const {
     createQueue,

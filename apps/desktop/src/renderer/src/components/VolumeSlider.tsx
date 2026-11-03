@@ -1,7 +1,7 @@
 import { useContext, useRef, type CSSProperties } from 'react';
 import { AppUpdateContext } from '../contexts/AppUpdateContext';
 import { useStore } from '@tanstack/react-store';
-import { store } from '../store';
+import { store, selectPreferences } from '../store';
 
 type Props = {
   id: string;
@@ -11,7 +11,7 @@ type Props = {
 };
 
 const VolumeSlider = (props: Props) => {
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('seekbarScrollInterval'));
   const volume = useStore(store, (state) => state.player.volume.value);
 
   const { updateVolume } = useContext(AppUpdateContext);

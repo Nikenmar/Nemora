@@ -6,7 +6,7 @@ import MultipleArtworksCover from '../PlaylistsPage/MultipleArtworksCover';
 import DefaultPlaylistCover from '../../assets/images/webp/playlist_cover_default.webp';
 import { useMemo } from 'react';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type Props = {
   playlist: Playlist;
@@ -14,7 +14,7 @@ type Props = {
 };
 
 const PlaylistInfoAndImgContainer = (props: Props) => {
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('enableArtworkFromSongCovers'));
   const { t } = useTranslation();
 
   const { playlist, songs } = props;

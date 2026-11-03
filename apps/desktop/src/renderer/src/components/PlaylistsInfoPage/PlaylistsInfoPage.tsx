@@ -12,7 +12,7 @@ import TitleContainer from '../TitleContainer';
 import { songSortOptions, songFilterOptions } from '../SongsPage/SongOptions';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const SensitiveActionConfirmPrompt = lazy(() => import('../SensitiveActionConfirmPrompt'));
 const RefreshRediscoverPrompt = lazy(() => import('./RefreshRediscoverPrompt'));
@@ -40,7 +40,7 @@ const PlaylistInfoPage = () => {
     store,
     (state) => state.localStorage.sortingStates?.songsPage || 'addedOrder'
   );
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isSongIndexingEnabled'));
   const {
     updateQueueData,
     changePromptMenuData,

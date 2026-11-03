@@ -3,11 +3,11 @@ import { isMotionReduced } from '../../other/viewTransition';
 import calculateTime from '../../utils/calculateTime';
 import SeekBarSlider from '../SeekBarSlider';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const SeekBarContainer = () => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isFavouriteMomentsEnabled', 'showSongRemainingTime'));
 
   const [songPos, setSongPos] = useState(0);
   // The time under the pointer while it is over the bar (PLAN/14 A17).

@@ -1,7 +1,7 @@
 import { type ReactElement, lazy, useCallback, useContext } from 'react';
 import { AppUpdateContext } from '../contexts/AppUpdateContext';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const OpenLinkConfirmPrompt = lazy(() => import('./OpenLinkConfirmPrompt'));
 
@@ -15,7 +15,7 @@ interface HyperlinkProp {
 }
 
 const Hyperlink = (props: HyperlinkProp) => {
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('doNotVerifyWhenOpeningLinks'));
   const { changePromptMenuData } = useContext(AppUpdateContext);
   const {
     link,

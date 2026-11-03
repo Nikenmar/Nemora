@@ -12,7 +12,7 @@ import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
 import DefaultPlaylistCover from '../../assets/images/webp/playlist_cover_default.webp';
 import MultipleArtworksCover from './MultipleArtworksCover';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const ConfirmDeletePlaylistsPrompt = lazy(() => import('./ConfirmDeletePlaylistsPrompt'));
 const RenamePlaylistPrompt = lazy(() => import('./RenamePlaylistPrompt'));
@@ -27,7 +27,7 @@ export const Playlist = (props: PlaylistProp) => {
     store,
     (state) => state.multipleSelectionsData.isEnabled
   );
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('enableArtworkFromSongCovers'));
   const multipleSelectionsData = useStore(store, (state) => state.multipleSelectionsData);
   const queue = useStore(store, (state) => state.localStorage.queue);
 

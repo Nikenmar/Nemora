@@ -11,7 +11,7 @@ import { songSortOptions } from '../SongsPage/SongOptions';
 import type { LastFMAlbumInfo } from 'src/types/last_fm_album_info_api';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
-import { store } from '../../store';
+import { store, selectPreferences } from '../../store';
 
 interface AlbumContentReducer {
   albumData: Album;
@@ -59,7 +59,7 @@ const reducer = (
 
 const AlbumInfoPage = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
-  const preferences = useStore(store, (state) => state?.localStorage?.preferences);
+  const preferences = useStore(store, selectPreferences('isSongIndexingEnabled', 'showTrackNumberAsSongIndex'));
   const queue = useStore(store, (state) => state.localStorage.queue);
 
   const {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '@tanstack/react-store';
 
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
-import { store } from '../../store';
+import { store, selectPreferences } from '../../store';
 import {
   loadMix,
   loadSmartLists,
@@ -27,7 +27,7 @@ const SmartListPage = () => {
   const { t } = useTranslation();
   const { createQueue, playSong, addNewNotifications } = useContext(AppUpdateContext);
   const page = useStore(store, (state) => state.currentlyActivePage);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isSongIndexingEnabled'));
   const which = (page.data?.list as SmartListId | 'mix' | undefined) ?? 'mix';
   const mix = useStore(mixStore, (s) => s);
   const lists = useStore(smartListsStore, (s) => s);

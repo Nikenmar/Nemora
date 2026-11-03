@@ -20,7 +20,7 @@ import EditingLyricsLine from './EditingLyricsLine';
 import Button from '../Button';
 import LyricsEditingPageDurationCounter from './LyricsEditingPageDurationCounter';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const LyricsEditorHelpPrompt = lazy(() => import('./LyricsEditorHelpPrompt'));
 const SensitiveActionConfirmPrompt = lazy(() => import('../SensitiveActionConfirmPrompt'));
@@ -55,7 +55,7 @@ const LyricsEditingPage = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
   const currentSongData = useStore(store, (state) => state.currentSongData);
   const lyricsEditorSettings = useStore(store, (state) => state.localStorage.lyricsEditorSettings);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('doNotShowHelpPageOnLyricsEditorStartUp'));
   const playback = useStore(store, (state) => state.localStorage.playback);
 
   const { changePromptMenuData, playSong, updateCurrentlyActivePageData, updateContextMenuData } =

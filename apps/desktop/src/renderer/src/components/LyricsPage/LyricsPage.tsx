@@ -18,7 +18,7 @@ import { type LyricData } from '../LyricsEditingPage/LyricsEditingPage';
 import { isLyricsEnhancedSynced } from '../../../../common/isLyricsSynced';
 import useSkipLyricsLines from '../../hooks/useSkipLyricsLines';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const { metadataEditingSupportedExtensions } = appPreferences;
 
@@ -33,7 +33,7 @@ let isScrollingByCode = false;
 // });
 
 const LyricsPage = () => {
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('autoConvertLyrics', 'autoTranslateLyrics', 'lyricsAutomaticallySaveState'));
   const currentSongData = useStore(store, (state) => state.currentSongData);
 
   const { addNewNotifications, updateCurrentlyActivePageData, changeCurrentActivePage, changePromptMenuData } =

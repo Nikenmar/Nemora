@@ -10,7 +10,7 @@ import SongInfoContainer from './containers/SongInfoContainer';
 import SeekBarSlider from '../SeekBarSlider';
 import AmbientLayer from './containers/AmbientLayer';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 // type Props = {};
 
@@ -23,7 +23,7 @@ const FullScreenPlayer = () =>
   {
     const isCurrentSongPlaying = useStore(store, (state) => state.player.isCurrentSongPlaying);
     const currentSongData = useStore(store, (state) => state.currentSongData);
-    const preferences = useStore(store, (state) => state.localStorage.preferences);
+    const preferences = useStore(store, selectPreferences('allowToPreventScreenSleeping', 'isAmbientFullScreen', 'isReducedMotion'));
     const isOnBatteryPower = useStore(store, (state) => state.isOnBatteryPower);
 
     const [isLyricsVisible, setIsLyricsVisible] = useState(true);

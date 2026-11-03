@@ -9,7 +9,7 @@ import {
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import Button from '../Button';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 const Notification = (props: AppNotification) => {
   const {
@@ -23,7 +23,7 @@ const Notification = (props: AppNotification) => {
     type = 'DEFAULT',
     progressBarData = { total: 100, value: 50 }
   } = props;
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('isReducedMotion'));
   const { updateNotifications } = useContext(AppUpdateContext);
 
   const notificationRef = useRef(null as HTMLDivElement | null);

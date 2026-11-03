@@ -12,7 +12,7 @@ import { cn } from './ui/cn';
 import { AppUpdateContext } from '../contexts/AppUpdateContext';
 import debounce from '../utils/debounce';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 type Props = {
   id: string;
@@ -23,7 +23,7 @@ type Props = {
 
 const SeekBarSlider = (props: Props) => {
   const currentSongData = useStore(store, (state) => state.currentSongData);
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('seekbarScrollInterval'));
 
   const { updateSongPosition } = useContext(AppUpdateContext);
 

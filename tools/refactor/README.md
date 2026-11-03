@@ -10,6 +10,7 @@ cannot pass all of them is not made.
 | IPC trace | `node tools/redesign/shots.mjs --label <x> --exe target/release/nemora.exe --probe tools/refactor/ipc-tour.js --ipc-trace E:/tmp/ipc-<x>.json` for the old exe, the new one, the old again; then `node tools/refactor/ipc-diff.mjs E:/tmp/ipc-old1.json E:/tmp/ipc-old2.json -- E:/tmp/ipc-<x>.json` | 0 differences |
 | Pixels | `node tools/redesign/shots.mjs --label <x> --exe target/release/nemora.exe`, then `node tools/refactor/pixel-diff.mjs base1 <x> --stable --out E:/tmp/pixdiff-<x>` | 0 differing among the stable shots; dynamic ones looked at |
 | Core and app | `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --locked`, `npm --prefix apps/desktop run check-types`, `npm --prefix apps/desktop run lint -- --max-warnings 0`, `node tools/licenses/licenses.mjs --check` | clean |
+| Render counts | `node tools/redesign/shots.mjs --label <x> --exe <exe> --probe tools/refactor/render-tour.js --render-count` for the build before and after | fewer or equal on every step; ordinary use (seek, play, pause) unchanged |
 | IPC types | `cargo test -p nemora-desktop --test desktop ipc_types` (the generated file is what the commands say), then `node tools/refactor/ipc-types-check.mjs` | 0 differing; each explained one has its reason in `ipc-types-explained.json` |
 
 - **The IPC trace** is read from outside the page (CDP Network, the `ipc.localhost` POSTs Tauri 2

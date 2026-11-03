@@ -6,7 +6,7 @@ import storage from '../utils/localStorage';
 import Button from './Button';
 import Checkbox from './Checkbox';
 import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
+import { store, selectPreferences } from '@renderer/store';
 
 interface OpenLinkConfirmPromptProps {
   link: string;
@@ -16,7 +16,7 @@ interface OpenLinkConfirmPromptProps {
 
 const OpenLinkConfirmPrompt = (props: OpenLinkConfirmPromptProps) => {
   const { title, link, buttonClassName } = props;
-  const preferences = useStore(store, (state) => state.localStorage.preferences);
+  const preferences = useStore(store, selectPreferences('doNotVerifyWhenOpeningLinks'));
   const { changePromptMenuData } = useContext(AppUpdateContext);
   const { t } = useTranslation();
 
