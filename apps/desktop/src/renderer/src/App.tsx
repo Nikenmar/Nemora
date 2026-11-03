@@ -3,7 +3,6 @@ import {
   type DragEvent,
   type ReactNode,
   Suspense,
-  lazy,
   useCallback,
   useEffect,
   useMemo,
@@ -20,7 +19,8 @@ import { appPreferences } from '../../../package.json';
 import { registerBenchApp } from './other/bench';
 import { registerShots } from './other/shots';
 import { applyCoverLight } from './other/coverLight';
-import { setPlaybackClock } from './other/trackVisuals';
+// Evaluated here as before; app/bootstrap.ts sets the playback clock.
+import './other/trackVisuals';
 import { applyAccent } from './other/accentPalette';
 import { withViewTransition } from './other/viewTransition';
 import { installSharedCovers } from './other/motion';
@@ -44,16 +44,13 @@ import ErrorBoundary from './components/ErrorBoundary';
 import toggleSongIsFavorite from './other/toggleSongIsFavorite';
 import SuspenseLoader from './components/SuspenseLoader';
 
-// ? PROMPTS
-const UnsupportedFileMessagePrompt = lazy(
-  () => import('./components/UnsupportedFileMessagePrompt')
-);
-const SongUnplayableErrorPrompt = lazy(() => import('./components/SongUnplayableErrorPrompt'));
-const AppShortcutsPrompt = lazy(() => import('./components/SettingsPage/AppShortcutsPrompt'));
-
-// ? SCREENS
-const MiniPlayer = lazy(() => import('./components/MiniPlayer/MiniPlayer'));
-const FullScreenPlayer = lazy(() => import('./components/FullScreenPlayer/FullScreenPlayer'));
+// ? PROMPTS, SCREENS (app/lazyScreens.ts)
+import {
+  FullScreenPlayer,
+  MiniPlayer,
+  SongUnplayableErrorPrompt,
+  UnsupportedFileMessagePrompt
+} from './app/lazyScreens';
 
 // ? UTILS
 import roundTo from '../../common/roundTo';
@@ -69,65 +66,29 @@ import shuffleQueueRandomly from './other/shuffleQueueRandomly';
 import megaShuffleQueue from './other/megaShuffleQueue';
 import { loadShuffleData, smartShuffleData } from './other/smartShuffle';
 import { rememberedPosition, rememberPosition } from './other/resumePosition';
-import { registerSoundPlayer, setPlayingVersion } from './other/soundEffects';
+import { setPlayingVersion } from './other/soundEffects';
 import { ownVersionOf } from './other/songSound';
-import { applySavedCorrection } from './other/headphoneCorrection';
+import './other/headphoneCorrection';
 import { lyricsLibrary } from './components/SettingsPage/Settings/LyricsLibrary';
 import { startTrace } from './other/trace';
-import AudioPlayer from './other/player';
+import './other/player';
 import {
   freshMediaUrl,
-  nextRecoveryAction,
-  PlaybackRecoveryLedger
+  nextRecoveryAction
 } from './other/playbackRecovery';
 import { dispatch, store } from './store';
 import { type AppReducer } from './other/appReducer';
 
-// ? CONSTANTS
-const LOW_RESPONSE_DURATION = 100;
-const DURATION = 1000;
-
-// ? INITIALIZE PLAYER
-const player = new AudioPlayer();
-// Slowed & reverb (PLAN/18): the saved sound applies from the start.
-registerSoundPlayer(player);
-// Headphone correction (PLAN/18 D5), when the user turned it on.
-applySavedCorrection();
-setPlaybackClock(() => player.currentTime);
-/**
- * What has already been tried for the track that is failing right now.
- *
- * Cleared whenever a track actually plays, which is the point the previous
- * counter got wrong: it only ever incremented, so a session long enough to
- * collect six unrelated hiccups answered every later one with an error dialog.
- */
-const playbackRecovery = new PlaybackRecoveryLedger();
-
-// ? / / / / / / /  PLAYER DEFAULT OPTIONS / / / / / / / / / / / / / /
-// player.addEventListener('player/trackchange', (e) => {
-//   if ('detail' in e) {
-//     console.log(`player track changed to ${(e as DetailAvailableEvent<string>).detail}.`);
-//   }
-// });
-// / / / / / / / /
-
-const updateNetworkStatus = () => window.api.settingsHelpers.networkStatusChange(navigator.onLine);
-const syncUserData = () =>
-  window.api.userData
-    .getUserData()
-    .then((res) => {
-      if (!res) return undefined;
-
-      dispatch({ type: 'USER_DATA_CHANGE', data: res });
-      dispatch({ type: 'APP_THEME_CHANGE', data: res.theme });
-      return res;
-    })
-    .catch((err) => console.error(err));
-
-updateNetworkStatus();
-syncUserData();
-window.addEventListener('online', updateNetworkStatus);
-window.addEventListener('offline', updateNetworkStatus);
+// ? START (app/bootstrap.ts: the player, the recovery ledger, network status, user data)
+import {
+  DURATION,
+  LOW_RESPONSE_DURATION,
+  player,
+  playbackRecovery,
+  syncUserData
+} from './app/bootstrap';
+import { handleKeyboardShortcut } from './app/keyboardShortcuts';
+import { useNotifications } from './app/notifications';
 
 // console.log('Command line args', window.api.properties.commandLineArgs);
 
@@ -531,44 +492,8 @@ export default function App() {
     };
   }, []);
 
-  /**
-   * A notification that is already on screen is updated WHERE IT IS.
-   *
-   * It used to be removed and unshifted back to the front, so every update
-   * moved it to the top of the list. With one notification that is a no-op;
-   * with two live progress bars they swapped places several times a second, and
-   * each swap moves the DOM node, which restarts its entrance animation. The
-   * bars looked like they were being recreated. Order is now decided once, when
-   * a notification first appears; only genuinely new ones go to the front.
-   */
-  const addNewNotifications = useCallback((newNotifications: AppNotification[]) => {
-    if (newNotifications.length > 0) {
-      const maxNotifications = 4;
-      const current = store.state.notificationPanelData.notifications;
-      const replacements = new Map(newNotifications.map((x) => [x.id, x]));
-      const updated = current.map((existing) => replacements.get(existing.id) ?? existing);
-      const known = new Set(current.map((x) => x.id));
-      const fresh = newNotifications.filter((x) => !known.has(x.id));
-      const resultNotifications = [...fresh, ...updated].slice(0, maxNotifications);
-
-      startTransition(() =>
-        dispatch({
-          type: 'ADD_NEW_NOTIFICATIONS',
-          data: resultNotifications
-        })
-      );
-    }
-  }, []);
-
-  const updateNotifications = useCallback(
-    (callback: (currentNotifications: AppNotification[]) => AppNotification[]) => {
-      const currentNotifications = store.state.notificationPanelData.notifications;
-      const updatedNotifications = callback(currentNotifications);
-
-      dispatch({ type: 'UPDATE_NOTIFICATIONS', data: updatedNotifications });
-    },
-    []
-  );
+  // app/notifications.ts
+  const { addNewNotifications, updateNotifications } = useNotifications(startTransition);
 
   /**
    * The single answer to "the player refused this track".
@@ -1744,144 +1669,26 @@ export default function App() {
   );
 
   const manageKeyboardShortcuts = useCallback(
-    (e: KeyboardEvent) => {
-      const ctrlCombinations = [
-        'ArrowUp',
-        'ArrowDown',
-        'ArrowRight',
-        'ArrowLeft',
-        'm',
-        's',
-        't',
-        'h',
-        'l',
-        'n',
-        'q',
-        'f',
-        '[',
-        ']',
-        '\\',
-        '/'
-      ];
-      const shiftCombinations = ['ArrowRight', 'ArrowLeft'];
-      const altCombinations = ['ArrowRight', 'ArrowLeft', 'Home'];
-      const functionCombinations = ['F12', 'F5'];
-      // Typing in a field keeps its keys: Space is a space there, Shift+arrows select text. Only
-      // Ctrl and Alt combinations and the function keys still reach the app.
-      const target = e.target as HTMLElement | null;
-      const isTyping =
-        !!target?.closest('input, textarea, select, [contenteditable="true"]') &&
-        !(target instanceof HTMLInputElement && ['checkbox', 'radio', 'range', 'button'].includes(target.type));
-      if (isTyping && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key)) return;
-      // A modal window (a game, a prompt) owns its plain keys: Space there never plays the song.
-      if (document.querySelector('dialog[open]') && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key))
-        return;
-      if (
-        (e.ctrlKey && ctrlCombinations.some((x) => e.key === x)) ||
-        (e.shiftKey && shiftCombinations.some((x) => e.key === x)) ||
-        (e.altKey && altCombinations.some((x) => e.key === x)) ||
-        functionCombinations.some((x) => e.key === x) ||
-        e.code === 'Space'
-      )
-        e.preventDefault();
-
-      // ctrl combinations
-      if (e.ctrlKey && e.key === 'ArrowUp')
-        updateVolume(player.volume + 0.05 <= 1 ? player.volume * 100 + 5 : 100);
-      else if (e.ctrlKey && e.key === 'ArrowDown')
-        updateVolume(player.volume - 0.05 >= 0 ? player.volume * 100 - 5 : 0);
-      else if (e.ctrlKey && e.key === 'm') toggleMutedState(!store.state.player.volume.isMuted);
-      else if (e.ctrlKey && e.key === 'ArrowRight') handleSkipForwardClick();
-      else if (e.ctrlKey && e.key === 'ArrowLeft') handleSkipBackwardClick();
-      else if (e.ctrlKey && e.key === 's') toggleShuffling();
-      else if (e.ctrlKey && e.key === 't') toggleRepeat();
-      else if (e.ctrlKey && e.key === 'h') toggleIsFavorite();
-      else if (e.ctrlKey && e.key === 'y') window.api.theme.changeAppTheme();
-      else if (e.ctrlKey && e.key === 'l') {
-        const currentlyActivePage =
-          store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex];
-        // Leaving Lyrics goes back to the page it was opened from, as the player's lyrics button does.
-        if (currentlyActivePage.pageTitle !== 'Lyrics') changeCurrentActivePage('Lyrics');
-        else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
-        else changeCurrentActivePage('Home');
-      } else if (e.ctrlKey && e.key === 'n')
-        updatePlayerType(store.state.playerType === 'mini' ? 'normal' : 'mini');
-      else if (e.ctrlKey && e.key === 'q') {
-        const currentlyActivePage =
-          store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex];
-        if (currentlyActivePage.pageTitle !== 'CurrentQueue') changeCurrentActivePage('CurrentQueue');
-        // Leaving the queue goes back to the page it was opened from, as Lyrics does.
-        else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
-        else changeCurrentActivePage('Home');
-      } else if (e.ctrlKey && e.key === 'f') changeCurrentActivePage('Search');
-      else if (e.ctrlKey && e.key === ']') {
-        let updatedPlaybackRate = store.state.localStorage.playback.playbackRate || 1;
-
-        if (updatedPlaybackRate + 0.05 > 4) updatedPlaybackRate = 4;
-        else updatedPlaybackRate += 0.05;
-
-        updatedPlaybackRate = parseFloat(updatedPlaybackRate.toFixed(2));
-
-        storage.setItem('playback', 'playbackRate', updatedPlaybackRate);
-        addNewNotifications([
-          {
-            id: 'playbackRate',
-            iconName: 'avg_pace',
-            content: t('notifications.playbackRateChanged', {
-              val: updatedPlaybackRate
-            })
-          }
-        ]);
-      } else if (e.ctrlKey && e.key === '[') {
-        let updatedPlaybackRate = store.state.localStorage.playback.playbackRate || 1;
-
-        if (updatedPlaybackRate - 0.05 < 0.25) updatedPlaybackRate = 0.25;
-        else updatedPlaybackRate -= 0.05;
-
-        updatedPlaybackRate = parseFloat(updatedPlaybackRate.toFixed(2));
-
-        storage.setItem('playback', 'playbackRate', updatedPlaybackRate);
-        addNewNotifications([
-          {
-            id: 'playbackRate',
-            iconName: 'avg_pace',
-            content: t('notifications.playbackRateChanged', {
-              val: updatedPlaybackRate
-            })
-          }
-        ]);
-      } else if (e.ctrlKey && e.key === '\\') {
-        storage.setItem('playback', 'playbackRate', 1);
-        addNewNotifications([
-          {
-            id: 'playbackRate',
-            iconName: 'avg_pace',
-            content: t('notifications.playbackRateReset')
-          }
-        ]);
-      } else if (e.ctrlKey && e.key === '/') changePromptMenuData(true, <AppShortcutsPrompt />);
-      // default combinations
-      else if (e.code === 'Escape') toggleMultipleSelections(false);
-      else if (e.code === 'Space') toggleSongPlayback();
-      // shift combinations
-      else if (e.shiftKey && e.key === 'ArrowLeft') {
-        if (player.currentTime - 10 >= 0) player.currentTime -= 10;
-        else player.currentTime = 0;
-      } else if (e.shiftKey && e.key === 'ArrowRight') {
-        if (player.currentTime + 10 < player.duration) player.currentTime += 10;
-      }
-      // alt combinations
-      else if (e.altKey && e.key === 'Home') updatePageHistoryIndex('home');
-      else if (e.altKey && e.key === 'ArrowLeft') updatePageHistoryIndex('decrement');
-      else if (e.altKey && e.key === 'ArrowRight') updatePageHistoryIndex('increment');
-      // function key combinations
-      else if (e.key === 'F5') {
-        e.preventDefault();
-        window.api.appControls.restartRenderer(`User request through F5.`);
-      } else if (e.key === 'F12' && !window.api.properties.isInDevelopment)
-        window.api.settingsHelpers.openDevtools();
-    },
+    (e: KeyboardEvent) =>
+      handleKeyboardShortcut(e, {
+        updateVolume,
+        toggleMutedState,
+        handleSkipForwardClick,
+        handleSkipBackwardClick,
+        toggleShuffling,
+        toggleRepeat,
+        toggleIsFavorite,
+        updatePlayerType,
+        changeCurrentActivePage,
+        changePromptMenuData,
+        toggleMultipleSelections,
+        toggleSongPlayback,
+        updatePageHistoryIndex,
+        addNewNotifications,
+        t
+      }),
     [
+
       updateVolume,
       toggleMutedState,
       handleSkipForwardClick,
