@@ -21,7 +21,14 @@ import { readFileSync } from 'node:fs';
 const CLOCKED = /^(stats_insights|stats_dashboard|taste_map|smart_lists|mix_of_day|mega_shuffle_data|shuffle_explain|skip_context|engine_position)$/;
 
 const load = (path) => JSON.parse(readFileSync(path, 'utf8')).trace;
-const key = (call) => (CLOCKED.test(call.cmd) ? `${call.cmd} ${call.args}` : `${call.cmd} ${call.args} -> ${call.result}`);
+/**
+ * Commands whose arguments are a snapshot taken on a timer: compared by name only. The persistence
+ * shadow's write (PLAN/21 P21.4) sends the state as it is 1.5 s after the last change; what it
+ * writes is checked by tools/refactor/persist-probe.js instead.
+ */
+const TIMED = /^(persist_write)$/;
+const key = (call) =>
+  TIMED.test(call.cmd) ? call.cmd : CLOCKED.test(call.cmd) ? `${call.cmd} ${call.args}` : `${call.cmd} ${call.args} -> ${call.result}`;
 const count = (trace) => {
   const map = new Map();
   for (const call of trace) map.set(key(call), (map.get(key(call)) ?? 0) + 1);

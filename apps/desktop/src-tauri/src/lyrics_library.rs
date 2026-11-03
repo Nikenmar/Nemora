@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use nemora_core::lyrics_job::{self, Outcome, Query};
-use serde_json::{Value, json};
 use tauri::{AppHandle, Manager, State};
 
 use crate::app::App;
@@ -98,7 +97,7 @@ pub async fn lyrics_library(
     app: State<'_, App>,
     job: State<'_, LyricsJob>,
     start: Option<bool>,
-) -> Res<Value> {
+) -> Res<LyricsLibraryStatus> {
     match start {
         Some(true) if !job.running.swap(true, Ordering::Relaxed) => {
             *job.error.lock().map_err(fail)? = None;
@@ -113,7 +112,18 @@ pub async fn lyrics_library(
     }
     let (done, total) = nemora_core::lyrics_job::progress(&app.read()).map_err(fail)?;
     let error = job.error.lock().map_err(fail)?.clone();
-    Ok(json!({ "done": done, "total": total, "running": job.running.load(Ordering::Relaxed), "error": error }))
+    Ok(LyricsLibraryStatus { done, error, running: job.running.load(Ordering::Relaxed), total })
+}
+
+/// How far the lyrics job got (PLAN/21: typed; fields in the order the untyped answer's keys had).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct LyricsLibraryStatus {
+    pub done: i64,
+    pub error: Option<String>,
+    pub running: bool,
+    pub total: i64,
 }
 
 /// The lyrics index (PLAN/19 D6): rebuilt in the background, in steps, whenever the stored lyrics

@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use serde_json::{Value, json};
 use tauri::{AppHandle, Manager, State};
 
 use crate::app::App;
@@ -73,7 +72,7 @@ pub async fn energy_analysis(
     app: State<'_, App>,
     job: State<'_, EnergyJob>,
     start: Option<bool>,
-) -> Res<Value> {
+) -> Res<EnergyStatus> {
     match start {
         Some(true) if !job.running.swap(true, Ordering::Relaxed) => {
             let running = job.running.clone();
@@ -83,5 +82,15 @@ pub async fn energy_analysis(
         _ => {}
     }
     let (analysed, total) = nemora_core::features::progress(&app.read()).map_err(fail)?;
-    Ok(json!({ "analysed": analysed, "total": total, "running": job.running.load(Ordering::Relaxed) }))
+    Ok(EnergyStatus { analysed, running: job.running.load(Ordering::Relaxed), total })
+}
+
+/// How far the energy analysis got (PLAN/21: typed; fields in the order the untyped answer's keys had).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct EnergyStatus {
+    pub analysed: i64,
+    pub running: bool,
+    pub total: i64,
 }

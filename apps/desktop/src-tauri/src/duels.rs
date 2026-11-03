@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 use tauri::{AppHandle, State};
 
 use crate::app::App;
-use crate::commands::{Res, fail, notify, rows_for, view};
+use crate::commands::{Outcome, Res, Success, fail, notify, rows_for, view};
 use crate::view::{View, asset_url, parse_view_id};
 
 /// A small xorshift generator: the matchmaker needs uniform draws, not cryptography.
@@ -86,14 +86,33 @@ pub async fn duel_pair(app: State<'_, App>, pinned_song_id: Option<String>, teac
 /// going on now reads as listening (`null` when none is).
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
-pub async fn skip_context(app: State<'_, App>) -> Res<Value> {
+pub async fn skip_context(app: State<'_, App>) -> Res<SkipContext> {
     let db = app.read();
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis() as i64);
     let (counted, ignored) = nemora_core::listening::summary(&db, now).map_err(fail)?;
     let current = nemora_core::listening::current(&db, now)
         .map_err(fail)?
-        .map(|c| json!({ "browsing": c.browsing, "listening": c.listening }));
-    Ok(json!({ "counted": counted, "ignored": ignored, "current": current }))
+        .map(|c| ListeningNow { browsing: c.browsing, listening: c.listening });
+    Ok(SkipContext { counted, current, ignored })
+}
+
+/// This week's plays the shuffle counted and ignored, and what is going on now (PLAN/21: typed;
+/// fields in the order the untyped answer's keys had).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct SkipContext {
+    pub counted: usize,
+    pub current: Option<ListeningNow>,
+    pub ignored: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct ListeningNow {
+    pub browsing: bool,
+    pub listening: f64,
 }
 
 /// Songs whose duels put them a tier away from where the user placed them (PLAN/15 T2).
@@ -340,9 +359,9 @@ pub fn tierlist_add(
 /// Saves the view's tierlist, keeping the pending placements it never saw in their tiers.
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
-pub fn tierlist_save(handle: AppHandle, app: State<'_, App>, tierlist: Value) -> Res<Value> {
+pub fn tierlist_save(handle: AppHandle, app: State<'_, App>, tierlist: Value) -> Res<Outcome> {
     let Some(id) = tierlist["tierlistId"].as_str().map(str::to_owned) else {
-        return Ok(json!({ "success": false, "message": "The tierlist has no id." }));
+        return Ok(Outcome { message: Some("The tierlist has no id.".to_owned()), success: false });
     };
     app.write(|db| {
         let stored = playlists::tierlists(db)?.into_iter().find(|(i, _)| *i == id).map(|(_, d)| d);
@@ -388,15 +407,15 @@ pub fn tierlist_save(handle: AppHandle, app: State<'_, App>, tierlist: Value) ->
     })
     .map_err(fail)?;
     notify(&handle, &["tierlists"]);
-    Ok(json!({ "success": true }))
+    Ok(Outcome { message: None, success: true })
 }
 
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
-pub fn tierlists_remove(handle: AppHandle, app: State<'_, App>, ids: Vec<String>) -> Res<Value> {
+pub fn tierlists_remove(handle: AppHandle, app: State<'_, App>, ids: Vec<String>) -> Res<Success> {
     app.write(|db| ids.iter().try_for_each(|id| playlists::delete_tierlist(db, id))).map_err(fail)?;
     notify(&handle, &["tierlists"]);
-    Ok(json!({ "success": true }))
+    Ok(Success { success: true })
 }
 
 /// Card pictures for a tierlist: the large cover thumbnail of each song.

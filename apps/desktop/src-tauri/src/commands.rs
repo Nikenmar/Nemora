@@ -295,7 +295,7 @@ pub fn artists_toggle_like(
     app: State<'_, App>,
     artist_ids: Vec<String>,
     like: Option<bool>,
-) -> Res<Value> {
+) -> Res<LikesChanged> {
     let (mut likes, mut dislikes) = (Vec::new(), Vec::new());
     app.write(|db| {
         let mut liked: Vec<String> = playlists::shared_setting(db, LIKED_ARTISTS)?
@@ -315,7 +315,17 @@ pub fn artists_toggle_like(
     })
     .map_err(fail)?;
     notify(&handle, &["artists/likes"]);
-    Ok(json!({ "likes": likes, "dislikes": dislikes }))
+    Ok(LikesChanged { dislikes, likes })
+}
+
+/// Which ids a like toggle liked and which it unliked (PLAN/21: typed; fields in the order the
+/// untyped answer's keys had).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct LikesChanged {
+    pub dislikes: Vec<String>,
+    pub likes: Vec<String>,
 }
 
 /// Keeps the pictures the network found for an artist.
@@ -652,12 +662,12 @@ pub fn playlist_remove_song(
     app: State<'_, App>,
     playlist_id: String,
     song_id: String,
-) -> Res<Value> {
+) -> Res<Success> {
     let song = parse_view_id(&song_id).0.to_owned();
     if playlist_id == "Favorites" {
         app.write(|db| playlists::set_favorite(db, &song, false)).map_err(fail)?;
         notify(&handle, &["songs/likes", "playlists/favorites"]);
-        return Ok(json!({ "success": true }));
+        return Ok(Success { success: true });
     }
     let removed = app
         .write(|db| {
@@ -671,7 +681,25 @@ pub fn playlist_remove_song(
         })
         .map_err(fail)?;
     notify(&handle, &["playlists/deletedSong"]);
-    Ok(json!({ "success": removed }))
+    Ok(Success { success: removed })
+}
+
+/// Whether it happened (PLAN/21: typed).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct Success {
+    pub success: bool,
+}
+
+/// Whether it happened, and why not (PLAN/21: typed; no `message` when it did).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct Outcome {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    pub success: bool,
 }
 
 #[tauri::command]
@@ -736,10 +764,10 @@ pub fn playlist_export(handle: AppHandle, app: State<'_, App>, playlist_id: Stri
 /// Clears the History playlist. The sessions stay: they are the statistics.
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
-pub fn history_clear(handle: AppHandle, app: State<'_, App>, now: i64) -> Res<Value> {
+pub fn history_clear(handle: AppHandle, app: State<'_, App>, now: i64) -> Res<Success> {
     app.write(|db| nemora_core::settings::set_device(db, "history.clearedAt", &json!(now))).map_err(fail)?;
     notify(&handle, &["playlists/history"]);
-    Ok(json!({ "success": true }))
+    Ok(Success { success: true })
 }
 
 /// Recomputes Rediscover: songs the user rated or loved but has not heard for `threshold_days`.
@@ -750,13 +778,21 @@ pub fn rediscover_refresh(
     app: State<'_, App>,
     threshold_days: Option<i64>,
     today: String,
-) -> Res<Value> {
+) -> Res<Count> {
     let days = threshold_days.filter(|&d| d > 0).unwrap_or(30);
     let songs = nemora_core::rediscover::stored(&app.read(), days, &today).map_err(fail)?;
     let count = songs.len();
     app.write(|db| nemora_core::settings::set_device(db, "rediscover.songs", &json!(songs))).map_err(fail)?;
     notify(&handle, &["playlists/rediscover"]);
-    Ok(json!({ "count": count }))
+    Ok(Count { count })
+}
+
+/// How many (PLAN/21: typed).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct Count {
+    pub count: usize,
 }
 
 /// The Rediscover list as last refreshed.
@@ -780,17 +816,27 @@ fn song_for_path(db: &Db, path: &str) -> nemora_core::Result<Option<String>> {
 /// finds (the `.lrc` file, the tags, LRCLIB when `network`), which it then keeps.
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
-pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res<Value> {
+pub async fn lyrics_get(app: State<'_, App>, path: String, network: bool) -> Res<Option<StoredLyrics>> {
     // A benchmark run is offline (bench.rs).
     let network = network && crate::bench::dir().is_none();
-    let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(Value::Null) };
+    let Some(song) = song_for_path(&app.read(), &path).map_err(fail)? else { return Ok(None) };
     if app.write(|db| nemora_core::lyrics::get(db, &song, network)).map_err(fail)?.is_none() {
-        return Ok(Value::Null);
+        return Ok(None);
     }
     let Some((text, source)) = nemora_core::lyrics::stored(&app.read(), &song).map_err(fail)? else {
-        return Ok(Value::Null);
+        return Ok(None);
     };
-    Ok(json!({ "synced": nemora_core::lyrics::is_synced(&text), "text": text, "source": source }))
+    Ok(Some(StoredLyrics { source, synced: nemora_core::lyrics::is_synced(&text), text }))
+}
+
+/// A song's stored lyrics: the text, where it came from, whether it is synced (PLAN/21: typed).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct StoredLyrics {
+    pub source: String,
+    pub synced: bool,
+    pub text: String,
 }
 
 /// Keeps lyrics the view found elsewhere (Musixmatch) under their source; like any found text they
@@ -934,7 +980,7 @@ pub fn stats_dashboard(app: State<'_, App>, time_range: String, today: String) -
 /// Writes this profile as a stats export (`nora-cmr-stats-export`), readable by 1.x and Android.
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
-pub fn stats_export(app: State<'_, App>, path: String, tier_shuffle_intensity: Option<f64>, now: i64) -> Res<Value> {
+pub fn stats_export(app: State<'_, App>, path: String, tier_shuffle_intensity: Option<f64>, now: i64) -> Res<Success> {
     use nemora_core::transfer::{ExportOptions, export_stats};
     let export_id = nemora_core::ids::random();
     let text = export_stats(
@@ -948,7 +994,7 @@ pub fn stats_export(app: State<'_, App>, path: String, tier_shuffle_intensity: O
     )
     .map_err(fail)?;
     std::fs::write(&path, text).map_err(fail)?;
-    Ok(json!({ "success": true }))
+    Ok(Success { success: true })
 }
 
 /// Merges a stats export into this profile. Counters merge by maximum per source and day, so the
@@ -1096,7 +1142,7 @@ pub fn favorites_toggle(
     app: State<'_, App>,
     song_ids: Vec<String>,
     like: Option<bool>,
-) -> Res<Value> {
+) -> Res<LikesChanged> {
     let (mut likes, mut dislikes) = (Vec::new(), Vec::new());
     app.write(|db| {
         let current: std::collections::HashSet<String> = playlists::favorites(db)?.into_iter().collect();
@@ -1110,7 +1156,7 @@ pub fn favorites_toggle(
     })
     .map_err(fail)?;
     notify(&handle, &["songs/likes", "playlists"]);
-    Ok(json!({ "likes": likes, "dislikes": dislikes }))
+    Ok(LikesChanged { dislikes, likes })
 }
 
 #[tauri::command]
@@ -1245,7 +1291,7 @@ pub async fn songs_delete_files(
     app: State<'_, App>,
     paths: Vec<String>,
     permanent: bool,
-) -> Res<Value> {
+) -> Res<Outcome> {
     for path in &paths {
         let result = if permanent {
             std::fs::remove_file(path).map_err(fail)
@@ -1253,12 +1299,12 @@ pub async fn songs_delete_files(
             crate::shellops::trash_item(path.clone())
         };
         if let Err(error) = result {
-            return Ok(json!({ "success": false, "message": error }));
+            return Ok(Outcome { message: Some(error), success: false });
         }
     }
     app.scan().map_err(fail)?;
     notify(&handle, &["songs/deletedSong", "songs", "artists", "albums", "genres"]);
-    Ok(json!({ "success": true }))
+    Ok(Outcome { message: None, success: true })
 }
 
 /// Brings the library in line with the music folders.
@@ -1315,5 +1361,52 @@ mod tests {
         // "Newest" and Home's Recently Added send `dateAddedAscending`; "Oldest" sends the other.
         assert_eq!(song_sort(Some("dateAddedAscending"), "2026-10-01"), SongSort::AddedDesc);
         assert_eq!(song_sort(Some("dateAddedDescending"), "2026-10-01"), SongSort::AddedAsc);
+    }
+}
+
+/// PLAN/21: the typed answers write the same JSON, byte for byte, as the untyped ones did.
+#[cfg(test)]
+mod typed_answers {
+    use super::*;
+
+    fn same(typed: impl serde::Serialize, untyped: Value) {
+        assert_eq!(serde_json::to_string(&typed).unwrap(), serde_json::to_string(&untyped).unwrap());
+    }
+
+    #[test]
+    fn as_the_untyped_answers_wrote_them() {
+        let (likes, dislikes) = (vec!["a".to_owned()], vec!["b".to_owned(), "c".to_owned()]);
+        same(
+            LikesChanged { dislikes: dislikes.clone(), likes: likes.clone() },
+            json!({ "likes": likes, "dislikes": dislikes }),
+        );
+        same(Success { success: false }, json!({ "success": false }));
+        same(Count { count: 7 }, json!({ "count": 7 }));
+        same(
+            StoredLyrics { source: "lrclib".into(), synced: true, text: "[00:01.00]x".into() },
+            json!({ "synced": true, "text": "[00:01.00]x", "source": "lrclib" }),
+        );
+        same(Outcome { message: None, success: true }, json!({ "success": true }));
+        same(Outcome { message: Some("no".into()), success: false }, json!({ "success": false, "message": "no" }));
+        same(
+            crate::lyrics_library::LyricsLibraryStatus { done: 3, error: None, running: true, total: 9 },
+            json!({ "done": 3, "total": 9, "running": true, "error": Option::<String>::None }),
+        );
+        same(
+            crate::energy::EnergyStatus { analysed: 2, running: false, total: 5 },
+            json!({ "analysed": 2, "total": 5, "running": false }),
+        );
+        same(
+            crate::duels::SkipContext {
+                counted: 4,
+                current: Some(crate::duels::ListeningNow { browsing: false, listening: 0.75 }),
+                ignored: 1,
+            },
+            json!({ "counted": 4, "ignored": 1, "current": json!({ "browsing": false, "listening": 0.75 }) }),
+        );
+        same(
+            crate::duels::SkipContext { counted: 0, current: None, ignored: 0 },
+            json!({ "counted": 0, "ignored": 0, "current": Option::<Value>::None }),
+        );
     }
 }

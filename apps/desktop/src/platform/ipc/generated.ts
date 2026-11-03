@@ -14,6 +14,11 @@ export type CoreQueue = {
 	positionMs: number,
 };
 
+/**  How many (PLAN/21: typed). */
+export type Count = {
+	count: number,
+};
+
 /**  Bundled pictures the view shows where there is no cover; their URLs exist only in the bundle. */
 export type DefaultArtwork = {
 	song: string,
@@ -70,6 +75,13 @@ export type DiscordActivity_Serialize = {
 export type DiscordButton = {
 	label: string,
 	url: string,
+};
+
+/**  How far the energy analysis got (PLAN/21: typed; fields in the order the untyped answer's keys had). */
+export type EnergyStatus = {
+	analysed: number,
+	running: boolean,
+	total: number,
 };
 
 export type Entry = Entry_Serialize | Entry_Deserialize;
@@ -199,7 +211,40 @@ export type Island_Serialize = {
 
 export type Kind = "peak" | "lowShelf" | "highShelf";
 
+/**
+ *  Which ids a like toggle liked and which it unliked (PLAN/21: typed; fields in the order the
+ *  untyped answer's keys had).
+ */
+export type LikesChanged = {
+	dislikes: string[],
+	likes: string[],
+};
+
 export type List = "rediscover" | "onRepeat" | "caughtYou" | "thisHour" | "energetic" | "calm" | "neverHeard";
+
+export type ListeningNow = {
+	browsing: boolean,
+	listening: number,
+};
+
+/**  How far the lyrics job got (PLAN/21: typed; fields in the order the untyped answer's keys had). */
+export type LyricsLibraryStatus = LyricsLibraryStatus_Serialize | LyricsLibraryStatus_Deserialize;
+
+/**  How far the lyrics job got (PLAN/21: typed; fields in the order the untyped answer's keys had). */
+export type LyricsLibraryStatus_Deserialize = {
+	done: number,
+	error?: string | null,
+	running: boolean,
+	total: number,
+};
+
+/**  How far the lyrics job got (PLAN/21: typed; fields in the order the untyped answer's keys had). */
+export type LyricsLibraryStatus_Serialize = {
+	done: number,
+	error: string | null,
+	running: boolean,
+	total: number,
+};
 
 /**  What the order reads, as the view's `MegaShuffleData` (Smart Shuffle's `shuffle_data` answer). */
 export type MegaData = MegaData_Serialize | MegaData_Deserialize;
@@ -337,6 +382,21 @@ export type Options_Serialize = {
 	followMap: boolean,
 	/**  C2: the view orders the queue without jumps in energy (the core sends the numbers). */
 	energyFlow: boolean,
+};
+
+/**  Whether it happened, and why not (PLAN/21: typed; no `message` when it did). */
+export type Outcome = Outcome_Serialize | Outcome_Deserialize;
+
+/**  Whether it happened, and why not (PLAN/21: typed; no `message` when it did). */
+export type Outcome_Deserialize = {
+	message?: string | null,
+	success: boolean,
+};
+
+/**  Whether it happened, and why not (PLAN/21: typed; no `message` when it did). */
+export type Outcome_Serialize = {
+	message?: string,
+	success: boolean,
 };
 
 /**  One pair the user marked in duels; only `tooDifferent` keeps two songs apart. */
@@ -528,6 +588,32 @@ export type SessionInput_Serialize = {
 	startReason: string | null,
 };
 
+/**
+ *  This week's plays the shuffle counted and ignored, and what is going on now (PLAN/21: typed;
+ *  fields in the order the untyped answer's keys had).
+ */
+export type SkipContext = SkipContext_Serialize | SkipContext_Deserialize;
+
+/**
+ *  This week's plays the shuffle counted and ignored, and what is going on now (PLAN/21: typed;
+ *  fields in the order the untyped answer's keys had).
+ */
+export type SkipContext_Deserialize = {
+	counted: number,
+	current?: ListeningNow | null,
+	ignored: number,
+};
+
+/**
+ *  This week's plays the shuffle counted and ignored, and what is going on now (PLAN/21: typed;
+ *  fields in the order the untyped answer's keys had).
+ */
+export type SkipContext_Serialize = {
+	counted: number,
+	current: ListeningNow | null,
+	ignored: number,
+};
+
 export type SmartList = SmartList_Serialize | SmartList_Deserialize;
 
 export type SmartList_Deserialize = {
@@ -585,6 +671,18 @@ export type Steering_Serialize = {
 	 *  neighbours, like a tierlist lens.
 	 */
 	lensSongs: string[],
+};
+
+/**  A song's stored lyrics: the text, where it came from, whether it is synced (PLAN/21: typed). */
+export type StoredLyrics = {
+	source: string,
+	synced: boolean,
+	text: string,
+};
+
+/**  Whether it happened (PLAN/21: typed). */
+export type Success = {
+	success: boolean,
 };
 
 export type TaskbarButtonState = TaskbarButtonState_Serialize | TaskbarButtonState_Deserialize;
@@ -753,7 +851,7 @@ export interface IpcCommands {
   artist_resolve_featuring: { args: { songId: string; featArtistNames: string[]; removeFeatInfoInTitle?: boolean | null; }; ret: Value };
   artist_resolve_separate: { args: { separateArtistId: string; separateArtistNames: string[]; }; ret: Value };
   artist_set_online_artworks: { args: { artistId: string; artworks: Value; }; ret: null };
-  artists_toggle_like: { args: { artistIds: string[]; like?: boolean | null; }; ret: Value };
+  artists_toggle_like: { args: { artistIds: string[]; like?: boolean | null; }; ret: LikesChanged };
   artwork_save: { args: { source: string; destination: string; }; ret: null };
   autoeq_index: { args: { refresh: boolean; }; ret: Headphone_Serialize[] };
   autoeq_profile: { args: { headphone: Headphone_Deserialize; }; ret: string };
@@ -779,7 +877,7 @@ export interface IpcCommands {
   duel_select_anchor: { args: { candidates: Value[]; excluded?: string[] | null; }; ret: string | null };
   duel_skip: { args: { songAId: string; songBId: string; reason?: string | null; }; ret: null };
   duel_submit: { args: { songAId: string; songBId: string; winnerId: string; }; ret: Value };
-  energy_analysis: { args: { start?: boolean | null; }; ret: Value };
+  energy_analysis: { args: { start?: boolean | null; }; ret: EnergyStatus };
   engine_clipped: { args: Record<string, never>; ret: boolean };
   engine_correction: { args: { text?: string | null; }; ret: null };
   engine_equalizer: { args: { gains: [number, number, number, number, number, number, number, number, number, number]; }; ret: null };
@@ -793,7 +891,7 @@ export interface IpcCommands {
   engine_stop: { args: Record<string, never>; ret: null };
   engine_varispeed: { args: { factor: number; }; ret: null };
   engine_volume: { args: { percent: number; muted: boolean; }; ret: null };
-  favorites_toggle: { args: { songIds: string[]; like?: boolean | null; }; ret: Value };
+  favorites_toggle: { args: { songIds: string[]; like?: boolean | null; }; ret: LikesChanged };
   folders_add: { args: { paths: string[]; }; ret: Value[] };
   folders_remove: { args: { path: string; }; ret: null };
   get_power_state: { args: Record<string, never>; ret: PowerState };
@@ -801,7 +899,7 @@ export interface IpcCommands {
   guessr_record: { args: { songId: string; attempts?: number | null; poolKind?: string | null; }; ret: null };
   guessr_round: { args: { options: Value; }; ret: Value };
   guessr_search: { args: { query: string; limit?: number | null; offset?: number | null; }; ret: Value };
-  history_clear: { args: { now: number; }; ret: Value };
+  history_clear: { args: { now: number; }; ret: Success };
   legacy_import_state: { args: Record<string, never>; ret: Value };
   library_albums: { args: { idsOrTitles?: string[] | null; sortType?: string | null; }; ret: Value[] };
   library_artists: { args: { idsOrNames?: string[] | null; sortType?: string | null; filterType?: string | null; limit?: number | null; }; ret: Value[] };
@@ -816,8 +914,8 @@ export interface IpcCommands {
   library_song_for_playback: { args: { songId: string; }; ret: Value };
   library_song_info: { args: { songIds: string[]; sortType?: string | null; filterType?: string | null; limit?: number | null; preserveIdOrder?: boolean | null; today: string; }; ret: Value[] };
   library_songs: { args: { sortType?: string | null; filterType?: string | null; start?: number | null; end?: number | null; today: string; }; ret: Value };
-  lyrics_get: { args: { path: string; network: boolean; }; ret: Value };
-  lyrics_library: { args: { start?: boolean | null; }; ret: Value };
+  lyrics_get: { args: { path: string; network: boolean; }; ret: StoredLyrics | null };
+  lyrics_library: { args: { start?: boolean | null; }; ret: LyricsLibraryStatus_Serialize };
   lyrics_save: { args: { path: string; text: string; }; ret: boolean };
   lyrics_search: { args: { query: string; limit?: number | null; }; ret: Hit_Serialize[] };
   lyrics_store_found: { args: { path: string; text: string; source: string; }; ret: boolean };
@@ -834,27 +932,27 @@ export interface IpcCommands {
   playlist_export: { args: { playlistId: string; path: string; }; ret: null };
   playlist_import: { args: { path: string; }; ret: null };
   playlist_remove: { args: { playlistIds: string[]; }; ret: boolean };
-  playlist_remove_song: { args: { playlistId: string; songId: string; }; ret: Value };
+  playlist_remove_song: { args: { playlistId: string; songId: string; }; ret: Success };
   playlist_rename: { args: { playlistId: string; name: string; }; ret: null };
   playlist_set_artwork: { args: { playlistId: string; path: string; }; ret: Value };
-  rediscover_refresh: { args: { thresholdDays?: number | null; today: string; }; ret: Value };
+  rediscover_refresh: { args: { thresholdDays?: number | null; today: string; }; ret: Count };
   reveal_folder_in_file_explorer: { args: { path: string; }; ret: null };
   reveal_song_in_file_explorer: { args: { path: string; }; ret: null };
   secrets_scrypt_key: { args: { secret: string; }; ret: number[] };
   set_taskbar_buttons: { args: { state: TaskbarButtonState_Deserialize; }; ret: null };
   shuffle_data: { args: { songIds: string[]; intensity?: number | null; options?: Options_Deserialize | null; steering?: Steering_Deserialize | null; }; ret: Value };
   shuffle_explain: { args: { songIds: string[]; intensity?: number | null; options?: Options_Deserialize | null; }; ret: Value };
-  skip_context: { args: Record<string, never>; ret: Value };
+  skip_context: { args: Record<string, never>; ret: SkipContext_Serialize };
   smart_lists: { args: { options?: Options_Deserialize | null; intensity?: number | null; }; ret: SmartList_Serialize[] };
   smtc_update: { args: { now?: NowPlaying | null; }; ret: null };
   song_from_path: { args: { path: string; }; ret: Value };
   song_moments: { args: { songId: string; }; ret: ([number, number])[] };
   song_reparse: { args: { path: string; }; ret: Value };
-  songs_delete_files: { args: { paths: string[]; permanent: boolean; }; ret: Value };
+  songs_delete_files: { args: { paths: string[]; permanent: boolean; }; ret: Outcome_Serialize };
   start_file_drag: { args: { paths: string[]; artwork?: string | null; }; ret: null };
   startup_args: { args: Record<string, never>; ret: string[] };
   stats_dashboard: { args: { timeRange: string; today: string; }; ret: Value };
-  stats_export: { args: { path: string; tierShuffleIntensity?: number | null; now: number; }; ret: Value };
+  stats_export: { args: { path: string; tierShuffleIntensity?: number | null; now: number; }; ret: Success };
   stats_import: { args: { path: string; }; ret: Value };
   stats_insights: { args: Record<string, never>; ret: Insight_Serialize[] };
   stats_recap: { args: { period: Value; utcOffsetMin: number; }; ret: Value };
@@ -871,9 +969,9 @@ export interface IpcCommands {
   tier_suggestions: { args: Record<string, never>; ret: TierSuggestion[] };
   tierlist_add: { args: { name: string; sourcePlaylistIds?: string[] | null; labelMode?: string | null; sourceFolderPaths?: string[] | null; }; ret: Value };
   tierlist_artworks: { args: { songIds: string[]; }; ret: { [key in string]: string } };
-  tierlist_save: { args: { tierlist: Value; }; ret: Value };
+  tierlist_save: { args: { tierlist: Value; }; ret: Outcome_Serialize };
   tierlists_list: { args: { ids?: string[] | null; sortType?: string | null; }; ret: Value[] };
-  tierlists_remove: { args: { ids: string[]; }; ret: Value };
+  tierlists_remove: { args: { ids: string[]; }; ret: Success };
   toggle_auto_launch: { args: { enabled: boolean; }; ret: null };
   tournament_overview: { args: Record<string, never>; ret: Value };
   tournament_resume: { args: Record<string, never>; ret: Value };
@@ -900,18 +998,14 @@ export type JsonAnswerCommand =
   | 'artist_resolve_duplicates'
   | 'artist_resolve_featuring'
   | 'artist_resolve_separate'
-  | 'artists_toggle_like'
   | 'bench_config'
   | 'duel_pair'
   | 'duel_pair_by_ids'
   | 'duel_submit'
-  | 'energy_analysis'
-  | 'favorites_toggle'
   | 'folders_add'
   | 'guessr_pools'
   | 'guessr_round'
   | 'guessr_search'
-  | 'history_clear'
   | 'legacy_import_state'
   | 'library_albums'
   | 'library_artists'
@@ -926,30 +1020,21 @@ export type JsonAnswerCommand =
   | 'library_song_for_playback'
   | 'library_song_info'
   | 'library_songs'
-  | 'lyrics_get'
-  | 'lyrics_library'
   | 'play_record'
   | 'playlist_create'
-  | 'playlist_remove_song'
   | 'playlist_set_artwork'
-  | 'rediscover_refresh'
   | 'shuffle_data'
   | 'shuffle_explain'
-  | 'skip_context'
   | 'song_from_path'
   | 'song_reparse'
-  | 'songs_delete_files'
   | 'stats_dashboard'
-  | 'stats_export'
   | 'stats_import'
   | 'stats_recap'
   | 'storage_usage'
   | 'tags_get'
   | 'tags_update'
   | 'tierlist_add'
-  | 'tierlist_save'
   | 'tierlists_list'
-  | 'tierlists_remove'
   | 'tournament_overview'
   | 'tournament_resume'
   | 'tournament_start'
