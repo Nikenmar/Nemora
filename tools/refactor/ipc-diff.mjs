@@ -28,7 +28,24 @@ const count = (trace) => {
   return map;
 };
 
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).filter((a) => a !== '--sequence');
+// `--sequence`: the commands in order, by name only - for walks whose payloads carry the clock
+// (playback: Discord timestamps, positions, session facts), where two runs of one build differ in
+// values but never in which commands go out and when.
+if (process.argv.includes('--sequence')) {
+  const split = args.indexOf('--');
+  const olds = (split >= 0 ? args.slice(0, split) : args.slice(0, 1)).map(load).map((t) => t.map((c) => c.cmd));
+  const now = load(split >= 0 ? args[split + 1] : args[1]).map((c) => c.cmd);
+  // A run's capture may stop a call early or late: the shorter is compared as a prefix.
+  const agrees = (old) => {
+    const n = Math.min(old.length, now.length);
+    return old.slice(0, n).join(' ') === now.slice(0, n).join(' ') && Math.abs(old.length - now.length) <= 1;
+  };
+  const ok = olds.some(agrees);
+  console.log(`IPC sequence: ${now.length} commands, ${ok ? 'the same as an old run' : 'DIFFERENT from every old run'}`);
+  if (!ok) for (const old of olds) console.log(`  old: ${old.join(' ')}\n  new: ${now.join(' ')}`);
+  process.exit(ok ? 0 : 1);
+}
 const split = args.indexOf('--');
 const beforePaths = split >= 0 ? args.slice(0, split) : args.slice(0, 1);
 const afterPath = split >= 0 ? args[split + 1] : args[1];
