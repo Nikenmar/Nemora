@@ -5,15 +5,20 @@
  * random draws go to the core's port (`mega_order`), and any order that comes back different is
  * written to the shadow log (`nemora.shadow.megaOrder`, the last 50, and the console).
  *
- * The switch to the core's order waits until the log has stayed empty through the user's daily
- * use: it makes building a shuffled queue wait for the core's answer, so it is a change of its own,
- * not a flag here. The TypeScript order stays as the oracle until then.
+ * The switch, `nemora.megaOrder.fromCore` = "1" in localStorage (off), makes the core's order the
+ * one that plays: the TypeScript order still comes first, at once, so building a queue never waits;
+ * when the core's answer differs it replaces it, as long as the queue is still that order and still
+ * on its first song (both orders keep the current song first, so the change is not heard). The
+ * TypeScript order stays as the oracle until the switch has been on through daily use.
  */
 import { ipc } from '@platform/ipc';
 
 import megaShuffleQueue from './megaShuffleQueue';
+import { store } from '../store';
+import storage from '../utils/localStorage';
 
 export const SHADOW_LOG_KEY = 'nemora.shadow.megaOrder';
+export const FROM_CORE_KEY = 'nemora.megaOrder.fromCore';
 const LOG_LIMIT = 50;
 /** `Math.random` gives multiples of 2^-53: as whole numbers they cross JSON exactly. */
 const SCALE = 2 ** 53;
@@ -28,6 +33,26 @@ const log = (entry: { songs: number; firstDifference: number; detail: string }) 
     /* a full or blocked storage: the console still has it */
   }
   console.warn(`[mega order shadow] ${entry.songs} songs, first difference at ${entry.firstDifference}: ${entry.detail}`);
+};
+
+type Order = { shuffledQueue: string[]; positions: number[] };
+
+/**
+ * The switch on: the queue the TypeScript order made becomes the core's, if nothing changed it yet
+ * and it is still on its first song (the current one, first in both).
+ */
+export const adoptCoreOrder = (made: Order, core: Order): boolean => {
+  const queue = store.state.localStorage.queue;
+  const unchanged =
+    queue.queue.length === made.shuffledQueue.length && queue.queue.every((id, i) => id === made.shuffledQueue[i]);
+  if (!unchanged || (queue.currentSongIndex ?? 0) !== 0 || core.shuffledQueue[0] !== made.shuffledQueue[0]) return false;
+  storage.queue.setQueue({
+    ...queue,
+    queue: core.shuffledQueue,
+    ...(core.positions.length > 0 ? { queueBeforeShuffle: core.positions } : {})
+  });
+  console.info(`[mega order] the core's order adopted for ${core.shuffledQueue.length} songs`);
+  return true;
 };
 
 /** `megaShuffleQueue`, unchanged, with its draws recorded and the core asked for the same order. */
@@ -51,6 +76,7 @@ const shadowedMegaShuffleQueue = (songIds: string[], data: MegaShuffleData, curr
         if (!same) {
           const firstDifference = core.shuffledQueue.findIndex((id, i) => id !== result.shuffledQueue[i]);
           log({ songs: songIds.length, firstDifference, detail: exact ? 'same draws' : 'draws not whole multiples of 2^-53' });
+          if (localStorage.getItem(FROM_CORE_KEY) === '1') adoptCoreOrder(result, core);
         }
       })
       .catch((error: unknown) => console.warn('[mega order shadow] the core did not answer', error));

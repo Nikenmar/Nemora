@@ -4,6 +4,10 @@
 // gave the view's order every time.
 const LOG = 'nemora.shadow.megaOrder';
 localStorage.removeItem(LOG);
+// `--probe-widths` 1600 runs with the core's order off, 1601 with it on (nemora.megaOrder.fromCore).
+const switchOn = window.innerWidth % 2 === 1;
+if (switchOn) localStorage.setItem('nemora.megaOrder.fromCore', '1');
+else localStorage.removeItem('nemora.megaOrder.fromCore');
 const button = document.querySelector('.tier-shuffle-btn');
 if (!button) return 'no Smart Shuffle button';
 const wasOn = button.className.includes('active') || button.getAttribute('aria-pressed') === 'true';
@@ -18,4 +22,5 @@ for (let i = 0; i < 8; i++) {
 await wait(3000);
 const log = JSON.parse(localStorage.getItem(LOG) ?? '[]');
 if (!wasOn) button.click();
-return { shuffles: 8, songs: songs.length, shadowLog: log };
+localStorage.removeItem('nemora.megaOrder.fromCore');
+return { switchOn, shuffles: 8, songs: songs.length, shadowLog: log };
