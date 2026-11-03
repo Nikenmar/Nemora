@@ -6,12 +6,13 @@ import {
 } from './other/appReducer';
 import storage from './utils/localStorage';
 
-storage.checkLocalStorage();
 /**
- * The blob as the last session left it, before this one changes anything: what the persistence
- * shadow compares the core's copy with (PLAN/21 P21.4). Read only; the store starts from it below.
+ * The blob as the last session left it, before this one changes anything - before the check below,
+ * which writes the defaults when there is none: what the persistence layer compares the core's
+ * copy with, and restores from the core when it is missing (PLAN/21 P21.4). Read only.
  */
 export const LOADED_LOCAL_STORAGE_TEXT = localStorage.getItem('localStorage');
+storage.checkLocalStorage();
 export const store = new Store(DEFAULT_REDUCER_DATA);
 
 /**

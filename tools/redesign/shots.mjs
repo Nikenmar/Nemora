@@ -454,6 +454,12 @@ function prepareProfile(dir, copyFrom) {
   const source = new DatabaseSync(db, { readOnly: true });
   return backup(source, join(dir, 'profile', 'nemora.db')).then(() => {
     source.close();
+    // The copy starts without the view's state the user's app wrote to the core (PLAN/21 P21.4):
+    // with it, a fresh webview would restore the user's own settings and queue, and runs would
+    // follow whatever the user did last. A run that needs that state makes it itself.
+    const copy = new DatabaseSync(join(dir, 'profile', 'nemora.db'));
+    copy.exec("DELETE FROM settings_device WHERE key LIKE 'view.%' OR key LIKE 'queue.%'; DELETE FROM queue_items;");
+    copy.close();
     if (existsSync(join(copyFrom, 'covers'))) cpSync(join(copyFrom, 'covers'), join(dir, 'profile', 'covers'), { recursive: true });
   });
 }

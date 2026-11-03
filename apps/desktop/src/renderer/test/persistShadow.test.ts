@@ -1,6 +1,6 @@
 import '@renderer/store';
 import { describe, expect, it } from 'vitest';
-import { SLICES, canonical, compareSlices } from '@renderer/other/persistShadow';
+import { SLICES, canonical, compareSlices, slicesToRestore } from '@renderer/other/persistShadow';
 
 /** PLAN/21 P21.4: the shadow read's comparison of the core's copy with the view's blob. */
 const blob = () =>
@@ -41,5 +41,21 @@ describe('persist shadow', () => {
     core.coreQueue = { songIds: ['s1', 's3'], index: 1, positionMs: 0 };
     const found = compareSlices(b, core).map((d) => d.slice);
     expect(found).toEqual(['preferences', 'duels', 'queue_items']);
+  });
+
+  it('restores from the core only what the blob does not have', () => {
+    const b = blob();
+    const core = coreOf(b) as Record<string, unknown>;
+    (core.preferences as Record<string, unknown>).b = 99;
+    // The blob is there: its slices stay, even where the core differs (the core's is the older).
+    expect(slicesToRestore(JSON.stringify(b), core)).toEqual({});
+    // A slice the blob lacks comes from the core.
+    const partial = { ...b } as Record<string, unknown>;
+    delete partial.duels;
+    expect(Object.keys(slicesToRestore(JSON.stringify(partial), core))).toEqual(['duels']);
+    // No blob at all (the webview's storage cleared): every slice the core has.
+    expect(Object.keys(slicesToRestore(null, core)).sort()).toEqual([...SLICES].sort());
+    // An unreadable blob counts as none.
+    expect(Object.keys(slicesToRestore('{oops', core)).length).toBe(SLICES.length);
   });
 });

@@ -7,9 +7,10 @@
  * is compared with the blob the view loaded (`persist_read`). Every difference goes to the shadow
  * log (`nemora.persist.shadowLog`, the last 50, and the console).
  *
- * The blob stays the source. The switch, `nemora.persist.readFromCore` = "1" in localStorage, makes
- * the start read the slices from the core instead; it is off, and stays off until the shadow log
- * has stayed empty through the user's daily use. The blob is kept a release after that.
+ * The switch, `nemora.persist.readFromCore` (on since 2026-11-03; "0" turns it off): at a start the
+ * core restores every slice the blob does not have - all of them when the webview's storage was
+ * cleared. Where both have a slice the blob's stays, being never the older (`slicesToRestore`).
+ * The blob is kept and written as before for a release; then the core becomes the only home.
  */
 import { ipc } from '@platform/ipc';
 import { registerFlush } from '@platform/runtime/flush';
@@ -124,11 +125,32 @@ const scheduleWrite = () => {
   timer = setTimeout(() => void writeNow(), WRITE_DELAY_MS);
 };
 
+/**
+ * What the core restores at a start (the switch, on): every slice the blob the last session left
+ * does not have - all of them when the webview's storage was cleared. Where both have a slice the
+ * blob's stays: it is written at once on every change and the core's a moment later, so the blob
+ * is never the older; a difference between them is logged, not taken.
+ */
+export const slicesToRestore = (loadedText: string | null, core: CoreSlices): Partial<LocalStorage> => {
+  let loaded: Partial<LocalStorage> | null = null;
+  try {
+    loaded = loadedText ? (JSON.parse(loadedText) as Partial<LocalStorage>) : null;
+  } catch {
+    loaded = null;
+  }
+  const out: Partial<LocalStorage> = {};
+  for (const slice of SLICES) {
+    if (!(slice in core)) continue;
+    if (!loaded || loaded[slice] === undefined || loaded[slice] === null) Object.assign(out, { [slice]: core[slice] });
+  }
+  return out;
+};
+
 let started = false;
 
 /**
  * Compares the core's copy with the blob the view started from, then writes every change. With
- * the switch on, the slices the core has replace the blob's at this start.
+ * the switch on (the default), the core restores what the blob does not have (`slicesToRestore`).
  */
 export const startPersistShadow = async (): Promise<void> => {
   if (started) return;
@@ -148,11 +170,23 @@ export const startPersistShadow = async (): Promise<void> => {
     }
     // The first start with the shadow: the core has nothing yet, which is no difference.
     const known = SLICES.some((slice) => slice in core);
-    if (known) appendLog(compareSlices(blob, core));
-    if (known && localStorage.getItem(READ_FROM_CORE_KEY) === '1') {
-      const fromCore: Partial<LocalStorage> = {};
-      for (const slice of SLICES) if (slice in core) Object.assign(fromCore, { [slice]: core[slice] });
-      dispatch({ type: 'UPDATE_LOCAL_STORAGE', data: { ...store.state.localStorage, ...fromCore } });
+    // With no blob from the last session there is nothing to compare: the store holds defaults.
+    if (known && LOADED_LOCAL_STORAGE_TEXT) appendLog(compareSlices(blob, core));
+    if (known && localStorage.getItem(READ_FROM_CORE_KEY) !== '0') {
+      const fromCore = slicesToRestore(LOADED_LOCAL_STORAGE_TEXT, core);
+      if (Object.keys(fromCore).length > 0) {
+        console.info(`[persist] restored from the core: ${Object.keys(fromCore).join(', ')}`);
+        dispatch({ type: 'UPDATE_LOCAL_STORAGE', data: { ...store.state.localStorage, ...fromCore } });
+        // The whole blob was gone: start again from the restored one (written by the store at once),
+        // so the queue and the player come up as they were. The next start has a blob: no loop.
+        // What the start has changed since (it tidies the queue) goes to the core first, or the
+        // next start would find the blob ahead of it.
+        if (!LOADED_LOCAL_STORAGE_TEXT) {
+          await writeNow();
+          window.location.reload();
+          return;
+        }
+      }
     }
   } catch (error) {
     console.warn('[persist shadow] read failed', error);
