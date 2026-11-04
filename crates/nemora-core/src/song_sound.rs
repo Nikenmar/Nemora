@@ -20,7 +20,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use lofty::config::{ParseOptions, ParsingMode, WriteOptions};
-use lofty::file::{AudioFile, FileType};
+use lofty::file::{AudioFile, FileType, TaggedFileExt};
 use lofty::probe::Probe;
 use lofty::tag::TagExt;
 use rusqlite::params;
@@ -174,6 +174,13 @@ pub fn write_field(path: &Path, text: Option<&str>) -> Result<bool> {
         if read_field(&copy)?.as_deref() != text {
             return Err(tags_error(path, "the field did not read back; the file was left as it was"));
         }
+        // Everything else must be as it was, pictures included, or the original is not replaced.
+        if contents(&copy)? != contents(path)? {
+            return Err(tags_error(
+                path,
+                "writing the tag would have changed something else; the file was left as it was",
+            ));
+        }
         std::fs::rename(&copy, path)?;
         Ok(())
     })();
@@ -188,6 +195,41 @@ pub fn write_field(path: &Path, text: Option<&str>) -> Result<bool> {
         let _ = std::fs::remove_file(&copy);
     }
     done.map(|()| true)
+}
+
+/// All a file's tags hold but the field: each tag's items and the bytes of its pictures, in a fixed
+/// order. FLAC's picture blocks count as its tag's here.
+fn contents(path: &Path) -> Result<Vec<String>> {
+    // By its content: the copy's extension says nothing.
+    let tagged = Probe::open(path)
+        .map_err(|e| tags_error(path, e))?
+        .guess_file_type()
+        .map_err(|e| tags_error(path, e))?
+        .options(ParseOptions::new().read_properties(false).parsing_mode(ParsingMode::Relaxed))
+        .read()
+        .map_err(|e| tags_error(path, e))?;
+    let mut out = Vec::new();
+    for tag in tagged.tags() {
+        for item in tag.items() {
+            let value = format!("{:?}", item.value());
+            // The field itself, under whatever key a format's generic view gives it.
+            if item.value().text().is_some_and(|text| decode(text).is_some()) {
+                continue;
+            }
+            out.push(format!("{:?} {:?} {value}", tag.tag_type(), item.key()));
+        }
+        for picture in tag.pictures() {
+            out.push(format!(
+                "{:?} picture {:?} {:?} {}",
+                tag.tag_type(),
+                picture.pic_type(),
+                picture.mime_type(),
+                blake3::hash(picture.data()).to_hex()
+            ));
+        }
+    }
+    out.sort();
+    Ok(out)
 }
 
 /// Whether this file's format has a place for the field.
@@ -205,7 +247,6 @@ fn write_in_place(path: &Path, text: Option<&str>) -> Result<()> {
     use lofty::id3::v2::Id3v2Tag;
     use lofty::mp4::{Atom, AtomData, AtomIdent, Ilst, Mp4File};
     use lofty::mpeg::MpegFile;
-    use lofty::ogg::tag::VorbisComments;
     use lofty::ogg::{OpusFile, VorbisFile};
 
     let file_type = Probe::open(path)
@@ -235,13 +276,16 @@ fn write_in_place(path: &Path, text: Option<&str>) -> Result<()> {
             tag.save_to_path(path, WriteOptions::default().use_id3v23(v23)).map_err(|e| tags_error(path, e))?;
         }
         Some(FileType::Flac) => {
-            let flac = FlacFile::read_from(&mut file, options()).map_err(|e| tags_error(path, e))?;
+            let mut flac = FlacFile::read_from(&mut file, options()).map_err(|e| tags_error(path, e))?;
             drop(file);
-            let mut tag = flac.vorbis_comments().cloned().unwrap_or_else(VorbisComments::default);
+            let mut tag = flac.vorbis_comments().cloned().unwrap_or_default();
             if !vorbis_set(&mut tag, text) {
                 return Ok(());
             }
-            tag.save_to_path(path, WriteOptions::default()).map_err(|e| tags_error(path, e))?;
+            flac.set_vorbis_comments(tag);
+            // Saved through the file, never the tag: FLAC keeps its pictures in blocks of their own,
+            // which `FlacFile` holds and a Vorbis comments tag saved alone would erase.
+            flac.save_to_path(path, WriteOptions::default()).map_err(|e| tags_error(path, e))?;
         }
         Some(FileType::Vorbis) | Some(FileType::Opus) => {
             let mut tag = if file_type == Some(FileType::Vorbis) {

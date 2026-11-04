@@ -8,6 +8,7 @@ use std::process::Command;
 
 use nemora_core::identity::identify_path;
 use nemora_core::song_sound::{SongSound, decode, encode, read_field, write_field};
+use nemora_core::tags::read_tags;
 
 /// Every tag ffprobe sees (container and stream), names lowercased.
 fn all_tags(path: &Path) -> BTreeMap<String, String> {
@@ -75,21 +76,19 @@ fn the_field_goes_in_and_out_touching_nothing_else() {
         ("opus", &["-c:a", "libopus", "-b:a", "64k"][..]),
     ] {
         let path = make(&root, ext, codec);
+        // The front cover, which FLAC keeps outside its tag and the others inside it.
+        common::set_tags(&path, "Song", "Someone", None, Some(common::png(5)));
         let tags = all_tags(&path);
         let id = identify_path(&path).unwrap();
+        let cover = read_tags(&path).unwrap().cover.expect("the cover was set").data;
         assert_eq!(read_field(&path).unwrap(), None, "{ext}: no field yet");
 
         assert!(write_field(&path, Some(&text)).unwrap(), "{ext}: has a place for it");
         assert_eq!(read_field(&path).unwrap().as_deref(), Some(text.as_str()), "{ext}: written");
         assert_eq!(decode(&read_field(&path).unwrap().unwrap()), Some(sound.clone()));
         assert_eq!(without_ours(all_tags(&path)), tags, "{ext}: every other tag as it was");
+        assert_eq!(read_tags(&path).unwrap().cover.map(|c| c.data).as_ref(), Some(&cover), "{ext}: the cover stays");
         assert_eq!(identify_path(&path).unwrap(), id, "{ext}: the song keeps its id");
-        if ext == "mp3" {
-            // ffmpeg wrote ID3v2.3: the file keeps it.
-            let head = std::fs::read(&path).unwrap();
-            assert_eq!(&head[..4], b"ID3", "mp3: still ID3v2.3");
-        }
-
         // Written again: still one field.
         let other = encode(&SongSound { semitones: 3.0, keep_pitch: true, reverb: 0.0, size: "room".into() });
         write_field(&path, Some(&other)).unwrap();
@@ -99,6 +98,11 @@ fn the_field_goes_in_and_out_touching_nothing_else() {
         assert!(write_field(&path, None).unwrap());
         assert_eq!(read_field(&path).unwrap(), None, "{ext}: removed");
         assert_eq!(all_tags(&path), tags, "{ext}: back to the tags it had");
+        assert_eq!(
+            read_tags(&path).unwrap().cover.map(|c| c.data).as_ref(),
+            Some(&cover),
+            "{ext}: the cover still stays"
+        );
         assert_eq!(identify_path(&path).unwrap(), id, "{ext}: the song keeps its id");
         // Removing what is not there changes nothing.
         assert!(write_field(&path, None).unwrap());
@@ -139,6 +143,59 @@ fn the_field_goes_in_and_out_touching_nothing_else() {
     let before = std::fs::read(&wav).unwrap();
     assert!(!write_field(&wav, Some(&text)).unwrap());
     assert_eq!(std::fs::read(&wav).unwrap(), before);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// lofty writes ID3v2.4 unless told; a file that has 2.3 keeps it, and its picture.
+#[test]
+fn an_mp3_keeps_its_id3_version() {
+    if !common::ffmpeg_available() {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let root = common::temp_dir("song-sound-id3");
+    let path = make(&root, "mp3", &["-c:a", "libmp3lame", "-b:a", "128k", "-id3v2_version", "3"]);
+    assert_eq!(&std::fs::read(&path).unwrap()[..4], b"ID3\x03", "ffmpeg wrote 2.3");
+    let tags = all_tags(&path);
+    let text = encode(&SongSound { semitones: 2.0, keep_pitch: false, reverb: 0.0, size: "hall".into() });
+    write_field(&path, Some(&text)).unwrap();
+    assert_eq!(&std::fs::read(&path).unwrap()[..4], b"ID3\x03", "still 2.3");
+    assert_eq!(without_ours(all_tags(&path)), tags);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// The engine reads the song it plays through an open handle: the field can go in at once, and what
+/// the handle reads does not move.
+#[test]
+fn a_file_open_for_playing_takes_the_field_and_keeps_playing_what_it_read() {
+    use std::io::{Read, Seek, SeekFrom};
+
+    if !common::ffmpeg_available() {
+        eprintln!("SKIPPED: ffmpeg is not on PATH");
+        return;
+    }
+    let root = common::temp_dir("song-sound-open");
+    let path = root.join("a.flac");
+    common::flac(&path, 9, 3);
+    common::set_tags(&path, "Song", "Someone", None, Some(common::png(6)));
+    let original = std::fs::read(&path).unwrap();
+    let id = identify_path(&path).unwrap();
+
+    let mut playing = std::fs::File::open(&path).unwrap();
+    let mut head = vec![0; 1000];
+    playing.read_exact(&mut head).unwrap();
+
+    let text = encode(&SongSound { semitones: 2.0, keep_pitch: false, reverb: 0.0, size: "hall".into() });
+    assert!(write_field(&path, Some(&text)).unwrap(), "written while it is open");
+    assert_eq!(read_field(&path).unwrap().as_deref(), Some(text.as_str()));
+    assert_eq!(identify_path(&path).unwrap(), id);
+
+    // The open handle goes on reading the file as it was, to its end.
+    playing.seek(SeekFrom::Start(0)).unwrap();
+    let mut read = Vec::new();
+    playing.read_to_end(&mut read).unwrap();
+    assert_eq!(read, original, "what was being played did not move");
+    drop(playing);
     let _ = std::fs::remove_dir_all(&root);
 }
 
