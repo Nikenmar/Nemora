@@ -42,6 +42,24 @@ pub struct TrackTags {
     pub composer: Option<String>,
 }
 
+/// What a song's page shows beyond the library's row, read from the file when the page opens: none
+/// of it is in the signature, so it never makes a second row.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileDetails {
+    /// `PUBLISHER`, `TPUB`; a file with only a label (`LABEL`, `ORGANIZATION`) gives that.
+    pub publisher: Option<String>,
+    pub composer: Option<String>,
+    pub copyright: Option<String>,
+    pub isrc: Option<String>,
+    pub bpm: Option<String>,
+    pub disc_no: Option<u32>,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u8>,
+    pub channels: Option<u8>,
+    pub bitrate_kbps: Option<u32>,
+    pub size_bytes: u64,
+}
+
 impl TrackTags {
     /// BLAKE3 over the display tags, each trimmed, joined with NUL in the order of
     /// `spec/schema-v1.md`. Two files of one song with equal signatures are one library row.
@@ -65,6 +83,30 @@ impl TrackTags {
 
 /// Reads the tags of a file. Parsing is relaxed: a tag slightly out of spec is common in real
 /// libraries, and refusing the file would lose a song over a detail nobody hears.
+pub fn read_details(path: &Path) -> Result<FileDetails> {
+    let tagged = Probe::open(path)
+        .and_then(|p| p.options(ParseOptions::new().read_properties(true).parsing_mode(ParsingMode::Relaxed)).read())
+        .map_err(|e| Error::Tags(format!("{}: {e}", path.display())))?;
+    let properties = tagged.properties();
+    let tag = tagged.primary_tag().or_else(|| tagged.first_tag());
+    let text = |key: ItemKey| {
+        tag.and_then(|t| t.get_string(key)).map(|value| value.trim().to_owned()).filter(|value| !value.is_empty())
+    };
+    Ok(FileDetails {
+        publisher: text(ItemKey::Publisher).or_else(|| text(ItemKey::Label)),
+        composer: text(ItemKey::Composer),
+        copyright: text(ItemKey::CopyrightMessage),
+        isrc: text(ItemKey::Isrc),
+        bpm: text(ItemKey::Bpm).or_else(|| text(ItemKey::IntegerBpm)),
+        disc_no: tag.and_then(|t| t.disk()),
+        sample_rate: properties.sample_rate(),
+        bit_depth: properties.bit_depth(),
+        channels: properties.channels(),
+        bitrate_kbps: properties.audio_bitrate(),
+        size_bytes: std::fs::metadata(path)?.len(),
+    })
+}
+
 pub fn read_tags(path: &Path) -> Result<TrackTags> {
     let tagged = Probe::open(path)
         .and_then(|p| p.options(ParseOptions::new().read_properties(true).parsing_mode(ParsingMode::Relaxed)).read())

@@ -1,14 +1,20 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { SongFileDetails } from '@platform/ipc';
+import parseByteSizes from '../../utils/parseByteSizes';
 import SongAdditionalInfoItem from './SongAdditionalInfoItem';
 import Button from '../Button';
 
-type Props = { songInfo: SongData; songDurationStr: string };
+type Props = { songInfo: SongData; songDurationStr: string; details: SongFileDetails | null };
 
 const SongAdditionalInfoContainer = (props: Props) => {
   const { t } = useTranslation();
 
-  const { songInfo, songDurationStr } = props;
+  const { songInfo, songDurationStr, details } = props;
+  // What the file says about itself, one line for each it has.
+  const text = (label: string, value: string | null | undefined) =>
+    value ? <SongAdditionalInfoItem label={label} value={value} /> : null;
+  const format = songInfo.path.split('.').pop()?.toUpperCase();
 
   const [isDataVisible, setIsDataVisible] = useState(false);
 
@@ -68,12 +74,18 @@ const SongAdditionalInfoContainer = (props: Props) => {
               value={songInfo.trackNo.toString()}
             />
           )}
+          {text(t('common.discNo'), details?.discNo?.toString())}
           {songInfo.year && (
             <SongAdditionalInfoItem
               label={t('common.releasedYear')}
               value={songInfo.year.toString()}
             />
           )}
+          {text(t('common.publisher'), details?.publisher)}
+          {text(t('common.composer'), details?.composer)}
+          {text(t('common.copyright'), details?.copyright)}
+          {text(t('common.isrc'), details?.isrc)}
+          {text(t('common.bpm'), details?.bpm)}
           <SongAdditionalInfoItem
             label={t('common.songAddedOn')}
             value={new Date(songInfo.addedDate).toUTCString()}
@@ -84,26 +96,15 @@ const SongAdditionalInfoContainer = (props: Props) => {
               value={new Date(songInfo.modifiedDate).toUTCString()}
             />
           )}
-          {songInfo.sampleRate && (
-            <SongAdditionalInfoItem
-              label={t('common.sampleRate')}
-              value={`${songInfo.sampleRate} Hz`}
-            />
+          {text(t('common.fileFormat'), format)}
+          {text(t('common.sampleRate'), details?.sampleRate ? `${details.sampleRate} Hz` : null)}
+          {text(t('common.bitDepth'), details?.bitDepth ? `${details.bitDepth} bit` : null)}
+          {text(t('common.bitRate'), details?.bitrateKbps ? `${details.bitrateKbps} Kbps` : null)}
+          {text(
+            t('common.noOfAudioChannels'),
+            details?.channels ? t('common.channelWithCount', { count: details.channels }) : null
           )}
-          {songInfo.bitrate && (
-            <SongAdditionalInfoItem
-              label={t('common.bitRate')}
-              value={`${Math.floor(songInfo.bitrate / 1000)} Kbps`}
-            />
-          )}
-          {songInfo.noOfChannels && (
-            <SongAdditionalInfoItem
-              label={t('common.noOfAudioChannels')}
-              value={t('common.channelWithCount', {
-                count: songInfo.noOfChannels
-              })}
-            />
-          )}
+          {text(t('common.fileSize'), details ? parseByteSizes(details.sizeBytes, 1)?.size : null)}
           <SongAdditionalInfoItem label={t('common.songLocation')} value={songInfo.path} />
         </div>
       )}

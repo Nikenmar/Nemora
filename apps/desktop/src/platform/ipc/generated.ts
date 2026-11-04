@@ -626,6 +626,48 @@ export type SmartList_Serialize = {
 	entries: Entry_Serialize[],
 };
 
+/**
+ *  1.x `SongTags` for the editor.
+ *  What the song's page shows beyond the library's row (`nemora_core::tags::FileDetails`).
+ */
+export type SongFileDetails = SongFileDetails_Serialize | SongFileDetails_Deserialize;
+
+/**
+ *  1.x `SongTags` for the editor.
+ *  What the song's page shows beyond the library's row (`nemora_core::tags::FileDetails`).
+ */
+export type SongFileDetails_Deserialize = {
+	publisher?: string | null,
+	composer?: string | null,
+	copyright?: string | null,
+	isrc?: string | null,
+	bpm?: string | null,
+	discNo?: number | null,
+	sampleRate?: number | null,
+	bitDepth?: number | null,
+	channels?: number | null,
+	bitrateKbps?: number | null,
+	sizeBytes: number,
+};
+
+/**
+ *  1.x `SongTags` for the editor.
+ *  What the song's page shows beyond the library's row (`nemora_core::tags::FileDetails`).
+ */
+export type SongFileDetails_Serialize = {
+	publisher: string | null,
+	composer: string | null,
+	copyright: string | null,
+	isrc: string | null,
+	bpm: string | null,
+	discNo: number | null,
+	sampleRate: number | null,
+	bitDepth: number | null,
+	channels: number | null,
+	bitrateKbps: number | null,
+	sizeBytes: number,
+};
+
 /**  A song's own sound (the view's `SongSound` without its display name). */
 export type SongSound = SongSound_Serialize | SongSound_Deserialize;
 
@@ -974,6 +1016,7 @@ export interface IpcCommands {
   skip_context: { args: Record<string, never>; ret: SkipContext_Serialize };
   smart_lists: { args: { options?: Options_Deserialize | null; intensity?: number | null; }; ret: SmartList_Serialize[] };
   smtc_update: { args: { now?: NowPlaying | null; }; ret: null };
+  song_file_details: { args: { path: string; }; ret: SongFileDetails_Serialize };
   song_from_path: { args: { path: string; }; ret: Value };
   song_moments: { args: { songId: string; }; ret: ([number, number])[] };
   song_reparse: { args: { path: string; }; ret: Value };

@@ -271,6 +271,7 @@ pub fn run() {
             order::mega_order,
             sounds::song_sounds,
             sounds::song_sound_set,
+            tags_cmd::song_file_details,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Off the main thread: a cold 50 MB read must never block the UI.

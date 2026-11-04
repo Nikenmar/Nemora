@@ -4,7 +4,8 @@
 use std::path::Path;
 
 use nemora_core::library::{self, SongRow};
-use nemora_core::tags::{TagEdit, read_tags, write_tags};
+use nemora_core::tags::{TagEdit, read_details, read_tags, write_tags};
+use serde::Serialize;
 use serde_json::{Value, json};
 use tauri::{AppHandle, State};
 
@@ -83,6 +84,47 @@ fn library_entries(app: &App, tags: &nemora_core::tags::TrackTags) -> Res<Entrie
 }
 
 /// 1.x `SongTags` for the editor.
+/// What the song's page shows beyond the library's row (`nemora_core::tags::FileDetails`).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(specta::Type))]
+pub struct SongFileDetails {
+    pub publisher: Option<String>,
+    pub composer: Option<String>,
+    pub copyright: Option<String>,
+    pub isrc: Option<String>,
+    pub bpm: Option<String>,
+    pub disc_no: Option<u32>,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u8>,
+    pub channels: Option<u8>,
+    pub bitrate_kbps: Option<u32>,
+    pub size_bytes: f64,
+}
+
+/// Reads them from the file as the page opens; nothing is written or kept.
+#[tauri::command]
+#[cfg_attr(test, specta::specta)]
+pub async fn song_file_details(path: String) -> Res<SongFileDetails> {
+    let details = tauri::async_runtime::spawn_blocking(move || read_details(Path::new(&path)))
+        .await
+        .map_err(fail)?
+        .map_err(fail)?;
+    Ok(SongFileDetails {
+        publisher: details.publisher,
+        composer: details.composer,
+        copyright: details.copyright,
+        isrc: details.isrc,
+        bpm: details.bpm,
+        disc_no: details.disc_no,
+        sample_rate: details.sample_rate,
+        bit_depth: details.bit_depth,
+        channels: details.channels,
+        bitrate_kbps: details.bitrate_kbps,
+        size_bytes: details.size_bytes as f64,
+    })
+}
+
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
 pub fn tags_get(app: State<'_, App>, song_id_or_path: String, is_known_source: bool) -> Res<Value> {

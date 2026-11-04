@@ -1,5 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ipc, type SongFileDetails } from '@platform/ipc';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
 import calculateTimeFromSeconds from '../../utils/calculateTimeFromSeconds';
 import log from '../../utils/log';
@@ -27,6 +28,25 @@ const SongInfoPage = () => {
 
   const [songInfo, setSongInfo] = useState<SongData>();
   const [listeningData, setListeningData] = useState<SongListeningData>();
+  const [details, setDetails] = useState<SongFileDetails | null>(null);
+
+  // What the library's row does not keep, from the file: again when the file has changed.
+  const songPath = songInfo?.path;
+  const songModified = songInfo?.modifiedDate;
+  useEffect(() => {
+    setDetails(null);
+    if (!songPath) return undefined;
+    let current = true;
+    ipc('song_file_details', { path: songPath })
+      .then((read) => {
+        if (current) setDetails(read);
+        return undefined;
+      })
+      .catch((err) => log(err));
+    return () => {
+      current = false;
+    };
+  }, [songPath, songModified]);
 
   const songDuration = useMemo(() => {
     const { timeString } = calculateTimeFromSeconds(songInfo?.duration ?? 0);
@@ -224,9 +244,11 @@ const SongInfoPage = () => {
               ) : (
                 t('common.unknownAlbum')
               ),
+              songInfo.year ? String(songInfo.year) : undefined,
+              details?.publisher,
               songDuration,
-              songInfo.sampleRate ? `${songInfo.sampleRate / 1000} kHz` : undefined,
-              songInfo.bitrate ? `${Math.floor(songInfo.bitrate / 1000)} kbps` : undefined
+              details?.sampleRate ? `${details.sampleRate / 1000} kHz` : undefined,
+              details?.bitrateKbps ? `${details.bitrateKbps} kbps` : undefined
             ]}
           />
         </div>
@@ -306,7 +328,11 @@ const SongInfoPage = () => {
               </div>
             </div>
           )}
-          <SongAdditionalInfoContainer songInfo={songInfo} songDurationStr={songDuration} />
+          <SongAdditionalInfoContainer
+            songInfo={songInfo}
+            songDurationStr={songDuration}
+            details={details}
+          />
           {(currentlyActivePage.data?.songId as string) && (
             <SimilarTracksContainer songId={currentlyActivePage.data?.songId as string} />
           )}
