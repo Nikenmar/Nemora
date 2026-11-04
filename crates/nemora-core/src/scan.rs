@@ -53,6 +53,8 @@ struct Processed {
     identity: Identity,
     tags: TrackTags,
     cover: Option<NewCover>,
+    /// Switch version's sound in the file's own field (`song_sound`), if it has one.
+    sound: Option<String>,
 }
 
 struct NewCover {
@@ -257,7 +259,12 @@ fn process(
         };
         Some(NewCover { hash, mime: picture.mime, size })
     });
-    Ok(Processed { file, identity, tags, cover })
+    // A field that cannot be read costs nothing but the sound: the song is scanned all the same.
+    let sound = crate::song_sound::read_field(&file.path)
+        .ok()
+        .flatten()
+        .filter(|text| crate::song_sound::decode(text).is_some());
+    Ok(Processed { file, identity, tags, cover, sound })
 }
 
 fn write_processed(tx: &Transaction<'_>, p: &Processed, now: i64) -> Result<()> {
@@ -288,6 +295,14 @@ fn write_processed(tx: &Transaction<'_>, p: &Processed, now: i64) -> Result<()> 
         )?;
     }
     let cover_hash = p.cover.as_ref().map(|c| c.hash.as_str());
+    // The file carries the song's sound (another PC or a reinstall set it): the library takes it.
+    // A file without the field changes nothing: only Back to original removes one.
+    if let Some(text) = &p.sound {
+        tx.execute(
+            "INSERT INTO settings_device (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![format!("sound.{song_id}"), serde_json::to_string(&serde_json::Value::String(text.clone()))?],
+        )?;
+    }
 
     let signature = p.tags.signature();
     let existing: Option<i64> = tx

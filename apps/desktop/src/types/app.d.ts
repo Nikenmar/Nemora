@@ -551,6 +551,8 @@ declare global {
     isFullScreenSpectrum?: boolean;
     /** Smart Shuffle (Settings > Audio playback, PLAN/14 C1-C5); the first three and the map are on by default. */
     isShuffleReasonsHidden?: boolean;
+    /** Switch version's sound kept in the library only, not in the song's file (on unless set). */
+    isSoundInFileDisabled?: boolean;
     isShuffleSteeringHidden?: boolean;
     isSkipAwareDisabled?: boolean;
     isSessionFiltersEnabled?: boolean;

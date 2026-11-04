@@ -377,6 +377,8 @@
     "audioPlayback": "Audio playback",
     "showRemainingSongDuration": "Show remaining song duration",
     "showRemainingSongDurationDescription": "Shows the remaining duration of the song instead of the default song duration.",
+    "soundInFile": "Keep Switch version in the song's file",
+    "soundInFileDescription": "Writes a song's own sound into a field of its tag that only Nemora uses, so it comes with the file to another PC or a reinstall. Your notes and other tags are not touched; the song that is playing is written when it stops.",
     "playbackRate": "Playback speed",
     "changePlaybackRate": "Change the default playback speed of the player.",
     "tierShuffleIntensityDescription": "How strongly Smart Shuffle leans on your tierlists & top artists. Higher = more curated, lower = closer to plain random.",

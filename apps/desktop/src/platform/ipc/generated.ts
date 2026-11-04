@@ -626,6 +626,35 @@ export type SmartList_Serialize = {
 	entries: Entry_Serialize[],
 };
 
+/**  A song's own sound (the view's `SongSound` without its display name). */
+export type SongSound = SongSound_Serialize | SongSound_Deserialize;
+
+/**  A song's own sound (the view's `SongSound` without its display name). */
+export type SongSound_Deserialize = {
+	semitones: number,
+	keepPitch?: boolean,
+	reverb?: number,
+	size?: string,
+};
+
+/**  A song's own sound (the view's `SongSound` without its display name). */
+export type SongSound_Serialize = {
+	semitones: number,
+	keepPitch: boolean,
+	reverb: number,
+	size: string,
+};
+
+/**
+ *  What writing the files did: written, without a place for the field (the library still has the
+ *  sound), or failed (read-only, locked) with the reason.
+ */
+export type SoundSaved = {
+	written: number,
+	unsupported: number,
+	failed: string[],
+};
+
 /**  The user's steering for this session (C2) and session filters (C4); nothing is stored. */
 export type Steering = Steering_Serialize | Steering_Deserialize;
 
@@ -948,6 +977,8 @@ export interface IpcCommands {
   song_from_path: { args: { path: string; }; ret: Value };
   song_moments: { args: { songId: string; }; ret: ([number, number])[] };
   song_reparse: { args: { path: string; }; ret: Value };
+  song_sound_set: { args: { songId: string; sound?: SongSound_Deserialize | null; writeFile: boolean; }; ret: SoundSaved };
+  song_sounds: { args: Record<string, never>; ret: { [key in string]: SongSound_Serialize } };
   songs_delete_files: { args: { paths: string[]; permanent: boolean; }; ret: Outcome_Serialize };
   start_file_drag: { args: { paths: string[]; artwork?: string | null; }; ret: null };
   startup_args: { args: Record<string, never>; ret: string[] };

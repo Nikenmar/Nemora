@@ -27,6 +27,7 @@ mod secrets;
 #[allow(unsafe_op_in_unsafe_fn)]
 mod shellops;
 mod smtc;
+mod sounds;
 mod system;
 mod tags_cmd;
 #[allow(unsafe_op_in_unsafe_fn)]
@@ -268,6 +269,8 @@ pub fn run() {
             persist::persist_write,
             persist::persist_read,
             order::mega_order,
+            sounds::song_sounds,
+            sounds::song_sound_set,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Off the main thread: a cold 50 MB read must never block the UI.

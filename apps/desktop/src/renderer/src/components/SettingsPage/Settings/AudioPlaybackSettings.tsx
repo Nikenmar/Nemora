@@ -215,6 +215,18 @@ const AudioPlaybackSettings = () => {
           />
         </li>
 
+        <li className="secondary-container sound-in-file mb-4">
+          <div className="description">{t('settingsPage.soundInFileDescription')}</div>
+          <Checkbox
+            id="toggleSoundInFile"
+            isChecked={!preferences?.isSoundInFileDisabled}
+            checkedStateUpdateFunction={(state) =>
+              storage.preferences.setPreferences('isSoundInFileDisabled', !state)
+            }
+            labelContent={t('settingsPage.soundInFile')}
+          />
+        </li>
+
         <li className="tier-shuffle-intensity mb-6">
           <div className="description">{t('settingsPage.tierShuffleIntensityDescription')}</div>
           <div className="mt-6 flex items-center">
