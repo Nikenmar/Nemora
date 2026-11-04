@@ -29,8 +29,8 @@ pub struct SoundSaved {
 }
 
 /// Keeps the song's sound (`None`: back to the original) in the library, and with `write_file` in
-/// its present files too. The view never asks for the file of the song that is playing: a tag that
-/// grows moves the audio the engine is reading.
+/// its present files too, the playing song's as well: `write_field` replaces a file with a finished
+/// copy, and the engine goes on reading the one it opened. The view sends one write at a time.
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
 pub async fn song_sound_set(
@@ -43,12 +43,15 @@ pub async fn song_sound_set(
     // The library's own setting: nothing the lists or the derived values read.
     app.write_quiet(|db| song_sound::set(db, &song, sound.as_ref())).map_err(fail)?;
     let mut saved = SoundSaved { written: 0, unsupported: 0, failed: Vec::new() };
-    // A bench or stand run uses a copy of the library but the user's own music files: it never
-    // writes into them.
-    if !write_file || crate::bench::dir().is_some() {
+    if !write_file {
         return Ok(saved);
     }
-    let files = song_sound::files(&app.read(), &song).map_err(fail)?;
+    let mut files = song_sound::files(&app.read(), &song).map_err(fail)?;
+    // A bench or stand run uses a copy of the library but the user's own music files: it never
+    // writes into them, only into files inside its own folder.
+    if let Some(bench) = crate::bench::dir() {
+        files.retain(|path| path.starts_with(bench));
+    }
     let text = sound.as_ref().map(song_sound::encode);
     let saved = tauri::async_runtime::spawn_blocking(move || {
         for path in files {
