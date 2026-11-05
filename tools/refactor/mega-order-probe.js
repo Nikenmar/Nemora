@@ -7,7 +7,7 @@ localStorage.removeItem(LOG);
 // `--probe-widths` 1600 runs with the core's order off, 1601 with it on (nemora.megaOrder.fromCore).
 const switchOn = window.innerWidth % 2 === 1;
 if (switchOn) localStorage.setItem('nemora.megaOrder.fromCore', '1');
-else localStorage.removeItem('nemora.megaOrder.fromCore');
+else localStorage.setItem('nemora.megaOrder.fromCore', '0');
 const button = document.querySelector('.tier-shuffle-btn');
 if (!button) return 'no Smart Shuffle button';
 const wasOn = button.className.includes('active') || button.getAttribute('aria-pressed') === 'true';

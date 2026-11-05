@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { store } from '@renderer/store';
 import storage from '@renderer/utils/localStorage';
-import { adoptCoreOrder } from '@renderer/other/megaOrderShadow';
+import { FROM_CORE_KEY, adoptCoreOrder, isCoreOrderOn } from '@renderer/other/megaOrderShadow';
 
 /** PLAN/21 P21.6, the switch: the core's order replaces the TypeScript one only while nothing moved. */
 const made = { shuffledQueue: ['a', 'b', 'c', 'd'], positions: [0, 1, 2, 3] };
@@ -10,6 +10,14 @@ const setQueue = (queue: string[], currentSongIndex: number) =>
   storage.queue.setQueue({ ...store.state.localStorage.queue, queue, currentSongIndex, queueType: 'songs' });
 
 describe('adopting the core order', () => {
+  it('is on unless turned off', () => {
+    localStorage.removeItem(FROM_CORE_KEY);
+    expect(isCoreOrderOn()).toBe(true);
+    localStorage.setItem(FROM_CORE_KEY, '0');
+    expect(isCoreOrderOn()).toBe(false);
+    localStorage.removeItem(FROM_CORE_KEY);
+  });
+
   it('takes the core order while the queue is the one just made, on its first song', () => {
     setQueue(made.shuffledQueue, 0);
     expect(adoptCoreOrder(made, core)).toBe(true);

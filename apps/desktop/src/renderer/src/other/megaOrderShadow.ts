@@ -5,11 +5,12 @@
  * random draws go to the core's port (`mega_order`), and any order that comes back different is
  * written to the shadow log (`nemora.shadow.megaOrder`, the last 50, and the console).
  *
- * The switch, `nemora.megaOrder.fromCore` = "1" in localStorage (off), makes the core's order the
- * one that plays: the TypeScript order still comes first, at once, so building a queue never waits;
- * when the core's answer differs it replaces it, as long as the queue is still that order and still
- * on its first song (both orders keep the current song first, so the change is not heard). The
- * TypeScript order stays as the oracle until the switch has been on through daily use.
+ * The switch, `nemora.megaOrder.fromCore` (on since 2026-11-05, the log having stayed empty through
+ * daily use; "0" turns it off), makes the core's order the one that plays: the TypeScript order
+ * still comes first, at once, so building a queue never waits; when the core's answer differs it
+ * replaces it, as long as the queue is still that order and still on its first song (both orders
+ * keep the current song first, so the change is not heard). The TypeScript order stays as the
+ * oracle until the switch has been on through daily use.
  */
 import { ipc } from '@platform/ipc';
 
@@ -34,6 +35,9 @@ const log = (entry: { songs: number; firstDifference: number; detail: string }) 
   }
   console.warn(`[mega order shadow] ${entry.songs} songs, first difference at ${entry.firstDifference}: ${entry.detail}`);
 };
+
+/** Whether a differing core order is the one that plays. */
+export const isCoreOrderOn = () => localStorage.getItem(FROM_CORE_KEY) !== '0';
 
 type Order = { shuffledQueue: string[]; positions: number[] };
 
@@ -76,7 +80,7 @@ const shadowedMegaShuffleQueue = (songIds: string[], data: MegaShuffleData, curr
         if (!same) {
           const firstDifference = core.shuffledQueue.findIndex((id, i) => id !== result.shuffledQueue[i]);
           log({ songs: songIds.length, firstDifference, detail: exact ? 'same draws' : 'draws not whole multiples of 2^-53' });
-          if (localStorage.getItem(FROM_CORE_KEY) === '1') adoptCoreOrder(result, core);
+          if (isCoreOrderOn()) adoptCoreOrder(result, core);
         }
       })
       .catch((error: unknown) => console.warn('[mega order shadow] the core did not answer', error));
