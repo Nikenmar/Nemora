@@ -427,12 +427,16 @@ export type Persisted = Persisted_Serialize | Persisted_Deserialize;
 export type Persisted_Deserialize = {
 	slices: { [key in string]: string },
 	coreQueue?: CoreQueue | null,
+	/**  Milliseconds since the epoch; `None` before the first write that recorded it. */
+	writtenAt?: number | null,
 };
 
 /**  What the core keeps of the view's state: each slice's JSON text as written, and the queue. */
 export type Persisted_Serialize = {
 	slices: { [key in string]: string },
 	coreQueue: CoreQueue | null,
+	/**  Milliseconds since the epoch; `None` before the first write that recorded it. */
+	writtenAt: number | null,
 };
 
 export type Point = Point_Serialize | Point_Deserialize;

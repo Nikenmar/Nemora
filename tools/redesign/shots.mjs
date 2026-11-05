@@ -533,7 +533,7 @@ async function runOne(name, shots, copyFrom) {
       const ipc = [];
       const answers = [];
       if (IPC_TRACE) {
-        const volatile = /^(at|atMs|startedAt|now|updatedAt|updated_at|ts|seq|generation|elapsed|took|today)$/i;
+        const volatile = /^(at|atMs|startedAt|now|updatedAt|updated_at|writtenAt|ts|seq|generation|elapsed|took|today)$/i;
         const digest = (text) => {
           // The stand's run folder (named after --label) appears in every artwork URL: one name for all.
           let value = (text ?? '').replace(/nemora-shots(%5C|\\|\|\/)[^%\/"]+/g, 'nemora-shots$1<run>');

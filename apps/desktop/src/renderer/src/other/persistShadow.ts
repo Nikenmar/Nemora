@@ -42,6 +42,8 @@ type CoreSlices = Partial<Record<(typeof SLICES)[number], unknown>> & {
   coreQueue?: { songIds: string[]; index: number; positionMs: number } | null;
 };
 export type ShadowEntry = { at: number; slice: string; detail: string };
+/** The entry that says, beside a difference, when the core last took a write. */
+export const LAST_WRITE_SLICE = 'core last written';
 
 /** JSON with object keys sorted: the core keeps keys in its own order. */
 export const canonical = (value: unknown): string =>
@@ -72,6 +74,15 @@ export const compareSlices = (blob: LocalStorage, core: CoreSlices): Omit<Shadow
   return out;
 };
 
+/** Beside any difference: how old the core's copy was, the first thing to know about one. */
+export const withLastWrite = (differences: Omit<ShadowEntry, 'at'>[], writtenAt: number | null | undefined) =>
+  differences.length === 0
+    ? differences
+    : [
+        ...differences,
+        { slice: LAST_WRITE_SLICE, detail: writtenAt ? new Date(writtenAt).toISOString() : 'not recorded' }
+      ];
+
 const readLog = (): ShadowEntry[] => {
   try {
     return JSON.parse(localStorage.getItem(SHADOW_LOG_KEY) ?? '[]') as ShadowEntry[];
@@ -94,6 +105,7 @@ const appendLog = (entries: Omit<ShadowEntry, 'at'>[]) => {
 
 const written = new Map<string, string>();
 let timer: ReturnType<typeof setTimeout> | undefined;
+let writeFailureLogged = false;
 
 /** The slices that changed since the last write go to the core now; resolves when written. */
 const writeNow = (): Promise<void> => {
@@ -116,6 +128,11 @@ const writeNow = (): Promise<void> => {
     // Written again with the next change.
     for (const slice of Object.keys(slices)) written.delete(slice);
     console.warn('[persist shadow] write failed', error);
+    // Once a session in the log: it says why the core's copy fell behind, if that is why.
+    if (!writeFailureLogged) {
+      writeFailureLogged = true;
+      appendLog([{ slice: 'write failed', detail: String(error).slice(0, 200) }]);
+    }
   });
 };
 
@@ -171,7 +188,7 @@ export const startPersistShadow = async (): Promise<void> => {
     // The first start with the shadow: the core has nothing yet, which is no difference.
     const known = SLICES.some((slice) => slice in core);
     // With no blob from the last session there is nothing to compare: the store holds defaults.
-    if (known && LOADED_LOCAL_STORAGE_TEXT) appendLog(compareSlices(blob, core));
+    if (known && LOADED_LOCAL_STORAGE_TEXT) appendLog(withLastWrite(compareSlices(blob, core), persisted.writtenAt));
     if (known && localStorage.getItem(READ_FROM_CORE_KEY) !== '0') {
       const fromCore = slicesToRestore(LOADED_LOCAL_STORAGE_TEXT, core);
       if (Object.keys(fromCore).length > 0) {

@@ -5,7 +5,7 @@
 //! ignores) is written here as well - a device setting `view.<slice>`, and the queue also as the
 //! core's own `queue_items` - and read back by the view to compare (the shadow read). The blob stays
 //! the source until the comparison has stayed empty through daily use; the view's flag
-//! `nemora.persist.readFromCore` (off) then reads the slices from here instead.
+//! `nemora.persist.readFromCore` (on) has this copy restore what the blob does not have.
 //!
 //! A slice is kept as the JSON text the view wrote, not parsed: serde_json's default float parsing
 //! is not exact (2.2199999999999998 came back as 2.22, measured on the stand), so a parsed copy
@@ -25,6 +25,8 @@ use crate::app::App;
 use crate::commands::{Res, fail};
 
 const PREFIX: &str = "view.";
+/// When the last write came: beside a difference at a start it says how old the core's copy was.
+const WRITTEN_AT: &str = "view.writtenAt";
 
 /// The slices of the view's `LocalStorage`, by its own names.
 pub const SLICES: &[&str] = &[
@@ -57,6 +59,8 @@ pub struct CoreQueue {
 pub struct Persisted {
     pub slices: HashMap<String, String>,
     pub core_queue: Option<CoreQueue>,
+    /// Milliseconds since the epoch; `None` before the first write that recorded it.
+    pub written_at: Option<f64>,
 }
 
 /// The view's queue slice as the core's queue: its songs (a view id `song:variant` as its song;
@@ -109,7 +113,9 @@ fn stored_text(db: &nemora_core::db::Db, name: &str) -> nemora_core::Result<Opti
 }
 
 fn write(app: &App, slices: &HashMap<String, String>) -> nemora_core::Result<()> {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0.0, |d| d.as_millis() as f64);
     app.write_quiet(|db| {
+        nemora_core::settings::set_device(db, WRITTEN_AT, &Value::from(now))?;
         for name in SLICES {
             if let Some(text) = slices.get(*name) {
                 nemora_core::settings::set_device(db, &format!("{PREFIX}{name}"), &Value::String(text.clone()))?;
@@ -154,7 +160,8 @@ fn read(app: &App) -> nemora_core::Result<Persisted> {
         index: queue.index,
         position_ms: queue.position_ms,
     });
-    Ok(Persisted { slices, core_queue })
+    let written_at = nemora_core::settings::device(&db, WRITTEN_AT)?.and_then(|value| value.as_f64());
+    Ok(Persisted { slices, core_queue, written_at })
 }
 
 #[cfg(test)]
@@ -211,8 +218,10 @@ mod tests {
         slices
             .insert("queue".to_owned(), r#"{"currentSongIndex":0,"queue":["s1","s2"],"queueType":"songs"}"#.to_owned());
         slices.insert("unknown".to_owned(), "1".to_owned());
+        assert_eq!(read(&app).unwrap().written_at, None);
         write(&app, &slices).unwrap();
         let back = read(&app).unwrap();
+        assert!(back.written_at.is_some_and(|at| at > 1e12), "when the write came is kept");
         for name in SLICES {
             assert_eq!(back.slices.get(*name), slices.get(*name), "{name}");
         }

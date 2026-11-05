@@ -1,6 +1,6 @@
 import '@renderer/store';
 import { describe, expect, it } from 'vitest';
-import { SLICES, canonical, compareSlices, slicesToRestore } from '@renderer/other/persistShadow';
+import { LAST_WRITE_SLICE, SLICES, canonical, compareSlices, slicesToRestore, withLastWrite } from '@renderer/other/persistShadow';
 
 /** PLAN/21 P21.4: the shadow read's comparison of the core's copy with the view's blob. */
 const blob = () =>
@@ -57,5 +57,15 @@ describe('persist shadow', () => {
     expect(Object.keys(slicesToRestore(null, core)).sort()).toEqual([...SLICES].sort());
     // An unreadable blob counts as none.
     expect(Object.keys(slicesToRestore('{oops', core)).length).toBe(SLICES.length);
+  });
+
+  it('says when the core was last written, only beside a difference', () => {
+    expect(withLastWrite([], 1_700_000_000_000)).toEqual([]);
+    const difference = { slice: 'queue', detail: 'x' };
+    expect(withLastWrite([difference], 1_700_000_000_000)).toEqual([
+      difference,
+      { slice: LAST_WRITE_SLICE, detail: '2023-11-14T22:13:20.000Z' }
+    ]);
+    expect(withLastWrite([difference], null)[1].detail).toBe('not recorded');
   });
 });
