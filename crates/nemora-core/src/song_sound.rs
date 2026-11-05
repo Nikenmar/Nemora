@@ -187,6 +187,9 @@ pub fn write_field(path: &Path, text: Option<&str>) -> Result<bool> {
                 "writing the tag would have changed something else; the file was left as it was",
             ));
         }
+        // The power can go at any moment: the copy's bytes reach the disk before its name replaces the
+        // file, or a cut right after could leave the name on a file that is not all there.
+        File::options().write(true).open(&copy)?.sync_all()?;
         std::fs::rename(&copy, path)?;
         Ok(())
     })();
