@@ -11,10 +11,12 @@
 //! The value is versioned text with the numbers, not the name ("Slowed" is only a label of the
 //! speed): `v1;semitones=-2;keepPitch=0;reverb=0.35;size=hall`.
 //!
-//! Only that one field is read or written, through the format's own tag (never lofty's generic
-//! `Tag`, which can drop frames it has no mapping for): the user's notes, lyrics, chapters and
-//! everything else stay as they are. Neither the song's id (the audio stream, `identity`) nor its
-//! row (the display tags' signature, `tags::TrackTags::signature`) depends on the field.
+//! Only that one field is written: in FLAC and MP3 at the byte level (`raw_field`), so every other
+//! comment, frame and picture stays the bytes it was; in the rest, and in a FLAC or MP3 of a shape
+//! `raw_field` leaves alone, through the format's own tag with lofty's conversions off (never its
+//! generic `Tag`, which can drop frames it has no mapping for). Neither the song's id (the audio
+//! stream, `identity`) nor its row (the display tags' signature, `tags::TrackTags::signature`)
+//! depends on the field.
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -93,7 +95,7 @@ fn tags_error(path: &Path, e: impl std::fmt::Display) -> Error {
 }
 
 fn options() -> ParseOptions {
-    ParseOptions::new().read_properties(false).parsing_mode(ParsingMode::Relaxed)
+    ParseOptions::new().read_properties(false).parsing_mode(ParsingMode::Relaxed).implicit_conversions(false)
 }
 
 /// The field's text in the file, if the file has it. Formats without a place for it answer `None`.
@@ -160,6 +162,10 @@ pub fn write_field(path: &Path, text: Option<&str>) -> Result<bool> {
     if read_field(path)?.as_deref() == text {
         return Ok(true);
     }
+    // A rename would replace a read-only file all the same; the user has said it is not to change.
+    if std::fs::metadata(path)?.permissions().readonly() {
+        return Err(tags_error(path, "the file is read-only; it was left as it was"));
+    }
     let mut name = path.file_name().unwrap_or_default().to_os_string();
     name.push(".nemora-tmp");
     let copy = path.with_file_name(name);
@@ -185,13 +191,6 @@ pub fn write_field(path: &Path, text: Option<&str>) -> Result<bool> {
         Ok(())
     })();
     if done.is_err() && copy.exists() {
-        // A copy of a read-only file is read-only too, which Windows will not delete.
-        if let Ok(metadata) = std::fs::metadata(&copy) {
-            let mut permissions = metadata.permissions();
-            #[allow(clippy::permissions_set_readonly_false)]
-            permissions.set_readonly(false);
-            let _ = std::fs::set_permissions(&copy, permissions);
-        }
         let _ = std::fs::remove_file(&copy);
     }
     done.map(|()| true)
@@ -205,7 +204,7 @@ fn contents(path: &Path) -> Result<Vec<String>> {
         .map_err(|e| tags_error(path, e))?
         .guess_file_type()
         .map_err(|e| tags_error(path, e))?
-        .options(ParseOptions::new().read_properties(false).parsing_mode(ParsingMode::Relaxed))
+        .options(options())
         .read()
         .map_err(|e| tags_error(path, e))?;
     let mut out = Vec::new();
@@ -254,6 +253,14 @@ fn write_in_place(path: &Path, text: Option<&str>) -> Result<()> {
         .guess_file_type()
         .map_err(|e| tags_error(path, e))?
         .file_type();
+    let done = match file_type {
+        Some(FileType::Mpeg) => crate::raw_field::write_id3(path, FIELD, text)?,
+        Some(FileType::Flac) => crate::raw_field::write_flac(path, FIELD, text)?,
+        _ => false,
+    };
+    if done {
+        return Ok(());
+    }
     let mut file = File::open(path)?;
     match file_type {
         Some(FileType::Mpeg) => {

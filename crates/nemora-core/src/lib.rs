@@ -31,6 +31,7 @@ mod perf;
 pub mod playlists;
 pub mod plays;
 pub mod queue;
+mod raw_field;
 pub mod recap;
 pub mod rediscover;
 pub mod scan;
