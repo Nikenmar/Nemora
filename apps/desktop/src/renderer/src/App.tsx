@@ -1202,11 +1202,22 @@ export default function App() {
   );
 
   useEffect(() => {
+    // A menu sits where it opened (fixed): a scroll of the page under it, or a resize, closes it,
+    // as Windows' own menus do; a scroll inside the menu itself does not.
+    const closeOnScroll = (event: Event) => {
+      const target = event.target as Element | null;
+      if (target instanceof Element && target.closest('.context-menu')) return;
+      handleContextMenuVisibilityUpdate();
+    };
     window.addEventListener('click', handleContextMenuVisibilityUpdate);
     window.addEventListener('keydown', manageKeyboardShortcuts);
+    window.addEventListener('scroll', closeOnScroll, { capture: true, passive: true });
+    window.addEventListener('resize', handleContextMenuVisibilityUpdate);
     return () => {
       window.removeEventListener('click', handleContextMenuVisibilityUpdate);
       window.removeEventListener('keydown', manageKeyboardShortcuts);
+      window.removeEventListener('scroll', closeOnScroll, { capture: true });
+      window.removeEventListener('resize', handleContextMenuVisibilityUpdate);
     };
   }, [handleContextMenuVisibilityUpdate, manageKeyboardShortcuts]);
 
