@@ -35,8 +35,8 @@ pub enum Control {
 }
 
 /// What the renderer and the player share with the callback.
-/// Set when a sample left the chain past 0 dBFS (a resampled over, or reverb on a loud song); the
-/// panel's peak lamp reads and clears it (PLAN/18). Nothing limits: this only tells.
+/// Set when the clipper caught a sample past 0 dBFS (reverb on a loud song, an over the speed or a
+/// resampling made); the panel's peak lamp reads and clears it (PLAN/18).
 pub static CLIPPED: AtomicBool = AtomicBool::new(false);
 
 pub struct Shared {
@@ -45,6 +45,9 @@ pub struct Shared {
     pub consumed: AtomicU64,
     /// Set by the callback when a pausing fade has finished; cleared by `Resume`.
     pub paused: AtomicBool,
+    /// Set by the player while what it buffers is not the file as decoded (another speed,
+    /// varispeed, a resampling to the device's rate): the clipper then keeps it within full scale.
+    pub upstream_processing: AtomicBool,
 }
 
 pub struct Output {
@@ -73,6 +76,7 @@ impl Output {
             buffer: Mutex::new(VecDeque::new()),
             consumed: AtomicU64::new(0),
             paused: AtomicBool::new(true),
+            upstream_processing: AtomicBool::new(false),
         });
         let (control, controls) = channel();
         let failed = Arc::new(AtomicBool::new(false));
@@ -100,6 +104,7 @@ impl Output {
             buffer: Mutex::new(VecDeque::new()),
             consumed: AtomicU64::new(0),
             paused: AtomicBool::new(true),
+            upstream_processing: AtomicBool::new(false),
         });
         let (control, controls) = channel();
         let callback = Callback::new(Arc::clone(&shared), controls, sample_rate, channels);
@@ -164,7 +169,11 @@ impl Callback {
         data[taken..].fill(0.0);
         self.shared.consumed.fetch_add((taken / self.channels) as u64, Ordering::SeqCst);
         self.chain.process(&mut data[..taken]);
-        if !self.chain.is_neutral() && data[..taken].iter().any(|s| s.abs() > 1.0) {
+        // The clipper: only where the sound was processed, so the file as decoded passes untouched
+        // (the transparency rule); there, a sample past full scale is set to it and nothing else
+        // changes (`dsp::clip_to_full_scale`).
+        let processed = !self.chain.is_neutral() || self.shared.upstream_processing.load(Ordering::Relaxed);
+        if processed && crate::dsp::clip_to_full_scale(&mut data[..taken]) {
             CLIPPED.store(true, Ordering::Relaxed);
         }
         if self.pause_after_fade && !self.chain.is_fading() && self.chain.fade_target() == 0.0 {
@@ -201,6 +210,7 @@ mod tests {
             buffer: Mutex::new(VecDeque::new()),
             consumed: AtomicU64::new(0),
             paused: AtomicBool::new(false),
+            upstream_processing: AtomicBool::new(false),
         });
         let (tx, rx) = channel();
         (Callback::new(Arc::clone(&shared), rx, 48_000, 2), shared, tx)

@@ -49,6 +49,7 @@ fn through_the_engine(path: &Path, rate: u32, channels: usize) -> Vec<f32> {
         buffer: Mutex::new(VecDeque::new()),
         consumed: AtomicU64::new(0),
         paused: AtomicBool::new(false),
+        upstream_processing: AtomicBool::new(false),
     });
     let (_tx, rx) = channel();
     let mut callback = Callback::new(Arc::clone(&shared), rx, rate, channels);
@@ -106,6 +107,28 @@ fn every_format_leaves_the_engine_bit_identical() {
     }
     assert!(checked >= 3, "only {checked} formats could be checked");
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The clipper acts on processed sound only: the file as decoded keeps even its overs (a lossy
+/// decode can have them), and processed sound past full scale is held at it and lights the lamp.
+#[test]
+fn the_clipper_holds_processed_sound_at_full_scale_and_leaves_the_file_as_decoded() {
+    let run = |processing: bool| {
+        let shared = Arc::new(Shared {
+            buffer: Mutex::new(VecDeque::from(vec![1.5f32, -2.0, 0.25, -0.5])),
+            consumed: AtomicU64::new(0),
+            paused: AtomicBool::new(false),
+            upstream_processing: AtomicBool::new(processing),
+        });
+        let (_tx, rx) = channel();
+        let mut callback = Callback::new(Arc::clone(&shared), rx, 48_000, 2);
+        crate::output::CLIPPED.store(false, std::sync::atomic::Ordering::Relaxed);
+        let mut period = vec![0.0f32; 4];
+        callback.fill(&mut period);
+        (period, crate::output::CLIPPED.swap(false, std::sync::atomic::Ordering::Relaxed))
+    };
+    assert_eq!(run(false), (vec![1.5, -2.0, 0.25, -0.5], false), "as decoded: untouched");
+    assert_eq!(run(true), (vec![1.0, -1.0, 0.25, -0.5], true), "processed: held at full scale");
 }
 
 #[test]

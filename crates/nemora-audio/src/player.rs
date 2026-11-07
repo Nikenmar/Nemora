@@ -520,7 +520,8 @@ impl Engine {
     /// from the frame right after the current track's last.
     fn top_up(&mut self) {
         let channels = self.output.channels;
-        let pace = self.speed / self.output.sample_rate as f64;
+        let speed = self.speed;
+        let pace = speed / self.output.sample_rate as f64;
         let consumed = self.output.shared.consumed.load(Ordering::SeqCst);
         if let Some(c) = &mut self.current {
             c.compact(consumed);
@@ -550,6 +551,9 @@ impl Engine {
                 let factor = track.source.factor();
                 track.record((block.len() / channels) as u64, pace * factor);
                 track.drained = !more;
+                // Not the file as decoded: the output's clipper keeps it within full scale.
+                let processed = !track.source.is_direct() || speed != 1.0 || factor != 1.0;
+                self.output.shared.upstream_processing.store(processed, Ordering::Relaxed);
                 self.output.shared.buffer.lock().unwrap_or_else(|e| e.into_inner()).extend(block);
             }
             Err(error) if is_next => {

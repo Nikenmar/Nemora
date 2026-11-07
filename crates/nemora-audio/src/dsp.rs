@@ -4,6 +4,24 @@
 //! no fade the samples leave untouched (the transparency rule). Nothing here lowers or raises the
 //! sound on its own: the only automatic gain is the equalizer's pre-gain, which exists only while
 //! the user has the equalizer on with a boosted band, and equals that boost so it cannot clip.
+//! Processed sound (these stages, a speed, a resampling) goes through `clip_to_full_scale` last.
+
+/// The clipper (the user's call, 2026-11-07): a sample past 0 dBFS is set to it, every other one
+/// stays exactly as it is. No knee, no limiter, no gain: below full scale nothing changes, and what
+/// it cuts is what the device would have cut. `true` when it cut anything.
+pub fn clip_to_full_scale(samples: &mut [f32]) -> bool {
+    let mut cut = false;
+    for sample in samples {
+        if *sample > 1.0 {
+            *sample = 1.0;
+            cut = true;
+        } else if *sample < -1.0 {
+            *sample = -1.0;
+            cut = true;
+        }
+    }
+    cut
+}
 
 /// The ten bands of the 1.x equalizer, in Hz.
 pub const EQ_BANDS: [f64; 10] = [32.0, 64.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0];
@@ -289,6 +307,17 @@ mod tests {
         assert_eq!(perceptual_gain(100.0), 1.0);
         // 1.x: (exp(ln30 * 0.5) - 1) / (30 - 1)
         assert!((perceptual_gain(50.0) - (30f64.sqrt() - 1.0) / 29.0).abs() < 1e-15);
+    }
+
+    #[test]
+    fn the_clipper_cuts_only_what_is_past_full_scale() {
+        let mut samples = [0.0, 0.5, -0.999_999, 1.0, -1.0, 1.25, -3.0, f32::MIN_POSITIVE];
+        assert!(clip_to_full_scale(&mut samples));
+        assert_eq!(samples, [0.0, 0.5, -0.999_999, 1.0, -1.0, 1.0, -1.0, f32::MIN_POSITIVE]);
+        let mut quiet = [0.25_f32, -0.75, 0.999_999_9];
+        let before = quiet;
+        assert!(!clip_to_full_scale(&mut quiet), "nothing past full scale: nothing cut");
+        assert_eq!(quiet.map(f32::to_bits), before.map(f32::to_bits), "bit for bit the same");
     }
 
     #[test]
