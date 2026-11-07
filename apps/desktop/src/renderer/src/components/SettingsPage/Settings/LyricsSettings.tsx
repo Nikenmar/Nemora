@@ -6,42 +6,19 @@ import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
 
 import Button from '../../Button';
 import Checkbox from '../../Checkbox';
-import Dropdown, { type DropdownOption } from '../../Dropdown';
 import LyricsLibrary from './LyricsLibrary';
 
-import i18n from '../../../i18n';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
 const MusixmatchSettingsPrompt = lazy(() => import('../MusixmatchSettingsPrompt'));
 const MusixmatchDisclaimerPrompt = lazy(() => import('../MusixmatchDisclaimerPrompt'));
 
-const automaticallySaveLyricsOptions: DropdownOption<AutomaticallySaveLyricsTypes>[] = [
-  {
-    label: i18n.t('settingsPage.doNotSaveLyricsAutomatically'),
-    value: 'NONE'
-  },
-  { label: i18n.t('settingsPage.syncedLyricsOnly'), value: 'SYNCED' },
-  {
-    label: i18n.t('settingsPage.saveEitherLyrics'),
-    value: 'SYNCED_OR_UN_SYNCED'
-  }
-];
-
 const LyricsSettings = () => {
   const userData = useStore(store, (state) => state.userData);
 
   const { changePromptMenuData, updateUserData } = useContext(AppUpdateContext);
   const { t } = useTranslation();
-
-  const [lyricsAutomaticallySaveState, setLyricsAutomaticallySaveState] =
-    useState<AutomaticallySaveLyricsTypes>('NONE');
-
-  useEffect(() => {
-    const lyricsSaveState = storage.preferences.getPreferences('lyricsAutomaticallySaveState');
-
-    setLyricsAutomaticallySaveState(lyricsSaveState);
-  }, []);
 
   const [autoTranslateLyrics, setAutoTranslateLyrics] = useState(false);
 
@@ -122,90 +99,6 @@ const LyricsSettings = () => {
                   .catch((err) => console.error(err));
               }}
               isDisabled={userData?.preferences.isMusixmatchLyricsEnabled}
-            />
-          </div>
-        </li>
-
-        <li className="save-lyrics-automatically mb-4">
-          <div className="description">{t('settingsPage.saveLyricsAutomaticallyDescription')}</div>
-          <div className="mt-4 flex flex-row items-center">
-            <Dropdown
-              name="lyricsAutomaticallySaveState"
-              value={lyricsAutomaticallySaveState}
-              options={automaticallySaveLyricsOptions}
-              onChange={(e) => {
-                const val = e.currentTarget.value as AutomaticallySaveLyricsTypes;
-                setLyricsAutomaticallySaveState(val);
-                storage.preferences.setPreferences('lyricsAutomaticallySaveState', val);
-              }}
-            />
-            <span
-              className="ms-icon ml-4 cursor-pointer text-2xl text-echo"
-              title={t('settingsPage.saveLyricsAutomaticallyInfo')}
-            >
-              help
-            </span>
-          </div>
-        </li>
-
-        <li className="secondary-container always-save-lrc-files mb-4">
-          <div className="description">{t('settingsPage.saveLyricsInLrcFilesDescription')}</div>
-          <Checkbox
-            id="saveLyricsInLrcFilesForSupportedSongs"
-            isChecked={
-              userData !== undefined && userData?.preferences.saveLyricsInLrcFilesForSupportedSongs
-            }
-            checkedStateUpdateFunction={(state) =>
-              window.api.userData
-                .saveUserData('preferences.saveLyricsInLrcFilesForSupportedSongs', state)
-                .then(() =>
-                  updateUserData((prevUserData) => ({
-                    ...prevUserData,
-                    preferences: {
-                      ...prevUserData.preferences,
-                      saveLyricsInLrcFilesForSupportedSongs: state
-                    }
-                  }))
-                )
-            }
-            labelContent={t('settingsPage.saveLyricsInLrcFiles')}
-          />
-        </li>
-
-        <li className="lrc-files-custom-save-location mb-4">
-          <div className="description">
-            {t('settingsPage.lrcFileCustomSaveLocationDescription')}
-          </div>
-          <div className="ml-2 mt-4 flex-row text-sm">
-            {userData?.customLrcFilesSaveLocation && (
-              <>
-                <span>{t('settingsPage.selectedCustomLocation')}: </span>
-                <span className="mr-4 text-echo">
-                  {userData.customLrcFilesSaveLocation}
-                </span>
-              </>
-            )}
-          </div>
-          <div className="mt-4 flex flex-row items-center">
-            <Button
-              label={t('settingsPage.setCustomLocation')}
-              iconName="location_on"
-              iconClassName="ms-icon"
-              clickHandler={() =>
-                window.api.settingsHelpers
-                  .getFolderLocation()
-                  .then((folderPath) =>
-                    window.api.userData
-                      .saveUserData('customLrcFilesSaveLocation', folderPath)
-                      .then(() =>
-                        updateUserData((prevUserData) => ({
-                          ...prevUserData,
-                          customLrcFilesSaveLocation: folderPath
-                        }))
-                      )
-                  )
-                  .catch((err) => console.warn(err))
-              }
             />
           </div>
         </li>
