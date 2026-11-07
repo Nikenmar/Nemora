@@ -13,7 +13,8 @@ export const updateSystemMedia = (
   // 0 when the length is unknown: the engine says so for a file that does not state it.
   const duration = Number.isFinite(state.duration) && state.duration > 0 ? state.duration : 0;
   const position = Number.isFinite(state.position) ? Math.max(state.position, 0) : 0;
-  const now = song
+  // The player's song before any is loaded is an empty object: nothing is playing yet.
+  const now = song?.title
     ? {
         title: song.title,
         artist: song.artists?.map((artist) => artist.name).join(', ') || fallbacks.artist,
