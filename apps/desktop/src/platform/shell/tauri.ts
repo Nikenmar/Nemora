@@ -8,6 +8,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { stat } from '@tauri-apps/plugin-fs';
 import { exit } from '@tauri-apps/plugin-process';
 
+import { clientSizeFor } from './geometry';
 import type { FileArgumentPort } from './singleInstance';
 import type { ExitPort, TrayFactory, TrayHandle } from './tray';
 import type {
@@ -36,7 +37,10 @@ export const tauriWindowPort: WindowPort = {
     return { x: position.x, y: position.y, width: size.width, height: size.height };
   },
   setRect: async (rect: PhysicalRect) => {
-    await window.setSize(new PhysicalSize(rect.width, rect.height));
+    // `rect` is the outer rectangle; `setSize` takes the client area (`clientSizeFor`).
+    const [outer, client] = await Promise.all([window.outerSize(), window.innerSize()]);
+    const size = clientSizeFor(rect, outer, client);
+    await window.setSize(new PhysicalSize(size.width, size.height));
     await window.setPosition(new PhysicalPosition(rect.x, rect.y));
   },
   setSizeLimits: async (minWidth, minHeight, maxWidth, maxHeight) => {

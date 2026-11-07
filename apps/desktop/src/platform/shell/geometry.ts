@@ -19,6 +19,22 @@ export const DEFAULT_WINDOW_RECTS = {
 
 export const DISPLAY_CHANGED_EVENT = 'nemora://display-changed';
 
+/**
+ * The client size that gives a window this outer size. Every rectangle here is the window's outer
+ * one (`outerPosition`/`outerSize`, which is what is saved and clamped), but Tauri's `setSize` sets
+ * the client area: applying an outer size as it is grew the window by its frame (16x9 px on
+ * Windows 11 with the shadow of an undecorated window) at every start, until after a dozen starts
+ * it reached under the taskbar, past the clamp, which had checked the size before the frame.
+ */
+export const clientSizeFor = (
+  outerRect: { width: number; height: number },
+  outer: { width: number; height: number },
+  client: { width: number; height: number }
+): { width: number; height: number } => ({
+  width: Math.max(1, outerRect.width - Math.max(0, outer.width - client.width)),
+  height: Math.max(1, outerRect.height - Math.max(0, outer.height - client.height))
+});
+
 export interface GeometryRepository {
   load(mode: Exclude<WindowMode, 'full'>): PhysicalRect | undefined;
   save(mode: Exclude<WindowMode, 'full'>, rect: PhysicalRect): void | Promise<void>;
