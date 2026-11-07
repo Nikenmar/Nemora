@@ -407,6 +407,31 @@
       }
     }
   },
+  "spotifyImport": {
+    "title": "Import from Spotify",
+    "button": "From Spotify",
+    "description": "Paste the link of a public Spotify playlist. Its tracks are found in your library, even when spelled differently; nothing is downloaded and you need no account.",
+    "find": "Find",
+    "foundCount_one": "{{count}} found",
+    "foundCount_other": "{{count}} found",
+    "likelyCount_one": "{{count}} to check",
+    "likelyCount_other": "{{count}} to check",
+    "missingCount_one": "{{count}} not in your library",
+    "missingCount_other": "{{count}} not in your library",
+    "mayBeCut": "Spotify shows only the first 100 tracks of a playlist to anyone not signed in, so a longer one comes in cut.",
+    "likelyTitle": "Check these",
+    "likelyHint": "Found with a slightly different title or length. Untick any that are not the same song.",
+    "missingTitle": "Not in your library",
+    "copyMissing": "Copy the list",
+    "copied": "The missing tracks are copied.",
+    "foundTitle_one": "{{count}} found",
+    "foundTitle_other": "{{count}} found",
+    "create_one": "Create the playlist ({{count}} song)",
+    "create_other": "Create the playlist ({{count}} songs)",
+    "created_one": "'{{name}}' created with {{count}} song.",
+    "created_other": "'{{name}}' created with {{count}} songs.",
+    "createFailed": "The playlist was not created."
+  },
   "playlistsPage": {
     "createNewPlaylist": "Create new playlist",
     "importPlaylist": "Import a playlist",

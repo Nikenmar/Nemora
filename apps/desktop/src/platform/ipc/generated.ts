@@ -701,6 +701,56 @@ export type SoundSaved = {
 	failed: string[],
 };
 
+export type SpotifyPreview = SpotifyPreview_Serialize | SpotifyPreview_Deserialize;
+
+export type SpotifyPreview_Deserialize = {
+	id: string,
+	name: string,
+	owner?: string | null,
+	coverUrl?: string | null,
+	/**  Spotify's page shows the first 100 tracks: a longer playlist comes cut. */
+	mayBeCut: boolean,
+	tracks: SpotifyTrack_Deserialize[],
+};
+
+export type SpotifyPreview_Serialize = {
+	id: string,
+	name: string,
+	owner: string | null,
+	coverUrl: string | null,
+	/**  Spotify's page shows the first 100 tracks: a longer playlist comes cut. */
+	mayBeCut: boolean,
+	tracks: SpotifyTrack_Serialize[],
+};
+
+export type SpotifyTrack = SpotifyTrack_Serialize | SpotifyTrack_Deserialize;
+
+export type SpotifyTrack_Deserialize = {
+	title: string,
+	artists: string[],
+	durationMs?: number | null,
+	/**  The library's song, if found. */
+	songId?: string | null,
+	/**  `exact` or `likely`, with `song_id`. */
+	confidence?: string | null,
+	/**  The found song as the library names it, for the user to check. */
+	libraryTitle?: string | null,
+	libraryArtists: string[],
+};
+
+export type SpotifyTrack_Serialize = {
+	title: string,
+	artists: string[],
+	durationMs: number | null,
+	/**  The library's song, if found. */
+	songId: string | null,
+	/**  `exact` or `likely`, with `song_id`. */
+	confidence: string | null,
+	/**  The found song as the library names it, for the user to check. */
+	libraryTitle: string | null,
+	libraryArtists: string[],
+};
+
 /**  The user's steering for this session (C2) and session filters (C4); nothing is stored. */
 export type Steering = Steering_Serialize | Steering_Deserialize;
 
@@ -1027,6 +1077,8 @@ export interface IpcCommands {
   song_sound_set: { args: { songId: string; sound?: SongSound_Deserialize | null; writeFile: boolean; }; ret: SoundSaved };
   song_sounds: { args: Record<string, never>; ret: { [key in string]: SongSound_Serialize } };
   songs_delete_files: { args: { paths: string[]; permanent: boolean; }; ret: Outcome_Serialize };
+  spotify_cover: { args: { id: string; url: string; }; ret: string };
+  spotify_playlist_preview: { args: { link: string; }; ret: SpotifyPreview_Serialize };
   start_file_drag: { args: { paths: string[]; artwork?: string | null; }; ret: null };
   startup_args: { args: Record<string, never>; ret: string[] };
   stats_dashboard: { args: { timeRange: string; today: string; }; ret: Value };

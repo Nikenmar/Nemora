@@ -15,6 +15,7 @@ import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
 const NewPlaylistPrompt = lazy(() => import('./NewPlaylistPrompt'));
+const SpotifyImportPrompt = lazy(() => import('./SpotifyImportPrompt'));
 
 const playlistSortOptions: DropdownOption<PlaylistSortTypes>[] = [
   { label: i18n.t('sortTypes.aToZ'), value: 'aToZ' },
@@ -100,6 +101,11 @@ const PlaylistsPage = () => {
     [changePromptMenuData, playlists]
   );
 
+  const importFromSpotify = useCallback(
+    () => changePromptMenuData(true, <SpotifyImportPrompt />, '!w-[44rem] !max-w-[90vw]'),
+    [changePromptMenuData]
+  );
+
   return (
     <MainContainer
       className="main-container appear-from-bottom playlists-list-container mb-0 !h-full !pb-0"
@@ -117,6 +123,11 @@ const PlaylistsPage = () => {
               iconName: 'publish',
               handlerFunction: () =>
                 window.api.playlistsData.importPlaylist().catch((err) => console.error(err))
+            },
+            {
+              label: t('spotifyImport.title'),
+              iconName: 'link',
+              handlerFunction: importFromSpotify
             }
           ],
           e.pageX,
@@ -186,6 +197,12 @@ const PlaylistsPage = () => {
                     })
                     .catch((err) => console.error(err));
                 }}
+              />
+              <Button
+                label={t('spotifyImport.button')}
+                className="spotify-import-btn !mr-0"
+                iconName="link"
+                clickHandler={importFromSpotify}
               />
               <Dropdown
                 name="playlistsSortDropdown"

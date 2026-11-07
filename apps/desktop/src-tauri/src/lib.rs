@@ -28,6 +28,7 @@ mod secrets;
 mod shellops;
 mod smtc;
 mod sounds;
+mod spotify_import;
 mod system;
 mod tags_cmd;
 #[allow(unsafe_op_in_unsafe_fn)]
@@ -272,6 +273,8 @@ pub fn run() {
             sounds::song_sounds,
             sounds::song_sound_set,
             tags_cmd::song_file_details,
+            spotify_import::spotify_playlist_preview,
+            spotify_import::spotify_cover,
         ])
         .register_asynchronous_uri_scheme_protocol("nemora", |_ctx, request, responder| {
             // Off the main thread: a cold 50 MB read must never block the UI.

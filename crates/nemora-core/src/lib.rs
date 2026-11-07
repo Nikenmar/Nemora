@@ -28,6 +28,7 @@ pub mod mega_order;
 pub mod palette;
 #[cfg(test)]
 mod perf;
+pub mod playlist_match;
 pub mod playlists;
 pub mod plays;
 pub mod queue;
@@ -41,6 +42,7 @@ pub mod shuffle;
 pub mod signals;
 pub mod smartlists;
 pub mod song_sound;
+pub mod spotify;
 pub mod stats;
 pub mod suggest;
 pub mod tags;
