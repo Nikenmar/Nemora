@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 /**
- * What Nemora does with the user's data, said plainly: what goes over the internet and when, what
+ * What Nemora does with the user's data, said plainly (Settings, About, Privacy): what goes over the internet and when, what
  * stays on this computer, and when it changes the music files. Every line is checked against the
  * code (2026-11-06); a new online feature adds its line here.
  */
@@ -33,14 +33,14 @@ const Group = ({ title, rows }: { title: string; rows: [string, string][] }) => 
   </section>
 );
 
-const PrivacySettings = () => {
+const PrivacyPrompt = () => {
   const { t } = useTranslation();
   return (
-    <li className="main-container privacy-settings-container mb-16">
-      <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
+    <div className="privacy-prompt w-full px-2 pb-2">
+      <h2 className="mb-2 flex items-center text-title font-semibold text-ink">
         <span className="ms-icon mr-2">shield</span>
         {t('privacySettings.title')}
-      </div>
+      </h2>
       <p className="mb-5 text-small text-ink-dim">{t('privacySettings.intro')}</p>
       <Group
         title={t('privacySettings.onlineTitle')}
@@ -54,8 +54,8 @@ const PrivacySettings = () => {
         title={t('privacySettings.filesTitle')}
         rows={FILES.map((i) => [t(`privacySettings.files.${i}.name`), t(`privacySettings.files.${i}.what`)])}
       />
-    </li>
+    </div>
   );
 };
 
-export default PrivacySettings;
+export default PrivacyPrompt;

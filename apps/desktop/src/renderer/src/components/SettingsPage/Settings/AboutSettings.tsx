@@ -27,6 +27,7 @@ const SensitiveActionConfirmPrompt = lazy(() => import('../../SensitiveActionCon
 const AppShortcutsPrompt = lazy(() => import('../AppShortcutsPrompt'));
 const ClearLocalStoragePrompt = lazy(() => import('../ClearLocalStoragePrompt'));
 const OpenLinkConfirmPrompt = lazy(() => import('../../OpenLinkConfirmPrompt'));
+const PrivacyPrompt = lazy(() => import('../PrivacyPrompt'));
 
 const AboutSettings = () => {
   const isDarkMode = useStore(store, (state) => state.isDarkMode);
@@ -211,6 +212,12 @@ const AboutSettings = () => {
             clickHandler={() =>
               changePromptMenuData(true, <ReleaseNotesPrompt />, 'release-notes px-8 py-4')
             }
+          />
+          <Button
+            iconName="shield"
+            className="privacy-prompt-btn mb-4"
+            label={t('privacySettings.button')}
+            clickHandler={() => changePromptMenuData(true, <PrivacyPrompt />, '!w-[60rem] !max-w-[92vw]')}
           />
           <Button
             iconName="receipt_long"

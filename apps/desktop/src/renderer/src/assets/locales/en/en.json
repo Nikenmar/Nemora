@@ -327,6 +327,7 @@
     "empty": "No folders added to your library."
   },
   "privacySettings": {
+    "button": "Privacy",
     "title": "Privacy and your data",
     "intro": "Nemora is a player for the music on your computer. It needs no account and keeps your library, statistics and settings here. This is everything it sends anywhere, and when.",
     "onlineTitle": "Sent over the internet",
