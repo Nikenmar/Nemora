@@ -58,7 +58,7 @@ pub struct Song {
     version: Option<String>,
 }
 
-fn song(row: &SongRow) -> Song {
+pub(crate) fn song(row: &SongRow) -> Song {
     let view_id = match &row.version {
         Some(v) => Some(format!("{}:v{}", row.song_id, v.id)),
         None if !row.is_primary => Some(format!("{}:{}", row.song_id, row.variant_id)),
@@ -83,7 +83,7 @@ fn song_of(id: &str) -> &str {
     id.split(':').next().unwrap_or(id).trim()
 }
 
-fn rows_for_songs(db: &Db, song_ids: &[String]) -> Result<Vec<SongRow>, String> {
+pub(crate) fn rows_for_songs(db: &Db, song_ids: &[String]) -> Result<Vec<SongRow>, String> {
     let variants = library::primary_variants(db, song_ids).map_err(err)?;
     let ids: Vec<i64> = song_ids.iter().filter_map(|s| variants.get(s).copied()).collect();
     let rows = library::rows_by_id(db, &ids).map_err(err)?;
@@ -461,10 +461,10 @@ pub struct Summary {
 
 impl Nemora {
     pub fn new(profile: PathBuf) -> Self {
-        Self { profile, tool_router: Self::tool_router() }
+        Self { profile, tool_router: crate::control::router() }
     }
 
-    fn db(&self) -> Result<Db, String> {
+    pub(crate) fn db(&self) -> Result<Db, String> {
         let path = crate::profile::database(&self.profile);
         if !path.exists() {
             return Err(format!(
@@ -492,7 +492,7 @@ impl Nemora {
     }
 }
 
-#[tool_router]
+#[tool_router(router = read_router, vis = "pub(crate)")]
 impl Nemora {
     #[tool(
         description = "The library at a glance: how many songs, albums, artists, genres and playlists, the total length, all-time plays, and which profile folder is read. Call it first to see that Nemora's library is there.",

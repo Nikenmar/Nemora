@@ -2,6 +2,7 @@
 //! shapes the 1.1.9 renderer reads (`commands`, `view`) and owns what a webview cannot reach: the
 //! ranged media protocol, the tray, taskbar buttons, Discord, the OBS widget and window geometry.
 
+mod agent;
 mod app;
 mod appdata;
 mod audio_session;
@@ -273,6 +274,10 @@ pub fn run() {
             sounds::song_sounds,
             sounds::song_sound_set,
             tags_cmd::song_file_details,
+            agent::agent_reply,
+            agent::agent_settings,
+            agent::agent_set_access,
+            agent::agent_log_clear,
             spotify_import::spotify_playlist_preview,
             spotify_import::spotify_cover,
         ])
@@ -284,6 +289,7 @@ pub fn run() {
         .manage(shellops::ScreenSleepState::default())
         .manage(watch::FolderWatch::default())
         .manage(engine::Engine::default())
+        .manage(agent::Agents::default())
         .manage(visuals::Visuals::default())
         .manage(energy::EnergyJob::default())
         .manage(lyrics_library::LyricsJob::default())
@@ -330,6 +336,8 @@ pub fn run() {
             });
 
             system::spawn_system_watcher(tauri_app.handle().clone());
+            // The door for AI agents (PLAN/22): nemora-mcp talks to the running app through it.
+            agent::start(tauri_app.handle());
             // Paint both layers before the first frame, from native code: the renderer's own call
             // arrives after the profile is readable, far too late for an immediate resize.
             if let Some(window) = tauri_app.get_webview_window("main") {

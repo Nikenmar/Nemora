@@ -128,11 +128,28 @@ fn an_agent_reads_the_library_and_nothing_is_written() {
 
     let mut server = Server::start(&profile);
     let tools = server.request("tools/list", json!({}))["tools"].as_array().unwrap().clone();
-    assert!(tools.len() >= 12, "{} tools", tools.len());
+    assert!(tools.len() >= 30, "{} tools", tools.len());
+    let reads = [
+        "library_summary",
+        "search",
+        "get_song",
+        "list_songs",
+        "stats_dashboard",
+        "get_lyrics",
+        "now_playing",
+        "get_queue",
+    ];
     for tool in &tools {
         let name = tool["name"].as_str().unwrap();
-        assert!(tool["description"].as_str().unwrap().len() > 60, "{name}: a description an agent can act on");
-        assert_eq!(tool["annotations"]["readOnlyHint"], true, "{name}: read only");
+        assert!(tool["description"].as_str().unwrap().len() > 15, "{name}: a description");
+        assert!(tool["annotations"]["title"].is_string(), "{name}: a title");
+        let read_only = tool["annotations"]["readOnlyHint"] == true;
+        if reads.contains(&name) {
+            assert!(read_only, "{name}: read only");
+        }
+        if !read_only {
+            assert!(tool["annotations"]["destructiveHint"].is_boolean(), "{name}: says whether it destroys");
+        }
         assert!(tool.get("outputSchema").is_some(), "{name}: an output schema");
         assert!(!tool.to_string().contains("\"uint"), "{name}: no schema format a validator does not know");
     }

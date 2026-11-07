@@ -3137,6 +3137,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "tiny_http",
+ "tokio",
  "windows 0.62.2",
 ]
 

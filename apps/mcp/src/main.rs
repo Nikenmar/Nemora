@@ -4,7 +4,9 @@
 //! `nemora-mcp [--profile <folder>]` serves MCP; `--profile` (or `NEMORA_PROFILE_DIR`) points at
 //! another profile than `%APPDATA%\Nemora`.
 
+mod control;
 mod docs;
+mod pipe;
 mod profile;
 mod server;
 

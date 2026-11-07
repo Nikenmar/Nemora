@@ -49,6 +49,8 @@ tiny_http = "0.12"
 # Native drag-out of a song file (dragout.rs): an OLE drag carrying CF_HDROP.
 drag = "2.1.1"
 notify = "8.2.0"
+# The agents' door (agent.rs, PLAN/22): a named pipe on the runtime Tauri already runs.
+tokio = { version = "1.53", features = ["net", "io-util", "sync", "time", "macros"] }
 
 [target.'cfg(windows)'.dependencies]
 # Must track the windows version tao and tauri-runtime-wry use, or HWND types differ.

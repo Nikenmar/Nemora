@@ -18,6 +18,7 @@ import { appPreferences } from '../../../package.json';
 // ? CONTEXTS
 import { registerBenchApp } from './other/bench';
 import { registerShots } from './other/shots';
+import { registerAgentBridge } from './other/agentBridge';
 import { applyCoverLight } from './other/coverLight';
 // Evaluated here as before; app/bootstrap.ts sets the playback clock.
 import './other/trackVisuals';
@@ -1159,6 +1160,45 @@ export default function App() {
       createQueue,
       updateSongPosition,
       toggleSongPlayback
+    ]
+  );
+
+  // PLAN/22: what an AI agent asks for through nemora-mcp is done with the app's own functions.
+  useEffect(
+    () =>
+      registerAgentBridge({
+        playSong,
+        createQueue,
+        togglePlay: toggleSongPlayback,
+        next: () => handleSkipForwardClick('USER_SKIP'),
+        previous: handleSkipBackwardClick,
+        seek: updateSongPosition,
+        setVolume: updateVolume,
+        setMuted: toggleMutedState,
+        setRepeat: toggleRepeat,
+        setShuffle: toggleShuffling,
+        setSmartShuffle: toggleTierShuffle,
+        updateQueue: (index, queue) => updateQueueData(index, queue, false, false),
+        playAt: (index) => changeQueueCurrentSongIndex(index),
+        open: changeCurrentActivePage,
+        notify: (text, iconName) => addNewNotifications([{ id: `agent-${Date.now()}`, content: text, iconName, duration: 5000 }])
+      }),
+    [
+      playSong,
+      createQueue,
+      toggleSongPlayback,
+      handleSkipForwardClick,
+      handleSkipBackwardClick,
+      updateSongPosition,
+      updateVolume,
+      toggleMutedState,
+      toggleRepeat,
+      toggleShuffling,
+      toggleTierShuffle,
+      updateQueueData,
+      changeQueueCurrentSongIndex,
+      changeCurrentActivePage,
+      addNewNotifications
     ]
   );
 
