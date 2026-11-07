@@ -146,7 +146,7 @@ const SoundPanel = () => {
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <span
-            className={`h-2 w-2 rounded-full transition-colors duration-150 ${clipped ? 'bg-danger' : 'bg-line'}`}
+            className={`h-2 w-2 rounded-full transition-colors duration-150 ${clipped ? 'bg-warning' : 'bg-line'}`}
             title={t('sound.peak')}
             aria-label={clipped ? t('sound.peakOn') : t('sound.peak')}
           />

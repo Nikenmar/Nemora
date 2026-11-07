@@ -1771,7 +1771,7 @@
     "reverb": "Reverb",
     "reset": "Reset",
     "peak": "Peak lamp: lights when the processed sound reached 0 dBFS and the clipper held it there. Lower the reverb or the volume to keep it off.",
-    "peakOn": "The sound went past 0 dBFS",
+    "peakOn": "The clipper held a peak at 0 dBFS",
     "plusReverb": "+ Reverb",
     "keepPitch": "Keep pitch",
     "keepPitchDescription": "Off: the pitch goes with the speed, like a record. On: the speed changes, the pitch stays.",
