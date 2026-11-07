@@ -16,6 +16,7 @@ import PerformanceSettings from './Settings/PerformanceSettings';
 import AdvancedSettings from './Settings/AdvancedSettings';
 import AccountsSettings from './Settings/AccountsSettings';
 import LanguageSettings from './Settings/LanguageSettings';
+import AgentsSettings from './Settings/AgentsSettings';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -117,6 +118,9 @@ const SettingsPage = () => {
 
           {/* STORAGE SETTINGS */}
           <StorageSettings />
+
+          {/* AI AGENTS (PLAN/22) */}
+          <AgentsSettings />
 
           {/* ADVANCED SETTINGS */}
           <AdvancedSettings />

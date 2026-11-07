@@ -173,6 +173,8 @@ fn functions(types: &mut Types) -> Vec<specta::datatype::Function> {
         crate::agent::agent_settings,
         crate::agent::agent_set_access,
         crate::agent::agent_log_clear,
+        crate::agent_setup::agent_targets,
+        crate::agent_setup::agent_setup,
         crate::spotify_import::spotify_playlist_preview,
         crate::spotify_import::spotify_cover,
     ](types)

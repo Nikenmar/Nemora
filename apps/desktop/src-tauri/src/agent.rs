@@ -296,6 +296,7 @@ pub struct AgentSettings {
 }
 
 pub fn mcp_path() -> Option<std::path::PathBuf> {
+    // The installer puts it beside nemora.exe; a development build finds the one cargo built there.
     let path = std::env::current_exe().ok()?.parent()?.join("nemora-mcp.exe");
     path.exists().then_some(path)
 }

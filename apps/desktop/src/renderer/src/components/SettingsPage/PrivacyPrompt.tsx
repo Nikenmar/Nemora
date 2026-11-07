@@ -14,6 +14,7 @@ const ONLINE = [
   'tagSearch',
   'translation',
   'autoEq',
+  'agents',
   'spotify'
 ] as const;
 const LOCAL = ['nothingCounted', 'discord', 'obs', 'profile'] as const;

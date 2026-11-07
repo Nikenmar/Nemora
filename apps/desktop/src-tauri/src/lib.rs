@@ -4,6 +4,7 @@
 
 mod agent;
 mod agent_library;
+mod agent_setup;
 mod app;
 mod appdata;
 mod audio_session;
@@ -279,6 +280,8 @@ pub fn run() {
             agent::agent_settings,
             agent::agent_set_access,
             agent::agent_log_clear,
+            agent_setup::agent_targets,
+            agent_setup::agent_setup,
             spotify_import::spotify_playlist_preview,
             spotify_import::spotify_cover,
         ])

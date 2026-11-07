@@ -326,6 +326,38 @@
     "musicFolders": "Music folders",
     "empty": "No folders added to your library."
   },
+  "agentsSettings": {
+    "title": "AI agents",
+    "intro": "Let an AI agent (Claude, Codex, Cursor, Gemini and others) use Nemora: answer about your music and statistics, play, build queues and playlists. It connects through nemora-mcp, a small program beside Nemora; nothing is opened to the network. What it reads goes to the agent's own provider.",
+    "accessTitle": "What agents may do",
+    "level": {
+      "off": "Nothing",
+      "read": "Read",
+      "control": "Control",
+      "full": "Full"
+    },
+    "levelHint": {
+      "off": "Agents can do nothing in Nemora, not even read the library.",
+      "read": "Agents see what plays and the queue, but change nothing.",
+      "control": "Agents play, build the queue, make and edit playlists, set favourites, versions and lyrics. Your music files are never changed.",
+      "full": "Also your music files: tag edits (shown as a dry run first) and moving songs to the recycle bin, each only after you agree."
+    },
+    "connectTitle": "Connect an agent",
+    "connectHint": "Add this command to an agent as an MCP server (stdio), or set it up below.",
+    "copy": "Copy",
+    "copied": "Copied.",
+    "setUp": "Set up",
+    "setUpAnyway": "Set up",
+    "configured": "Set up",
+    "setupHint": "Setting up adds one entry, nemora, to that agent's config and keeps a backup of the file beside it. Restart the agent afterwards.",
+    "done": "{{name}}: Nemora added to {{file}}.",
+    "backup": "The file as it was: {{file}}.",
+    "already": "{{name}} already has Nemora.",
+    "noServer": "nemora-mcp.exe comes with the installed Nemora; this build has none beside it.",
+    "logTitle": "What agents did",
+    "noLog": "No agent has changed anything yet.",
+    "clearLog": "Clear"
+  },
   "privacySettings": {
     "button": "Privacy",
     "title": "Privacy and your data",
@@ -363,6 +395,10 @@
       "autoEq": {
         "name": "Headphone correction",
         "what": "The AutoEQ list on GitHub, when you look for your headphones: nothing but the request."
+      },
+      "agents": {
+        "name": "AI agents",
+        "what": "Only when you connect one (Settings, AI agents): what it reads of your library and listening goes to that agent's own provider. Nemora itself sends nothing."
       },
       "spotify": {
         "name": "Import from Spotify",

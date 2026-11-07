@@ -472,7 +472,13 @@ impl Nemora {
                 path.display()
             ));
         }
-        Db::open_read_only(&path).map_err(|e| format!("The library could not be opened: {e}"))
+        let db = Db::open_read_only(&path).map_err(|e| format!("The library could not be opened: {e}"))?;
+        // The user's choice holds with Nemora closed too: agents off means no reading either.
+        let access = nemora_core::settings::device(&db, "agent.access").ok().flatten();
+        if access.as_ref().and_then(|v| v.as_str()) == Some("off") {
+            return Err("The user has turned agents off in Nemora (Settings, AI agents).".into());
+        }
+        Ok(db)
     }
 
     fn summary(&self) -> Result<Summary, String> {

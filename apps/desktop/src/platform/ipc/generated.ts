@@ -23,6 +23,17 @@ export type AgentSettings_Serialize = {
 	log: LogEntry[],
 };
 
+export type AgentTarget = {
+	id: string,
+	name: string,
+	/**  Where its config lives, or the command that sets it up. */
+	place: string,
+	/**  The agent seems to be installed here. */
+	detected: boolean,
+	/**  Nemora is already in its config. */
+	configured: boolean,
+};
+
 export type CoreInfo = {
 	coreVersion: string,
 	identityAlgorithm: string,
@@ -623,6 +634,24 @@ export type SessionInput_Serialize = {
 	startReason: string | null,
 };
 
+export type SetupDone = SetupDone_Serialize | SetupDone_Deserialize;
+
+export type SetupDone_Deserialize = {
+	file: string,
+	/**  The copy of the file as it was, when there was one. */
+	backup?: string | null,
+	/**  It was set up already: nothing changed. */
+	already: boolean,
+};
+
+export type SetupDone_Serialize = {
+	file: string,
+	/**  The copy of the file as it was, when there was one. */
+	backup: string | null,
+	/**  It was set up already: nothing changed. */
+	already: boolean,
+};
+
 /**
  *  This week's plays the shuffle counted and ignored, and what is going on now (PLAN/21: typed;
  *  fields in the order the untyped answer's keys had).
@@ -1001,6 +1030,8 @@ export interface IpcCommands {
   agent_reply: { args: { requestId: number; result?: Value | null; error?: string | null; }; ret: null };
   agent_set_access: { args: { access: string; }; ret: null };
   agent_settings: { args: Record<string, never>; ret: AgentSettings_Serialize };
+  agent_setup: { args: { target: string; }; ret: SetupDone_Serialize };
+  agent_targets: { args: Record<string, never>; ret: AgentTarget[] };
   allow_screen_sleeping: { args: Record<string, never>; ret: null };
   app_hydrate: { args: { defaults: DefaultArtwork; }; ret: Value };
   appdata_export: { args: { folder: string; localStorage: string; }; ret: null };
