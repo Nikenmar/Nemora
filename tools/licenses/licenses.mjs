@@ -103,9 +103,10 @@ function rustCrates() {
   );
   const byId = new Map(metadata.packages.map((p) => [p.id, p]));
   const nodes = new Map(metadata.resolve.nodes.map((n) => [n.id, n]));
-  const app = metadata.packages.find((p) => p.name === 'nemora-desktop');
+  // What the installer ships: the app and the MCP server beside it (PLAN/22).
+  const roots = ['nemora-desktop', 'nemora-mcp'].map((name) => metadata.packages.find((p) => p.name === name));
   const seen = new Set();
-  const stack = [app.id];
+  const stack = roots.filter(Boolean).map((p) => p.id);
   while (stack.length) {
     const id = stack.pop();
     if (seen.has(id)) continue;

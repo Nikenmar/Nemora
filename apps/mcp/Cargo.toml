@@ -1,0 +1,21 @@
+[package]
+name = "nemora-mcp"
+description = "Nemora for AI agents: an MCP server over stdio (PLAN/22)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "nemora-mcp"
+path = "src/main.rs"
+
+[dependencies]
+nemora-core.workspace = true
+rmcp = { version = "=3.8.0", features = ["server", "transport-io", "macros"] }
+schemars = "1"
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1.53", features = ["rt", "macros", "io-std"] }
