@@ -736,6 +736,27 @@ pub fn members(db: &Db, group: Group) -> Result<HashMap<String, Vec<Member>>> {
     Ok(out)
 }
 
+/// The present library in numbers (PLAN/22's summary for agents).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Counts {
+    pub songs: i64,
+    pub duration_ms: i64,
+    pub plays: i64,
+    pub songs_with_lyrics: i64,
+}
+
+pub fn counts(db: &Db) -> Result<Counts> {
+    let present = "EXISTS (SELECT 1 FROM track_variants v JOIN locations l USING (variant_id)
+                   WHERE v.song_id = t.song_id AND l.missing_since IS NULL)";
+    let one = |sql: String| db.conn().query_row(&sql, [], |r| r.get::<_, i64>(0));
+    Ok(Counts {
+        songs: one(format!("SELECT count(*) FROM tracks t WHERE {present}"))?,
+        duration_ms: one(format!("SELECT coalesce(sum(t.duration_ms), 0) FROM tracks t WHERE {present}"))?,
+        plays: one("SELECT coalesce(sum(plays), 0) FROM song_totals".to_owned())?,
+        songs_with_lyrics: one("SELECT count(*) FROM lyrics".to_owned())?,
+    })
+}
+
 /// The search corpus of the present library: one entry per library row, ids are variant ids.
 pub fn search_corpus(db: &Db) -> Result<Corpus> {
     let conn = db.conn();

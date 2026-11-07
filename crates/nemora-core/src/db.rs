@@ -38,6 +38,22 @@ impl Db {
         Self::init(conn, path.parent())
     }
 
+    /// Opens an existing database for reading only, as a second process beside the running app
+    /// does (`nemora-mcp`, PLAN/22): no migration, no write; a file at another schema version is
+    /// refused rather than read wrong.
+    pub fn open_read_only(path: &Path) -> Result<Self> {
+        let conn = Connection::open_with_flags(
+            path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        conn.busy_timeout(std::time::Duration::from_secs(2))?;
+        let version: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+        if version != SCHEMA_VERSION {
+            return Err(Error::SchemaTooNew { found: version, supported: SCHEMA_VERSION });
+        }
+        Ok(Self { conn, generation: AtomicU64::new(0), orders: Mutex::new(HashMap::new()) })
+    }
+
     /// A private database in memory, for tests and dry runs.
     pub fn open_in_memory() -> Result<Self> {
         Self::init(Connection::open_in_memory()?, None)
@@ -190,6 +206,21 @@ mod tests {
         let first = Db::open(&path).unwrap().device_id().unwrap();
         let second = Db::open(&path).unwrap().device_id().unwrap();
         assert_eq!(first, second);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_read_only_open_reads_and_never_writes() {
+        let dir = std::env::temp_dir().join(format!("nemora-db-ro-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("nemora.db");
+        let id = Db::open(&path).unwrap().device_id().unwrap();
+        let ro = Db::open_read_only(&path).unwrap();
+        assert_eq!(ro.device_id().unwrap(), id);
+        assert!(ro.conn().execute("INSERT INTO meta (key, value) VALUES ('x', 'y')", []).is_err(), "read only");
+        drop(ro);
+        assert!(Db::open_read_only(&dir.join("missing.db")).is_err(), "never created");
+        assert!(!dir.join("missing.db").exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

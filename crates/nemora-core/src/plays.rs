@@ -395,6 +395,16 @@ pub fn history(db: &Db, limit: usize, since: i64) -> Result<Vec<String>> {
     Ok(songs)
 }
 
+/// The user's UTC offset as of their latest play, for a process that has no clock of its own for
+/// their local day (`nemora-mcp`).
+pub fn latest_utc_offset(db: &Db) -> Result<Option<i64>> {
+    use rusqlite::OptionalExtension;
+    Ok(db
+        .conn()
+        .query_row("SELECT utc_offset_min FROM play_events ORDER BY started_at DESC LIMIT 1", [], |r| r.get(0))
+        .optional()?)
+}
+
 pub fn recent_songs(db: &Db, limit: usize, since: i64) -> Result<Vec<String>> {
     let mut stmt = db.conn().prepare(
         "SELECT song_id FROM play_events WHERE started_at > ?2 GROUP BY song_id
