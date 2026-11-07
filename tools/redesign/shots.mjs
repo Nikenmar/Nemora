@@ -38,6 +38,8 @@ const PORT = Number(option('port', '9361'));
 const SKIP_EMPTY = process.argv.includes('--skip-empty') || Boolean(option('probe', '')) || Boolean(option('film', ''));
 /** `--probe file.js`: run that script in the app (after the library and queue are up) instead of shooting, and print what it returns, once per `--probe-widths`. */
 const PROBE = option('probe', '');
+/** `--cdp-timeout <s>`: how long one page evaluation may run (a probe that holds the stand open for an agent needs more than 120 s). */
+const CDP_TIMEOUT_MS = Number(option('cdp-timeout', '120')) * 1000;
 /**
  * `--ipc-trace file.json` (with `--probe`): records every command the app sends to Rust while the
  * probe runs, from the outside (CDP Network, the `ipc.localhost` requests Tauri 2 makes on
@@ -189,6 +191,7 @@ const SHOTS = [
   { id: '36r-moment-card', surface: 'Lyrics, Share moment: the card of a line (PLAN/19)', setup: `S.go('Lyrics'); for (let i = 0; i < 40 && document.querySelectorAll('.highlight').length < 6; i++) await wait(250); const line = document.querySelectorAll('.highlight')[5]; const r = line.getBoundingClientRect(); line.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 20, clientY: r.top + 10, pageX: r.left + 20, pageY: r.top + 10, button: 2 })); await wait(400); [...document.querySelectorAll('*')].find((e) => e.children.length === 0 && e.textContent.trim() === 'Share moment')?.click(); for (let i = 0; i < 20 && !document.querySelector('.moment-card'); i++) await wait(150);`, settle: 1200 },
   { id: '36s-search-did-you-mean', surface: 'Search with a typo in a Japanese reading: the kanji title found, Did you mean (PLAN/20)', setup: `S.go('Search', { keyword: 'mushku tensei' }); for (let i = 0; i < 40 && !document.querySelector('.did-you-mean'); i++) await wait(250);`, settle: 1000 },
   { id: '36t-stats-insights', surface: 'Stats, Insights on top (PLAN/20)', setup: `S.go('Stats'); for (let i = 0; i < 40 && !document.querySelector('.insight-card'); i++) await wait(250);`, settle: 1500 },
+  { id: '36w-settings-agents', surface: 'Settings, AI agents: the access level, the command, the agents to set up, the log (PLAN/22)', setup: `S.go('Settings'); for (let i = 0; i < 40 && !document.querySelector('.agents-settings-container'); i++) await wait(250); document.querySelector('.agents-settings-container').scrollIntoView({ block: 'start' });`, settle: 1200 },
   { id: '36u-version-tag', surface: 'A version beside its song, the sound tag after the title (PLAN/18)', setup: `await api.tierlistsData.versionCreate(D.song.songId, { name: 'Slowed', semitones: -4, keepPitch: false, reverb: 0.35, size: 'hall' }); await wait(600); S.go('Search', { keyword: D.song.title.split(' ').slice(0, 3).join(' ') }); for (let i = 0; i < 40 && !document.querySelector('.search-results-container .sound-tag'); i++) await wait(200);`, settle: 1200 },
   { id: '37-accent-picker', surface: 'Accent colour picker, violet chosen', setup: `S.go('Settings'); await wait(1200); document.querySelector('[role=radiogroup] [aria-label=Violet]').click(); await wait(300); document.querySelector('.accent-color').scrollIntoView({ block: 'center' });`, settle: 1200 },
   { id: '38-accent-home', surface: 'Home in teal', setup: `S.go('Settings'); await wait(1200); document.querySelector('[role=radiogroup] [aria-label=Teal]').click(); await wait(300); S.go('Home');`, settle: 1800 }
@@ -376,7 +379,7 @@ class Cdp {
       this.pending.set(id, { resolve, reject });
       setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error(`CDP ${method} timed out`));
-      }, 120_000);
+      }, CDP_TIMEOUT_MS);
     });
   }
   async eval(body) {
