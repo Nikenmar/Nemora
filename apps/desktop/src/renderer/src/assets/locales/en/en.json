@@ -326,6 +326,87 @@
     "musicFolders": "Music folders",
     "empty": "No folders added to your library."
   },
+  "privacySettings": {
+    "title": "Privacy and your data",
+    "intro": "Nemora is a player for the music on your computer. It needs no account and keeps your library, statistics and settings here. This is everything it sends anywhere, and when.",
+    "onlineTitle": "Sent over the internet",
+    "online": {
+      "updates": {
+        "name": "Update check",
+        "what": "GitHub, a few seconds after each start. Nothing but the request itself; an update installs only when you agree."
+      },
+      "lyrics": {
+        "name": "Lyrics",
+        "what": "LRCLIB, when the lyrics page shows a song with no lyrics of its own: its title, artist, album and length. The found lyrics are kept, so a song is looked up once."
+      },
+      "musixmatch": {
+        "name": "Musixmatch lyrics",
+        "what": "Only when you turn it on in Lyrics: the title and artist of the song."
+      },
+      "pages": {
+        "name": "Album, artist and song pages",
+        "what": "Last.fm and Deezer, when you open such a page: the album, artist or song name, for its description, the artist's pictures and similar tracks."
+      },
+      "lastFm": {
+        "name": "Last.fm account",
+        "what": "Only when you connect it in Accounts and turn on scrobbling, now playing or loves: the songs you play or love."
+      },
+      "tagSearch": {
+        "name": "Tag editor search",
+        "what": "iTunes, Last.fm and Musixmatch, when you search for a song's tags: what you search for."
+      },
+      "translation": {
+        "name": "Lyrics translation",
+        "what": "Google Translate, when you translate lyrics: their lines."
+      },
+      "autoEq": {
+        "name": "Headphone correction",
+        "what": "The AutoEQ list on GitHub, when you look for your headphones: nothing but the request."
+      },
+      "spotify": {
+        "name": "Import from Spotify",
+        "what": "Spotify, when you import a playlist: its link, nothing else. Its tracks are found in your library on this computer."
+      }
+    },
+    "localTitle": "Stays on this computer",
+    "local": {
+      "nothingCounted": {
+        "name": "No tracking",
+        "what": "No analytics, no telemetry, no account. What you play, skip and rate is counted only here, for your statistics and Smart Shuffle."
+      },
+      "discord": {
+        "name": "Discord status",
+        "what": "On unless you turn it off in Accounts: the song you play goes to the Discord app on this computer, which shows it to your friends."
+      },
+      "obs": {
+        "name": "OBS widget",
+        "what": "Off unless you turn it on: served to this computer only, never to the network."
+      },
+      "profile": {
+        "name": "Library and settings",
+        "what": "In your profile folder (%APPDATA%\\Nemora): the library, statistics, playlists, settings and covers. Logs are in %LOCALAPPDATA%\\com.cmrdevs.nemora\\logs."
+      }
+    },
+    "filesTitle": "Your music files",
+    "files": {
+      "tagEditor": {
+        "name": "Tag editor",
+        "what": "Writes a song's tags when you save them. The audio is never touched, so the song keeps its statistics."
+      },
+      "switchVersion": {
+        "name": "Switch version",
+        "what": "Writes its own field into the song's tag, so the sound comes with the file. Nothing else in the file changes; turn it off in Audio playback."
+      },
+      "delete": {
+        "name": "Deleting a song",
+        "what": "Moves the file to the recycle bin, or deletes it for good only when you choose that."
+      },
+      "chosen": {
+        "name": "Files you save",
+        "what": "Versions, playlists and artwork you save go only where you choose."
+      }
+    }
+  },
   "playlistsPage": {
     "createNewPlaylist": "Create new playlist",
     "importPlaylist": "Import a playlist",

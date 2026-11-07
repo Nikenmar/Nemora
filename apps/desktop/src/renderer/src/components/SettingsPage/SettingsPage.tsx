@@ -16,6 +16,7 @@ import PerformanceSettings from './Settings/PerformanceSettings';
 import AdvancedSettings from './Settings/AdvancedSettings';
 import AccountsSettings from './Settings/AccountsSettings';
 import LanguageSettings from './Settings/LanguageSettings';
+import PrivacySettings from './Settings/PrivacySettings';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -120,6 +121,9 @@ const SettingsPage = () => {
 
           {/* ADVANCED SETTINGS */}
           <AdvancedSettings />
+
+          {/* PRIVACY: what Nemora sends, keeps and writes */}
+          <PrivacySettings />
 
           {/* ABOUT SETTINGS */}
           <AboutSettings />
