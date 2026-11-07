@@ -26,7 +26,8 @@
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "stage:mcp": "node ../../tools/mcp/stage.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

@@ -65,6 +65,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
+          # Ships nemora-mcp.exe beside nemora.exe (PLAN/22): builds and stages it, then bundles it.
+          args: --config src-tauri/tauri.mcp.json
           tagName: ${{ github.ref_name }}
           releaseName: 'Nemora __VERSION__'
           releaseBody: 'See the assets below to download and install.'

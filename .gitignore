@@ -10,6 +10,9 @@ dist/
 # Tauri generated schemas
 apps/desktop/src-tauri/gen/
 
+# nemora-mcp staged for the installer (tools/mcp/stage.mjs)
+apps/desktop/src-tauri/binaries/
+
 # Private Android app: its own nested git repository, never part of this one.
 /apps/android/
 
