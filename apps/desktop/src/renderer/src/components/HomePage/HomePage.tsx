@@ -392,6 +392,10 @@ const HomePage = () => {
                 <MixOfTheDay />
               </div>
             )}
+            {/* For you first: what is made for the user before the lists of what happened. */}
+            {content.latestSongs[0] !== null && (
+              <ForYouShelf noOfVisibleSongs={noOfRecentandLovedSongCards} />
+            )}
             {content.latestSongs[0] !== null && (
               <RecentlyAddedSongs
                 latestSongs={content.latestSongs as AudioInfo[]}
@@ -405,9 +409,6 @@ const HomePage = () => {
               )}
               noOfVisibleSongs={noOfRecentandLovedSongCards}
             />
-            {content.latestSongs[0] !== null && (
-              <ForYouShelf noOfVisibleSongs={noOfRecentandLovedSongCards} />
-            )}
             <MostLovedSongs
               mostLovedSongs={content.mostLovedSongs.slice(0, noOfRecentandLovedSongCards)}
               noOfVisibleSongs={noOfRecentandLovedSongCards}
