@@ -3,6 +3,7 @@
 //! ranged media protocol, the tray, taskbar buttons, Discord, the OBS widget and window geometry.
 
 mod agent;
+mod agent_library;
 mod app;
 mod appdata;
 mod audio_session;
@@ -290,6 +291,7 @@ pub fn run() {
         .manage(watch::FolderWatch::default())
         .manage(engine::Engine::default())
         .manage(agent::Agents::default())
+        .manage(agent_library::UndoStack::default())
         .manage(visuals::Visuals::default())
         .manage(energy::EnergyJob::default())
         .manage(lyrics_library::LyricsJob::default())

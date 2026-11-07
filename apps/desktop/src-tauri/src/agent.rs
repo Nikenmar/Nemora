@@ -69,7 +69,7 @@ pub fn level_of(method: &str) -> Option<Level> {
         "view.play" | "view.pause" | "view.resume" | "view.next" | "view.previous" | "view.seek" | "view.volume"
         | "view.mute" | "view.repeat" | "view.shuffle" | "view.queue_add" | "view.queue_remove" | "view.queue_move"
         | "view.queue_clear" | "view.open" | "view.notify" => Level::Control,
-        _ => return None,
+        other => return crate::agent_library::level_of(other),
     })
 }
 
@@ -226,9 +226,14 @@ async fn dispatch(handle: &AppHandle, request: Request) -> Result<Value, String>
         method if method.starts_with("view.") => {
             ask_view(handle, &method["view.".len()..], &request.params, &agent).await
         }
+        method if method.starts_with("library.") || method.starts_with("files.") => {
+            crate::agent_library::run(handle, method, &request.params, allowed).await
+        }
         other => Err(format!("`{other}` is not served yet.")),
     }?;
-    if need >= Level::Control {
+    // A dry run changes nothing; a write that went through is logged whatever its method's level.
+    let wrote = result.get("dryRun") == Some(&Value::Bool(false));
+    if need >= Level::Control || wrote {
         log(&app, &agent, &request.method, &request.params);
     }
     Ok(result)

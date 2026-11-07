@@ -117,6 +117,12 @@ pub fn delete(db: &Db, id: &str) -> Result<()> {
     touch_playlist(db, id)
 }
 
+/// Brings a deleted playlist back with its items (an agent's undo, PLAN/22).
+pub fn restore(db: &Db, id: &str) -> Result<()> {
+    db.conn().execute("UPDATE playlists SET deleted_at = NULL WHERE playlist_id = ?1", [id])?;
+    touch_playlist(db, id)
+}
+
 pub fn set_pinned(db: &Db, id: &str, position: Option<i64>) -> Result<()> {
     db.conn().execute("UPDATE playlists SET pinned_position = ?2 WHERE playlist_id = ?1", params![id, position])?;
     touch_playlist(db, id)

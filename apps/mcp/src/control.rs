@@ -595,5 +595,5 @@ impl Nemora {
 
 /// Both routers: the read tools and these.
 pub fn router() -> ToolRouter<Nemora> {
-    Nemora::read_router() + Nemora::control_router()
+    Nemora::read_router() + Nemora::control_router() + crate::library_tools::router()
 }

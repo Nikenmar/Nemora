@@ -6,6 +6,7 @@
 
 mod control;
 mod docs;
+mod library_tools;
 mod pipe;
 mod profile;
 mod server;
