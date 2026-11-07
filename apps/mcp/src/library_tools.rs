@@ -5,23 +5,18 @@ use std::collections::HashMap;
 
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::{Peer, RoleServer, tool, tool_router};
+use rmcp::service::RequestContext;
+use rmcp::{RoleServer, tool, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::control::agent;
 use crate::pipe;
 use crate::server::{Nemora, Song, rows_for_songs, song};
 
-fn agent(peer: &Peer<RoleServer>) -> String {
-    peer.peer_info()
-        .map(|info| info.client_info.name.clone())
-        .filter(|n| !n.is_empty())
-        .unwrap_or_else(|| "an agent".into())
-}
-
-async fn call(peer: &Peer<RoleServer>, method: &str, params: Value) -> Result<Json<Value>, String> {
-    pipe::call(method, params, &agent(peer), true).await.map(Json)
+async fn call(ctx: &RequestContext<RoleServer>, method: &str, params: Value) -> Result<Json<Value>, String> {
+    pipe::call(method, params, &agent(ctx), true).await.map(Json)
 }
 
 fn ids(list: &[String]) -> Vec<String> {
@@ -428,14 +423,14 @@ impl Nemora {
     )]
     async fn create_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<CreatePlaylist>,
     ) -> Result<Json<Value>, String> {
         let mut params = json!({ "name": p.name });
         if let Some(list) = p.song_ids.filter(|l| !l.is_empty()) {
             params["songIds"] = json!(ids(&list));
         }
-        call(&peer, "library.playlist_create", params).await
+        call(&ctx, "library.playlist_create", params).await
     }
 
     #[tool(
@@ -450,10 +445,10 @@ impl Nemora {
     )]
     async fn rename_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<RenamePlaylist>,
     ) -> Result<Json<Value>, String> {
-        call(&peer, "library.playlist_rename", json!({ "playlistId": p.playlist_id, "name": p.name })).await
+        call(&ctx, "library.playlist_rename", json!({ "playlistId": p.playlist_id, "name": p.name })).await
     }
 
     #[tool(
@@ -468,10 +463,10 @@ impl Nemora {
     )]
     async fn add_to_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<PlaylistSongs>,
     ) -> Result<Json<Value>, String> {
-        call(&peer, "library.playlist_add", json!({ "playlistId": p.playlist_id, "songIds": ids(&p.song_ids) })).await
+        call(&ctx, "library.playlist_add", json!({ "playlistId": p.playlist_id, "songIds": ids(&p.song_ids) })).await
     }
 
     #[tool(
@@ -486,11 +481,10 @@ impl Nemora {
     )]
     async fn remove_from_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<PlaylistSongs>,
     ) -> Result<Json<Value>, String> {
-        call(&peer, "library.playlist_remove", json!({ "playlistId": p.playlist_id, "songIds": ids(&p.song_ids) }))
-            .await
+        call(&ctx, "library.playlist_remove", json!({ "playlistId": p.playlist_id, "songIds": ids(&p.song_ids) })).await
     }
 
     #[tool(
@@ -505,13 +499,13 @@ impl Nemora {
     )]
     async fn delete_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<DeletePlaylist>,
     ) -> Result<Json<Value>, String> {
         if !p.confirm {
             return Err("Deleting a playlist needs confirm: true, after the user agreed.".into());
         }
-        call(&peer, "library.playlist_delete", json!({ "playlistId": p.playlist_id })).await
+        call(&ctx, "library.playlist_delete", json!({ "playlistId": p.playlist_id })).await
     }
 
     #[tool(
@@ -526,10 +520,10 @@ impl Nemora {
     )]
     async fn set_favorite(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<Favorite>,
     ) -> Result<Json<Value>, String> {
-        call(&peer, "library.favorite", json!({ "songIds": ids(&p.song_ids), "favorite": p.favorite.unwrap_or(true) }))
+        call(&ctx, "library.favorite", json!({ "songIds": ids(&p.song_ids), "favorite": p.favorite.unwrap_or(true) }))
             .await
     }
 
@@ -543,8 +537,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn undo_last_change(&self, peer: Peer<RoleServer>) -> Result<Json<Value>, String> {
-        call(&peer, "library.undo", json!({})).await
+    async fn undo_last_change(&self, ctx: RequestContext<RoleServer>) -> Result<Json<Value>, String> {
+        call(&ctx, "library.undo", json!({})).await
     }
 
     #[tool(
@@ -559,10 +553,10 @@ impl Nemora {
     )]
     async fn save_lyrics(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<SaveLyrics>,
     ) -> Result<Json<Value>, String> {
-        call(&peer, "library.lyrics_save", json!({ "songId": ids(&[p.song_id])[0], "text": p.text })).await
+        call(&ctx, "library.lyrics_save", json!({ "songId": ids(&[p.song_id])[0], "text": p.text })).await
     }
 
     #[tool(
@@ -577,14 +571,14 @@ impl Nemora {
     )]
     async fn create_version(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<CreateVersion>,
     ) -> Result<Json<Value>, String> {
         let params = json!({
             "songId": ids(&[p.song_id])[0], "name": p.name, "semitones": p.semitones.unwrap_or(0.0),
             "keepPitch": p.keep_pitch.unwrap_or(false), "reverb": p.reverb.unwrap_or(0.0), "size": p.size.unwrap_or_else(|| "hall".into()),
         });
-        call(&peer, "library.version_create", params).await
+        call(&ctx, "library.version_create", params).await
     }
 
     #[tool(
@@ -599,12 +593,12 @@ impl Nemora {
     )]
     async fn switch_version(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<SwitchVersion>,
     ) -> Result<Json<Value>, String> {
         let sound = p.sound.map(|s| json!({ "semitones": s.semitones, "keepPitch": s.keep_pitch, "reverb": s.reverb, "size": s.size.unwrap_or_else(|| "hall".into()) }));
         call(
-            &peer,
+            &ctx,
             "library.switch_version",
             json!({ "songId": ids(&[p.song_id])[0], "sound": sound, "writeFile": p.write_file.unwrap_or(false) }),
         )
@@ -621,8 +615,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn rescan_library(&self, peer: Peer<RoleServer>) -> Result<Json<Value>, String> {
-        call(&peer, "library.rescan", json!({})).await
+    async fn rescan_library(&self, ctx: RequestContext<RoleServer>) -> Result<Json<Value>, String> {
+        call(&ctx, "library.rescan", json!({})).await
     }
 
     #[tool(
@@ -631,10 +625,10 @@ impl Nemora {
     )]
     async fn preview_spotify_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<SpotifyLink>,
     ) -> Result<Json<Value>, String> {
-        call(&peer, "library.spotify_preview", json!({ "link": p.link })).await
+        call(&ctx, "library.spotify_preview", json!({ "link": p.link })).await
     }
 
     #[tool(
@@ -649,10 +643,10 @@ impl Nemora {
     )]
     async fn import_spotify_playlist(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<ImportSpotify>,
     ) -> Result<Json<Value>, String> {
-        let preview = call(&peer, "library.spotify_preview", json!({ "link": p.link })).await?.0;
+        let preview = call(&ctx, "library.spotify_preview", json!({ "link": p.link })).await?.0;
         let likely = p.include_likely.unwrap_or(true);
         let mut chosen: Vec<String> = Vec::new();
         let mut missing = Vec::new();
@@ -682,7 +676,7 @@ impl Nemora {
             return Err(format!("None of the {} tracks is in the library.", missing.len()));
         }
         let name = p.name.unwrap_or_else(|| preview["name"].as_str().unwrap_or("Spotify playlist").to_owned());
-        let made = call(&peer, "library.playlist_create", json!({ "name": name, "songIds": chosen })).await?.0;
+        let made = call(&ctx, "library.playlist_create", json!({ "name": name, "songIds": chosen })).await?.0;
         Ok(Json(
             json!({ "playlist": made, "songs": chosen.len(), "missing": missing, "mayBeCut": preview["mayBeCut"] }),
         ))
@@ -692,8 +686,8 @@ impl Nemora {
         description = "A pair of songs for a duel, as Nemora picks them (songs whose rating is least sure). Ask the user which they prefer, then submit_duel; never decide for them.",
         annotations(title = "Get a duel", read_only_hint = true, open_world_hint = false)
     )]
-    async fn get_duel(&self, peer: Peer<RoleServer>) -> Result<Json<Value>, String> {
-        call(&peer, "library.duel_pair", json!({})).await
+    async fn get_duel(&self, ctx: RequestContext<RoleServer>) -> Result<Json<Value>, String> {
+        call(&ctx, "library.duel_pair", json!({})).await
     }
 
     #[tool(
@@ -708,11 +702,11 @@ impl Nemora {
     )]
     async fn submit_duel(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<SubmitDuel>,
     ) -> Result<Json<Value>, String> {
         call(
-            &peer,
+            &ctx,
             "library.duel_submit",
             json!({ "songAId": p.song_a_id, "songBId": p.song_b_id, "winnerId": p.winner_id }),
         )
@@ -733,11 +727,11 @@ impl Nemora {
     )]
     async fn edit_tags(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<EditTags>,
     ) -> Result<Json<Value>, String> {
         call(
-            &peer,
+            &ctx,
             "files.tags",
             json!({ "songId": ids(&[p.song_id])[0], "changes": p.changes, "dryRun": p.dry_run.unwrap_or(true) }),
         )
@@ -756,13 +750,13 @@ impl Nemora {
     )]
     async fn delete_songs(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<DeleteSongs>,
     ) -> Result<Json<Value>, String> {
         if !p.confirm {
             return Err("Deleting needs confirm: true, after the user agreed to the list.".into());
         }
-        call(&peer, "files.delete", json!({ "songIds": ids(&p.song_ids), "confirm": true })).await
+        call(&ctx, "files.delete", json!({ "songIds": ids(&p.song_ids), "confirm": true })).await
     }
 }
 

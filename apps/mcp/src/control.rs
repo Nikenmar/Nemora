@@ -4,7 +4,8 @@
 
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::{Peer, RoleServer, tool, tool_router};
+use rmcp::service::RequestContext;
+use rmcp::{RoleServer, tool, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -12,11 +13,14 @@ use serde_json::{Value, json};
 use crate::pipe;
 use crate::server::{Nemora, Song, rows_for_songs, song};
 
-/// The agent's name as its client gave it, for the user's log and notices.
-fn agent(peer: &Peer<RoleServer>) -> String {
-    peer.peer_info()
-        .map(|info| info.client_info.name.clone())
-        .filter(|n| !n.is_empty())
+/// The agent's name as its client gave it, for the user's log and notices: its title ("Claude
+/// Code") when it sent one, else its name. From the request itself under MCP 2026-07-28, which has
+/// no handshake (Claude Code sends `io.modelcontextprotocol/clientInfo` in every request's `_meta`),
+/// else from the older protocols' `initialize`.
+pub(crate) fn agent(ctx: &RequestContext<RoleServer>) -> String {
+    ctx.client_info()
+        .and_then(|info| info.title.filter(|t| !t.trim().is_empty()).or(Some(info.name)))
+        .filter(|n| !n.trim().is_empty())
         .unwrap_or_else(|| "an agent".into())
 }
 
@@ -241,11 +245,11 @@ impl Nemora {
         description = "Whether Nemora is running, what the user lets agents do (off, read, control, full) and its version. Reading the library works without the app; playing and changing things need it running (those tools start it when it is not).",
         annotations(title = "App status", read_only_hint = true, open_world_hint = false)
     )]
-    async fn app_status(&self, peer: Peer<RoleServer>) -> Result<Json<AppStatus>, String> {
+    async fn app_status(&self, ctx: RequestContext<RoleServer>) -> Result<Json<AppStatus>, String> {
         if !pipe::running().await {
             return Ok(Json(AppStatus { running: false, access: None, version: None }));
         }
-        let status = pipe::call("app.status", json!({}), &agent(&peer), false).await?;
+        let status = pipe::call("app.status", json!({}), &agent(&ctx), false).await?;
         Ok(Json(AppStatus {
             running: true,
             access: status.get("access").and_then(Value::as_str).map(str::to_owned),
@@ -257,8 +261,8 @@ impl Nemora {
         description = "What Nemora is playing right now: the song (ids, title, artists, album), position and length in seconds, playing or paused, volume, mute, repeat (off/all/one), shuffle (off/shuffle/smart), and the queue's length and position.",
         annotations(title = "Now playing", read_only_hint = true, open_world_hint = false)
     )]
-    async fn now_playing(&self, peer: Peer<RoleServer>) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.now", json!({}), &agent(&peer), false).await?)
+    async fn now_playing(&self, ctx: RequestContext<RoleServer>) -> Result<Json<NowPlaying>, String> {
+        now(pipe::call("view.now", json!({}), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -273,14 +277,14 @@ impl Nemora {
     )]
     async fn play(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<PlayParams>,
     ) -> Result<Json<NowPlaying>, String> {
         if p.song_ids.is_empty() {
             return Err("song_ids is empty: find songs with search or list_songs first.".into());
         }
         let params = json!({ "songIds": p.song_ids, "startIndex": p.start_index.unwrap_or(0), "shuffle": p.shuffle.unwrap_or(false) });
-        now(pipe::call("view.play", params, &agent(&peer), true).await?)
+        now(pipe::call("view.play", params, &agent(&ctx), true).await?)
     }
 
     #[tool(
@@ -293,8 +297,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn pause(&self, peer: Peer<RoleServer>) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.pause", json!({}), &agent(&peer), false).await?)
+    async fn pause(&self, ctx: RequestContext<RoleServer>) -> Result<Json<NowPlaying>, String> {
+        now(pipe::call("view.pause", json!({}), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -307,8 +311,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn resume(&self, peer: Peer<RoleServer>) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.resume", json!({}), &agent(&peer), true).await?)
+    async fn resume(&self, ctx: RequestContext<RoleServer>) -> Result<Json<NowPlaying>, String> {
+        now(pipe::call("view.resume", json!({}), &agent(&ctx), true).await?)
     }
 
     #[tool(
@@ -321,8 +325,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn next_song(&self, peer: Peer<RoleServer>) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.next", json!({}), &agent(&peer), false).await?)
+    async fn next_song(&self, ctx: RequestContext<RoleServer>) -> Result<Json<NowPlaying>, String> {
+        now(pipe::call("view.next", json!({}), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -335,8 +339,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn previous_song(&self, peer: Peer<RoleServer>) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.previous", json!({}), &agent(&peer), false).await?)
+    async fn previous_song(&self, ctx: RequestContext<RoleServer>) -> Result<Json<NowPlaying>, String> {
+        now(pipe::call("view.previous", json!({}), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -351,10 +355,10 @@ impl Nemora {
     )]
     async fn seek(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<SeekParams>,
     ) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.seek", json!({ "seconds": p.seconds }), &agent(&peer), false).await?)
+        now(pipe::call("view.seek", json!({ "seconds": p.seconds }), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -369,10 +373,10 @@ impl Nemora {
     )]
     async fn set_volume(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<VolumeParams>,
     ) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.volume", json!({ "percent": p.percent }), &agent(&peer), false).await?)
+        now(pipe::call("view.volume", json!({ "percent": p.percent }), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -387,10 +391,10 @@ impl Nemora {
     )]
     async fn set_muted(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<MuteParams>,
     ) -> Result<Json<NowPlaying>, String> {
-        now(pipe::call("view.mute", json!({ "muted": p.muted }), &agent(&peer), false).await?)
+        now(pipe::call("view.mute", json!({ "muted": p.muted }), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -405,7 +409,7 @@ impl Nemora {
     )]
     async fn set_repeat(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<RepeatParams>,
     ) -> Result<Json<NowPlaying>, String> {
         let mode = match p.mode {
@@ -413,7 +417,7 @@ impl Nemora {
             RepeatMode::All => "all",
             RepeatMode::One => "one",
         };
-        now(pipe::call("view.repeat", json!({ "mode": mode }), &agent(&peer), false).await?)
+        now(pipe::call("view.repeat", json!({ "mode": mode }), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -428,7 +432,7 @@ impl Nemora {
     )]
     async fn set_shuffle(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<ShuffleParams>,
     ) -> Result<Json<NowPlaying>, String> {
         let mode = match p.mode {
@@ -436,7 +440,7 @@ impl Nemora {
             ShuffleMode::Shuffle => "shuffle",
             ShuffleMode::Smart => "smart",
         };
-        now(pipe::call("view.shuffle", json!({ "mode": mode }), &agent(&peer), false).await?)
+        now(pipe::call("view.shuffle", json!({ "mode": mode }), &agent(&ctx), false).await?)
     }
 
     #[tool(
@@ -445,10 +449,10 @@ impl Nemora {
     )]
     async fn get_queue(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<QueueParams>,
     ) -> Result<Json<QueueOut>, String> {
-        let queue = pipe::call("view.queue", json!({}), &agent(&peer), false).await?;
+        let queue = pipe::call("view.queue", json!({}), &agent(&ctx), false).await?;
         let ids: Vec<String> =
             queue.get("songIds").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
         let current = queue.get("currentIndex").and_then(Value::as_i64);
@@ -481,11 +485,11 @@ impl Nemora {
     )]
     async fn queue_add(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<QueueAddParams>,
     ) -> Result<Json<Value>, String> {
         let ids: Vec<String> = p.song_ids.iter().map(|id| id.split(':').next().unwrap_or(id).to_owned()).collect();
-        pipe::call("view.queue_add", json!({ "songIds": ids, "next": p.next.unwrap_or(false) }), &agent(&peer), true)
+        pipe::call("view.queue_add", json!({ "songIds": ids, "next": p.next.unwrap_or(false) }), &agent(&ctx), true)
             .await
             .map(Json)
     }
@@ -502,10 +506,10 @@ impl Nemora {
     )]
     async fn queue_remove(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<QueueRemoveParams>,
     ) -> Result<Json<Value>, String> {
-        pipe::call("view.queue_remove", json!({ "positions": p.positions }), &agent(&peer), false).await.map(Json)
+        pipe::call("view.queue_remove", json!({ "positions": p.positions }), &agent(&ctx), false).await.map(Json)
     }
 
     #[tool(
@@ -520,10 +524,10 @@ impl Nemora {
     )]
     async fn queue_move(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<QueueMoveParams>,
     ) -> Result<Json<Value>, String> {
-        pipe::call("view.queue_move", json!({ "from": p.from, "to": p.to }), &agent(&peer), false).await.map(Json)
+        pipe::call("view.queue_move", json!({ "from": p.from, "to": p.to }), &agent(&ctx), false).await.map(Json)
     }
 
     #[tool(
@@ -536,8 +540,8 @@ impl Nemora {
             open_world_hint = false
         )
     )]
-    async fn queue_clear(&self, peer: Peer<RoleServer>) -> Result<Json<Value>, String> {
-        pipe::call("view.queue_clear", json!({}), &agent(&peer), false).await.map(Json)
+    async fn queue_clear(&self, ctx: RequestContext<RoleServer>) -> Result<Json<Value>, String> {
+        pipe::call("view.queue_clear", json!({}), &agent(&ctx), false).await.map(Json)
     }
 
     #[tool(
@@ -552,13 +556,13 @@ impl Nemora {
     )]
     async fn open_page(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<OpenParams>,
     ) -> Result<Json<Value>, String> {
         let id = p
             .id
             .map(|id| if matches!(p.page, Page::Song) { id.split(':').next().unwrap_or(&id).to_owned() } else { id });
-        pipe::call("view.open", json!({ "page": page_name(&p.page), "id": id }), &agent(&peer), true).await.map(Json)
+        pipe::call("view.open", json!({ "page": page_name(&p.page), "id": id }), &agent(&ctx), true).await.map(Json)
     }
 
     #[tool(
@@ -573,10 +577,10 @@ impl Nemora {
     )]
     async fn show_notice(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<NotifyParams>,
     ) -> Result<Json<Value>, String> {
-        pipe::call("view.notify", json!({ "text": p.text }), &agent(&peer), false).await.map(Json)
+        pipe::call("view.notify", json!({ "text": p.text }), &agent(&ctx), false).await.map(Json)
     }
 
     #[tool(
@@ -585,11 +589,11 @@ impl Nemora {
     )]
     async fn wait_for_song_change(
         &self,
-        peer: Peer<RoleServer>,
+        ctx: RequestContext<RoleServer>,
         Parameters(p): Parameters<WaitParams>,
     ) -> Result<Json<NowPlaying>, String> {
         let params = json!({ "timeoutSeconds": p.timeout_seconds.unwrap_or(120.0), "fromSongId": p.from_song_id });
-        now(pipe::call("view.wait_change", params, &agent(&peer), false).await?)
+        now(pipe::call("view.wait_change", params, &agent(&ctx), false).await?)
     }
 }
 
