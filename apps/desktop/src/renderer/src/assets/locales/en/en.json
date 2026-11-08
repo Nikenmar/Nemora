@@ -513,6 +513,15 @@
       "teal": "Teal",
       "graphite": "Graphite"
     },
+    "frameShade": "Frame colour",
+    "frameShadeDescription": "The colour of the frame around the page: the title bar, the sidebar and the player.",
+    "frameShades": {
+      "black": "Black",
+      "charcoal": "Charcoal",
+      "graphite": "Graphite",
+      "grey": "Grey",
+      "lightGrey": "Light grey"
+    },
     "enableImageBasedDynamicThemesDescription": "Light the top of the page and the player with the colour of the playing song's cover.",
     "visuals": "Visuals",
     "visualsDescription": "Let the music show. Each is drawn from the song itself, analysed once in the background, and stops when you can't see it.",

@@ -575,6 +575,8 @@ declare global {
     isLyricsLibraryEnabled?: boolean;
     /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
     accentColor?: string;
+    /** The dark theme's frame, an id of FRAME_SHADES (other/framePalette.ts); black when unset. */
+    frameShade?: string;
     autoTranslateLyrics: boolean;
     autoConvertLyrics: boolean;
     /** Smart Shuffle intensity, 0..1 (0 = pure random, 0.6 = default 60/40, 1 = fully smart). */

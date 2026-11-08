@@ -15,6 +15,11 @@ import {
   accentTokens,
   type AccentId
 } from '../../../other/accentPalette';
+import {
+  DEFAULT_FRAME_SHADE,
+  FRAME_SHADES,
+  type FrameShadeId
+} from '../../../other/framePalette';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
@@ -32,6 +37,8 @@ const ThemeSettings = () => {
   const isDarkMode = useStore(store, (state) => state.isDarkMode);
   const accent: AccentId =
     ACCENT_PRESETS.find((p) => p.id === preferences?.accentColor)?.id ?? DEFAULT_ACCENT;
+  const frameShade: FrameShadeId =
+    FRAME_SHADES.find((s) => s.id === preferences?.frameShade)?.id ?? DEFAULT_FRAME_SHADE;
 
   const { t } = useTranslation();
 
@@ -193,6 +200,41 @@ const ThemeSettings = () => {
               {t(`settingsPage.accentColors.${accent}`)}
             </span>
           </div>
+          {isDarkMode && (
+            <>
+              <div className="description mt-5">{t('settingsPage.frameShadeDescription')}</div>
+              <div
+                role="radiogroup"
+                aria-label={t('settingsPage.frameShade')}
+                className="flex flex-wrap items-center gap-3 pl-4 pt-4"
+              >
+                {FRAME_SHADES.map(({ id, rgb }) => {
+                  const isOn = frameShade === id;
+                  const label = t(`settingsPage.frameShades.${id}`);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isOn}
+                      aria-label={label}
+                      data-tooltip={label}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border border-ink-faint/50 text-ink outline-none transition-transform duration-150 hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-echo ${
+                        isOn ? 'ring-2 ring-ink ring-offset-2 ring-offset-surface-1' : ''
+                      }`}
+                      style={{ backgroundColor: `rgb(${rgb.join(' ')})` }}
+                      onClick={() => storage.preferences.setPreferences('frameShade', id)}
+                    >
+                      {isOn && <Icon name="check" size={18} />}
+                    </button>
+                  );
+                })}
+                <span className="ml-1 text-small text-ink-dim">
+                  {t(`settingsPage.frameShades.${frameShade}`)}
+                </span>
+              </div>
+            </>
+          )}
         </li>
         <li className="secondary-container enable-image-based-dynamic-themes mb-4">
           <div className="description">

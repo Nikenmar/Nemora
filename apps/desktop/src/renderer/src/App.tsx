@@ -23,6 +23,7 @@ import { applyCoverLight } from './other/coverLight';
 // Evaluated here as before; app/bootstrap.ts sets the playback clock.
 import './other/trackVisuals';
 import { applyAccent } from './other/accentPalette';
+import { applyFrameShade } from './other/framePalette';
 import { withViewTransition } from './other/viewTransition';
 import { installSharedCovers } from './other/motion';
 import TooltipLayer from './components/ui/Tooltip';
@@ -641,6 +642,10 @@ export default function App() {
   // The accent colour the user chose (Settings > Appearance); blue needs no override.
   const accentColor = useStore(store, (state) => state.localStorage.preferences.accentColor);
   useEffect(() => applyAccent(accentColor), [accentColor]);
+
+  // The dark theme's frame (Settings > Appearance); black needs no override.
+  const frameShade = useStore(store, (state) => state.localStorage.preferences.frameShade);
+  useEffect(() => applyFrameShade(frameShade), [frameShade]);
 
   // Cover light is on unless the user switched it off (Settings > Appearance).
   const isImageBasedDynamicThemesEnabled = useStore(
