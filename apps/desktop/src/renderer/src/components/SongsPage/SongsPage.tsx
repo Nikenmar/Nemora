@@ -16,6 +16,7 @@ import { songSortOptions, songFilterOptions } from './SongOptions';
 
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
+import { SONG_ROW_HEIGHT } from './songRowHeight';
 
 const AddMusicFoldersPrompt = lazy(() => import('../MusicFoldersPage/AddMusicFoldersPrompt'));
 
@@ -327,7 +328,7 @@ const SongsPage = () => {
           {content.songsData && content.songsData.length > 0 && (
             <VirtualizedList
               data={content.songsData}
-              fixedItemHeight={60}
+              fixedItemHeight={SONG_ROW_HEIGHT}
               scrollTopOffset={currentlyActivePage.data?.scrollTopOffset}
               itemContent={(index, song) => {
                 if (song)

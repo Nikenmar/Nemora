@@ -12,6 +12,7 @@ import { songSortOptions, songFilterOptions } from '../SongsPage/SongOptions';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
 import { store, selectPreferences } from '@renderer/store';
+import { SONG_ROW_HEIGHT } from '../SongsPage/songRowHeight';
 
 const MusicFolderInfoPage = () => {
   const isMultipleSelectionEnabled = useStore(
@@ -249,7 +250,7 @@ const MusicFolderInfoPage = () => {
           {folderSongs && folderSongs.length > 0 && (
             <VirtualizedList
               data={folderSongs}
-              fixedItemHeight={60}
+              fixedItemHeight={SONG_ROW_HEIGHT}
               scrollTopOffset={currentlyActivePage.data?.scrollTopOffset}
               itemContent={(index, song) => {
                 if (song)

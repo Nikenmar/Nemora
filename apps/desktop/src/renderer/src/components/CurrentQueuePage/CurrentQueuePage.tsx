@@ -34,6 +34,7 @@ import VirtualizedList from "../VirtualizedList";
 import { type VirtuosoHandle } from "react-virtuoso";
 import { useStore } from "@tanstack/react-store";
 import { store } from "@renderer/store";
+import { SONG_ROW_HEIGHT } from "../SongsPage/songRowHeight";
 
 interface QueueInfo {
   artworkPath: string;
@@ -445,7 +446,7 @@ const CurrentQueuePage = () => {
                 {(droppableProvided) => (
                   <VirtualizedList
                     data={queuedSongs}
-                    fixedItemHeight={60}
+                    fixedItemHeight={SONG_ROW_HEIGHT}
                     ref={ListRef}
                     scrollerRef={droppableProvided.innerRef}
                     scrollTopOffset={currentlyActivePage.data?.scrollTopOffset}

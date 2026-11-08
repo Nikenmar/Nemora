@@ -11,6 +11,7 @@ import { songSortOptions, songFilterOptions } from '../SongsPage/SongOptions';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
 import { store, selectPreferences } from '@renderer/store';
+import { SONG_ROW_HEIGHT } from '../SongsPage/songRowHeight';
 
 const GenreInfoPage = () => {
   const currentlyActivePage = useStore(store, (state) => state.currentlyActivePage);
@@ -217,7 +218,7 @@ const GenreInfoPage = () => {
 
       <VirtualizedList
         data={listItems}
-        fixedItemHeight={60}
+        fixedItemHeight={SONG_ROW_HEIGHT}
         scrollTopOffset={currentlyActivePage.data?.scrollTopOffset}
         itemContent={(index, item) => {
           if ('songId' in item)

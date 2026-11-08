@@ -7,6 +7,7 @@ import SecondaryContainer from '../../SecondaryContainer';
 import VirtualizedList from '../../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
 import { store, selectPreferences } from '@renderer/store';
+import { SONG_ROW_HEIGHT } from '../../SongsPage/songRowHeight';
 
 type Props = { songData: SongData[] };
 
@@ -45,7 +46,7 @@ const AllSongResults = (prop: Props) => {
       {songData && songData.length > 0 && (
         <VirtualizedList
           data={songData}
-          fixedItemHeight={60}
+          fixedItemHeight={SONG_ROW_HEIGHT}
           scrollTopOffset={currentlyActivePage.data?.scrollTopOffset}
           itemContent={(index, song) => {
             if (song)

@@ -12,6 +12,7 @@ import type { LastFMAlbumInfo } from 'src/types/last_fm_album_info_api';
 import VirtualizedList from '../VirtualizedList';
 import { useStore } from '@tanstack/react-store';
 import { store, selectPreferences } from '../../store';
+import { SONG_ROW_HEIGHT } from '../SongsPage/songRowHeight';
 
 interface AlbumContentReducer {
   albumData: Album;
@@ -278,7 +279,7 @@ const AlbumInfoPage = () => {
 
       <VirtualizedList
         data={listItems}
-        fixedItemHeight={60}
+        fixedItemHeight={SONG_ROW_HEIGHT}
         scrollTopOffset={currentlyActivePage.data?.scrollTopOffset}
         itemContent={(index, item) => {
           if ('songId' in item)
