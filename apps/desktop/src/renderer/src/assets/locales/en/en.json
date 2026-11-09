@@ -535,6 +535,7 @@
     "fullScreenSpectrumDescription": "A thin spectrum of the song under the cover in the full-screen player.",
     "language": "Language",
     "languageDescription": "Select the language you want Nemora to be displayed in.",
+    "systemLanguage": "Same as system",
     "audioPlayback": "Audio playback",
     "showRemainingSongDuration": "Show remaining song duration",
     "showRemainingSongDurationDescription": "Shows the remaining duration of the song instead of the default song duration.",

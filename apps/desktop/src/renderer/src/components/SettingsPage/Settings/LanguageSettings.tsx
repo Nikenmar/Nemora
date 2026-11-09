@@ -2,7 +2,13 @@ import { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import Dropdown from '../../Dropdown';
 import { AppUpdateContext } from '../../../contexts/AppUpdateContext';
-import i18n, { loadLanguage, supportedLanguagesDropdownOptions } from '../../../i18n';
+import i18n, {
+  chosenLanguage,
+  loadLanguage,
+  resolveLanguage,
+  supportedLanguagesDropdownOptions
+} from '../../../i18n';
+import { SYSTEM_LANGUAGE } from '../../../other/appLanguage';
 import { useStore } from '@tanstack/react-store';
 import { store } from '@renderer/store';
 
@@ -11,8 +17,7 @@ const LanguageSettings = () => {
   const userData = useStore(store, (state) => state.userData);
 
   const { addNewNotifications } = useContext(AppUpdateContext);
-  // Not the saved value: a language that is no longer offered shows as the English it reads as.
-  const appLang = (i18n.language || userData?.language || 'en') as LanguageCodes;
+  const appLang = chosenLanguage(userData?.language);
 
   return (
     <li className="main-container performance-settings-container mb-16">
@@ -27,13 +32,17 @@ const LanguageSettings = () => {
             className="mt-4"
             name="supportedLanguagesDropdown"
             value={appLang}
-            options={supportedLanguagesDropdownOptions}
+            options={[
+              { label: t('settingsPage.systemLanguage'), value: SYSTEM_LANGUAGE },
+              ...supportedLanguagesDropdownOptions
+            ]}
             onChange={(e) => {
-              const val = e.currentTarget.value as LanguageCodes;
+              const val = e.currentTarget.value as LanguageCodes | typeof SYSTEM_LANGUAGE;
+              const language = resolveLanguage(val);
 
-              return loadLanguage(val)
+              return loadLanguage(language)
                 .then(() =>
-                  i18n.changeLanguage(val, (err) => {
+                  i18n.changeLanguage(language, (err) => {
                     if (err) return console.warn(err);
                     window.api.userData.saveUserData('language', val);
                     return window.api.appControls.restartRenderer(`App language changed to ${val}`);

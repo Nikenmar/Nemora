@@ -455,7 +455,7 @@
         "what": "Scrive i tag di un brano quando li salvi. L'audio non viene mai toccato, quindi il brano conserva le statistiche."
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "Cambia versione",
         "what": "Scrive un campo proprio nel tag del brano, così il suono viaggia con il file. Nient'altro cambia nel file; si disattiva in Riproduzione audio."
       },
       "delete": {
@@ -565,10 +565,11 @@
     "fullScreenSpectrumDescription": "Un sottile spettro del brano sotto la copertina nel player a schermo intero.",
     "language": "Lingua",
     "languageDescription": "Seleziona la lingua in cui visualizzare Nemora.",
+    "systemLanguage": "Come il sistema",
     "audioPlayback": "Riproduzione audio",
     "showRemainingSongDuration": "Mostra la durata rimanente",
     "showRemainingSongDurationDescription": "Mostra il tempo rimanente del brano invece della durata.",
-    "soundInFile": "Conserva Switch version nel file del brano",
+    "soundInFile": "Conserva la versione scelta nel file del brano",
     "soundInFileDescription": "Scrive il suono proprio di un brano in un campo del tag usato solo da Nemora, così viaggia con il file su un altro PC o dopo una reinstallazione. Note, copertina e altri tag non vengono toccati.",
     "playbackRate": "Velocità di riproduzione",
     "changePlaybackRate": "Cambia la velocità di riproduzione predefinita del player.",
@@ -1739,7 +1740,7 @@
     "chipRadio": "Radio da {{name}}"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "Cambia versione",
     "switchedTo": "Passato a {{name}}",
     "backToOriginal": "Torna all'originale",
     "editingSwitched": "Questo brano suona: {{name}}",

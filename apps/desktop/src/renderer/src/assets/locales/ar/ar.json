@@ -524,7 +524,7 @@
         "what": "يكتب وسوم الأغنية عند حفظها. لا يُمس الصوت أبدًا، فتحتفظ الأغنية بإحصاءاتها."
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "تبديل الإصدار",
         "what": "يكتب حقلًا خاصًا في وسم الأغنية ليرافق الصوت الملف. لا يتغير شيء آخر في الملف؛ ويمكن إيقافه من تشغيل الصوت."
       },
       "delete": {
@@ -652,10 +652,11 @@
     "fullScreenSpectrumDescription": "طيف رفيع للأغنية تحت الغلاف في مشغل ملء الشاشة.",
     "language": "اللغة",
     "languageDescription": "اختر اللغة التي تريد عرض Nemora بها.",
+    "systemLanguage": "مثل النظام",
     "audioPlayback": "تشغيل الصوت",
     "showRemainingSongDuration": "عرض المدة المتبقية للأغنية",
     "showRemainingSongDurationDescription": "يعرض المدة المتبقية للأغنية بدلًا من مدتها الكاملة.",
-    "soundInFile": "الاحتفاظ بـ Switch version في ملف الأغنية",
+    "soundInFile": "الاحتفاظ بالإصدار المختار في ملف الأغنية",
     "soundInFileDescription": "يكتب صوت الأغنية الخاص في حقل من وسمها لا يستخدمه إلا Nemora، ليرافق الملف إلى حاسوب آخر أو عند إعادة التثبيت. لا تُمس ملاحظاتك وغلافك ووسومك الأخرى.",
     "playbackRate": "سرعة التشغيل",
     "changePlaybackRate": "غيّر سرعة التشغيل الافتراضية للمشغل.",
@@ -1934,7 +1935,7 @@
     "chipRadio": "راديو من {{name}}"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "تبديل الإصدار",
     "switchedTo": "تم التبديل إلى {{name}}",
     "backToOriginal": "العودة إلى الأصل",
     "editingSwitched": "صوت هذه الأغنية: {{name}}",

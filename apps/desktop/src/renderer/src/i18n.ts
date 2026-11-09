@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 
 import en from './assets/locales/en/en.json';
 import type { DropdownOption } from './components/Dropdown';
+import { pickLanguage, SYSTEM_LANGUAGE } from './other/appLanguage';
 
 /** English is always there, as the fallback; another language is loaded only when it is the one in use. */
 export const languageLoaders = {
@@ -37,8 +38,17 @@ export const supportedLanguagesDropdownOptions: DropdownOption<LanguageCodes>[] 
   { label: `हिन्दी`, value: 'hi' }
 ];
 
-const isSupported = (language?: string | null): language is LanguageCodes =>
-  !!language && language in languageLoaders;
+const supportedLanguages = Object.keys(languageLoaders);
+
+/** The language a saved setting means now; `system` and a language no longer offered follow Windows. */
+export const resolveLanguage = (saved?: string | null) =>
+  pickLanguage(saved, navigator.languages, supportedLanguages) as LanguageCodes;
+
+/** What the language dropdown shows as chosen. */
+export const chosenLanguage = (saved?: string | null): LanguageCodes | typeof SYSTEM_LANGUAGE =>
+  saved && saved !== SYSTEM_LANGUAGE && supportedLanguages.includes(saved)
+    ? (saved as LanguageCodes)
+    : SYSTEM_LANGUAGE;
 
 /** Makes a language's strings available; English and a language already loaded need nothing. */
 export const loadLanguage = async (language: LanguageCodes) => {
@@ -49,8 +59,7 @@ export const loadLanguage = async (language: LanguageCodes) => {
 
 const userData = await window.api.userData.getUserData();
 
-// A language that is no longer offered (Turkish, Vietnamese) reads as English.
-const language: LanguageCodes = isSupported(userData.language) ? userData.language : 'en';
+const language = resolveLanguage(userData.language);
 
 // Read by styles.css: the fonts of some scripts, and Arabic's direction.
 document.documentElement.lang = language;

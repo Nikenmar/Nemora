@@ -409,7 +409,7 @@
         "what": "저장할 때 노래의 태그를 씁니다. 오디오는 절대 건드리지 않으므로 노래의 통계가 유지됩니다."
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "버전 전환",
         "what": "노래 태그에 전용 필드를 써서 사운드가 파일과 함께 이동하게 합니다. 파일의 다른 부분은 변경되지 않으며, 오디오 재생에서 끌 수 있습니다."
       },
       "delete": {
@@ -507,10 +507,11 @@
     "fullScreenSpectrumDescription": "전체 화면 플레이어의 커버 아래에 노래의 얇은 스펙트럼을 표시합니다.",
     "language": "언어",
     "languageDescription": "Nemora를 표시할 언어를 선택하세요.",
+    "systemLanguage": "시스템과 동일",
     "audioPlayback": "오디오 재생",
     "showRemainingSongDuration": "남은 재생 시간 표시",
     "showRemainingSongDurationDescription": "노래 길이 대신 남은 시간을 표시합니다.",
-    "soundInFile": "Switch version을 노래 파일에 유지",
+    "soundInFile": "선택한 버전을 노래 파일에 유지",
     "soundInFileDescription": "노래 고유의 사운드를 Nemora만 사용하는 태그 필드에 기록하여 다른 PC나 재설치 시에도 파일과 함께 이동합니다. 메모, 커버, 다른 태그는 건드리지 않습니다.",
     "playbackRate": "재생 속도",
     "changePlaybackRate": "플레이어의 기본 재생 속도를 변경합니다.",
@@ -1609,7 +1610,7 @@
     "chipRadio": "{{name}} 라디오"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "버전 전환",
     "switchedTo": "{{name}}(으)로 전환했습니다",
     "backToOriginal": "원본으로 돌아가기",
     "editingSwitched": "이 노래의 사운드: {{name}}",

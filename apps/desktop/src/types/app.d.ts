@@ -450,7 +450,8 @@ declare global {
   }
 
   interface UserData {
-    language: LanguageCodes;
+    /** A language, or `system` (other/appLanguage.ts) to follow Windows. */
+    language: LanguageCodes | 'system';
     theme: AppThemeData;
     musicFolders: FolderStructure[];
     preferences: {

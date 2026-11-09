@@ -455,7 +455,7 @@
         "what": "Écrit les tags d'un morceau quand vous les enregistrez. L'audio n'est jamais touché, le morceau garde donc ses statistiques."
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "Changer de version",
         "what": "Écrit un champ propre dans le tag du morceau, pour que le son suive le fichier. Rien d'autre ne change dans le fichier ; se désactive dans Lecture audio."
       },
       "delete": {
@@ -565,10 +565,11 @@
     "fullScreenSpectrumDescription": "Un fin spectre du morceau sous la pochette dans le lecteur plein écran.",
     "language": "Langue",
     "languageDescription": "Sélectionnez la langue d'affichage de Nemora.",
+    "systemLanguage": "Comme le système",
     "audioPlayback": "Lecture audio",
     "showRemainingSongDuration": "Afficher la durée restante",
     "showRemainingSongDurationDescription": "Affiche la durée restante du morceau au lieu de sa durée totale.",
-    "soundInFile": "Garder Switch version dans le fichier du morceau",
+    "soundInFile": "Garder la version choisie dans le fichier du morceau",
     "soundInFileDescription": "Écrit le son propre d'un morceau dans un champ de son tag utilisé uniquement par Nemora, pour qu'il suive le fichier sur un autre PC ou après une réinstallation. Vos notes, pochette et autres tags ne sont pas touchés.",
     "playbackRate": "Vitesse de lecture",
     "changePlaybackRate": "Changez la vitesse de lecture par défaut du lecteur.",
@@ -1739,7 +1740,7 @@
     "chipRadio": "Radio de {{name}}"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "Changer de version",
     "switchedTo": "Passé à {{name}}",
     "backToOriginal": "Revenir à l'original",
     "editingSwitched": "Ce morceau sonne : {{name}}",

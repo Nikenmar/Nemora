@@ -432,7 +432,7 @@
         "what": "जब आप सहेजते हैं तो गाने के टैग लिखता है। ऑडियो को कभी नहीं छुआ जाता, इसलिए गाने के आँकड़े बने रहते हैं।"
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "संस्करण बदलें",
         "what": "गाने के टैग में अपना फ़ील्ड लिखता है, ताकि ध्वनि फ़ाइल के साथ जाए। फ़ाइल में और कुछ नहीं बदलता; ऑडियो प्लेबैक में बंद करें।"
       },
       "delete": {
@@ -536,10 +536,11 @@
     "fullScreenSpectrumDescription": "फ़ुलस्क्रीन प्लेयर में कवर के नीचे गाने का पतला स्पेक्ट्रम।",
     "language": "भाषा",
     "languageDescription": "वह भाषा चुनें जिसमें आप Nemora देखना चाहते हैं।",
+    "systemLanguage": "सिस्टम के अनुसार",
     "audioPlayback": "ऑडियो प्लेबैक",
     "showRemainingSongDuration": "गाने की शेष अवधि दिखाएँ",
     "showRemainingSongDurationDescription": "गाने की डिफ़ॉल्ट अवधि के बजाय शेष अवधि दिखाता है।",
-    "soundInFile": "Switch version को गाने की फ़ाइल में रखें",
+    "soundInFile": "चुना गया संस्करण गाने की फ़ाइल में रखें",
     "soundInFileDescription": "गाने की अपनी ध्वनि उसके टैग के उस फ़ील्ड में लिखता है जिसे केवल Nemora उपयोग करती है, ताकि वह फ़ाइल के साथ दूसरे PC या पुनः इंस्टॉल पर जाए। आपके नोट्स, कवर और अन्य टैग नहीं छुए जाते।",
     "playbackRate": "चलाने की गति",
     "changePlaybackRate": "प्लेयर की डिफ़ॉल्ट चलाने की गति बदलें।",
@@ -1674,7 +1675,7 @@
     "chipRadio": "{{name}} से रेडियो"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "संस्करण बदलें",
     "switchedTo": "{{name}} पर बदला गया",
     "backToOriginal": "मूल पर वापस",
     "editingSwitched": "यह गाना सुनाई देता है: {{name}}",

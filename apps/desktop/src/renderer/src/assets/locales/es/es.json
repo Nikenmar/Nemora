@@ -455,7 +455,7 @@
         "what": "Escribe las etiquetas de una canción cuando las guardas. El audio nunca se toca, así que la canción conserva sus estadísticas."
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "Cambiar versión",
         "what": "Escribe un campo propio en la etiqueta de la canción para que el sonido viaje con el archivo. Nada más cambia en el archivo; se desactiva en Reproducción de audio."
       },
       "delete": {
@@ -565,10 +565,11 @@
     "fullScreenSpectrumDescription": "Un fino espectro de la canción bajo la carátula en el reproductor a pantalla completa.",
     "language": "Idioma",
     "languageDescription": "Selecciona el idioma en el que quieres ver Nemora.",
+    "systemLanguage": "Igual que el sistema",
     "audioPlayback": "Reproducción de audio",
     "showRemainingSongDuration": "Mostrar la duración restante",
     "showRemainingSongDurationDescription": "Muestra el tiempo restante de la canción en lugar de su duración.",
-    "soundInFile": "Guardar Switch version en el archivo de la canción",
+    "soundInFile": "Guardar la versión elegida en el archivo de la canción",
     "soundInFileDescription": "Escribe el sonido propio de una canción en un campo de su etiqueta que solo usa Nemora, para que viaje con el archivo a otro PC o tras reinstalar. Tus notas, carátula y otras etiquetas no se tocan.",
     "playbackRate": "Velocidad de reproducción",
     "changePlaybackRate": "Cambia la velocidad de reproducción predeterminada del reproductor.",
@@ -1739,7 +1740,7 @@
     "chipRadio": "Radio de {{name}}"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "Cambiar versión",
     "switchedTo": "Cambiado a {{name}}",
     "backToOriginal": "Volver al original",
     "editingSwitched": "Esta canción suena: {{name}}",

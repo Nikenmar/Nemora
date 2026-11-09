@@ -14,7 +14,7 @@ const SHARED_KEYS: &[&str] = &["language", "theme", "preferences"];
 /// What a profile that has never stored a value reads, as in 1.1.9.
 fn defaults() -> Value {
     json!({
-        "language": "en",
+        "language": "system",
         "theme": { "isDarkMode": true, "useSystemTheme": false },
         "musicFolders": [],
         "preferences": {

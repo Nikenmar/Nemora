@@ -409,7 +409,7 @@
         "what": "保存时写入歌曲标签。音频绝不会被改动，因此歌曲的统计信息会保留。"
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "切换版本",
         "what": "在歌曲标签中写入专用字段，使音效随文件一起迁移。文件的其他部分不会更改；可在“音频播放”中关闭。"
       },
       "delete": {
@@ -507,10 +507,11 @@
     "fullScreenSpectrumDescription": "在全屏播放器的封面下显示歌曲的细频谱。",
     "language": "语言",
     "languageDescription": "选择 Nemora 的显示语言。",
+    "systemLanguage": "跟随系统",
     "audioPlayback": "音频播放",
     "showRemainingSongDuration": "显示歌曲剩余时间",
     "showRemainingSongDurationDescription": "显示歌曲的剩余时间，而不是总时长。",
-    "soundInFile": "在歌曲文件中保留 Switch version",
+    "soundInFile": "在歌曲文件中保留所选版本",
     "soundInFileDescription": "将歌曲自身的音效写入仅 Nemora 使用的标签字段，使其随文件迁移到其他电脑或重新安装后保留。你的备注、封面和其他标签不会被改动。",
     "playbackRate": "播放速度",
     "changePlaybackRate": "更改播放器的默认播放速度。",
@@ -1609,7 +1610,7 @@
     "chipRadio": "来自 {{name}} 的电台"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "切换版本",
     "switchedTo": "已切换到 {{name}}",
     "backToOriginal": "恢复原版",
     "editingSwitched": "这首歌的音效：{{name}}",

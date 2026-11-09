@@ -409,7 +409,7 @@
         "what": "保存時に曲のタグを書き込みます。音声には触れないため、曲の統計は維持されます。"
       },
       "switchVersion": {
-        "name": "Switch version",
+        "name": "バージョンを切り替え",
         "what": "曲のタグに専用の項目を書き込み、サウンドがファイルと一緒に移動するようにします。ファイルの他の部分は変更しません。「オーディオ再生」でオフにできます。"
       },
       "delete": {
@@ -507,10 +507,11 @@
     "fullScreenSpectrumDescription": "全画面プレーヤーのカバーの下に曲の細いスペクトラムを表示します。",
     "language": "言語",
     "languageDescription": "Nemora の表示言語を選択します。",
+    "systemLanguage": "システムと同じ",
     "audioPlayback": "オーディオ再生",
     "showRemainingSongDuration": "曲の残り時間を表示",
     "showRemainingSongDurationDescription": "曲の長さの代わりに残り時間を表示します。",
-    "soundInFile": "Switch version を曲のファイルに保持",
+    "soundInFile": "選択したバージョンを曲のファイルに保持",
     "soundInFileDescription": "曲独自のサウンドを Nemora だけが使うタグの項目に書き込み、別の PC や再インストール後もファイルと一緒に移動できるようにします。メモ、カバー、他のタグには触れません。",
     "playbackRate": "再生速度",
     "changePlaybackRate": "プレーヤーの既定の再生速度を変更します。",
@@ -1609,7 +1610,7 @@
     "chipRadio": "{{name}} からのラジオ"
   },
   "versions": {
-    "switch": "Switch version",
+    "switch": "バージョンを切り替え",
     "switchedTo": "{{name}} に切り替えました",
     "backToOriginal": "オリジナルに戻す",
     "editingSwitched": "この曲のサウンド: {{name}}",
