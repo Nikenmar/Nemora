@@ -183,7 +183,7 @@ const AddSongsToPlaylistsPrompt = (props: AddSongsToPlaylistProp) => {
         </span>
         <div className="buttons-container flex">
           <Button
-            label="Cancel"
+            label={t('common.cancel')}
             iconName="close"
             clickHandler={() => changePromptMenuData(false)}
           />

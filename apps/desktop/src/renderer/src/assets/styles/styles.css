@@ -101,7 +101,7 @@
   --cover-glow-strength: 16%;
 
   --font-ui: 'Geologica', 'Yu Gothic UI', 'Meiryo UI', 'Microsoft YaHei UI', 'Malgun Gothic',
-    'Segoe UI', sans-serif;
+    'Segoe UI', 'Nirmala UI', sans-serif;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   /* Motion (PLAN/14): state changes, small moves, pages and track changes, shared elements. Only
@@ -118,6 +118,20 @@
   --transition-duration-0_2s: 0.2s;
   --transition-duration-0_25s: 0.25s;
   --transition-duration-0_3s: 0.3s;
+}
+
+/* Simplified Chinese before the Japanese fonts, which draw the shared characters in Japanese forms. */
+html[lang='zh-CN'],
+html[lang='zh-CN'] .light {
+  --font-ui: 'Geologica', 'Microsoft YaHei UI', 'Yu Gothic UI', 'Meiryo UI', 'Malgun Gothic',
+    'Segoe UI', 'Nirmala UI', sans-serif;
+}
+
+/* Arabic: each piece of text takes its own direction and alignment, so a sentence reads right to
+   left with its punctuation in place, while the layout (sidebar, player, seek bars) stays as it is.
+   English song titles among it stay left to right. */
+html[lang='ar'] body * {
+  unicode-bidi: plaintext;
 }
 
 /* `.dark` sits on <body>; the mini and full-screen players and portalled dialogs carry it too. */

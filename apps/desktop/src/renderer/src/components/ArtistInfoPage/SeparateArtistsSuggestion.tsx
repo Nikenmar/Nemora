@@ -176,7 +176,7 @@ const SeparateArtistsSuggestion = (props: Props) => {
                   className="!mr-0 !border-0 bg-canvas/50 !px-4 !py-2 outline-1 transition-colors hover:bg-canvas hover:!text-echo focus-visible:!outline "
                   iconName="do_not_disturb_on"
                   iconClassName="ms-icon"
-                  label="Ignore"
+                  label={t('common.ignore')}
                   clickHandler={() => {
                     storage.ignoredSeparateArtists.setIgnoredSeparateArtists([artistId]);
                     setIsIgnored(true);

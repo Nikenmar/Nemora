@@ -57,7 +57,7 @@ const AboutSettings = () => {
     <li className="main-container about-container">
       <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
         <span className="ms-icon mr-2">info</span>
-        About
+        {t('settingsPage.about')}
       </div>
       <div className="pl-2">
         <div className="mb-2 flex items-center justify-between p-2 text-lg">

@@ -8,7 +8,7 @@ import { DropdownOption } from '../renderer/src/components/Dropdown';
 import { api } from '../platform/api';
 import { LastFMSessionData } from './last_fm_api';
 import { SimilarArtist, Tag } from './last_fm_artist_info_api';
-import { resources } from 'src/renderer/src/i18n';
+import { languageLoaders } from 'src/renderer/src/i18n';
 
 declare global {
   interface Window {
@@ -486,7 +486,7 @@ declare global {
     customLrcFilesSaveLocation?: string;
   }
 
-  type LanguageCodes = NoInfer<keyof typeof resources>;
+  type LanguageCodes = NoInfer<keyof typeof languageLoaders>;
 
   interface AppThemeData {
     isDarkMode: boolean;

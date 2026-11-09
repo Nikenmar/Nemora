@@ -93,7 +93,7 @@ const SongMetadataResultsSelectPage = (props: SongMetadataResultsSelectPageProp)
               }));
             }}
             onKeyDown={(e) => e.stopPropagation()}
-            placeholder="Song Title"
+            placeholder={t('common.songTitle')}
           />
           <label htmlFor="songArtistsInput">{t('common.artist_other')} : </label>
           <input

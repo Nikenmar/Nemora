@@ -68,7 +68,7 @@ const GenreSearchResultsContainer = (props: Props) => {
       <>
         <div className="title-container mb-8 mt-1 flex items-center pr-4 text-title font-semibold text-ink">
           <div className="container flex">
-            Genres
+            {t('common.genre_other')}
             <div className="other-stats-container ml-12 flex items-center text-xs">
               {genres.length > 0 && (
                 <div className="no-of-genres">
