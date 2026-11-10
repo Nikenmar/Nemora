@@ -52,7 +52,7 @@ CARDS = [
          title="Slowed<br>+ reverb",
          text="Speed, pitch and a real reverb in the audio engine. Keep a sound as a version of the song, or switch the song itself to it."),
     dict(key="search", bg="dawn", side="left",
-         shots=[("36s-search-did-you-mean", "dark", (205, 40, 1600, 620), (760, 120, 820)), ("36q-search-in-lyrics", "dark", (215, 680, 1600, 812), (720, 520, 820))],
+         shots=[("36s-search-did-you-mean", "dark", (205, 0, 1600, 620), (760, 90, 820)), ("36q-search-in-lyrics", "dark", (624, 2, 1120, 44), (800, 500, 500)), ("36q-search-in-lyrics", "dark", (215, 680, 1600, 812), (720, 570, 820))],
          title="Search that<br>gets you",
          text="Typos, any word order, Japanese readings, a wrong keyboard layout, even a line of the lyrics: it still finds the song."),
     dict(key="fullscreen", bg="ink", side="right",
