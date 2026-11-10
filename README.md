@@ -1,90 +1,75 @@
 <div align="center">
 
-<img src="resources/banner.png" alt="Nemora Player" width="720">
+<img src="resources/readme/hero.webp" alt="Nemora, the music player for the music you own" width="100%">
 
-### A feature-rich music player
-
-Built with Rust, Tauri and React / Based on [Nora](https://github.com/Sandakan/Nora)
+<br>
 
 <a href="https://github.com/Nikenmar/Nemora/releases/latest">
-  <img alt="Download Nemora for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=212226&color=4C8DD9">
+  <img alt="Download Nemora for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=0b1640&color=1d4094">
 </a>
 
 </div>
 
-> [!NOTE]
-> New to the player? Nemora keeps Nora's core, so [Nora's page](https://github.com/Sandakan/Nora) covers the basics, what it does and how it feels to use. What follows is what Nemora adds and changes.
+Nemora plays the music on your own computer: your files, your folders, your tags. No account, no stream, no ads. It is built around one idea, that a player you use every day should get to know your taste and show you what it learned.
 
-## 🆕 Nemora 2.0
+## Why Nemora
 
-Nemora 2.0 is a rewrite underneath the same player. Your library, listening history, tierlists and duel ratings now live in one database kept by a Rust core, and music plays through Nemora's own audio engine instead of the webview's.
+- **Its own audio engine.** Written in Rust, it decodes every file itself. At full volume with the equalizer flat, a file reaches Windows sample for sample; one track runs into the next without a gap.
+- **It learns how you listen.** Tierlists, duels, what you replay and what you skip all feed Smart Shuffle, and it tells you why each song comes next.
+- **Songs keep their history.** A song is recognised by its audio, not by its path or tags, so renaming, retagging or moving a file keeps every listen, rating and tier.
+- **Private by design.** No telemetry, no analytics, no account. Settings › About › Privacy lists every request Nemora makes and when.
 
-- **Bit-perfect at full volume.** The engine decodes every file itself. At full volume with the equalizer flat, a file at the device's sample rate reaches Windows sample for sample, a file at another rate goes through Nemora's own high-quality resampler rather than Windows'.
-- **Gapless.** One track runs into the next without a gap, so live albums and mixes play the way they were cut.
-- **Songs keep their history.** A song is recognised by its audio, not by its file path or its tags, so editing tags, renaming the file or moving it to another folder keeps every listen, rating and tierlist place.
+## Features
 
-The first start of 2.0 imports the library and statistics of a 1.x install. The 1.x files are left untouched, but going back to 1.x afterwards is not supported.
+<img src="resources/readme/shuffle.webp" alt="Smart Shuffle that explains itself" width="100%">
 
-## ✨ Features
+<img src="resources/readme/tierlists.webp" alt="Rank your music in tierlists" width="100%">
 
-### Tierlists
+<img src="resources/readme/duels.webp" alt="Duels and Song Guessr" width="100%">
 
-![Tierlist editor](/resources/features/tierlists.webp)
+<img src="resources/readme/stats.webp" alt="Statistics and insights" width="100%">
 
-Drag songs into tiers, then play a tierlist like a playlist. Your rankings feed the smart shuffle.
+<img src="resources/readme/tastemap.webp" alt="The taste map" width="100%">
 
-### Statistics
+<img src="resources/readme/sound.webp" alt="Slowed and reverb" width="100%">
 
-![Statistics tab](/resources/features/statistics.webp)
+<img src="resources/readme/search.webp" alt="Search" width="100%">
 
-Listens, skips, hours, streaks, a heatmap of every day you listened, and the hours and weekdays you play music, for any year or all time.
+<img src="resources/readme/fullscreen.webp" alt="The full-screen player" width="100%">
 
-Your history exports to a single file, and importing it twice never doubles a listen.
+<img src="resources/readme/agents.webp" alt="AI agents over MCP" width="100%">
 
-### Duels & SongGuessr
+<img src="resources/readme/yours.webp" alt="Themes, accent colours and languages" width="100%">
 
-![Duels and SongGuessr](/resources/features/duels-songguessr.webp)
+### And more
 
-The most fun part!
+- **For you.** The mix of the day, Rediscover (songs you love but have not heard in a while), On repeat, Never heard, each one a click from a playlist.
+- **Lyrics.** Synced lyrics from your files or LRCLIB, optionally Musixmatch, fetched for the whole library in the background if you want; search by a line, share a line as a card, translate.
+- **Tournaments.** Seed 8, 16 or 32 songs and play the bracket down to one winner.
+- **Versions.** Keep a slowed, sped-up or reverb sound as its own row, or save it as a WAV with the song's tags and cover.
+- **Headphone correction.** Pick your headphones from the AutoEQ list, or import a profile, on top of the equalizer.
+- **Smooth volume.** A perceptual curve like the Windows mixer, not a linear slider.
+- **Import from Spotify.** Paste a public playlist link; its tracks are matched against your library.
+- **Last.fm and Discord.** Scrobbling, now playing and loves; your song as your Discord status.
+- **OBS widget.** A transparent now-playing overlay, served only to your own computer.
+- **Mini player, tag editor, drag a song out** into Explorer, a DAW or a chat.
 
-- **Duels.** Which of these two do you like more? Every answer moves an ELO rating, so your library sorts itself by what you actually pick, not by what you claim to like.
-- **Tournaments.** Seed 8, 16 or 32 tracks and play the bracket down to one winner.
-- **SongGuessr.** Songless on your own library: name the track from a tenth of a second, or skip for a longer clip, up to 12 seconds. Six tries, a streak counter, and your whole library or a single artist or album.
+## Download
 
-### Smart Shuffle
+Get the installer from [Releases](https://github.com/Nikenmar/Nemora/releases/latest). Windows 10 and 11, x64. Nemora checks for updates and installs one only when you agree.
 
-A second shuffle that leans toward what you rate: higher tiers, ranked artists and frequent plays come up more, recent plays less. It leans, it doesn't rig, and only the tierlists you choose count.
-
-### Search
-
-Any word order, typos forgiven, and text nobody can type: "hikari" finds `ひかり`, "oneheart" finds `Øneheart`, "little dark age" finds `𝓛𝓲𝓽𝓽𝓵𝓮 𝓓𝓪𝓻𝓴 𝓐𝓰𝓮`. Forgot to switch layouts? "negfz Lbfyf" still finds `тупая диана`.
-
-### Also
-
-- **Rediscover:** a self-refreshing playlist of songs you love but haven't heard in a while.
-- **Smooth volume:** a perceptual dB curve, like the Windows mixer, instead of a linear slider.
-- **Sticky selection:** multi-select survives switching tabs.
-- **OBS widget:** a transparent now-playing overlay, served only on your computer.
-- **Drag a song out** into Explorer, a DAW or a chat.
-
-## 📊 Benchmark
-
-![Nemora vs Nora benchmark](/resources/features/benchmark.png)
-
-Against [Nora 3.1.0](https://github.com/Sandakan/Nora/releases/tag/v3.1.0-stable): a 1775-track library builds 17× faster with 45× less written to disk, memory drops to a third, CPU during playback to under a quarter, and songs run into each other with no gap where Nora leaves 35 ms of silence.
-
-Nemora is not ahead everywhere: it writes more in its first minute (13 MB against 3 MB) and idles slightly higher (1.0 % of a core against 0.6 %).
-
-Same machine, both players offline in separate profiles, every process counted, medians of 2 to 5 launches. [Full report](docs/benchmark.md) · [harness](tools/bench)
-
-## 🛠 Building
+## Building
 
 ```
 cargo test
 cd apps/desktop && npm install && npm run tauri dev
 ```
 
-Development builds keep their data in `%APPDATA%\Nemora-dev`; `NEMORA_PROFILE_DIR` overrides it.
+Development builds keep their data in `%APPDATA%\Nemora-dev`; `NEMORA_PROFILE_DIR` overrides it. The README pictures are made from real shots of the app by `tools/readme/compose.py`.
+
+## Credits
+
+Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com), artist info from [Deezer](https://www.deezer.com) and [Genius](https://genius.com), scrobbling via [Last.fm](https://www.last.fm), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
 
 ---
 
@@ -92,14 +77,6 @@ Development builds keep their data in `%APPDATA%\Nemora-dev`; `NEMORA_PROFILE_DI
 
 Made by nikenmar, CMR
 
-_All songs, artists, albums, and cover art used in demonstrations are property of their respective owners and used for illustrative purposes only. All copyrights are respected._
+<sub>All songs, artists, albums and cover art shown are the property of their respective owners and appear for illustration only.</sub>
 
 </div>
-
----
-
-## Credits
-
-Built on [Nora](https://github.com/Sandakan/Nora) by [Sandakan Nipunajith](https://github.com/Sandakan) (MIT), which made all of this possible.
-
-Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com). artist info from [Deezer](https://www.deezer.com) and [Genius](https://genius.com). scrobbling via [Last.fm](https://www.last.fm). Every third-party licence is listed in **Settings > About > Open-source licenses**.
