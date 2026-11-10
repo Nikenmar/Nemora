@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="resources/readme/hero.webp" alt="Nemora, the music player for the music you own" width="100%">
+<img src="resources/readme/hero.webp" alt="Nemora. Sounds exactly as recorded, shuffles like it knows you." width="100%">
 
 <br>
 

@@ -118,7 +118,7 @@ def card_html(c, shots):
 
 
 def hero_html(shots):
-    pills = "".join(f'<span class="pill">{p}</span>' for p in ("Free", "Open-source", "No ads", "No telemetry", "Works offline"))
+    pills = "".join(f'<span class="pill">{p}</span>' for p in ("Bit-perfect", "Gapless", "Smart Shuffle", "Slowed + reverb", "Tierlists & duels", "Free & open-source"))
     logo = (BRAND / "mark/nemora-mark-color-on-blue.svg").as_uri()
     word = (BRAND / "wordmark/nemora-wordmark-white.svg").as_uri()
     return f"""
@@ -129,7 +129,7 @@ def hero_html(shots):
       <img src="{logo}" style="width:150px;height:150px;margin:-30px">
       <img src="{word}" style="height:96px">
     </div>
-    <p style="margin:0;font-size:38px;line-height:1.25;font-weight:500;letter-spacing:-0.01em">The music player for<br>the music you own.</p>
+    <p style="margin:0;font-size:38px;line-height:1.25;font-weight:500;letter-spacing:-0.01em">Sounds exactly as recorded.<br>Shuffles like it knows you.</p>
     <div style="display:flex;flex-wrap:wrap;gap:12px">{pills}</div>
   </div>
   {windows(HERO, shots)}
