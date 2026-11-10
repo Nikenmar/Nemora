@@ -68,9 +68,9 @@ CARDS = [
          title="Make it<br>yours",
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
-HERO = dict(key="hero", shots=[("36m-home-today", "dark", None, (820, 120, 1060)), ("08-mini-player", "dark", None, (700, 560, 420))])
+HERO = dict(key="hero", shots=[("36m-home-today", "dark", None, (800, 150, 1100))])
 # Order in the README; the cards alternate sides from the first, mirrored where they were drawn the other way.
-ORDER = ["tierlists", "sound", "shuffle", "stats", "duels", "tastemap", "search", "fullscreen", "agents", "yours"]
+ORDER = ["tierlists", "sound", "shuffle", "stats", "search", "duels", "tastemap", "fullscreen", "agents", "yours"]
 
 
 def oriented(c, side):
