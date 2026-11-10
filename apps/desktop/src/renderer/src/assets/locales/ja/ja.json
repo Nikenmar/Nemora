@@ -629,7 +629,7 @@
     "noraGithubRepo": "Nemora の GitHub リポジトリ",
     "noraGithubIssues": "Nemora の GitHub Issues",
     "noraDescription": "Nemora は Tauri と React で作られた Windows 用の音楽プレーヤーです。",
-    "noraLicenseNotice": "この製品は <Button>MIT ライセンス</Button>で提供されています。",
+    "appLicenseNotice": "この製品は <Button>MIT ライセンス</Button>で提供されています。",
     "appLicense": "アプリのライセンス",
     "releaseNotes": "リリースノート",
     "openSourceLicenses": "オープンソースライセンス",

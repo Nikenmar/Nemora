@@ -779,7 +779,7 @@
     "noraGithubRepo": "مستودع Nemora على GitHub",
     "noraGithubIssues": "مشكلات Nemora على GitHub",
     "noraDescription": "Nemora مشغل موسيقى لنظام Windows، مبني باستخدام Tauri وReact.",
-    "noraLicenseNotice": "هذا المنتج مرخص بموجب <Button>رخصة MIT.</Button>",
+    "appLicenseNotice": "هذا المنتج مرخص بموجب <Button>رخصة MIT.</Button>",
     "appLicense": "رخصة التطبيق",
     "releaseNotes": "ملاحظات الإصدار",
     "openSourceLicenses": "رخص المصادر المفتوحة",

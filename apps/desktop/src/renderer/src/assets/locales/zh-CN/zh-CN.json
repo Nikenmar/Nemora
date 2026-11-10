@@ -629,7 +629,7 @@
     "noraGithubRepo": "Nemora 的 GitHub 仓库",
     "noraGithubIssues": "Nemora 的 GitHub Issues",
     "noraDescription": "Nemora 是一款适用于 Windows 的音乐播放器，使用 Tauri 和 React 构建。",
-    "noraLicenseNotice": "本产品根据 <Button>MIT 许可证</Button>授权。",
+    "appLicenseNotice": "本产品根据 <Button>MIT 许可证</Button>授权。",
     "appLicense": "应用许可证",
     "releaseNotes": "发行说明",
     "openSourceLicenses": "开源许可证",

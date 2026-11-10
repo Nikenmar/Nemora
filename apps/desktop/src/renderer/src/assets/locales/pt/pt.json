@@ -689,7 +689,7 @@
     "noraGithubRepo": "Repositório do Nemora no GitHub",
     "noraGithubIssues": "Issues do Nemora no GitHub",
     "noraDescription": "O Nemora é um player de música para Windows, feito com Tauri e React.",
-    "noraLicenseNotice": "Este produto é licenciado sob a <Button>licença MIT.</Button>",
+    "appLicenseNotice": "Este produto é licenciado sob a <Button>licença MIT.</Button>",
     "appLicense": "Licença do aplicativo",
     "releaseNotes": "Notas da versão",
     "openSourceLicenses": "Licenças de código aberto",

@@ -178,7 +178,7 @@ const AboutSettings = () => {
           </li>
           <li>
             <Trans
-              i18nKey="settingsPage.noraLicenseNotice"
+              i18nKey="settingsPage.appLicenseNotice"
               components={{
                 Button: (
                   <Button

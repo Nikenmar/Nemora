@@ -719,7 +719,7 @@
     "noraGithubRepo": "Репозиторій Nemora на GitHub",
     "noraGithubIssues": "Звернення щодо Nemora на GitHub",
     "noraDescription": "Nemora — музичний плеєр для Windows, створений на Tauri та React.",
-    "noraLicenseNotice": "Цей продукт поширюється за <Button>ліцензією MIT.</Button>",
+    "appLicenseNotice": "Цей продукт поширюється за <Button>ліцензією MIT.</Button>",
     "appLicense": "Ліцензія застосунку",
     "releaseNotes": "Нотатки про випуск",
     "openSourceLicenses": "Ліцензії відкритого ПЗ",
