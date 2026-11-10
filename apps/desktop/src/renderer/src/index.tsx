@@ -182,7 +182,7 @@ ${reason.stack ?? ''}`
     //
     // In Electron this network code ran in the MAIN process, where fetch has no
     // CORS enforcement. In a webview it is an ordinary browser request from
-    // http://tauri.localhost, and Deezer, Last.fm and Genius send no
+    // http://tauri.localhost, and Deezer and Last.fm send no
     // Access-Control-Allow-Origin - so every artist bio, lyric lookup and
     // scrobble failed with "TypeError: Failed to fetch".
     //

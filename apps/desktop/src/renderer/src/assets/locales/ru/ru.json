@@ -425,7 +425,7 @@
       },
       "tagSearch": {
         "name": "Поиск в редакторе тегов",
-        "what": "iTunes, Genius, Deezer и Last.fm, когда вы ищете теги песни: ваш поисковый запрос."
+        "what": "iTunes, Deezer и Last.fm, когда вы ищете теги песни: ваш поисковый запрос."
       },
       "translation": {
         "name": "Перевод текстов",

@@ -1834,7 +1834,7 @@ declare global {
 
   // ? Song metadata results related types
 
-  export type SongMetadataSource = 'LAST_FM' | 'GENIUS' | 'DEEZER' | 'ITUNES';
+  export type SongMetadataSource = 'LAST_FM' | 'DEEZER' | 'ITUNES';
 
   interface SongMetadataResultFromInternet {
     title: string;

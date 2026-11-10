@@ -69,7 +69,7 @@ Development builds keep their data in `%APPDATA%\Nemora-dev`, and `NEMORA_PROFIL
 
 ## Credits
 
-Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net), artist and album info from [Deezer](https://www.deezer.com), [Last.fm](https://www.last.fm) and [Genius](https://genius.com), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
+Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net), artist and album info from [Deezer](https://www.deezer.com) and [Last.fm](https://www.last.fm), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
 
 ---
 

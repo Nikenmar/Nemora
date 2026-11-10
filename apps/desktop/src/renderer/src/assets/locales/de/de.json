@@ -379,7 +379,7 @@
       },
       "tagSearch": {
         "name": "Suche im Tag-Editor",
-        "what": "iTunes, Genius, Deezer und Last.fm, wenn du nach Tags eines Songs suchst: dein Suchbegriff."
+        "what": "iTunes, Deezer und Last.fm, wenn du nach Tags eines Songs suchst: dein Suchbegriff."
       },
       "translation": {
         "name": "Songtext-Übersetzung",

@@ -901,7 +901,7 @@ export class NemoraRuntime {
   // ----- network ---------------------------------------------------------------------------------
 
   /**
-   * The 1.x network modules (Last.fm, Deezer, Genius, iTunes) read a synchronous catalog. They get a
+   * The 1.x network modules (Last.fm, Deezer, iTunes) read a synchronous catalog. They get a
    * snapshot of what one call needs, taken from the core just before it.
    */
   private async networkRepository(

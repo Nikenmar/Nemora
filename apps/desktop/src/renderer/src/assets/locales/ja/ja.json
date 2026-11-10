@@ -356,7 +356,7 @@
       },
       "tagSearch": {
         "name": "タグエディターの検索",
-        "what": "iTunes、Genius、Deezer、Last.fm、曲のタグを検索したとき: 検索した内容。"
+        "what": "iTunes、Deezer、Last.fm、曲のタグを検索したとき: 検索した内容。"
       },
       "translation": {
         "name": "歌詞の翻訳",

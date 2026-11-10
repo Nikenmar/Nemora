@@ -356,7 +356,7 @@
       },
       "tagSearch": {
         "name": "标签编辑器搜索",
-        "what": "iTunes、Genius、Deezer 和 Last.fm，当你搜索歌曲标签时：你搜索的内容。"
+        "what": "iTunes、Deezer 和 Last.fm，当你搜索歌曲标签时：你搜索的内容。"
       },
       "translation": {
         "name": "歌词翻译",

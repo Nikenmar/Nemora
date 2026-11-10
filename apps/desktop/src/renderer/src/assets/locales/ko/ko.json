@@ -356,7 +356,7 @@
       },
       "tagSearch": {
         "name": "태그 편집기 검색",
-        "what": "iTunes, Genius, Deezer, Last.fm, 노래 태그를 검색할 때: 검색한 내용."
+        "what": "iTunes, Deezer, Last.fm, 노래 태그를 검색할 때: 검색한 내용."
       },
       "translation": {
         "name": "가사 번역",

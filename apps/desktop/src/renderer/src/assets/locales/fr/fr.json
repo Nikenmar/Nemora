@@ -402,7 +402,7 @@
       },
       "tagSearch": {
         "name": "Recherche de l'éditeur de tags",
-        "what": "iTunes, Genius, Deezer et Last.fm, quand vous cherchez les tags d'un morceau : ce que vous recherchez."
+        "what": "iTunes, Deezer et Last.fm, quand vous cherchez les tags d'un morceau : ce que vous recherchez."
       },
       "translation": {
         "name": "Traduction des paroles",

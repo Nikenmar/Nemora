@@ -92,12 +92,6 @@
           "url": "https://api.deezer.com/*"
         },
         {
-          "url": "https://api.genius.com/*"
-        },
-        {
-          "url": "https://apic-desktop.musixmatch.com/*"
-        },
-        {
           "url": "https://lrclib.net/*"
         },
         {
@@ -111,12 +105,6 @@
         },
         {
           "url": "https://*.mzstatic.com/*"
-        },
-        {
-          "url": "https://*.mxmcdn.net/*"
-        },
-        {
-          "url": "https://*.genius.com/*"
         },
         {
           "url": "https://lastfm.freetls.fastly.net/*"

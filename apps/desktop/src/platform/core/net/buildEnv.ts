@@ -8,7 +8,6 @@
  *
  * Required variable names (see docs/tauri-port/03-main-logic-port.md §1):
  *   MAIN_VITE_LAST_FM_API_KEY
- *   MAIN_VITE_GENIUS_API_KEY
  *
  * NOTE: this module intentionally keeps the literal `import.meta.env` access so
  * Vite's static replacement applies. (A `@ts-ignore` for ts-jest, which compiled
