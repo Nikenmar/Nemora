@@ -38,7 +38,7 @@ CARDS = [
     dict(key="duels", bg="deep", side="left",
          shots=[("34-duel", "dark", (420, 120, 1180, 780), (760, 120, 600)), ("33-songguessr", "dark", (542, 85, 1058, 815), (1150, 250, 380))],
          title="Duels and<br>Song Guessr",
-         text="Pick the better of two songs and an ELO rating sorts your library by what you really choose. Or name a track from a tenth of a second."),
+         text="A little bit of fun with your own library. Pick the better of two songs and an ELO rating sorts it by what you really choose; or name a track from a tenth of a second."),
     dict(key="stats", bg="sky", side="right",
          shots=[("36t-stats-insights", "dark", (205, 40, 1600, 720), (60, 210, 840))],
          title="Know how<br>you listen",
@@ -48,7 +48,7 @@ CARDS = [
          title="Your taste,<br>as a map",
          text="The whole library laid out by how you listen: islands of songs that belong together. Pick an area and play it."),
     dict(key="sound", bg="night", side="right",
-         shots=[("36k-sound-panel", "dark", None, (40, 170, 780)), ("36k-sound-panel", "dark", (1065, 365, 1400, 812), (560, 260, 340))],
+         shots=[("36k-sound-panel", "dark", None, (40, 170, 780)), ("36k-sound-panel", "dark", (1063, 363, 1400, 838), (560, 240, 340))],
          title="Slowed<br>+ reverb",
          text="Speed, pitch and a real reverb in the audio engine. Keep a sound as a version of the song, or switch the song itself to it."),
     dict(key="search", bg="dawn", side="left",
@@ -58,7 +58,7 @@ CARDS = [
     dict(key="fullscreen", bg="ink", side="right",
          shots=[("36g-full-screen-bars", "dark", None, (60, 190, 840))],
          title="Full screen,<br>alive",
-         text="Synced lyrics, the cover breathing with the music, a live equalizer under it. Every visual is off until you turn it on."),
+         text="Synced lyrics, the cover breathing with the music, a live equalizer under it."),
     dict(key="agents", bg="deep", side="left",
          shots=[("36w-settings-agents", "dark", (458, 55, 1560, 350), (730, 300, 860))],
          title="Ask an AI<br>about your music",
@@ -69,6 +69,17 @@ CARDS = [
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
 HERO = dict(key="hero", shots=[("36m-home-today", "dark", None, (820, 120, 1060)), ("08-mini-player", "dark", None, (700, 560, 420))])
+# Order in the README; the cards alternate sides from the first, mirrored where they were drawn the other way.
+ORDER = ["tierlists", "sound", "shuffle", "stats", "duels", "tastemap", "search", "fullscreen", "agents", "yours"]
+
+
+def oriented(c, side):
+    if c["side"] == side:
+        return c
+    shots = [(i, t, cr, (W - x - w, y, w)) for i, t, cr, (x, y, w) in c["shots"]]
+    return {**c, "side": side, "shots": shots}
+
+
 SHOTS = sorted({s[0] for c in CARDS + [HERO] for s in c["shots"]})
 
 
@@ -137,7 +148,9 @@ def main():
     from PIL import Image
     OUT.mkdir(parents=True, exist_ok=True)
     tmp = OUT / "_page.html"
-    jobs = [("hero", hero_html, HERO)] + [(c["key"], (lambda c: lambda s: card_html(c, s))(c), c) for c in CARDS]
+    by_key = {c["key"]: c for c in CARDS}
+    cards = [oriented(by_key[k], "right" if i % 2 == 0 else "left") for i, k in enumerate(ORDER)]
+    jobs = [("hero", hero_html, HERO)] + [(c["key"], (lambda c: lambda s: card_html(c, s))(c), c) for c in cards]
     with sync_playwright() as p:
         try:
             br = p.chromium.launch(channel="msedge", headless=True)

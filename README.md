@@ -21,17 +21,17 @@ Nemora plays the music on your own computer: your files, your folders, your tags
 
 ## Features
 
-<img src="resources/readme/shuffle.webp" alt="Smart Shuffle that explains itself" width="100%">
-
 <img src="resources/readme/tierlists.webp" alt="Rank your music in tierlists" width="100%">
 
-<img src="resources/readme/duels.webp" alt="Duels and Song Guessr" width="100%">
+<img src="resources/readme/sound.webp" alt="Slowed and reverb" width="100%">
+
+<img src="resources/readme/shuffle.webp" alt="Smart Shuffle that explains itself" width="100%">
 
 <img src="resources/readme/stats.webp" alt="Statistics and insights" width="100%">
 
-<img src="resources/readme/tastemap.webp" alt="The taste map" width="100%">
+<img src="resources/readme/duels.webp" alt="Duels and Song Guessr" width="100%">
 
-<img src="resources/readme/sound.webp" alt="Slowed and reverb" width="100%">
+<img src="resources/readme/tastemap.webp" alt="The taste map" width="100%">
 
 <img src="resources/readme/search.webp" alt="Search" width="100%">
 
