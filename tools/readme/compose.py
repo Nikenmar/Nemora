@@ -129,7 +129,7 @@ def hero_html(shots):
       <img src="{logo}" style="width:150px;height:150px;margin:-30px">
       <img src="{word}" style="height:96px">
     </div>
-    <p style="margin:0;font-size:38px;line-height:1.25;font-weight:500;letter-spacing:-0.01em">Sounds exactly as recorded.<br>Shuffles like it knows you.</p>
+    <p style="margin:0;font-size:38px;line-height:1.25;font-weight:500;letter-spacing:-0.01em">Your library, heard properly.</p>
     <div style="display:flex;flex-wrap:wrap;gap:12px">{pills}</div>
   </div>
   {windows(HERO, shots)}
