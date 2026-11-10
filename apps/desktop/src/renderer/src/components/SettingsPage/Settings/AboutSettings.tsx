@@ -64,7 +64,7 @@ const AboutSettings = () => {
           <div className="flex items-center">
             <Img src={AppIcon} className="aspect-square max-h-12 rounded-md shadow-md" alt="" />
             <div className="ml-4 flex flex-col">
-              <span className="block font-medium">Nemora (f.k.a. CMR Fork)</span>
+              <span className="block font-medium">Nemora</span>
               <span className="text-sm font-light">
                 v{version}{' '}
                 {elapsed && (
@@ -143,14 +143,15 @@ const AboutSettings = () => {
             <img alt="GitHub issues" src={`https://img.shields.io/github/issues/Nikenmar/Nemora`} />
           </Hyperlink>
         </div>
-        <ul className="mb-4 list-disc pl-4 text-sm">
-          <li>{t('settingsPage.noraDescription')}</li>
-          <li>
+        <div className="mb-4 flex max-w-prose flex-col gap-3 px-2 text-sm leading-relaxed">
+          <p>{t('settingsPage.noraDescription')}</p>
+          <p className="text-ink-dim">
             {/*
               The lineage, stated once and linked at every name: Nemora is a
               descendant of Nora, and it shipped for a while under the CMR-Fork
               name. Someone arriving from either project should be able to get
-              back to it from here.
+              back to it from here. Nora's licence notice itself lives in the
+              open-source licences, with what Nemora still takes from it.
             */}
             <Trans
               i18nKey="settingsPage.basedOnNora"
@@ -175,8 +176,8 @@ const AboutSettings = () => {
                 )
               }}
             />
-          </li>
-          <li>
+          </p>
+          <p className="text-ink-dim">
             <Trans
               i18nKey="settingsPage.appLicenseNotice"
               components={{
@@ -201,8 +202,8 @@ const AboutSettings = () => {
                 )
               }}
             />
-          </li>
-        </ul>
+          </p>
+        </div>
         <div className="mt-12 flex flex-wrap items-center justify-center px-8">
           <Button
             iconName="new_releases"
