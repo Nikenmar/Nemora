@@ -24,11 +24,12 @@ BG = {
     "dawn": "linear-gradient(135deg, #5d9bf0 0%, #2a5bc4 45%, #172f78 100%)",
 }
 
-# A shot is (id, theme, crop, place): crop (x0, y0, x1, y1) in the 1600 x 900 shot or None for the whole
+# A shot is (id, theme, crop, place): crop (x0, y0, x1, y1) in the 1600 x 900 shot (a panel or dialog cut just
+# inside its own 1 px border, so no backdrop shows at its edges) or None for the whole
 # window, place (x, y, width) on the 1600 x 900 card. The copy sits on the side named by `side`.
 CARDS = [
     dict(key="shuffle", bg="night", side="left",
-         shots=[("36b-queue-smart", "dark", None, (760, 120, 820)), ("36c-why-this-song", "dark", (542, 197, 1058, 700), (880, 300, 560))],
+         shots=[("36b-queue-smart", "dark", None, (760, 120, 820)), ("36c-why-this-song", "dark", (543, 198, 1057, 702), (880, 300, 560))],
          title="Smart Shuffle<br>that explains itself",
          text="It leans toward what you rate and how you listen, shows why each song comes next, and lets you steer it for the session."),
     dict(key="tierlists", bg="dawn", side="right",
@@ -36,7 +37,7 @@ CARDS = [
          title="Rank your music<br>in tierlists",
          text="Drag songs into tiers, play a tierlist like a playlist, export it as an image. Your tiers feed Smart Shuffle."),
     dict(key="duels", bg="deep", side="left",
-         shots=[("34-duel", "dark", (420, 120, 1180, 780), (760, 120, 600)), ("33-songguessr", "dark", (542, 85, 1058, 815), (1150, 250, 380))],
+         shots=[("34-duel", "dark", (421, 122, 1179, 778), (760, 120, 600)), ("33-songguessr", "dark", (543, 86, 1057, 814), (1150, 250, 380))],
          title="Duels and<br>Song Guessr",
          text="A little bit of fun with your own library. Pick the better of two songs and an ELO rating sorts it by what you really choose. Or name a track from a tenth of a second."),
     dict(key="stats", bg="sky", side="right",
@@ -48,7 +49,7 @@ CARDS = [
          title="Your taste,<br>as a map",
          text="The whole library laid out by how you listen: islands of songs that belong together. Pick an area and play it."),
     dict(key="sound", bg="night", side="right",
-         shots=[("36k-sound-panel", "dark", None, (40, 170, 780)), ("36k-sound-panel", "dark", (1063, 363, 1400, 838), (560, 240, 340))],
+         shots=[("36k-sound-panel", "dark", None, (40, 170, 780)), ("36k-sound-panel", "dark", (1065, 363, 1398, 836), (560, 240, 340))],
          title="Slowed<br>+ reverb",
          text="Speed, pitch and a real reverb in the audio engine. Keep a sound as a version of the song, or switch the song itself to it."),
     dict(key="search", bg="dawn", side="left",
@@ -60,11 +61,11 @@ CARDS = [
          title="Full screen,<br>alive",
          text="Synced lyrics, the cover breathing with the music, a live equalizer under it."),
     dict(key="agents", bg="deep", side="left",
-         shots=[("36w-settings-agents", "dark", (458, 55, 1560, 350), (730, 300, 860))],
+         shots=[("36w-settings-agents", "dark", (458, 53, 1561, 351), (730, 300, 860))],
          title="Ask an AI<br>about your music",
          text="Connect Claude or another agent over MCP: it reads your library and stats, builds playlists, runs the queue. You choose how much it may do."),
     dict(key="yours", bg="sky", side="right",
-         shots=[("36m-home-today", "dark", None, (60, 340, 700)), ("37-accent-picker", "light", (458, 60, 1560, 520), (200, 120, 680))],
+         shots=[("36m-home-today", "dark", None, (60, 340, 700)), ("37-accent-picker", "light", (458, 65, 1561, 520), (200, 120, 680))],
          title="Make it<br>yours",
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
