@@ -396,21 +396,13 @@
         "name": "Testi",
         "what": "LRCLIB, quando la pagina dei testi mostra un brano senza testo proprio: titolo, artista, album e durata. Il testo trovato viene conservato, quindi un brano si cerca una sola volta."
       },
-      "musixmatch": {
-        "name": "Testi Musixmatch",
-        "what": "Solo se lo attivi in Testi: titolo e artista del brano."
-      },
       "pages": {
         "name": "Pagine di album, artisti e brani",
         "what": "Last.fm e Deezer, quando apri una di queste pagine: il nome di album, artista o brano, per la descrizione, le immagini dell'artista e i brani simili."
       },
-      "lastFm": {
-        "name": "Account Last.fm",
-        "what": "Solo se lo colleghi in Account e attivi lo scrobbling, «in riproduzione» o i «Mi piace»: i brani che ascolti o ami."
-      },
       "tagSearch": {
         "name": "Ricerca nell'editor di tag",
-        "what": "iTunes, Last.fm e Musixmatch, quando cerchi i tag di un brano: ciò che cerchi."
+        "what": "iTunes, Genius, Deezer e Last.fm, quando cerchi i tag di un brano: ciò che cerchi."
       },
       "translation": {
         "name": "Traduzione dei testi",
@@ -583,23 +575,8 @@
     "second_many": "secondi",
     "second_other": "secondi",
     "accounts": "Account",
-    "integrateLastFm": "Integra Last.fm con Nemora.",
-    "lastFmLogo": "Logo Last.fm",
-    "lastFmConnected": "Last.fm collegato",
-    "lastFmNotConnected": "Last.fm non collegato",
-    "loggedInAs": "Accesso effettuato come",
-    "lastFmDescription1": "Collegati a Last.fm per attivare lo scrobbling.",
-    "lastFmDescription2": "Lo scrobbling invia informazioni sulla musica che ascolti.",
-    "lastFmDescription3": "Ogni volta che ascolti un brano, Last.fm ne fa lo «scrobble» e lo aggiunge al tuo account.",
-    "lastFmDescription4": "Questa funzione richiede una connessione a Internet.",
     "authenticateAgain": "Autenticati di nuovo",
     "loginInBrowser": "Accedi dal browser",
-    "scrobblingDescription": "Attiva lo scrobbling di Last.fm per inviare dati su come ascolti.",
-    "enableScrobbling": "Attiva lo scrobbling di Last.fm",
-    "sendFavoritesToLastFmDescription": "Invia i preferiti a Last.fm quando metti o togli «Mi piace» ai brani.",
-    "sendFavoritesToLastFm": "Invia i preferiti",
-    "sendNowPlayingToLastFmDescription": "Invia automaticamente a Last.fm i dati del brano quando inizia la riproduzione.",
-    "sendNowPlayingToLastFm": "Invia i dati del brano in riproduzione",
     "enableDiscordRpcDescription": "Integra Discord Rich Presence con Nemora",
     "enableDiscordRpc": "Attiva Discord Rich Presence",
     "enableObsWidgetDescription": "Fornisce un widget trasparente «in riproduzione» per OBS. In OBS, aggiungi una sorgente Browser con l'URL http://127.0.0.1:41237/ e la dimensione che vuoi: il widget riempie l'altezza della sorgente e resta nitido, quindi 720 x 96 è la dimensione base e 1800 x 240 è adatta a uno stream ultrawide. È disponibile solo su questo computer.",
@@ -608,12 +585,6 @@
     "syncedLyricsOnly": "Solo testi sincronizzati",
     "saveEitherLyrics": "Testi sincronizzati o non sincronizzati",
     "lyrics": "Testi",
-    "enableMusixmatchLyricsDescription": "Attiva Musixmatch Lyrics, che fornisce testi sincronizzati e non sincronizzati su richiesta.",
-    "musixmatchDisclaimerNotice": "Attivando e usando questa funzione accetti il <Button>disclaimer di Musixmatch Lyrics</Button>.",
-    "editMusixmatchSettings": "Modifica le impostazioni di Musixmatch",
-    "enableMusixmatch": "Attiva Musixmatch Lyrics",
-    "musixmatchEnabled": "Musixmatch Lyrics è attivo",
-    "disableMusixmatch": "Disattiva i testi di Musixmatch",
     "saveLyricsAutomaticallyDescription": "Scegli quali testi salvare automaticamente quando vengono recuperati nella pagina dei testi.",
     "saveLyricsAutomaticallyInfo": "I testi scaricati automaticamente vengono salvati al termine del brano per evitare danni.",
     "saveLyricsInLrcFilesDescription": "Salva i testi in file LRC per i brani che supportano la modifica dei metadati. Nemora salverà il testo in un file LRC se il file del brano non la supporta.",
@@ -848,8 +819,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "Evita di inserire testi sincronizzati nella scheda dei non sincronizzati.",
     "pendingLyricsSavesAvailable": "Ci sono testi in attesa di salvataggio per questo brano. Verranno salvati e appariranno qui al termine del brano.",
     "downloadLyrics": "Scarica testo",
-    "downloadSyncedLyrics": "Scarica testo sincronizzato",
-    "musixmatchNotEnabled": "Devi attivare Musixmatch Lyrics nelle Impostazioni per usare questa funzione."
+    "downloadSyncedLyrics": "Scarica testo sincronizzato"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "Sempre in primo piano: ON",
@@ -1440,25 +1410,6 @@
     "effect": "<p>Questa azione interesserà i seguenti dati: </p><ul><li>La maggior parte delle preferenze di Nemora</li><li>Impostazioni di riproduzione come brano attuale, volume ecc.</li><li>Dati della coda attuale</li><li>Suggerimenti ignorati come artisti ospiti, artisti separati e duplicati</li><li>Ordinamento delle pagine</li><li>Dati dell'equalizzatore</li><li>Impostazioni dell'editor dei testi</li></ul>",
     "restartNotice": "Nemora si riavvierà al termine."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "Disclaimer - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics è stato aggiunto come funzione di valutazione e potrebbe essere rimosso in qualsiasi momento.</li><li>Nemora non è in alcun modo affiliata, autorizzata, gestita, sponsorizzata o approvata da Musixmatch Lyrics o dalle sue società affiliate.</li><li>I responsabili di questa applicazione fanno appello alla responsabilità personale degli utenti affinché usino questa funzione in modo corretto, rispettando i diritti d'autore di Musixmatch Lyrics.</li>",
-    "implementationNotice": "Implementazione dal <Hyperlink/> di Fashni.",
-    "hyperlinkTitle": "Repository GitHub di MxLRC",
-    "contactAboutComplaints": "Per eventuali reclami, apri una segnalazione sul <Hyperlink>GitHub</Hyperlink> di Nemora."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Impostazioni di Musixmatch",
-    "message": "<li>Musixmatch richiede un token utente per funzionare correttamente.</li><li>A volte Musixmatch non mostra i testi per l'uso prolungato dello stesso token.</li><li>Segui la guida della <Hyperlink>Wiki di Spicetify</Hyperlink> per ottenere un nuovo token.</li>",
-    "showToken": "Mostra token",
-    "hideToken": "Nascondi token",
-    "updateToken": "Aggiorna token",
-    "tokenUpdateSuccess": "Token aggiornato.",
-    "tokenUpdateFailed": "Impossibile aggiornare il token.",
-    "tokenMissingCharacters": "Il TOKEN deve avere 54 caratteri. (Ne mancano {{count}}).",
-    "tokenIncorrectCharacters": "Il TOKEN deve contenere solo caratteri alfanumerici.",
-    "savedTokenAvailableMessage": "<Title><span/> È presente un token salvato.</Title><p> In Nemora è già salvato un token Musixmatch valido.</p> <p> Devi cambiarlo solo se il servizio non funziona correttamente.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "Selezionato",
     "select": "Seleziona",
@@ -1548,7 +1499,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "Aggiornamenti dei metadati in sospeso di `{{title}}` salvati.",
     "METADATA_UPDATE_FAILED": "Aggiornamento dei metadati non riuscito. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "Il testo non può essere salvato perché l'estensione del brano ({{ext}}) non supporta la modifica dei metadati.",
-    "LASTFM_LOGIN_SUCCESS": "Hai effettuato l'accesso a Last.fm.",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{value}} di {{total}} brani completati.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "Generazione copertine per {{value}} di {{total}} brani.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "Generazione palette per {{value}} di {{total}} brani.",

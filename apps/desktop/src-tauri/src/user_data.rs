@@ -20,13 +20,9 @@ fn defaults() -> Value {
         "preferences": {
             "autoLaunchApp": false,
             "isMiniPlayerAlwaysOnTop": false,
-            "isMusixmatchLyricsEnabled": false,
             "hideWindowOnClose": false,
             "openWindowAsHiddenOnSystemStart": false,
             "openWindowMaximizedOnStart": false,
-            "sendSongScrobblingDataToLastFM": false,
-            "sendSongFavoritesDataToLastFM": false,
-            "sendNowPlayingSongDataToLastFM": false,
             "saveLyricsInLrcFilesForSupportedSongs": false,
             "enableDiscordRPC": true,
             "enableObsWidget": false,

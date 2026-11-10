@@ -839,7 +839,8 @@ pub struct StoredLyrics {
     pub text: String,
 }
 
-/// Keeps lyrics the view found elsewhere (Musixmatch) under their source; like any found text they
+/// Keeps lyrics the view found elsewhere under their source (no source asks this since Musixmatch
+/// went; the command stays for one that will); like any found text they
 /// never replace the user's own, and replace a found text only when they are synced and it is not.
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]

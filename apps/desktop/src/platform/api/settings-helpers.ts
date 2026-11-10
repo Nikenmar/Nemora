@@ -1,27 +1,7 @@
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { open } from '@tauri-apps/plugin-shell';
 
-import { getBuildEnvVariable } from '../core/net/buildEnv';
 import { getRuntime } from '../runtime';
-import { ensureLastFmAuthCallbackInstalled } from './lastfm-auth';
-
-/**
- * Opens the Last.fm authorization page in the system browser and installs the
- * callback listener. The browser redirects to `nemora://auth?service=lastfm&
- * token=...` after the user authorizes; the callback lifecycle is described in
- * `lastfm-auth.ts`.
- */
-const openLastFmLoginPage = (): void => {
-  const apiKey = getBuildEnvVariable('MAIN_VITE_LAST_FM_API_KEY');
-  if (!apiKey) {
-    console.error(
-      'MAIN_VITE_LAST_FM_API_KEY is not configured; cannot open the Last.fm login page.'
-    );
-    return;
-  }
-  ensureLastFmAuthCallbackInstalled();
-  void open(`http://www.last.fm/api/auth/?api_key=${apiKey}&cb=nemora://auth?service=lastfm`);
-};
 
 export const settingsHelpers = {
   getAppLanguage: (_lang: LanguageCodes): void => undefined,
@@ -55,7 +35,6 @@ export const settingsHelpers = {
    * decrypt of `undefined` threw and `compare` returned false).
    */
   compareEncryptedData: async (): Promise<boolean> => false,
-  loginToLastFmInBrowser: (): void => openLastFmLoginPage(),
   getFolderLocation: async (): Promise<string> => {
     const selected = await openDialog({ directory: true, multiple: false });
     if (typeof selected !== 'string') throw new Error('PROMPT_CLOSED_BEFORE_INPUT');

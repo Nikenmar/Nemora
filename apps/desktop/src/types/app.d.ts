@@ -6,7 +6,6 @@ import { DropdownOption } from '../renderer/src/components/Dropdown';
 // expose the SAME window.api, and typing against the bridge is what makes any
 // drift between them a compile error instead of a runtime surprise.
 import { api } from '../platform/api';
-import { LastFMSessionData } from './last_fm_api';
 import { SimilarArtist, Tag } from './last_fm_artist_info_api';
 import { languageLoaders } from 'src/renderer/src/i18n';
 
@@ -426,21 +425,15 @@ declare global {
     | 'preferences.isMiniPlayerAlwaysOnTop'
     | 'preferences.pinnedPlaylists'
     | 'preferences.autoLaunchApp'
-    | 'preferences.isMusixmatchLyricsEnabled'
     | 'preferences.hideWindowOnClose'
     | 'preferences.openWindowAsHiddenOnSystemStart'
-    | 'preferences.sendSongScrobblingDataToLastFM'
-    | 'preferences.sendSongFavoritesDataToLastFM'
-    | 'preferences.sendNowPlayingSongDataToLastFM'
     | 'preferences.saveLyricsInLrcFilesForSupportedSongs'
     | 'preferences.autoTranslateLyrics'
     | 'preferences.autoConvertLyrics'
     | 'preferences.enableDiscordRPC'
     | 'preferences.enableObsWidget'
     | 'preferences.saveVerboseLogs'
-    | 'customMusixmatchUserToken'
     | 'customLrcFilesSaveLocation'
-    | 'lastFmSessionData'
     | 'storageMetrics'
     | PageSortTypes;
 
@@ -459,11 +452,7 @@ declare global {
       openWindowMaximizedOnStart: boolean;
       openWindowAsHiddenOnSystemStart: boolean;
       isMiniPlayerAlwaysOnTop: boolean;
-      isMusixmatchLyricsEnabled: boolean;
       hideWindowOnClose: boolean;
-      sendSongScrobblingDataToLastFM: boolean;
-      sendSongFavoritesDataToLastFM: boolean;
-      sendNowPlayingSongDataToLastFM: boolean;
       saveLyricsInLrcFilesForSupportedSongs: boolean;
       enableDiscordRPC: boolean;
       enableObsWidget: boolean;
@@ -481,8 +470,6 @@ declare global {
     };
     windowState: WindowState;
     recentSearches: string[];
-    customMusixmatchUserToken?: string;
-    lastFmSessionData?: LastFMSessionData;
     storageMetrics?: StorageMetrics;
     customLrcFilesSaveLocation?: string;
   }
@@ -1453,7 +1440,6 @@ declare global {
     | 'LYRICS_TRANSLATION_TO_SAME_SOURCE_LANGUAGE'
     | 'LYRICS_CONVERT_SUCCESS'
     | 'RESET_CONVERTED_LYRICS_SUCCESS'
-    | 'LASTFM_LOGIN_SUCCESS'
     | 'APPDATA_EXPORT_STARTED'
     | 'APPDATA_IMPORT_STARTED'
     | 'APPDATA_EXPORT_SUCCESS'
@@ -1848,7 +1834,7 @@ declare global {
 
   // ? Song metadata results related types
 
-  export type SongMetadataSource = 'LAST_FM' | 'GENIUS' | 'DEEZER' | 'ITUNES' | 'MUSIXMATCH';
+  export type SongMetadataSource = 'LAST_FM' | 'GENIUS' | 'DEEZER' | 'ITUNES';
 
   interface SongMetadataResultFromInternet {
     title: string;

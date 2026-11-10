@@ -373,21 +373,13 @@
         "name": "बोल",
         "what": "LRCLIB, जब बोल पेज पर बिना अपने बोल वाला गाना दिखे: उसका शीर्षक, कलाकार, एल्बम और अवधि। मिले बोल रखे जाते हैं, इसलिए गाना एक बार ही खोजा जाता है।"
       },
-      "musixmatch": {
-        "name": "Musixmatch बोल",
-        "what": "केवल जब आप इसे बोल में चालू करें: गाने का शीर्षक और कलाकार।"
-      },
       "pages": {
         "name": "एल्बम, कलाकार और गाने के पेज",
         "what": "Last.fm और Deezer, जब आप ऐसा पेज खोलें: एल्बम, कलाकार या गाने का नाम, विवरण, कलाकार की तस्वीरों और मिलते-जुलते ट्रैक के लिए।"
       },
-      "lastFm": {
-        "name": "Last.fm खाता",
-        "what": "केवल जब आप इसे खातों में जोड़ें और स्क्रॉबलिंग, अभी चल रहा या पसंद चालू करें: जो गाने आप चलाते या पसंद करते हैं।"
-      },
       "tagSearch": {
         "name": "टैग संपादक की खोज",
-        "what": "iTunes, Last.fm और Musixmatch, जब आप गाने के टैग खोजें: जो आप खोजते हैं।"
+        "what": "iTunes, Genius, Deezer और Last.fm, जब आप गाने के टैग खोजें: जो आप खोजते हैं।"
       },
       "translation": {
         "name": "बोल का अनुवाद",
@@ -553,23 +545,8 @@
     "second_one": "सेकंड",
     "second_other": "सेकंड",
     "accounts": "खाते",
-    "integrateLastFm": "Last.fm को Nemora से जोड़ें।",
-    "lastFmLogo": "Last.fm लोगो",
-    "lastFmConnected": "Last.fm जुड़ा है",
-    "lastFmNotConnected": "Last.fm नहीं जुड़ा",
-    "loggedInAs": "इस रूप में लॉग इन",
-    "lastFmDescription1": "स्क्रॉबलिंग चालू करने के लिए Last.fm से जुड़ें।",
-    "lastFmDescription2": "स्क्रॉबलिंग आपके सुने जा रहे संगीत की जानकारी भेजने का तरीका है।",
-    "lastFmDescription3": "जब भी आप गाना सुनते हैं, Last.fm उसे 'स्क्रॉबल' कर आपके खाते में जोड़ता है।",
-    "lastFmDescription4": "इस सुविधा के लिए इंटरनेट कनेक्शन चाहिए।",
     "authenticateAgain": "फिर से प्रमाणित करें",
     "loginInBrowser": "ब्राउज़र से लॉग इन करें",
-    "scrobblingDescription": "आप कैसे सुनते हैं इसका डेटा भेजने के लिए Last.fm स्क्रॉबलिंग चालू करें।",
-    "enableScrobbling": "Last.fm स्क्रॉबलिंग चालू करें",
-    "sendFavoritesToLastFmDescription": "गाने पसंद/नापसंद करने पर पसंदीदा डेटा Last.fm को भेजें।",
-    "sendFavoritesToLastFm": "पसंदीदा डेटा भेजें",
-    "sendNowPlayingToLastFmDescription": "गाना शुरू होने पर चल रहे गाने का डेटा अपने आप Last.fm को भेजें।",
-    "sendNowPlayingToLastFm": "चल रहे गाने का डेटा भेजें",
     "enableDiscordRpcDescription": "Discord Rich Presence को Nemora से जोड़ें",
     "enableDiscordRpc": "Discord Rich Presence चालू करें",
     "enableObsWidgetDescription": "OBS के लिए पारदर्शी 'अभी चल रहा' विजेट देता है। OBS में URL http://127.0.0.1:41237/ के साथ ब्राउज़र स्रोत जोड़ें और मनचाहा आकार दें: विजेट स्रोत की ऊँचाई भरता है और स्पष्ट रहता है, इसलिए 720 x 96 आधार आकार है और 1800 x 240 अल्ट्रावाइड स्ट्रीम के लिए ठीक है। यह केवल इसी कंप्यूटर पर मिलता है।",
@@ -578,12 +555,6 @@
     "syncedLyricsOnly": "केवल सिंक किए गए बोल",
     "saveEitherLyrics": "सिंक या बिना सिंक के बोल",
     "lyrics": "बोल",
-    "enableMusixmatchLyricsDescription": "Musixmatch Lyrics चालू करें, जो माँग पर सिंक और बिना सिंक के बोल देता है।",
-    "musixmatchDisclaimerNotice": "इस सुविधा को चालू और उपयोग करने का अर्थ है कि आप <Button>Musixmatch Lyrics अस्वीकरण</Button> से सहमत हैं।",
-    "editMusixmatchSettings": "Musixmatch सेटिंग्स संपादित करें",
-    "enableMusixmatch": "Musixmatch Lyrics चालू करें",
-    "musixmatchEnabled": "Musixmatch Lyrics चालू है",
-    "disableMusixmatch": "Musixmatch बोल बंद करें",
     "saveLyricsAutomaticallyDescription": "बोल पेज पर प्राप्त होने पर कौन से बोल अपने आप सहेजे जाएँ, चुनें।",
     "saveLyricsAutomaticallyInfo": "अपने आप डाउनलोड हुए बोल खराबी से बचाने के लिए वर्तमान गाना समाप्त होने के बाद सहेजे जाते हैं।",
     "saveLyricsInLrcFilesDescription": "मेटाडेटा संपादन का समर्थन करने वाले गानों के बोल LRC फ़ाइलों में सहेजें। यदि गाने की फ़ाइल मेटाडेटा संपादन का समर्थन नहीं करती तो Nemora बोल LRC फ़ाइल में सहेजेगी।",
@@ -818,8 +789,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "बिना सिंक बोल टैब में सिंक बोल दर्ज न करें।",
     "pendingLyricsSavesAvailable": "इस गाने के कुछ बोल सहेजे जाने बाकी हैं। वर्तमान गाना समाप्त होने के बाद वे सहेजे जाएँगे और यहाँ दिखेंगे।",
     "downloadLyrics": "बोल डाउनलोड करें",
-    "downloadSyncedLyrics": "सिंक बोल डाउनलोड करें",
-    "musixmatchNotEnabled": "इस सुविधा के लिए सेटिंग्स से Musixmatch Lyrics चालू करें।"
+    "downloadSyncedLyrics": "सिंक बोल डाउनलोड करें"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "हमेशा ऊपर: चालू",
@@ -1376,25 +1346,6 @@
     "effect": "<p>इस क्रिया से यह डेटा प्रभावित होगा: </p><ul><li>Nemora की अधिकांश प्राथमिकताएँ</li><li>प्लेबैक सेटिंग्स जैसे चल रहा गाना, आवाज़ आदि</li><li>वर्तमान कतार का डेटा</li><li>अनदेखे सुझाव जैसे सहयोगी कलाकार, अलग कलाकार और डुप्लिकेट</li><li>पेज क्रम का डेटा</li><li>इक्वलाइज़र डेटा</li><li>बोल संपादक की सेटिंग्स</li></ul>",
     "restartNotice": "प्रक्रिया के बाद Nemora पुनः शुरू होगी।"
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "अस्वीकरण - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics को इस सॉफ़्टवेयर में मूल्यांकन सुविधा के रूप में जोड़ा गया है और इसे कभी भी हटाया जा सकता है।</li><li>Nemora किसी भी तरह Musixmatch Lyrics या उसकी सहयोगी कंपनियों से संबद्ध, अधिकृत, अनुरक्षित, प्रायोजित या समर्थित नहीं है।</li><li>इस ऐप के अनुरक्षक उपयोगकर्ताओं से व्यक्तिगत ज़िम्मेदारी की अपेक्षा करते हैं कि वे Musixmatch Lyrics के कॉपीराइट का पालन करते हुए इसका उचित उपयोग करें।</li>",
-    "implementationNotice": "Fashni के <Hyperlink/> से कार्यान्वयन।",
-    "hyperlinkTitle": "MxLRC GitHub रिपॉज़िटरी",
-    "contactAboutComplaints": "कोई शिकायत हो तो Nemora के <Hyperlink>GitHub</Hyperlink> पर इश्यू खोलें।"
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Musixmatch सेटिंग्स",
-    "message": "<li>Musixmatch को सेवा के लिए उपयोगकर्ता टोकन चाहिए।</li><li>एक ही टोकन के लंबे उपयोग से Musixmatch कभी-कभी बोल नहीं दिखाता।</li><li>नया Musixmatch टोकन पाने के लिए <Hyperlink>Spicetify Wiki</Hyperlink> की गाइड देखें।</li>",
-    "showToken": "टोकन दिखाएँ",
-    "hideToken": "टोकन छिपाएँ",
-    "updateToken": "टोकन अपडेट करें",
-    "tokenUpdateSuccess": "टोकन अपडेट किया गया।",
-    "tokenUpdateFailed": "टोकन अपडेट नहीं हो सका।",
-    "tokenMissingCharacters": "TOKEN 54 वर्णों का होना चाहिए। ({{count}} और वर्ण चाहिए)।",
-    "tokenIncorrectCharacters": "TOKEN में केवल अक्षर और अंक होने चाहिए।",
-    "savedTokenAvailableMessage": "<Title><span/> एक सहेजा गया टोकन उपलब्ध है।</Title><p> उपयोगकर्ता का सहेजा वैध Musixmatch टोकन Nemora में पहले से है।</p> <p> टोकन तभी बदलें जब सेवा ठीक से काम न करे।</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "चयनित",
     "select": "चुनें",
@@ -1483,7 +1434,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "`{{title}}` के लंबित मेटाडेटा अपडेट सहेजे गए।",
     "METADATA_UPDATE_FAILED": "मेटाडेटा अपडेट विफल। {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "बोल सहेजे नहीं जा सकते क्योंकि वर्तमान गाने का एक्सटेंशन ({{ext}}) मेटाडेटा बदलने का समर्थन नहीं करता।",
-    "LASTFM_LOGIN_SUCCESS": "आपने Last.fm में लॉग इन किया।",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{total}} में से {{value}} गाने पूरे।",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "{{total}} में से {{value}} गानों के कवर बन रहे हैं।",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "{{total}} में से {{value}} गानों के पैलेट बन रहे हैं।",

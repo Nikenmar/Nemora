@@ -373,21 +373,13 @@
         "name": "Songtexte",
         "what": "LRCLIB, wenn die Songtext-Seite einen Song ohne eigenen Text zeigt: Titel, Interpret, Album und Länge. Gefundene Texte werden gespeichert, ein Song wird also nur einmal gesucht."
       },
-      "musixmatch": {
-        "name": "Musixmatch-Songtexte",
-        "what": "Nur wenn du es unter Songtexte aktivierst: Titel und Interpret des Songs."
-      },
       "pages": {
         "name": "Album-, Interpreten- und Songseiten",
         "what": "Last.fm und Deezer, wenn du eine solche Seite öffnest: Album-, Interpreten- oder Songname, für Beschreibung, Interpretenbilder und ähnliche Titel."
       },
-      "lastFm": {
-        "name": "Last.fm-Konto",
-        "what": "Nur wenn du es unter Konten verbindest und Scrobbling, „Läuft gerade“ oder Favoriten aktivierst: die Songs, die du hörst oder magst."
-      },
       "tagSearch": {
         "name": "Suche im Tag-Editor",
-        "what": "iTunes, Last.fm und Musixmatch, wenn du nach Tags eines Songs suchst: dein Suchbegriff."
+        "what": "iTunes, Genius, Deezer und Last.fm, wenn du nach Tags eines Songs suchst: dein Suchbegriff."
       },
       "translation": {
         "name": "Songtext-Übersetzung",
@@ -553,23 +545,8 @@
     "second_one": "Sekunden",
     "second_other": "Sekunden",
     "accounts": "Konten",
-    "integrateLastFm": "Last.fm mit Nemora verbinden.",
-    "lastFmLogo": "Last.fm-Logo",
-    "lastFmConnected": "Last.fm verbunden",
-    "lastFmNotConnected": "Last.fm nicht verbunden",
-    "loggedInAs": "Angemeldet als",
-    "lastFmDescription1": "Verbinde dich mit Last.fm, um Scrobbling zu aktivieren.",
-    "lastFmDescription2": "Scrobbling sendet Informationen über die Musik, die du hörst.",
-    "lastFmDescription3": "Immer wenn du einen Song hörst, „scrobbelt“ Last.fm ihn und fügt ihn deinem Konto hinzu.",
-    "lastFmDescription4": "Für diese Funktion ist eine Internetverbindung nötig.",
     "authenticateAgain": "Erneut anmelden",
     "loginInBrowser": "Über den Browser anmelden",
-    "scrobblingDescription": "Aktiviere Last.fm-Scrobbling, um Daten über dein Hörverhalten zu senden.",
-    "enableScrobbling": "Last.fm-Scrobbling aktivieren",
-    "sendFavoritesToLastFmDescription": "Favoriten an Last.fm senden, wenn du Songs markierst oder die Markierung entfernst.",
-    "sendFavoritesToLastFm": "Favoriten senden",
-    "sendNowPlayingToLastFmDescription": "Daten zum laufenden Song automatisch an Last.fm senden, wenn die Wiedergabe startet.",
-    "sendNowPlayingToLastFm": "Daten zum laufenden Song senden",
     "enableDiscordRpcDescription": "Discord Rich Presence in Nemora einbinden",
     "enableDiscordRpc": "Discord Rich Presence aktivieren",
     "enableObsWidgetDescription": "Stellt ein transparentes „Läuft gerade“-Widget für OBS bereit. Füge in OBS eine Browser-Quelle mit der URL http://127.0.0.1:41237/ und der gewünschten Größe hinzu: Das Widget füllt die Höhe der Quelle und bleibt scharf, 720 x 96 ist die Grundgröße und 1800 x 240 passt für Ultrawide-Streams. Es wird nur auf diesem Computer bereitgestellt.",
@@ -578,12 +555,6 @@
     "syncedLyricsOnly": "Nur synchronisierte Songtexte",
     "saveEitherLyrics": "Synchronisierte oder nicht synchronisierte Songtexte",
     "lyrics": "Songtexte",
-    "enableMusixmatchLyricsDescription": "Aktiviere Musixmatch Lyrics für synchronisierte und nicht synchronisierte Songtexte auf Abruf.",
-    "musixmatchDisclaimerNotice": "Mit dem Aktivieren und Verwenden dieser Funktion akzeptierst du den <Button>Musixmatch-Lyrics-Haftungsausschluss</Button>.",
-    "editMusixmatchSettings": "Musixmatch-Einstellungen bearbeiten",
-    "enableMusixmatch": "Musixmatch Lyrics aktivieren",
-    "musixmatchEnabled": "Musixmatch Lyrics ist aktiviert",
-    "disableMusixmatch": "Musixmatch-Songtexte ausschalten",
     "saveLyricsAutomaticallyDescription": "Wähle, welche Songtexte beim Abruf auf der Songtext-Seite automatisch gespeichert werden.",
     "saveLyricsAutomaticallyInfo": "Automatisch geladene Songtexte werden erst nach Ende des aktuellen Songs gespeichert, um Beschädigungen zu vermeiden.",
     "saveLyricsInLrcFilesDescription": "Songtexte für Songs mit Metadaten-Bearbeitung in LRC-Dateien speichern. Unterstützt die Songdatei keine Metadaten-Bearbeitung, speichert Nemora den Text in einer LRC-Datei.",
@@ -818,8 +789,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "Gib im Tab für nicht synchronisierte Songtexte keine synchronisierten ein.",
     "pendingLyricsSavesAvailable": "Für diesen Song warten Songtexte auf das Speichern. Sie werden gespeichert und hier angezeigt, sobald der aktuelle Song zu Ende ist.",
     "downloadLyrics": "Songtext herunterladen",
-    "downloadSyncedLyrics": "Synchronisierten Songtext herunterladen",
-    "musixmatchNotEnabled": "Aktiviere Musixmatch Lyrics in den Einstellungen, um diese Funktion zu nutzen."
+    "downloadSyncedLyrics": "Synchronisierten Songtext herunterladen"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "Immer im Vordergrund: AN",
@@ -1376,25 +1346,6 @@
     "effect": "<p>Diese Aktion betrifft folgende Daten: </p><ul><li>Die meisten Einstellungen in Nemora</li><li>Wiedergabeeinstellungen wie aktueller Song, Lautstärke usw.</li><li>Aktuelle Warteschlange</li><li>Ignorierte Vorschläge wie Gastinterpreten, getrennte Interpreten und Duplikate</li><li>Sortierung der Seiten</li><li>Equalizer-Daten</li><li>Einstellungen des Songtext-Editors</li></ul>",
     "restartNotice": "Nemora startet danach neu."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "Haftungsausschluss - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics wurde als Testfunktion hinzugefügt und kann jederzeit entfernt werden.</li><li>Nemora ist in keiner Weise mit Musixmatch Lyrics oder dessen Tochtergesellschaften verbunden, von ihnen autorisiert, gepflegt, gesponsert oder empfohlen.</li><li>Die Entwickler appellieren an die Eigenverantwortung der Nutzer, diese Funktion fair und unter Beachtung der Urheberrechte von Musixmatch Lyrics zu verwenden.</li>",
-    "implementationNotice": "Implementierung aus Fashnis <Hyperlink/>.",
-    "hyperlinkTitle": "MxLRC-GitHub-Repository",
-    "contactAboutComplaints": "Bei Beschwerden eröffne ein Issue auf Nemoras <Hyperlink>GitHub</Hyperlink>."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Musixmatch-Einstellungen",
-    "message": "<li>Musixmatch braucht ein Benutzer-Token, um richtig zu funktionieren.</li><li>Bei längerer Nutzung desselben Tokens zeigt Musixmatch manchmal keine Songtexte an.</li><li>Folge der Anleitung im <Hyperlink>Spicetify-Wiki</Hyperlink>, um ein neues Musixmatch-Token zu erhalten.</li>",
-    "showToken": "Token anzeigen",
-    "hideToken": "Token ausblenden",
-    "updateToken": "Token aktualisieren",
-    "tokenUpdateSuccess": "Token aktualisiert.",
-    "tokenUpdateFailed": "Token konnte nicht aktualisiert werden.",
-    "tokenMissingCharacters": "TOKEN muss aus 54 Zeichen bestehen. (Noch {{count}} Zeichen erforderlich).",
-    "tokenIncorrectCharacters": "TOKEN darf nur alphanumerische Zeichen enthalten.",
-    "savedTokenAvailableMessage": "<Title><span/> Ein gespeichertes Token ist vorhanden.</Title><p> In Nemora ist bereits ein gültiges Musixmatch-Token gespeichert.</p> <p> Du musst es nur ändern, wenn der Dienst nicht richtig funktioniert.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "Ausgewählt",
     "select": "Auswählen",
@@ -1483,7 +1434,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "Ausstehende Metadaten-Änderungen von `{{title}}` gespeichert.",
     "METADATA_UPDATE_FAILED": "Metadaten-Aktualisierung fehlgeschlagen. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "Songtext kann nicht gespeichert werden, da die Dateiendung des aktuellen Songs ({{ext}}) keine Metadaten-Änderung unterstützt.",
-    "LASTFM_LOGIN_SUCCESS": "Du bist bei Last.fm angemeldet.",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{value}} von {{total}} Songs abgeschlossen.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "Cover für {{value}} von {{total}} Songs werden erstellt.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "Paletten für {{value}} von {{total}} Songs werden erstellt.",

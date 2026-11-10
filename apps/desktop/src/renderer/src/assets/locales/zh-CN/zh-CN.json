@@ -350,21 +350,13 @@
         "name": "歌词",
         "what": "LRCLIB，当歌词页面显示没有自带歌词的歌曲时：标题、艺术家、专辑和时长。找到的歌词会保存，因此每首歌只查询一次。"
       },
-      "musixmatch": {
-        "name": "Musixmatch 歌词",
-        "what": "仅当你在“歌词”中开启时：歌曲标题和艺术家。"
-      },
       "pages": {
         "name": "专辑、艺术家和歌曲页面",
         "what": "Last.fm 和 Deezer，当你打开此类页面时：专辑、艺术家或歌曲名称，用于获取简介、艺术家图片和相似曲目。"
       },
-      "lastFm": {
-        "name": "Last.fm 账户",
-        "what": "仅当你在“账户”中连接并开启 Scrobble、正在播放或喜欢时：你播放或喜欢的歌曲。"
-      },
       "tagSearch": {
         "name": "标签编辑器搜索",
-        "what": "iTunes、Last.fm 和 Musixmatch，当你搜索歌曲标签时：你搜索的内容。"
+        "what": "iTunes、Genius、Deezer 和 Last.fm，当你搜索歌曲标签时：你搜索的内容。"
       },
       "translation": {
         "name": "歌词翻译",
@@ -523,23 +515,8 @@
     "second": "秒",
     "second_other": "秒",
     "accounts": "账户",
-    "integrateLastFm": "将 Last.fm 与 Nemora 集成。",
-    "lastFmLogo": "Last.fm 徽标",
-    "lastFmConnected": "Last.fm 已连接",
-    "lastFmNotConnected": "Last.fm 未连接",
-    "loggedInAs": "已登录为",
-    "lastFmDescription1": "连接 Last.fm 以启用 Scrobble。",
-    "lastFmDescription2": "Scrobble 是一种发送你正在收听的音乐信息的方式。",
-    "lastFmDescription3": "每当你听一首歌，Last.fm 就会“Scrobble”这首歌并将其添加到你的账户。",
-    "lastFmDescription4": "此功能需要互联网连接。",
     "authenticateAgain": "重新验证",
     "loginInBrowser": "通过浏览器登录",
-    "scrobblingDescription": "启用 Last.fm Scrobble 以发送收听数据。",
-    "enableScrobbling": "启用 Last.fm Scrobble",
-    "sendFavoritesToLastFmDescription": "当你喜欢或取消喜欢歌曲时，将收藏数据发送到 Last.fm。",
-    "sendFavoritesToLastFm": "发送收藏数据",
-    "sendNowPlayingToLastFmDescription": "开始播放歌曲时，自动将当前歌曲数据发送到 Last.fm。",
-    "sendNowPlayingToLastFm": "发送当前播放歌曲数据",
     "enableDiscordRpcDescription": "将 Discord Rich Presence 与 Nemora 集成",
     "enableDiscordRpc": "启用 Discord Rich Presence",
     "enableObsWidgetDescription": "为 OBS 提供透明的“正在播放”小组件。在 OBS 中添加浏览器来源，URL 填 http://127.0.0.1:41237/，并设置所需大小：小组件填满来源高度并保持清晰，720 x 96 是基础尺寸，1800 x 240 适合超宽直播。仅在这台电脑上提供。",
@@ -548,12 +525,6 @@
     "syncedLyricsOnly": "仅同步歌词",
     "saveEitherLyrics": "同步或非同步歌词",
     "lyrics": "歌词",
-    "enableMusixmatchLyricsDescription": "启用 Musixmatch Lyrics，按需为你的歌曲提供同步和非同步歌词。",
-    "musixmatchDisclaimerNotice": "启用并使用此功能即表示你同意并接受<Button>Musixmatch Lyrics 免责声明</Button>。",
-    "editMusixmatchSettings": "编辑 Musixmatch 设置",
-    "enableMusixmatch": "启用 Musixmatch Lyrics",
-    "musixmatchEnabled": "Musixmatch Lyrics 已启用",
-    "disableMusixmatch": "关闭 Musixmatch 歌词",
     "saveLyricsAutomaticallyDescription": "选择在歌词页面获取歌词时自动保存哪些歌词。",
     "saveLyricsAutomaticallyInfo": "自动下载的歌词会在当前歌曲结束后保存，以防止损坏。",
     "saveLyricsInLrcFilesDescription": "为支持元数据编辑的歌曲将歌词保存到 LRC 文件。如果歌曲文件不支持元数据编辑，Nemora 会将歌词保存到 LRC 文件。",
@@ -788,8 +759,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "请勿在非同步歌词标签中输入同步歌词。",
     "pendingLyricsSavesAvailable": "这首歌有待保存的歌词。当前歌曲播放结束后，它们将被保存并显示在此处。",
     "downloadLyrics": "下载歌词",
-    "downloadSyncedLyrics": "下载同步歌词",
-    "musixmatchNotEnabled": "要使用此功能，请在设置中启用 Musixmatch Lyrics。"
+    "downloadSyncedLyrics": "下载同步歌词"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "始终置顶：开",
@@ -1312,25 +1282,6 @@
     "effect": "<p>继续此操作将影响以下数据：</p><ul><li>Nemora 中的大多数偏好设置</li><li>播放设置，例如当前歌曲、音量等</li><li>当前队列数据</li><li>已忽略的建议数据，例如合作艺术家、分开艺术家和重复项</li><li>页面排序数据</li><li>均衡器数据</li><li>歌词编辑器设置</li></ul>",
     "restartNotice": "此过程完成后 Nemora 将重启。"
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "免责声明 - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics 作为评估功能添加到本软件，可能随时被移除。</li><li>Nemora 与 Musixmatch Lyrics 或其任何关联公司、子公司没有任何关联，也未获得其授权、维护、赞助或背书。</li><li>本应用的维护者要求用户自行负责，遵守 Musixmatch Lyrics 的版权，公平使用此功能。</li>",
-    "implementationNotice": "实现来自 Fashni 的 <Hyperlink/>。",
-    "hyperlinkTitle": "MxLRC GitHub 仓库",
-    "contactAboutComplaints": "如有任何投诉，请在 Nemora 的 <Hyperlink>GitHub</Hyperlink> 上提交 Issue。"
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Musixmatch 设置",
-    "message": "<li>Musixmatch 需要用户令牌才能正常提供服务。</li><li>长时间使用同一令牌时，Musixmatch 有时无法显示歌词。</li><li>请按照 <Hyperlink>Spicetify Wiki</Hyperlink> 的指南获取新的 Musixmatch 令牌。</li>",
-    "showToken": "显示令牌",
-    "hideToken": "隐藏令牌",
-    "updateToken": "更新令牌",
-    "tokenUpdateSuccess": "令牌已更新。",
-    "tokenUpdateFailed": "更新令牌失败。",
-    "tokenMissingCharacters": "TOKEN 应为 54 个字符的字符串。(还需 {{count}} 个字符)。",
-    "tokenIncorrectCharacters": "TOKEN 只能包含字母和数字。",
-    "savedTokenAvailableMessage": "<Title><span/> 有已保存的令牌。</Title><p> Nemora 中已有用户保存的有效 Musixmatch 令牌。</p> <p> 仅当服务无法正常工作时才需要更换令牌。</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "已选择",
     "select": "选择",
@@ -1418,7 +1369,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "已保存 `{{title}}` 待处理的元数据更新。",
     "METADATA_UPDATE_FAILED": "元数据更新失败。{{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "无法保存歌词，因为当前歌曲的扩展名 ({{ext}}) 不支持修改元数据。",
-    "LASTFM_LOGIN_SUCCESS": "你已成功登录 Last.fm。",
     "AUDIO_PARSING_PROCESS_UPDATE": "已完成 {{value}} / {{total}} 首歌曲。",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "正在为 {{value}} / {{total}} 首歌曲生成封面。",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "正在为 {{value}} / {{total}} 首歌曲生成调色板。",

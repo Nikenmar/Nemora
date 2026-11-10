@@ -350,21 +350,13 @@
         "name": "가사",
         "what": "LRCLIB, 가사 페이지에 자체 가사가 없는 노래가 표시될 때: 제목, 아티스트, 앨범, 길이. 찾은 가사는 보관되므로 노래당 한 번만 검색합니다."
       },
-      "musixmatch": {
-        "name": "Musixmatch 가사",
-        "what": "가사에서 켠 경우에만: 노래의 제목과 아티스트."
-      },
       "pages": {
         "name": "앨범, 아티스트, 노래 페이지",
         "what": "Last.fm과 Deezer, 해당 페이지를 열 때: 설명, 아티스트 사진, 비슷한 트랙을 위한 앨범, 아티스트 또는 노래 이름."
       },
-      "lastFm": {
-        "name": "Last.fm 계정",
-        "what": "계정에서 연결하고 스크로블링, 지금 재생 중, 좋아요를 켠 경우에만: 재생하거나 좋아한 노래."
-      },
       "tagSearch": {
         "name": "태그 편집기 검색",
-        "what": "iTunes, Last.fm, Musixmatch, 노래 태그를 검색할 때: 검색한 내용."
+        "what": "iTunes, Genius, Deezer, Last.fm, 노래 태그를 검색할 때: 검색한 내용."
       },
       "translation": {
         "name": "가사 번역",
@@ -523,23 +515,8 @@
     "second": "초",
     "second_other": "초",
     "accounts": "계정",
-    "integrateLastFm": "Last.fm을 Nemora와 연동합니다.",
-    "lastFmLogo": "Last.fm 로고",
-    "lastFmConnected": "Last.fm 연결됨",
-    "lastFmNotConnected": "Last.fm 연결 안 됨",
-    "loggedInAs": "로그인 계정",
-    "lastFmDescription1": "Last.fm에 연결하여 스크로블링을 활성화하세요.",
-    "lastFmDescription2": "스크로블링은 듣고 있는 음악 정보를 보내는 방식입니다.",
-    "lastFmDescription3": "노래를 들을 때마다 Last.fm이 해당 노래를 '스크로블'하여 계정에 추가합니다.",
-    "lastFmDescription4": "이 기능에는 인터넷 연결이 필요합니다.",
     "authenticateAgain": "다시 인증",
     "loginInBrowser": "브라우저로 로그인",
-    "scrobblingDescription": "Last.fm 스크로블링을 활성화하여 청취 데이터를 보냅니다.",
-    "enableScrobbling": "Last.fm 스크로블링 활성화",
-    "sendFavoritesToLastFmDescription": "노래에 좋아요를 누르거나 취소할 때 즐겨찾기 데이터를 Last.fm으로 보냅니다.",
-    "sendFavoritesToLastFm": "즐겨찾기 데이터 보내기",
-    "sendNowPlayingToLastFmDescription": "노래 재생을 시작하면 현재 노래 데이터를 Last.fm으로 자동 전송합니다.",
-    "sendNowPlayingToLastFm": "현재 재생 중인 노래 데이터 보내기",
     "enableDiscordRpcDescription": "Discord Rich Presence를 Nemora와 연동",
     "enableDiscordRpc": "Discord Rich Presence 활성화",
     "enableObsWidgetDescription": "OBS용 투명 '지금 재생 중' 위젯을 제공합니다. OBS에서 브라우저 소스를 추가하고 URL에 http://127.0.0.1:41237/을 입력한 뒤 원하는 크기를 지정하세요. 위젯은 소스 높이를 채우고 선명하게 유지되며, 기본 크기는 720 x 96이고 울트라와이드 방송에는 1800 x 240이 적합합니다. 이 컴퓨터에서만 제공됩니다.",
@@ -548,12 +525,6 @@
     "syncedLyricsOnly": "동기화 가사만",
     "saveEitherLyrics": "동기화 또는 비동기화 가사",
     "lyrics": "가사",
-    "enableMusixmatchLyricsDescription": "노래의 동기화 및 비동기화 가사를 요청 시 제공하는 Musixmatch Lyrics를 활성화합니다.",
-    "musixmatchDisclaimerNotice": "이 기능을 활성화하고 사용하면 <Button>Musixmatch Lyrics 면책 조항</Button>에 동의하는 것입니다.",
-    "editMusixmatchSettings": "Musixmatch 설정 편집",
-    "enableMusixmatch": "Musixmatch Lyrics 활성화",
-    "musixmatchEnabled": "Musixmatch Lyrics가 활성화되어 있습니다",
-    "disableMusixmatch": "Musixmatch 가사 끄기",
     "saveLyricsAutomaticallyDescription": "가사 페이지에서 가져올 때 자동으로 저장할 가사를 선택하세요.",
     "saveLyricsAutomaticallyInfo": "자동으로 다운로드한 가사는 손상을 막기 위해 현재 노래가 끝난 후 저장됩니다.",
     "saveLyricsInLrcFilesDescription": "메타데이터 편집을 지원하는 노래의 가사를 LRC 파일에 저장합니다. 노래 파일이 메타데이터 편집을 지원하지 않으면 Nemora가 가사를 LRC 파일에 저장합니다.",
@@ -788,8 +759,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "비동기화 가사 탭에 동기화 가사를 입력하지 마세요.",
     "pendingLyricsSavesAvailable": "이 노래에 저장 대기 중인 가사가 있습니다. 현재 노래가 끝나면 저장되어 여기에 표시됩니다.",
     "downloadLyrics": "가사 다운로드",
-    "downloadSyncedLyrics": "동기화 가사 다운로드",
-    "musixmatchNotEnabled": "이 기능을 사용하려면 설정에서 Musixmatch Lyrics를 활성화해야 합니다."
+    "downloadSyncedLyrics": "동기화 가사 다운로드"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "항상 위에: 켜짐",
@@ -1312,25 +1282,6 @@
     "effect": "<p>이 작업은 다음 데이터에 영향을 줍니다: </p><ul><li>Nemora의 대부분의 환경설정</li><li>현재 재생 중인 노래, 볼륨 등의 재생 설정</li><li>현재 대기열 데이터</li><li>피처링 아티스트, 분리 아티스트, 중복 항목 등 무시한 제안 데이터</li><li>페이지 정렬 데이터</li><li>이퀄라이저 데이터</li><li>가사 편집기 설정</li></ul>",
     "restartNotice": "이 과정 후 Nemora가 다시 시작됩니다."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "면책 조항 - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics는 평가용 기능으로 추가되었으며 언제든지 제거될 수 있습니다.</li><li>Nemora는 Musixmatch Lyrics 또는 그 계열사와 어떠한 제휴도 없으며 승인, 유지 관리, 후원, 보증을 받지 않았습니다.</li><li>이 앱의 관리자는 사용자가 Musixmatch Lyrics의 저작권을 준수하며 이 기능을 공정하게 사용할 개인적 책임을 요청합니다.</li>",
-    "implementationNotice": "Fashni의 <Hyperlink/>에서 구현.",
-    "hyperlinkTitle": "MxLRC GitHub 저장소",
-    "contactAboutComplaints": "불만 사항이 있으면 Nemora의 <Hyperlink>GitHub</Hyperlink>에 이슈를 열어 주세요."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Musixmatch 설정",
-    "message": "<li>Musixmatch가 제대로 서비스되려면 사용자 토큰이 필요합니다.</li><li>같은 토큰을 오래 사용하면 Musixmatch가 가사를 표시하지 못할 수 있습니다.</li><li><Hyperlink>Spicetify Wiki</Hyperlink>의 안내에 따라 새 Musixmatch 토큰을 받으세요.</li>",
-    "showToken": "토큰 표시",
-    "hideToken": "토큰 숨기기",
-    "updateToken": "토큰 업데이트",
-    "tokenUpdateSuccess": "토큰을 업데이트했습니다.",
-    "tokenUpdateFailed": "토큰을 업데이트하지 못했습니다.",
-    "tokenMissingCharacters": "TOKEN은 54자 문자열이어야 합니다. ({{count}}자 더 필요).",
-    "tokenIncorrectCharacters": "TOKEN에는 영숫자만 사용할 수 있습니다.",
-    "savedTokenAvailableMessage": "<Title><span/> 저장된 토큰이 있습니다.</Title><p> 사용자가 저장한 유효한 Musixmatch 토큰이 Nemora에 이미 있습니다.</p> <p> 서비스가 제대로 작동하지 않을 때만 토큰을 변경하세요.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "선택됨",
     "select": "선택",
@@ -1418,7 +1369,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "`{{title}}`의 대기 중인 메타데이터 업데이트를 저장했습니다.",
     "METADATA_UPDATE_FAILED": "메타데이터 업데이트에 실패했습니다. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "현재 노래의 확장자({{ext}})는 메타데이터 수정을 지원하지 않아 가사를 저장할 수 없습니다.",
-    "LASTFM_LOGIN_SUCCESS": "Last.fm에 로그인했습니다.",
     "AUDIO_PARSING_PROCESS_UPDATE": "노래 {{total}}곡 중 {{value}}곡 완료.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "노래 {{total}}곡 중 {{value}}곡의 아트워크 생성 중.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "노래 {{total}}곡 중 {{value}}곡의 팔레트 생성 중.",

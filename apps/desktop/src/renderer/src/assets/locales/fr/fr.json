@@ -396,21 +396,13 @@
         "name": "Paroles",
         "what": "LRCLIB, quand la page des paroles affiche un morceau sans paroles propres : titre, artiste, album et durée. Les paroles trouvées sont conservées, un morceau n'est donc recherché qu'une fois."
       },
-      "musixmatch": {
-        "name": "Paroles Musixmatch",
-        "what": "Seulement si vous l'activez dans Paroles : le titre et l'artiste du morceau."
-      },
       "pages": {
         "name": "Pages d'album, d'artiste et de morceau",
         "what": "Last.fm et Deezer, quand vous ouvrez une telle page : le nom de l'album, de l'artiste ou du morceau, pour la description, les images de l'artiste et les morceaux similaires."
       },
-      "lastFm": {
-        "name": "Compte Last.fm",
-        "what": "Seulement si vous le connectez dans Comptes et activez le scrobbling, « en cours de lecture » ou les « J'aime » : les morceaux que vous écoutez ou aimez."
-      },
       "tagSearch": {
         "name": "Recherche de l'éditeur de tags",
-        "what": "iTunes, Last.fm et Musixmatch, quand vous cherchez les tags d'un morceau : ce que vous recherchez."
+        "what": "iTunes, Genius, Deezer et Last.fm, quand vous cherchez les tags d'un morceau : ce que vous recherchez."
       },
       "translation": {
         "name": "Traduction des paroles",
@@ -583,23 +575,8 @@
     "second_many": "secondes",
     "second_other": "secondes",
     "accounts": "Comptes",
-    "integrateLastFm": "Intégrer Last.fm à Nemora.",
-    "lastFmLogo": "Logo Last.fm",
-    "lastFmConnected": "Last.fm connecté",
-    "lastFmNotConnected": "Last.fm non connecté",
-    "loggedInAs": "Connecté en tant que",
-    "lastFmDescription1": "Connectez-vous à Last.fm pour activer le scrobbling.",
-    "lastFmDescription2": "Le scrobbling envoie des informations sur la musique que vous écoutez.",
-    "lastFmDescription3": "Chaque fois que vous écoutez un morceau, Last.fm le « scrobble » et l'ajoute à votre compte.",
-    "lastFmDescription4": "Cette fonction nécessite une connexion Internet.",
     "authenticateAgain": "S'authentifier à nouveau",
     "loginInBrowser": "Se connecter via le navigateur",
-    "scrobblingDescription": "Activez le scrobbling Last.fm pour envoyer des données sur vos écoutes.",
-    "enableScrobbling": "Activer le scrobbling Last.fm",
-    "sendFavoritesToLastFmDescription": "Envoyer les favoris à Last.fm quand vous aimez ou n'aimez plus des morceaux.",
-    "sendFavoritesToLastFm": "Envoyer les favoris",
-    "sendNowPlayingToLastFmDescription": "Envoyer automatiquement à Last.fm les données du morceau au début de sa lecture.",
-    "sendNowPlayingToLastFm": "Envoyer les données du morceau en cours",
     "enableDiscordRpcDescription": "Intégrer Discord Rich Presence à Nemora",
     "enableDiscordRpc": "Activer Discord Rich Presence",
     "enableObsWidgetDescription": "Fournit un widget transparent « en cours de lecture » pour OBS. Dans OBS, ajoutez une source Navigateur avec l'URL http://127.0.0.1:41237/ et la taille voulue : le widget remplit la hauteur de la source et reste net, 720 x 96 est la taille de base et 1800 x 240 convient à un stream ultra-large. Il n'est servi que sur cet ordinateur.",
@@ -608,12 +585,6 @@
     "syncedLyricsOnly": "Paroles synchronisées uniquement",
     "saveEitherLyrics": "Paroles synchronisées ou non",
     "lyrics": "Paroles",
-    "enableMusixmatchLyricsDescription": "Activez Musixmatch Lyrics, qui fournit des paroles synchronisées et non synchronisées à la demande.",
-    "musixmatchDisclaimerNotice": "En activant et en utilisant cette fonction, vous acceptez l'<Button>avertissement de Musixmatch Lyrics</Button>.",
-    "editMusixmatchSettings": "Modifier les réglages Musixmatch",
-    "enableMusixmatch": "Activer Musixmatch Lyrics",
-    "musixmatchEnabled": "Musixmatch Lyrics est activé",
-    "disableMusixmatch": "Désactiver les paroles Musixmatch",
     "saveLyricsAutomaticallyDescription": "Choisissez quelles paroles enregistrer automatiquement lorsqu'elles sont récupérées sur la page des paroles.",
     "saveLyricsAutomaticallyInfo": "Les paroles téléchargées automatiquement sont enregistrées à la fin du morceau pour éviter toute corruption.",
     "saveLyricsInLrcFilesDescription": "Enregistrer les paroles dans des fichiers LRC pour les morceaux qui permettent de modifier les métadonnées. Nemora enregistrera les paroles dans un fichier LRC si le fichier du morceau ne le permet pas.",
@@ -848,8 +819,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "Évitez de saisir des paroles synchronisées dans l'onglet des paroles non synchronisées.",
     "pendingLyricsSavesAvailable": "Des paroles sont en attente d'enregistrement pour ce morceau. Elles seront enregistrées et visibles ici à la fin du morceau en cours.",
     "downloadLyrics": "Télécharger les paroles",
-    "downloadSyncedLyrics": "Télécharger les paroles synchronisées",
-    "musixmatchNotEnabled": "Vous devez activer Musixmatch Lyrics dans les Réglages pour utiliser cette fonction."
+    "downloadSyncedLyrics": "Télécharger les paroles synchronisées"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "Toujours au premier plan : ACTIVÉ",
@@ -1440,25 +1410,6 @@
     "effect": "<p>Cette action affectera les données suivantes : </p><ul><li>La plupart des préférences de Nemora</li><li>Réglages de lecture comme le morceau en cours, le volume, etc.</li><li>Données de la file actuelle</li><li>Suggestions ignorées comme les artistes invités, artistes séparés et doublons</li><li>Tri des pages</li><li>Données de l'égaliseur</li><li>Réglages de l'éditeur de paroles</li></ul>",
     "restartNotice": "Nemora redémarrera ensuite."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "Avertissement - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics est ajouté comme fonction d'évaluation et peut être retiré à tout moment.</li><li>Nemora n'est en aucun cas affilié, autorisé, maintenu, sponsorisé ou approuvé par Musixmatch Lyrics ou ses filiales.</li><li>Les responsables de cette application font appel à la responsabilité personnelle des utilisateurs pour utiliser cette fonction de manière équitable, dans le respect des droits d'auteur de Musixmatch Lyrics.</li>",
-    "implementationNotice": "Implémentation issue du <Hyperlink/> de Fashni.",
-    "hyperlinkTitle": "Dépôt GitHub MxLRC",
-    "contactAboutComplaints": "Pour toute réclamation, ouvrez un ticket sur le <Hyperlink>GitHub</Hyperlink> de Nemora."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Réglages Musixmatch",
-    "message": "<li>Musixmatch nécessite un jeton utilisateur pour fonctionner correctement.</li><li>Musixmatch peut parfois ne pas afficher de paroles après un usage prolongé du même jeton.</li><li>Suivez le guide du <Hyperlink>wiki Spicetify</Hyperlink> pour obtenir un nouveau jeton.</li>",
-    "showToken": "Afficher le jeton",
-    "hideToken": "Masquer le jeton",
-    "updateToken": "Mettre à jour le jeton",
-    "tokenUpdateSuccess": "Jeton mis à jour.",
-    "tokenUpdateFailed": "Impossible de mettre à jour le jeton.",
-    "tokenMissingCharacters": "Le TOKEN doit comporter 54 caractères. ({{count}} caractères manquants).",
-    "tokenIncorrectCharacters": "Le TOKEN ne doit contenir que des caractères alphanumériques.",
-    "savedTokenAvailableMessage": "<Title><span/> Un jeton enregistré est disponible.</Title><p> Un jeton Musixmatch valide est déjà enregistré dans Nemora.</p> <p> Ne le changez que si le service ne fonctionne pas correctement.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "Sélectionné",
     "select": "Sélectionner",
@@ -1548,7 +1499,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "Mises à jour de métadonnées en attente de `{{title}}` enregistrées.",
     "METADATA_UPDATE_FAILED": "Échec de la mise à jour des métadonnées. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "Impossible d'enregistrer les paroles car l'extension du morceau ({{ext}}) ne permet pas de modifier les métadonnées.",
-    "LASTFM_LOGIN_SUCCESS": "Vous êtes connecté à Last.fm.",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{value}} morceaux sur {{total}} terminés.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "Génération des pochettes de {{value}} morceaux sur {{total}}.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "Génération des palettes de {{value}} morceaux sur {{total}}.",

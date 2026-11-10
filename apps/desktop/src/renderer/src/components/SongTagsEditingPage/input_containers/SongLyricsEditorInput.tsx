@@ -8,8 +8,6 @@ import { type LyricData } from '../../LyricsEditingPage/LyricsEditingPage';
 import useNetworkConnectivity from '../../../hooks/useNetworkConnectivity';
 import parseLyrics from '../../../../../common/parseLyrics';
 import isLyricsSynced, { isLyricsEnhancedSynced } from '../../../../../common/isLyricsSynced';
-import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
 
 type CurrentLyricsTYpe = 'synced' | 'unsynced';
 
@@ -39,7 +37,6 @@ type Props = {
 };
 
 const SongLyricsEditorInput = (props: Props) => {
-  const userData = useStore(store, (state) => state.userData);
 
   const { addNewNotifications, changeCurrentActivePage } = useContext(AppUpdateContext);
   const { t } = useTranslation();
@@ -336,15 +333,9 @@ const SongLyricsEditorInput = (props: Props) => {
           className="download-synced-lyrics-btn"
           iconClassName="mr-2"
           clickHandler={downloadSyncedLyrics}
-          isDisabled={!(isOnline && userData?.preferences.isMusixmatchLyricsEnabled)}
+          isDisabled={!isOnline}
           isVisible={currentLyricsType === 'synced'}
-          tooltipLabel={
-            isOnline
-              ? userData?.preferences.isMusixmatchLyricsEnabled
-                ? undefined
-                : t('songTagsEditingPage.musixmatchNotEnabled')
-              : t('common.noInternet')
-          }
+          tooltipLabel={isOnline ? undefined : t('common.noInternet')}
         />
         <Button
           key={2}

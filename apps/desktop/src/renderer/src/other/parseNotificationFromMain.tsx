@@ -29,7 +29,6 @@ const notificationsFromMainConfig: AppNotificationConfig[] = [
       'RESYNC_SUCCESSFUL',
       'RESET_SUCCESSFUL',
       'PENDING_METADATA_UPDATES_SAVED',
-      'LASTFM_LOGIN_SUCCESS',
       'SONG_BLACKLISTED',
       'ARTWORK_SAVED',
       'FOLDER_PARSED_FOR_DIRECTORIES',

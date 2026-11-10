@@ -372,21 +372,13 @@
         "name": "Lyrics",
         "what": "LRCLIB, when the lyrics page shows a song with no lyrics of its own: its title, artist, album and length. The found lyrics are kept, so a song is looked up once."
       },
-      "musixmatch": {
-        "name": "Musixmatch lyrics",
-        "what": "Only when you turn it on in Lyrics: the title and artist of the song."
-      },
       "pages": {
         "name": "Album, artist and song pages",
         "what": "Last.fm and Deezer, when you open such a page: the album, artist or song name, for its description, the artist's pictures and similar tracks."
       },
-      "lastFm": {
-        "name": "Last.fm account",
-        "what": "Only when you connect it in Accounts and turn on scrobbling, now playing or loves: the songs you play or love."
-      },
       "tagSearch": {
         "name": "Tag editor search",
-        "what": "iTunes, Last.fm and Musixmatch, when you search for a song's tags: what you search for."
+        "what": "iTunes, Genius, Deezer and Last.fm, when you search for a song's tags: what you search for."
       },
       "translation": {
         "name": "Lyrics translation",
@@ -551,23 +543,8 @@
     "second": "second",
     "second_other": "seconds",
     "accounts": "Accounts",
-    "integrateLastFm": "Integrate Last.fm with Nemora.",
-    "lastFmLogo": "LastFM logo",
-    "lastFmConnected": "LastFM connected",
-    "lastFmNotConnected": "LastFM not connected",
-    "loggedInAs": "Logged in as",
-    "lastFmDescription1": "Connect with Last.fm to enable Scrobbling.",
-    "lastFmDescription2": "Scrobbling is a way to send information about the music a user is listening to.",
-    "lastFmDescription3": "Whenever you listen to a song, Last.fm “Scrobbles” that song and adds it to your account.",
-    "lastFmDescription4": "This feature requires an internet connection.",
     "authenticateAgain": "Authenticate again",
     "loginInBrowser": "Login via browser",
-    "scrobblingDescription": "Enable Last.fm Scrobbling to send data related to how you listen to songs.",
-    "enableScrobbling": "Enable Last.fm Scrobbling",
-    "sendFavoritesToLastFmDescription": "Send favorites data to Last.fm when you like/dislike songs.",
-    "sendFavoritesToLastFm": "Send favorites data",
-    "sendNowPlayingToLastFmDescription": "Send the currently playing song data to Last.fm automatically when you start to play a song.",
-    "sendNowPlayingToLastFm": "Send currently playing song data",
     "enableDiscordRpcDescription": "Integrate Discord Rich Presence with Nemora",
     "enableDiscordRpc": "Enable Discord Rich Presence",
     "enableObsWidgetDescription": "Serve a transparent 'now playing' widget for OBS. In OBS, add a Browser source with the URL http://127.0.0.1:41237/ and give it the size you want: the widget fills the height of the source and stays sharp, so 720 x 96 is the base size and 1800 x 240 suits an ultrawide stream. It is served on this computer only.",
@@ -576,12 +553,6 @@
     "syncedLyricsOnly": "Synced lyrics only",
     "saveEitherLyrics": "Synced or unsynced lyrics",
     "lyrics": "Lyrics",
-    "enableMusixmatchLyricsDescription": "Enable Musixmatch Lyrics, which provides synced and unsynced lyrics for your songs on-demand.",
-    "musixmatchDisclaimerNotice": "Enabling and using this feature means that you agree to, and accept the <Button>Musixmatch Lyrics Disclaimer</Button>.",
-    "editMusixmatchSettings": "Edit Musixmatch settings",
-    "enableMusixmatch": "Enable Musixmatch Lyrics",
-    "musixmatchEnabled": "Musixmatch Lyrics is enabled",
-    "disableMusixmatch": "Turn off Musixmatch Lyrics",
     "saveLyricsAutomaticallyDescription": "Select an option to save song lyrics automatically when fetched in lyrics page.",
     "saveLyricsAutomaticallyInfo": "Automatically downloaded lyrics will be saved after the current song is finished to prevent any corruption from happening.",
     "saveLyricsInLrcFilesDescription": "Enable saving lyrics in LRC files for songs that support metadata editing. Nemora will save lyrics in an LRC file if the song file doesn't support metadata editing.",
@@ -816,8 +787,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "Avoid entering synchronized lyrics in the unsynchronized lyrics tab.",
     "pendingLyricsSavesAvailable": "There are pending lyrics to be saved to this song. They will be saved and visible here after the current song is finished playing.",
     "downloadLyrics": "Download lyrics",
-    "downloadSyncedLyrics": "Download synced lyrics",
-    "musixmatchNotEnabled": "'You have to enable Musixmatch Lyrics from Settings to use this feature."
+    "downloadSyncedLyrics": "Download synced lyrics"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "Always on top: ON",
@@ -1374,25 +1344,6 @@
     "effect": "<p>Proceeding this action will affect the following data: </p><ul><li>Most preference settings in Nemora</li><li>Playback settings such as currently playing song, volume etc.</li><li>Current queue data</li><li>Ignored suggestions data such as featuring artists, separate artists and duplicates</li><li>Page sorting data</li><li>Equalizer data</li><li>Lyrics editor settings</li></ul>",
     "restartNotice": "Nemora will restart after the process."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "Disclaimer - Musixmatch Lyrics",
-    "message": "<li> Musixmatch Lyrics is added as an evaluation feature to this software and could be removed at any time.</li><li>Nemora is in no way affiliated with, authorised, maintained, sponsored or endorsed by Musixmatch Lyrics or any of its affiliates or subsidiaries.</li><li>The maintainers of this application call upon the personal responsibility of its users to use this feature in a fair way, as it is intended to be used by obeying the copyrights implemented by Musixmatch Lyrics.</li>",
-    "implementationNotice": "Implementation from Fashni's <Hyperlink/>.",
-    "hyperlinkTitle": "MxLRC Github repository",
-    "contactAboutComplaints": "If you have any complaints, open an issue on Nemora's <Hyperlink>GitHub</Hyperlink>."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Musixmatch settings",
-    "message": "<li>Musixmatch requires a user token to provide its service properly.</li><li>Musixmatch can sometimes fail to show lyrics due to prolonged use of the service from the same token.</li><li>Follow the guide from <Hyperlink>Spicetify Wiki</Hyperlink> to get a new Musixmatch token.</li>",
-    "showToken": "Show token",
-    "hideToken": "Hide token",
-    "updateToken": "Update token",
-    "tokenUpdateSuccess": "Token updated successfully.",
-    "tokenUpdateFailed": "Failed to update the token.",
-    "tokenMissingCharacters": "TOKEN should be a string with 54 characters. ({{count}} more characters required).",
-    "tokenIncorrectCharacters": "TOKEN should only contain alpha-numeric characters.",
-    "savedTokenAvailableMessage": "<Title><span/> A saved token available.</Title><p> A valid Musixmatch token saved by the user is already available in Nemora.</p> <p> You only need to change the token if the service is not functioning properly.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "Selected",
     "select": "Select",
@@ -1481,7 +1432,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "Successfully saved pending metadata updates of `{{title}}`.",
     "METADATA_UPDATE_FAILED": "Metadata update failed. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "Lyrics cannot be saved because current song extension ({{ext}}) is not supported for modifying metadata.",
-    "LASTFM_LOGIN_SUCCESS": "You successfully logged in to LastFM.",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{value}} completed out of {{total}} songs.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "Generating artwork for {{value}} out of {{total}} songs.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "Generating palettes for {{value}} out of {{total}} songs.",
@@ -1690,7 +1640,10 @@
     "editing": "Version: {{name}}",
     "saveSound": "Save to version",
     "saveFile": "Save as file",
-    "format": { "wav24": "WAV 24-bit", "float": "WAV 32-bit float" },
+    "format": {
+      "wav24": "WAV 24-bit",
+      "float": "WAV 32-bit float"
+    },
     "saving": "Saving {{name}}...",
     "saved": "{{name}} saved as a file",
     "savedClipped_one": "{{name}} saved; {{count}} sample went past full scale and was clipped (32-bit float keeps it)",

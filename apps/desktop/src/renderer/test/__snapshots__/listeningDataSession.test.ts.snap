@@ -62,8 +62,4 @@ exports[`ListeningDataSession > records play, pause, a seek and the finish, then
 }
 `;
 
-exports[`ListeningDataSession > records play, pause, a seek and the finish, then hands the session over once 2`] = `
-[
-  "audioLibraryControls.sendNowPlayingSongDataToLastFM",
-]
-`;
+exports[`ListeningDataSession > records play, pause, a seek and the finish, then hands the session over once 2`] = `[]`;

@@ -44,7 +44,7 @@ Nemora plays the music on your own computer: your files, your folders, your tags
 ### And more
 
 - **For you.** The mix of the day, Rediscover (songs you love but have not heard in a while), On repeat, Never heard, each one a click from a playlist.
-- **Lyrics.** Synced lyrics from your files or LRCLIB, optionally Musixmatch, fetched for the whole library in the background if you want. Search by a line, share a line as a card, translate.
+- **Lyrics.** Synced lyrics from your files or LRCLIB, fetched for the whole library in the background if you want. Search by a line, share a line as a card, translate.
 - **Tournaments.** Seed 8, 16 or 32 songs and play the bracket down to one winner.
 - **Versions.** Keep a slowed, sped-up or reverb sound as its own row, or save it as a WAV with the song's tags and cover.
 - **Headphone correction.** Pick your headphones from the AutoEQ list, or import a profile, on top of the equalizer.
@@ -69,7 +69,7 @@ Development builds keep their data in `%APPDATA%\Nemora-dev`, and `NEMORA_PROFIL
 
 ## Credits
 
-Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com), artist and album info from [Deezer](https://www.deezer.com), [Last.fm](https://www.last.fm) and [Genius](https://genius.com), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
+Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net), artist and album info from [Deezer](https://www.deezer.com), [Last.fm](https://www.last.fm) and [Genius](https://genius.com), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
 
 ---
 

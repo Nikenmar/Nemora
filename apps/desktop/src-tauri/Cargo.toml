@@ -42,7 +42,7 @@ tauri-plugin-http = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-autostart = "2"
 percent-encoding = "2"
-# scrypt key derivation with the parameters 1.x used for stored Last.fm and Musixmatch credentials.
+# scrypt key derivation with the parameters 1.x used for stored credentials (secrets.rs).
 scrypt = { version = "0.11", default-features = false }
 # The OBS now-playing widget on 127.0.0.1 (widget_server.rs).
 tiny_http = "0.12"

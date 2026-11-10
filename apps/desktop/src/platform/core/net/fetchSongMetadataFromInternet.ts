@@ -3,74 +3,11 @@ import type { LastFMHitCache, LastFMTrackInfoApi } from '../../../types/last_fm_
 
 import type { GeniusLyricsAPI, GeniusSongMetadataResponse } from '../../../types/genius_lyrics_api';
 import type { DeezerTrackDataAPI, DeezerTrackResultsAPI } from '../../../types/deezer_api';
-import type { MusixmatchHitCache, MusixmatchLyricsAPI } from '../../../types/musixmatch_lyrics_api';
-import parseSongMetadataFromMusixmatchApiData from '../lyrics/parseSongMetadataFromMusixmatchApiData';
-import { parseMusicmatchDataFromLyrics } from './fetchLyricsFromMusixmatch';
 import { getBuildEnvVariable } from './buildEnv';
 import { logger } from './logger';
 
 const resultsController = new AbortController();
 const metadataController = new AbortController();
-
-const musixmatchHitCache = { id: '' } as MusixmatchHitCache;
-
-const MUSIXMATCH_BASE_URL = 'https://apic-desktop.musixmatch.com/';
-
-async function fetchSongMetadataFromMusixmatch(songTitle: string, songArtist?: string) {
-  const MUSIXMATCH_USER_TOKEN = getBuildEnvVariable('MAIN_VITE_MUSIXMATCH_DEFAULT_USER_TOKEN');
-  if (typeof MUSIXMATCH_USER_TOKEN !== 'string') {
-    logger.debug('MUSIXMATCH_USER_TOKEN not found.', { MUSIXMATCH_USER_TOKEN });
-    throw new Error('MUSIXMATCH_USER_TOKEN not found');
-  }
-
-  const headers = {
-    authority: 'apic-desktop.musixmatch.com',
-    cookie: 'x-mxm-token-guid='
-  };
-
-  const url = new URL('/ws/1.1/macro.subtitles.get', MUSIXMATCH_BASE_URL);
-  url.searchParams.set('namespace', 'lyrics_richsynched');
-  url.searchParams.set('app_id', 'web-desktop-app-v1.0');
-  url.searchParams.set('subtitle_format', 'mxm');
-  url.searchParams.set('format', 'json');
-  url.searchParams.set('usertoken', MUSIXMATCH_USER_TOKEN);
-  url.searchParams.set('q_track', songTitle);
-  if (songArtist) url.searchParams.set('q_artist', songArtist);
-
-  const res = await fetch(url, { headers, signal: resultsController.signal });
-  if (!res.ok) {
-    logger.warn(`Failed to fetch song metadata from Musixmatch`, {
-      status: res.status,
-      statusText: res.statusText
-    });
-    throw new Error(`Musixmatch metadata request failed with status ${res.status}.`);
-  }
-
-  const data = (await res.json()) as MusixmatchLyricsAPI;
-  const metadata = await parseSongMetadataFromMusixmatchApiData(data, true);
-  const lyrics = await parseMusicmatchDataFromLyrics(data, 'ANY');
-
-  if (!metadata) return [];
-
-  const { title, artist, duration, lang, album, album_artwork_urls } = metadata;
-  const result: SongMetadataResultFromInternet = {
-    title,
-    album,
-    artworkPaths: album_artwork_urls,
-    duration,
-    artists: [artist],
-    language: lang,
-    lyrics: lyrics ? lyrics.lyrics : undefined,
-    source: 'MUSIXMATCH',
-    // Musixmatch api isn't working as expected to provide searching for multiple hits.
-    sourceId: title
-  };
-
-  musixmatchHitCache.id = metadata.title;
-  musixmatchHitCache.data = result;
-
-  return [result];
-}
 
 const ITUNES_API_URL = 'https://itunes.apple.com/';
 let itunesHitsCache: SongMetadataResultFromInternet[] = [];
@@ -424,7 +361,6 @@ export const searchSongMetadataResultsInInternet = async (
 ) => {
   // resultsController.abort();
   const providers = [
-    fetchSongMetadataFromMusixmatch(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
     fetchSongMetadataResultsFromITunes(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
     searchSongMetadataResultsInGenius(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
     searchSongMetadataResultsInDeezer(songTitle, songArtsits ? songArtsits.join(' ') : undefined),
@@ -452,8 +388,6 @@ export const fetchSongMetadataFromInternet = async (
 ): Promise<SongMetadataResultFromInternet | undefined> => {
   // metadataController.abort();
   if (source === 'LAST_FM' && lastFMHitCache.id === sourceId) return lastFMHitCache.data;
-
-  if (source === 'MUSIXMATCH' && musixmatchHitCache.id === sourceId) return musixmatchHitCache.data;
 
   if (source === 'ITUNES') {
     const metadata = fetchSongMetadataFromItunes(sourceId);

@@ -1,6 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { useStore } from '@tanstack/react-store';
-import { store } from '@renderer/store';
 
 /**
  * What Nemora does with the user's data, said plainly (Settings, About, Privacy): what goes over the internet and when, what
@@ -10,9 +8,7 @@ import { store } from '@renderer/store';
 const ONLINE = [
   'updates',
   'lyrics',
-  'musixmatch',
   'pages',
-  'lastFm',
   'tagSearch',
   'translation',
   'autoEq',
@@ -38,10 +34,6 @@ const Group = ({ title, rows }: { title: string; rows: [string, string][] }) => 
 
 const PrivacyPrompt = () => {
   const { t } = useTranslation();
-  // The Last.fm account line only for a profile that still has a session (Accounts shows Last.fm
-  // then too): nobody else can connect one, so for them it would describe a feature they do not have.
-  const hasLastFm = useStore(store, (state) => !!state.userData?.lastFmSessionData);
-  const online = ONLINE.filter((i) => i !== 'lastFm' || hasLastFm);
   return (
     <div className="privacy-prompt w-full px-2 pb-2">
       <h2 className="mb-2 flex items-center text-title font-semibold text-ink">
@@ -51,7 +43,7 @@ const PrivacyPrompt = () => {
       <p className="mb-5 text-small text-ink-dim">{t('privacySettings.intro')}</p>
       <Group
         title={t('privacySettings.onlineTitle')}
-        rows={online.map((i) => [t(`privacySettings.online.${i}.name`), t(`privacySettings.online.${i}.what`)])}
+        rows={ONLINE.map((i) => [t(`privacySettings.online.${i}.name`), t(`privacySettings.online.${i}.what`)])}
       />
       <Group
         title={t('privacySettings.localTitle')}

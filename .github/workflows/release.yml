@@ -26,9 +26,7 @@ jobs:
       # missing one disables its feature rather than failing the build.
       MAIN_VITE_DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
       MAIN_VITE_LAST_FM_API_KEY: ${{ secrets.LAST_FM_API_KEY }}
-      MAIN_VITE_LAST_FM_SHARED_SECRET: ${{ secrets.LAST_FM_SHARED_SECRET }}
       MAIN_VITE_GENIUS_API_KEY: ${{ secrets.GENIUS_API_KEY }}
-      MAIN_VITE_MUSIXMATCH_DEFAULT_USER_TOKEN: ${{ secrets.MUSIXMATCH_DEFAULT_USER_TOKEN }}
       # Encrypts stored credentials. The same secret as every 1.x release: CHANGING IT MAKES THE
       # LOGINS 1.x SAVED UNREADABLE.
       MAIN_VITE_ENCRYPTION_SECRET: ${{ secrets.ENCRYPTION_SECRET }}

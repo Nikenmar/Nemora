@@ -53,10 +53,6 @@ class ListeningDataSession {
   private readonly facts: Fact[] = [];
   private lastPosition = 0;
   private finished = false;
-  private heardSeconds = 0;
-  private scrobbled = false;
-  private intervalId?: ReturnType<typeof setInterval>;
-  private nowPlayingId?: ReturnType<typeof setTimeout>;
 
   constructor(
     player: MediaLike,
@@ -104,20 +100,6 @@ class ListeningDataSession {
     );
     player.addEventListener('ended', () => this.stopRecording('finished'), { signal });
     window.addEventListener('pagehide', () => this.stopRecording('app_closed'), { signal });
-
-    // Last.fm wants "now playing" early and a scrobble once half the song (or 4 minutes) was heard.
-    this.nowPlayingId = setTimeout(
-      () => window.api.audioLibraryControls.sendNowPlayingSongDataToLastFM(this.songId),
-      2500
-    );
-    this.intervalId = setInterval(() => {
-      if (!player.paused) this.heardSeconds += 1;
-      const threshold = Math.min(this.duration / 2, 240);
-      if (!this.scrobbled && this.duration > 30 && this.heardSeconds >= threshold) {
-        this.scrobbled = true;
-        window.api.audioLibraryControls.scrobbleSong(this.songId, this.startedAt / 1000);
-      }
-    }, 1000);
   }
 
   /** Ends the session and hands it to the core; later calls do nothing. */
@@ -128,8 +110,6 @@ class ListeningDataSession {
     this.push({ kind: 'end', atMs: Date.now(), positionMs: position, reason });
     this.finished = true;
     this.abortController.abort();
-    clearInterval(this.intervalId);
-    clearTimeout(this.nowPlayingId);
     if (!this.isKnownSource) return;
     window.api.audioLibraryControls
       .recordPlaySession({

@@ -419,21 +419,13 @@
         "name": "Тексти пісень",
         "what": "LRCLIB, коли на сторінці тексту відкрита пісня без власного тексту: її назва, виконавець, альбом і тривалість. Знайдений текст зберігається, тому для кожної пісні пошук виконується один раз."
       },
-      "musixmatch": {
-        "name": "Тексти Musixmatch",
-        "what": "Лише якщо ви ввімкнете це в розділі «Тексти»: назва й виконавець пісні."
-      },
       "pages": {
         "name": "Сторінки альбомів, виконавців і пісень",
         "what": "Last.fm і Deezer, коли ви відкриваєте таку сторінку: назва альбому, пісні чи ім'я виконавця — для опису, фото виконавця та схожих треків."
       },
-      "lastFm": {
-        "name": "Обліковий запис Last.fm",
-        "what": "Лише якщо ви під'єднаєте його в розділі «Облікові записи» й увімкнете скроблінг, «зараз грає» або позначки: пісні, які ви слухаєте чи позначаєте."
-      },
       "tagSearch": {
         "name": "Пошук у редакторі тегів",
-        "what": "iTunes, Last.fm і Musixmatch, коли ви шукаєте теги пісні: ваш пошуковий запит."
+        "what": "iTunes, Genius, Deezer і Last.fm, коли ви шукаєте теги пісні: ваш пошуковий запит."
       },
       "translation": {
         "name": "Переклад текстів",
@@ -613,23 +605,8 @@
     "second_many": "сек.",
     "second_other": "сек.",
     "accounts": "Облікові записи",
-    "integrateLastFm": "Під'єднати Last.fm до Nemora.",
-    "lastFmLogo": "Логотип Last.fm",
-    "lastFmConnected": "Last.fm під'єднано",
-    "lastFmNotConnected": "Last.fm не під'єднано",
-    "loggedInAs": "Ви увійшли як",
-    "lastFmDescription1": "Під'єднайте Last.fm, щоб увімкнути скроблінг.",
-    "lastFmDescription2": "Скроблінг — це надсилання відомостей про музику, яку ви слухаєте.",
-    "lastFmDescription3": "Щоразу, коли ви слухаєте пісню, Last.fm «скроблить» її та додає до вашого облікового запису.",
-    "lastFmDescription4": "Для цієї функції потрібне підключення до інтернету.",
     "authenticateAgain": "Увійти знову",
     "loginInBrowser": "Увійти через браузер",
-    "scrobblingDescription": "Увімкніть скроблінг Last.fm, щоб надсилати дані про прослуховування.",
-    "enableScrobbling": "Увімкнути скроблінг Last.fm",
-    "sendFavoritesToLastFmDescription": "Надсилати позначки «Подобається» до Last.fm, коли ви їх ставите чи знімаєте.",
-    "sendFavoritesToLastFm": "Надсилати улюблене",
-    "sendNowPlayingToLastFmDescription": "Автоматично надсилати до Last.fm дані про пісню, коли вона починає грати.",
-    "sendNowPlayingToLastFm": "Надсилати дані про поточну пісню",
     "enableDiscordRpcDescription": "Інтеграція Discord Rich Presence із Nemora",
     "enableDiscordRpc": "Увімкнути Discord Rich Presence",
     "enableObsWidgetDescription": "Показує прозорий віджет «зараз грає» для OBS. В OBS додайте джерело «Браузер» з адресою http://127.0.0.1:41237/ і задайте потрібний розмір: віджет заповнює висоту джерела й залишається чітким, тому 720 x 96 — базовий розмір, а 1800 x 240 підійде для надширокого стриму. Віджет доступний лише на цьому комп'ютері.",
@@ -638,12 +615,6 @@
     "syncedLyricsOnly": "Лише синхронізовані тексти",
     "saveEitherLyrics": "Синхронізовані або звичайні тексти",
     "lyrics": "Тексти пісень",
-    "enableMusixmatchLyricsDescription": "Увімкнути тексти Musixmatch: синхронізовані й звичайні тексти для ваших пісень на запит.",
-    "musixmatchDisclaimerNotice": "Вмикаючи й використовуючи цю функцію, ви погоджуєтеся з <Button>умовами Musixmatch Lyrics</Button>.",
-    "editMusixmatchSettings": "Змінити налаштування Musixmatch",
-    "enableMusixmatch": "Увімкнути тексти Musixmatch",
-    "musixmatchEnabled": "Тексти Musixmatch увімкнено",
-    "disableMusixmatch": "Вимкнути тексти Musixmatch",
     "saveLyricsAutomaticallyDescription": "Виберіть, які тексти автоматично зберігати під час завантаження на сторінці тексту.",
     "saveLyricsAutomaticallyInfo": "Автоматично завантажені тексти зберігаються після закінчення поточної пісні, щоб уникнути пошкодження файлу.",
     "saveLyricsInLrcFilesDescription": "Зберігати тексти у файли LRC для пісень, що підтримують редагування метаданих. Якщо файл пісні не підтримує редагування метаданих, Nemora збереже текст у файл LRC.",
@@ -878,8 +849,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "Не вводьте синхронізований текст на вкладці несинхронізованого.",
     "pendingLyricsSavesAvailable": "Є тексти, що очікують на збереження для цієї пісні. Їх буде збережено, і вони з'являться тут після закінчення поточної пісні.",
     "downloadLyrics": "Завантажити текст",
-    "downloadSyncedLyrics": "Завантажити синхронізований текст",
-    "musixmatchNotEnabled": "Щоб використовувати цю функцію, увімкніть тексти Musixmatch у налаштуваннях."
+    "downloadSyncedLyrics": "Завантажити синхронізований текст"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "Поверх усіх вікон: УВІМК",
@@ -1504,25 +1474,6 @@
     "effect": "<p>Це торкнеться таких даних: </p><ul><li>Більшість налаштувань Nemora</li><li>Налаштування відтворення: поточна пісня, гучність тощо</li><li>Поточна черга</li><li>Проігноровані підказки: запрошені виконавці, розділення виконавців і дублікати</li><li>Сортування сторінок</li><li>Еквалайзер</li><li>Налаштування редактора тексту</li></ul>",
     "restartNotice": "Після цього Nemora перезапуститься."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "Застереження — Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics додано до програми як ознайомчу функцію, і її може бути прибрано будь-якої миті.</li><li>Nemora жодним чином не пов'язана з Musixmatch Lyrics, його партнерами чи дочірніми компаніями й не має від них дозволу, підтримки чи спонсорства.</li><li>Розробники застосунку розраховують на особисту відповідальність користувачів: використовуйте цю функцію сумлінно й з дотриманням авторських прав Musixmatch Lyrics.</li>",
-    "implementationNotice": "Реалізація з <Hyperlink/> від Fashni.",
-    "hyperlinkTitle": "Репозиторій MxLRC на GitHub",
-    "contactAboutComplaints": "Якщо у вас є скарги, створіть запит у <Hyperlink>GitHub</Hyperlink> Nemora."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Налаштування Musixmatch",
-    "message": "<li>Для роботи Musixmatch потрібен токен користувача.</li><li>Musixmatch іноді не показує тексти за тривалого використання одного токена.</li><li>Новий токен Musixmatch можна отримати за інструкцією з <Hyperlink>Spicetify Wiki</Hyperlink>.</li>",
-    "showToken": "Показати токен",
-    "hideToken": "Сховати токен",
-    "updateToken": "Оновити токен",
-    "tokenUpdateSuccess": "Токен оновлено.",
-    "tokenUpdateFailed": "Не вдалося оновити токен.",
-    "tokenMissingCharacters": "TOKEN має складатися з 54 символів. (Бракує: {{count}}).",
-    "tokenIncorrectCharacters": "TOKEN може містити лише літери та цифри.",
-    "savedTokenAvailableMessage": "<Title><span/> Є збережений токен.</Title><p> У Nemora вже збережено чинний токен Musixmatch.</p> <p> Змінювати його потрібно, лише якщо сервіс працює неправильно.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "Вибрано",
     "select": "Вибрати",
@@ -1613,7 +1564,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "Оновлення метаданих `{{title}}`, що очікували, збережено.",
     "METADATA_UPDATE_FAILED": "Не вдалося оновити метадані. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "Текст не можна зберегти: розширення поточної пісні ({{ext}}) не підтримує зміну метаданих.",
-    "LASTFM_LOGIN_SUCCESS": "Ви увійшли в Last.fm.",
     "AUDIO_PARSING_PROCESS_UPDATE": "Оброблено пісень: {{value}} із {{total}}.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "Створення обкладинок: {{value}} із {{total}} пісень.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "Створення палітр: {{value}} із {{total}} пісень.",

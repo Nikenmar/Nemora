@@ -350,21 +350,13 @@
         "name": "歌詞",
         "what": "LRCLIB、歌詞ページで歌詞のない曲を表示したとき: 曲名、アーティスト、アルバム、長さ。見つかった歌詞は保存されるため、検索は 1 曲につき 1 回です。"
       },
-      "musixmatch": {
-        "name": "Musixmatch の歌詞",
-        "what": "「歌詞」でオンにした場合のみ: 曲名とアーティスト。"
-      },
       "pages": {
         "name": "アルバム、アーティスト、曲のページ",
         "what": "Last.fm と Deezer、これらのページを開いたとき: 説明、アーティスト画像、類似曲のためのアルバム名、アーティスト名、曲名。"
       },
-      "lastFm": {
-        "name": "Last.fm アカウント",
-        "what": "「アカウント」で接続し、Scrobble、再生中、いいねをオンにした場合のみ: 再生した曲、いいねした曲。"
-      },
       "tagSearch": {
         "name": "タグエディターの検索",
-        "what": "iTunes、Last.fm、Musixmatch、曲のタグを検索したとき: 検索した内容。"
+        "what": "iTunes、Genius、Deezer、Last.fm、曲のタグを検索したとき: 検索した内容。"
       },
       "translation": {
         "name": "歌詞の翻訳",
@@ -523,23 +515,8 @@
     "second": "秒",
     "second_other": "秒",
     "accounts": "アカウント",
-    "integrateLastFm": "Last.fm を Nemora と連携します。",
-    "lastFmLogo": "Last.fm ロゴ",
-    "lastFmConnected": "Last.fm 接続済み",
-    "lastFmNotConnected": "Last.fm 未接続",
-    "loggedInAs": "ログイン中",
-    "lastFmDescription1": "Last.fm に接続して Scrobble を有効にします。",
-    "lastFmDescription2": "Scrobble は聴いている音楽の情報を送信する仕組みです。",
-    "lastFmDescription3": "曲を聴くたびに、Last.fm がその曲を「Scrobble」してアカウントに追加します。",
-    "lastFmDescription4": "この機能にはインターネット接続が必要です。",
     "authenticateAgain": "再認証",
     "loginInBrowser": "ブラウザーでログイン",
-    "scrobblingDescription": "Last.fm の Scrobble を有効にして、再生データを送信します。",
-    "enableScrobbling": "Last.fm の Scrobble を有効にする",
-    "sendFavoritesToLastFmDescription": "曲にいいねまたは取り消しをしたときにお気に入りデータを Last.fm に送信します。",
-    "sendFavoritesToLastFm": "お気に入りデータを送信",
-    "sendNowPlayingToLastFmDescription": "曲の再生が始まると、その曲のデータを自動的に Last.fm に送信します。",
-    "sendNowPlayingToLastFm": "再生中の曲のデータを送信",
     "enableDiscordRpcDescription": "Discord Rich Presence を Nemora と連携",
     "enableDiscordRpc": "Discord Rich Presence を有効にする",
     "enableObsWidgetDescription": "OBS 用の透明な「再生中」ウィジェットを提供します。OBS でブラウザーソースを追加し、URL に http://127.0.0.1:41237/ を指定して好きなサイズにします。ウィジェットはソースの高さに合わせて鮮明に表示され、基本サイズは 720 x 96、ウルトラワイド配信には 1800 x 240 が適しています。このコンピューターでのみ提供されます。",
@@ -548,12 +525,6 @@
     "syncedLyricsOnly": "同期歌詞のみ",
     "saveEitherLyrics": "同期歌詞または非同期歌詞",
     "lyrics": "歌詞",
-    "enableMusixmatchLyricsDescription": "曲の同期・非同期歌詞をオンデマンドで提供する Musixmatch Lyrics を有効にします。",
-    "musixmatchDisclaimerNotice": "この機能を有効にして使用すると、<Button>Musixmatch Lyrics の免責事項</Button>に同意したことになります。",
-    "editMusixmatchSettings": "Musixmatch の設定を編集",
-    "enableMusixmatch": "Musixmatch Lyrics を有効にする",
-    "musixmatchEnabled": "Musixmatch Lyrics は有効です",
-    "disableMusixmatch": "Musixmatch の歌詞をオフにする",
     "saveLyricsAutomaticallyDescription": "歌詞ページで取得したときに自動保存する歌詞を選択します。",
     "saveLyricsAutomaticallyInfo": "自動ダウンロードした歌詞は、破損を防ぐため現在の曲が終わってから保存されます。",
     "saveLyricsInLrcFilesDescription": "メタデータ編集に対応した曲の歌詞を LRC ファイルに保存します。曲ファイルがメタデータ編集に対応していない場合、Nemora は歌詞を LRC ファイルに保存します。",
@@ -788,8 +759,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "非同期歌詞タブに同期歌詞を入力しないでください。",
     "pendingLyricsSavesAvailable": "この曲に保存待ちの歌詞があります。現在の曲が終わると保存され、ここに表示されます。",
     "downloadLyrics": "歌詞をダウンロード",
-    "downloadSyncedLyrics": "同期歌詞をダウンロード",
-    "musixmatchNotEnabled": "この機能を使うには、設定で Musixmatch Lyrics を有効にしてください。"
+    "downloadSyncedLyrics": "同期歌詞をダウンロード"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "常に手前に表示: オン",
@@ -1312,25 +1282,6 @@
     "effect": "<p>この操作は次のデータに影響します: </p><ul><li>Nemora のほとんどの環境設定</li><li>再生中の曲や音量などの再生設定</li><li>現在のキューのデータ</li><li>フィーチャリングアーティスト、別アーティスト、重複などの無視した提案のデータ</li><li>ページの並べ替えデータ</li><li>イコライザーのデータ</li><li>歌詞エディターの設定</li></ul>",
     "restartNotice": "処理後に Nemora が再起動します。"
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "免責事項 - Musixmatch Lyrics",
-    "message": "<li>Musixmatch Lyrics は評価用の機能として追加されており、いつでも削除される可能性があります。</li><li>Nemora は Musixmatch Lyrics およびその関連会社と提携しておらず、承認、保守、後援、推奨も受けていません。</li><li>本アプリの開発者は、Musixmatch Lyrics の著作権を守り、この機能を公正に使用するようユーザーの自己責任を求めます。</li>",
-    "implementationNotice": "Fashni の <Hyperlink/> からの実装。",
-    "hyperlinkTitle": "MxLRC GitHub リポジトリ",
-    "contactAboutComplaints": "苦情がある場合は、Nemora の <Hyperlink>GitHub</Hyperlink> で Issue を作成してください。"
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "Musixmatch の設定",
-    "message": "<li>Musixmatch を正しく利用するにはユーザートークンが必要です。</li><li>同じトークンを長期間使用すると、歌詞を表示できないことがあります。</li><li><Hyperlink>Spicetify Wiki</Hyperlink> の手順に従って新しい Musixmatch トークンを取得してください。</li>",
-    "showToken": "トークンを表示",
-    "hideToken": "トークンを隠す",
-    "updateToken": "トークンを更新",
-    "tokenUpdateSuccess": "トークンを更新しました。",
-    "tokenUpdateFailed": "トークンを更新できませんでした。",
-    "tokenMissingCharacters": "TOKEN は 54 文字の文字列である必要があります。(あと {{count}} 文字必要です)。",
-    "tokenIncorrectCharacters": "TOKEN には英数字のみ使用できます。",
-    "savedTokenAvailableMessage": "<Title><span/> 保存済みのトークンがあります。</Title><p> ユーザーが保存した有効な Musixmatch トークンが既に Nemora にあります。</p> <p> サービスが正しく動作しない場合にのみ変更してください。</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "選択済み",
     "select": "選択",
@@ -1418,7 +1369,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "`{{title}}` の保留中のメタデータ更新を保存しました。",
     "METADATA_UPDATE_FAILED": "メタデータの更新に失敗しました。{{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "現在の曲の拡張子 ({{ext}}) はメタデータの変更に対応していないため、歌詞を保存できません。",
-    "LASTFM_LOGIN_SUCCESS": "Last.fm にログインしました。",
     "AUDIO_PARSING_PROCESS_UPDATE": "{{total}} 曲中 {{value}} 曲が完了しました。",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "{{total}} 曲中 {{value}} 曲のアートワークを生成中。",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "{{total}} 曲中 {{value}} 曲のパレットを生成中。",

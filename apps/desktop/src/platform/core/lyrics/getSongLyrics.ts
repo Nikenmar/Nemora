@@ -30,6 +30,7 @@ const SOURCE_NAMES: Record<string, LyricsSource> = {
   lrc_file: 'IN_SONG_LYRICS',
   user: 'IN_SONG_LYRICS',
   lrclib: 'LRCLIB',
+  // Nemora no longer asks Musixmatch, but a profile may still keep lyrics it found there.
   musixmatch: 'MUSIXMATCH'
 };
 
@@ -44,72 +45,10 @@ const accepts = (wanted: LyricsTypes, found: LyricsTypes) =>
   wanted === found ||
   (wanted === 'SYNCED' && found === 'ENHANCED_SYNCED');
 
-const fold = (value: string) =>
-  value
-    .normalize('NFKD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
-
-/**
- * Whether Musixmatch answered about the song that was asked. A token it no longer trusts gets
- * another song with placeholder words instead of an error, and that must never be kept as lyrics.
- */
-const isSameTrack = (asked: LyricsRequestTrackInfo, title?: string, artist?: string) => {
-  if (!title) return false;
-  const [askedTitle, gotTitle] = [fold(asked.songTitle), fold(title)];
-  const titleMatches = askedTitle.includes(gotTitle) || gotTitle.includes(askedTitle);
-  const artists = (asked.songArtists ?? []).map(fold).filter(Boolean);
-  const gotArtist = fold(artist ?? '');
-  const artistMatches =
-    artists.length === 0 || artists.some((a) => gotArtist.includes(a) || a.includes(gotArtist));
-  return titleMatches && artistMatches && gotTitle.length > 0;
-};
-
-/**
- * Musixmatch, when the user turned it on: asked only for what the core did not find (or found
- * without the timing that was asked for). What it finds is stored like any found text.
- */
-const fromMusixmatch = async (
-  trackInfo: LyricsRequestTrackInfo,
-  lyricsType: LyricsTypes,
-  token: string
-): Promise<SongLyrics | undefined> => {
-  const { default: fetchLyricsFromMusixmatch } = await import('../net/fetchLyricsFromMusixmatch');
-  const artists = trackInfo.songArtists ?? [];
-  const found = await fetchLyricsFromMusixmatch(
-    {
-      q_track: trackInfo.songTitle,
-      q_artist: artists[0] ?? '',
-      q_artists: artists.join(' '),
-      q_duration: trackInfo.duration.toString()
-    },
-    token,
-    lyricsType
-  ).catch(() => undefined);
-  if (!found || !isSameTrack(trackInfo, found.metadata.title, found.metadata.artist)) return undefined;
-  await ipc('lyrics_store_found', {
-    path: trackInfo.songPath,
-    text: found.lyrics,
-    source: 'musixmatch'
-  }).catch((error: unknown) => console.error('Musixmatch lyrics were not kept.', error));
-  const lyrics = parseLyrics(found.lyrics);
-  return {
-    title: trackInfo.songTitle,
-    source: 'MUSIXMATCH',
-    lyricsType: typeOf(lyrics),
-    link: found.metadata.link,
-    lyrics,
-    isOfflineLyricsAvailable: true
-  };
-};
-
 const getSongLyrics = async (
   trackInfo: LyricsRequestTrackInfo,
   lyricsType: LyricsTypes = 'ANY',
-  lyricsRequestType: LyricsRequestTypes = 'ANY',
-  musixmatchToken?: string
+  lyricsRequestType: LyricsRequestTypes = 'ANY'
 ): Promise<SongLyrics | undefined> => {
   const online = lyricsRequestType !== 'OFFLINE_ONLY' && navigator.onLine;
   const stored: StoredLyrics | null = await ipc('lyrics_get', { path: trackInfo.songPath, network: online });
@@ -125,13 +64,6 @@ const getSongLyrics = async (
       isOfflineLyricsAvailable: true
     };
     return cachedLyrics;
-  }
-  if (online && musixmatchToken) {
-    const fromMxm = await fromMusixmatch(trackInfo, lyricsType, musixmatchToken);
-    if (fromMxm && accepts(lyricsType, fromMxm.lyricsType)) {
-      cachedLyrics = fromMxm;
-      return cachedLyrics;
-    }
   }
   if (!stored) cachedLyrics = undefined;
   return undefined;

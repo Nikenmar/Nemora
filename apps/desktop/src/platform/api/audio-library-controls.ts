@@ -45,10 +45,6 @@ export const audioLibraryControls = {
   generatePalettes: (): Promise<void> => getRuntime().generatePalettes(),
   clearSongHistory: async (): Promise<{ success: boolean; message?: string }> =>
     getRuntime().clearHistory() as unknown as { success: boolean; message?: string },
-  scrobbleSong: (songId: string, startTimeInSecs: number): Promise<void> =>
-    getRuntime().scrobbleSong(songId, startTimeInSecs),
-  sendNowPlayingSongDataToLastFM: (songId: string): Promise<void> =>
-    getRuntime().sendNowPlayingSong(songId),
   getSimilarTracksForASong: (songId: string): Promise<SimilarTracksOutput> =>
     getRuntime().getSimilarTracks(songId)
 };

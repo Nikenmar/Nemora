@@ -465,21 +465,13 @@
         "name": "الكلمات",
         "what": "LRCLIB، عندما تعرض صفحة الكلمات أغنية بلا كلمات خاصة بها: عنوانها وفنانها وألبومها ومدتها. تُحفظ الكلمات التي عُثر عليها، فيُبحث عن الأغنية مرة واحدة."
       },
-      "musixmatch": {
-        "name": "كلمات Musixmatch",
-        "what": "فقط عند تفعيلها في الكلمات: عنوان الأغنية وفنانها."
-      },
       "pages": {
         "name": "صفحات الألبوم والفنان والأغنية",
         "what": "Last.fm وDeezer، عند فتح صفحة كهذه: اسم الألبوم أو الفنان أو الأغنية، للوصف وصور الفنان والمقطوعات المشابهة."
       },
-      "lastFm": {
-        "name": "حساب Last.fm",
-        "what": "فقط عند ربطه في الحسابات وتفعيل Scrobble أو قيد التشغيل أو الإعجابات: الأغاني التي تشغلها أو تعجبك."
-      },
       "tagSearch": {
         "name": "بحث محرر الوسوم",
-        "what": "iTunes وLast.fm وMusixmatch، عند البحث عن وسوم أغنية: ما تبحث عنه."
+        "what": "iTunes وGenius وDeezer وLast.fm، عند البحث عن وسوم أغنية: ما تبحث عنه."
       },
       "translation": {
         "name": "ترجمة الكلمات",
@@ -673,23 +665,8 @@
     "second_many": "ثوانٍ",
     "second_other": "ثوانٍ",
     "accounts": "الحسابات",
-    "integrateLastFm": "دمج Last.fm مع Nemora.",
-    "lastFmLogo": "شعار Last.fm",
-    "lastFmConnected": "Last.fm متصل",
-    "lastFmNotConnected": "Last.fm غير متصل",
-    "loggedInAs": "مسجل الدخول باسم",
-    "lastFmDescription1": "اتصل بـ Last.fm لتفعيل Scrobble.",
-    "lastFmDescription2": "Scrobble طريقة لإرسال معلومات عن الموسيقى التي تستمع إليها.",
-    "lastFmDescription3": "في كل مرة تستمع فيها إلى أغنية، يجري Last.fm لها «Scrobble» ويضيفها إلى حسابك.",
-    "lastFmDescription4": "تتطلب هذه الميزة اتصالًا بالإنترنت.",
     "authenticateAgain": "المصادقة مرة أخرى",
     "loginInBrowser": "تسجيل الدخول عبر المتصفح",
-    "scrobblingDescription": "فعّل Scrobble في Last.fm لإرسال بيانات عن طريقة استماعك.",
-    "enableScrobbling": "تفعيل Scrobble في Last.fm",
-    "sendFavoritesToLastFmDescription": "إرسال بيانات المفضلة إلى Last.fm عند الإعجاب بالأغاني أو إلغائه.",
-    "sendFavoritesToLastFm": "إرسال بيانات المفضلة",
-    "sendNowPlayingToLastFmDescription": "إرسال بيانات الأغنية الحالية إلى Last.fm تلقائيًا عند بدء تشغيلها.",
-    "sendNowPlayingToLastFm": "إرسال بيانات الأغنية الحالية",
     "enableDiscordRpcDescription": "دمج Discord Rich Presence مع Nemora",
     "enableDiscordRpc": "تفعيل Discord Rich Presence",
     "enableObsWidgetDescription": "يقدم أداة «قيد التشغيل» شفافة لـ OBS. في OBS، أضف مصدر متصفح بعنوان http://127.0.0.1:41237/ وبالحجم الذي تريده: تملأ الأداة ارتفاع المصدر وتبقى حادة، فالحجم الأساسي 720 x 96 و1800 x 240 يناسب البث فائق العرض. تُقدَّم على هذا الحاسوب فقط.",
@@ -698,12 +675,6 @@
     "syncedLyricsOnly": "الكلمات المتزامنة فقط",
     "saveEitherLyrics": "كلمات متزامنة أو غير متزامنة",
     "lyrics": "الكلمات",
-    "enableMusixmatchLyricsDescription": "فعّل Musixmatch Lyrics، الذي يوفر كلمات متزامنة وغير متزامنة لأغانيك عند الطلب.",
-    "musixmatchDisclaimerNotice": "بتفعيل هذه الميزة واستخدامها فإنك توافق على <Button>إخلاء مسؤولية Musixmatch Lyrics</Button>.",
-    "editMusixmatchSettings": "تعديل إعدادات Musixmatch",
-    "enableMusixmatch": "تفعيل Musixmatch Lyrics",
-    "musixmatchEnabled": "Musixmatch Lyrics مفعّل",
-    "disableMusixmatch": "إيقاف كلمات Musixmatch",
     "saveLyricsAutomaticallyDescription": "اختر الكلمات التي تُحفظ تلقائيًا عند جلبها في صفحة الكلمات.",
     "saveLyricsAutomaticallyInfo": "تُحفظ الكلمات المنزلة تلقائيًا بعد انتهاء الأغنية الحالية لتجنب أي تلف.",
     "saveLyricsInLrcFilesDescription": "حفظ الكلمات في ملفات LRC للأغاني التي تدعم تعديل البيانات الوصفية. سيحفظ Nemora الكلمات في ملف LRC إذا كان ملف الأغنية لا يدعم تعديل البيانات الوصفية.",
@@ -938,8 +909,7 @@
     "avoidSyncedOnUnsyncedLyricsTab": "تجنب إدخال كلمات متزامنة في تبويب الكلمات غير المتزامنة.",
     "pendingLyricsSavesAvailable": "توجد كلمات بانتظار الحفظ لهذه الأغنية. ستُحفظ وتظهر هنا بعد انتهاء الأغنية الحالية.",
     "downloadLyrics": "تنزيل الكلمات",
-    "downloadSyncedLyrics": "تنزيل الكلمات المتزامنة",
-    "musixmatchNotEnabled": "يجب تفعيل Musixmatch Lyrics من الإعدادات لاستخدام هذه الميزة."
+    "downloadSyncedLyrics": "تنزيل الكلمات المتزامنة"
   },
   "miniPlayer": {
     "alwaysOnTopEnabled": "دائمًا في المقدمة: مفعّل",
@@ -1632,25 +1602,6 @@
     "effect": "<p>سيؤثر هذا الإجراء في البيانات التالية: </p><ul><li>معظم التفضيلات في Nemora</li><li>إعدادات التشغيل مثل الأغنية الحالية ومستوى الصوت وغيرها</li><li>بيانات قائمة الانتظار الحالية</li><li>الاقتراحات المتجاهلة مثل الفنانين المشاركين والفنانين المنفصلين والتكرارات</li><li>بيانات ترتيب الصفحات</li><li>بيانات المعادل</li><li>إعدادات محرر الكلمات</li></ul>",
     "restartNotice": "سيُعاد تشغيل Nemora بعد العملية."
   },
-  "musixmatchDisclaimerPrompt": {
-    "title": "إخلاء مسؤولية - Musixmatch Lyrics",
-    "message": "<li>أُضيف Musixmatch Lyrics كميزة تجريبية إلى هذا البرنامج وقد يُزال في أي وقت.</li><li>لا يرتبط Nemora بأي شكل بـ Musixmatch Lyrics أو أي من شركاته التابعة، وليس مصرحًا أو مدعومًا أو معتمدًا منها.</li><li>يدعو القائمون على هذا التطبيق المستخدمين إلى تحمل مسؤوليتهم الشخصية باستخدام هذه الميزة بشكل عادل واحترام حقوق النشر الخاصة بـ Musixmatch Lyrics.</li>",
-    "implementationNotice": "التنفيذ مأخوذ من <Hyperlink/> الخاص بـ Fashni.",
-    "hyperlinkTitle": "مستودع MxLRC على GitHub",
-    "contactAboutComplaints": "إذا كانت لديك أي شكوى، افتح مشكلة على <Hyperlink>GitHub</Hyperlink> الخاص بـ Nemora."
-  },
-  "musixmatchSettingsPrompt": {
-    "title": "إعدادات Musixmatch",
-    "message": "<li>يتطلب Musixmatch رمز مستخدم لتقديم خدمته بشكل صحيح.</li><li>قد يفشل Musixmatch أحيانًا في عرض الكلمات بسبب الاستخدام الطويل للرمز نفسه.</li><li>اتبع الدليل في <Hyperlink>Spicetify Wiki</Hyperlink> للحصول على رمز Musixmatch جديد.</li>",
-    "showToken": "إظهار الرمز",
-    "hideToken": "إخفاء الرمز",
-    "updateToken": "تحديث الرمز",
-    "tokenUpdateSuccess": "تم تحديث الرمز.",
-    "tokenUpdateFailed": "فشل تحديث الرمز.",
-    "tokenMissingCharacters": "يجب أن يتكون TOKEN من 54 حرفًا. (يلزم {{count}} حرفًا إضافيًا).",
-    "tokenIncorrectCharacters": "يجب ألا يحتوي TOKEN إلا على أحرف وأرقام.",
-    "savedTokenAvailableMessage": "<Title><span/> يتوفر رمز محفوظ.</Title><p> يوجد بالفعل في Nemora رمز Musixmatch صالح حفظه المستخدم.</p> <p> لا تحتاج إلى تغيير الرمز إلا إذا كانت الخدمة لا تعمل بشكل صحيح.</p>"
-  },
   "customizeSelectedMetadataPrompt": {
     "selected": "محدد",
     "select": "تحديد",
@@ -1743,7 +1694,6 @@
     "PENDING_METADATA_UPDATES_SAVED": "تم حفظ تحديثات البيانات الوصفية المعلقة لـ `{{title}}`.",
     "METADATA_UPDATE_FAILED": "فشل تحديث البيانات الوصفية. {{message}}",
     "SONG_EXT_NOT_SUPPORTED_FOR_LYRICS_SAVES": "لا يمكن حفظ الكلمات لأن امتداد الأغنية الحالية ({{ext}}) لا يدعم تعديل البيانات الوصفية.",
-    "LASTFM_LOGIN_SUCCESS": "تم تسجيل دخولك إلى Last.fm.",
     "AUDIO_PARSING_PROCESS_UPDATE": "اكتمل {{value}} من أصل {{total}} أغنية.",
     "ARTWORK_GENERATING_PROCESS_UPDATE": "جارٍ إنشاء أغلفة لـ {{value}} من أصل {{total}} أغنية.",
     "SONG_PALETTE_GENERATING_PROCESS_UPDATE": "جارٍ إنشاء لوحات ألوان لـ {{value}} من أصل {{total}} أغنية.",
