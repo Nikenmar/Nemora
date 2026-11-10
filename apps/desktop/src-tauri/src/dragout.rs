@@ -84,6 +84,13 @@ pub async fn start_file_drag(app: AppHandle, paths: Vec<String>, artwork: Option
     // inside is a failed drag, which the user sees as "nothing happened" - the
     // log is the only place it can be reported from here.
     app.run_on_main_thread(move || {
+        // The IPC hop and the cover decode take a moment. If the button was let go meanwhile,
+        // `DoDragDrop` would see it up at once and drop the file wherever the cursor is, which is
+        // usually back on Nemora's own window. A gesture that already ended is not a drag.
+        if !primary_button_down() {
+            eprintln!("[nemora] the file drag was not started: the mouse button was already released");
+            return;
+        }
         if let Err(error) =
             drag::start_drag(&window, DragItem::Files(files), image, |_result, _cursor| {}, Options::default())
         {
@@ -91,6 +98,24 @@ pub async fn start_file_drag(app: AppHandle, paths: Vec<String>, artwork: Option
         }
     })
     .map_err(|error| format!("could not start the drag: {error}"))
+}
+
+/// Whether the primary mouse button is held right now (the right one when the buttons are swapped,
+/// as `DoDragDrop` itself reads it).
+#[cfg(windows)]
+fn primary_button_down() -> bool {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_SWAPBUTTON};
+    // SAFETY: both read process-wide input state and take no pointers.
+    unsafe {
+        let key = if GetSystemMetrics(SM_SWAPBUTTON) != 0 { VK_RBUTTON } else { VK_LBUTTON };
+        (GetAsyncKeyState(i32::from(key.0)) as u16) & 0x8000 != 0
+    }
+}
+
+#[cfg(not(windows))]
+fn primary_button_down() -> bool {
+    true
 }
 
 #[cfg(test)]

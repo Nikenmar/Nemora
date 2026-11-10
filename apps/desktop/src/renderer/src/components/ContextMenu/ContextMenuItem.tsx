@@ -31,14 +31,17 @@ const ContextMenuItem = (props: ContextMenuItem) => {
       } flex h-8 flex-row items-center gap-3 rounded-md px-2.5 text-body ${
         isDanger ? 'text-danger' : 'text-ink'
       } transition-colors duration-100 hover:bg-glass-hover`}
-      // The drag has to be handed to the OS while the button is still down, so
-      // it starts on mousedown - a click handler fires only on release, by
-      // which point there is no gesture left to take over.
-      onMouseDown={(event) => {
-        if (!props.fileDrag || event.button !== 0) return;
+      // The drag is handed to the OS once the browser itself sees a drag: the button held and the
+      // mouse moved past its threshold. Starting on mousedown (as before) turned every plain click
+      // into a drag that Windows dropped at once, back onto Nemora, and raced the release. The
+      // browser's own drag is cancelled; the OS one takes the gesture over. The menu closes on the
+      // next frame, so the item is still there while the drag begins.
+      draggable={props.fileDrag ? true : undefined}
+      onDragStart={(event) => {
+        if (!props.fileDrag) return;
         event.preventDefault();
         window.api.songUpdates.startFileDrag(props.fileDrag.paths, props.fileDrag.artwork);
-        updateContextMenuData(false, []);
+        requestAnimationFrame(() => updateContextMenuData(false, []));
       }}
       aria-haspopup={hasInner ? 'menu' : undefined}
       onClick={(event) => {
