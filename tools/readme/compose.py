@@ -38,7 +38,7 @@ CARDS = [
     dict(key="duels", bg="deep", side="left",
          shots=[("34-duel", "dark", (420, 120, 1180, 780), (760, 120, 600)), ("33-songguessr", "dark", (542, 85, 1058, 815), (1150, 250, 380))],
          title="Duels and<br>Song Guessr",
-         text="A little bit of fun with your own library. Pick the better of two songs and an ELO rating sorts it by what you really choose; or name a track from a tenth of a second."),
+         text="A little bit of fun with your own library. Pick the better of two songs and an ELO rating sorts it by what you really choose. Or name a track from a tenth of a second."),
     dict(key="stats", bg="sky", side="right",
          shots=[("36t-stats-insights", "dark", (205, 40, 1600, 720), (60, 210, 840))],
          title="Know how<br>you listen",

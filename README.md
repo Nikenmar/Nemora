@@ -14,7 +14,7 @@ Nemora plays the music on your own computer: your files, your folders, your tags
 
 ## Why Nemora
 
-- **Its own audio engine.** Written in Rust, it decodes every file itself. At full volume with the equalizer flat, a file reaches Windows sample for sample; one track runs into the next without a gap.
+- **Its own audio engine.** Written in Rust, it decodes every file itself. At full volume with the equalizer flat, a file reaches Windows sample for sample. One track runs into the next without a gap.
 - **It learns how you listen.** Tierlists, duels, what you replay and what you skip all feed Smart Shuffle, and it tells you why each song comes next.
 - **Songs keep their history.** A song is recognised by its audio, not by its path or tags, so renaming, retagging or moving a file keeps every listen, rating and tier.
 - **Private by design.** No telemetry, no analytics, no account. Settings › About › Privacy lists every request Nemora makes and when.
@@ -44,13 +44,13 @@ Nemora plays the music on your own computer: your files, your folders, your tags
 ### And more
 
 - **For you.** The mix of the day, Rediscover (songs you love but have not heard in a while), On repeat, Never heard, each one a click from a playlist.
-- **Lyrics.** Synced lyrics from your files or LRCLIB, optionally Musixmatch, fetched for the whole library in the background if you want; search by a line, share a line as a card, translate.
+- **Lyrics.** Synced lyrics from your files or LRCLIB, optionally Musixmatch, fetched for the whole library in the background if you want. Search by a line, share a line as a card, translate.
 - **Tournaments.** Seed 8, 16 or 32 songs and play the bracket down to one winner.
 - **Versions.** Keep a slowed, sped-up or reverb sound as its own row, or save it as a WAV with the song's tags and cover.
 - **Headphone correction.** Pick your headphones from the AutoEQ list, or import a profile, on top of the equalizer.
 - **Smooth volume.** A perceptual curve like the Windows mixer, not a linear slider.
-- **Import from Spotify.** Paste a public playlist link; its tracks are matched against your library.
-- **Last.fm and Discord.** Scrobbling, now playing and loves; your song as your Discord status.
+- **Import from Spotify.** Paste a public playlist link and its tracks are matched against your library.
+- **Last.fm and Discord.** Scrobbling, now playing and loves, and your song as your Discord status.
 - **OBS widget.** A transparent now-playing overlay, served only to your own computer.
 - **Mini player, tag editor, drag a song out** into Explorer, a DAW or a chat.
 
@@ -65,7 +65,7 @@ cargo test
 cd apps/desktop && npm install && npm run tauri dev
 ```
 
-Development builds keep their data in `%APPDATA%\Nemora-dev`; `NEMORA_PROFILE_DIR` overrides it. The README pictures are made from real shots of the app by `tools/readme/compose.py`.
+Development builds keep their data in `%APPDATA%\Nemora-dev`, and `NEMORA_PROFILE_DIR` overrides it. The README pictures are made from real shots of the app by `tools/readme/compose.py`.
 
 ## Credits
 
