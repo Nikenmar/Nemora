@@ -553,6 +553,7 @@
     "editMusixmatchSettings": "Musixmatch の設定を編集",
     "enableMusixmatch": "Musixmatch Lyrics を有効にする",
     "musixmatchEnabled": "Musixmatch Lyrics は有効です",
+    "disableMusixmatch": "Musixmatch の歌詞をオフにする",
     "saveLyricsAutomaticallyDescription": "歌詞ページで取得したときに自動保存する歌詞を選択します。",
     "saveLyricsAutomaticallyInfo": "自動ダウンロードした歌詞は、破損を防ぐため現在の曲が終わってから保存されます。",
     "saveLyricsInLrcFilesDescription": "メタデータ編集に対応した曲の歌詞を LRC ファイルに保存します。曲ファイルがメタデータ編集に対応していない場合、Nemora は歌詞を LRC ファイルに保存します。",

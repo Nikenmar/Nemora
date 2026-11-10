@@ -613,6 +613,7 @@
     "editMusixmatchSettings": "Modifier les réglages Musixmatch",
     "enableMusixmatch": "Activer Musixmatch Lyrics",
     "musixmatchEnabled": "Musixmatch Lyrics est activé",
+    "disableMusixmatch": "Désactiver les paroles Musixmatch",
     "saveLyricsAutomaticallyDescription": "Choisissez quelles paroles enregistrer automatiquement lorsqu'elles sont récupérées sur la page des paroles.",
     "saveLyricsAutomaticallyInfo": "Les paroles téléchargées automatiquement sont enregistrées à la fin du morceau pour éviter toute corruption.",
     "saveLyricsInLrcFilesDescription": "Enregistrer les paroles dans des fichiers LRC pour les morceaux qui permettent de modifier les métadonnées. Nemora enregistrera les paroles dans un fichier LRC si le fichier du morceau ne le permet pas.",

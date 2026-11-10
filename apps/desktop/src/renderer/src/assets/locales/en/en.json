@@ -581,6 +581,7 @@
     "editMusixmatchSettings": "Edit Musixmatch settings",
     "enableMusixmatch": "Enable Musixmatch Lyrics",
     "musixmatchEnabled": "Musixmatch Lyrics is enabled",
+    "disableMusixmatch": "Turn off Musixmatch Lyrics",
     "saveLyricsAutomaticallyDescription": "Select an option to save song lyrics automatically when fetched in lyrics page.",
     "saveLyricsAutomaticallyInfo": "Automatically downloaded lyrics will be saved after the current song is finished to prevent any corruption from happening.",
     "saveLyricsInLrcFilesDescription": "Enable saving lyrics in LRC files for songs that support metadata editing. Nemora will save lyrics in an LRC file if the song file doesn't support metadata editing.",

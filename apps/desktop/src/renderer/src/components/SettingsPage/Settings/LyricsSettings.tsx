@@ -76,13 +76,15 @@ const LyricsSettings = () => {
                 }
               />
             )}
+            {/* One button both ways: it turns Musixmatch on, and once on it turns it off again
+                (it used to go grey at "enabled", with no way back). */}
             <Button
               label={
                 userData?.preferences.isMusixmatchLyricsEnabled
-                  ? t('settingsPage.musixmatchEnabled')
+                  ? t('settingsPage.disableMusixmatch')
                   : t('settingsPage.enableMusixmatch')
               }
-              iconName={userData?.preferences.isMusixmatchLyricsEnabled ? 'done' : undefined}
+              iconName={userData?.preferences.isMusixmatchLyricsEnabled ? 'close' : undefined}
               clickHandler={() => {
                 const state = !userData?.preferences.isMusixmatchLyricsEnabled;
                 window.api.userData
@@ -98,7 +100,6 @@ const LyricsSettings = () => {
                   )
                   .catch((err) => console.error(err));
               }}
-              isDisabled={userData?.preferences.isMusixmatchLyricsEnabled}
             />
           </div>
         </li>

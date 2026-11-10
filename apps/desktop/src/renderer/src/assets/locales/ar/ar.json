@@ -703,6 +703,7 @@
     "editMusixmatchSettings": "تعديل إعدادات Musixmatch",
     "enableMusixmatch": "تفعيل Musixmatch Lyrics",
     "musixmatchEnabled": "Musixmatch Lyrics مفعّل",
+    "disableMusixmatch": "إيقاف كلمات Musixmatch",
     "saveLyricsAutomaticallyDescription": "اختر الكلمات التي تُحفظ تلقائيًا عند جلبها في صفحة الكلمات.",
     "saveLyricsAutomaticallyInfo": "تُحفظ الكلمات المنزلة تلقائيًا بعد انتهاء الأغنية الحالية لتجنب أي تلف.",
     "saveLyricsInLrcFilesDescription": "حفظ الكلمات في ملفات LRC للأغاني التي تدعم تعديل البيانات الوصفية. سيحفظ Nemora الكلمات في ملف LRC إذا كان ملف الأغنية لا يدعم تعديل البيانات الوصفية.",

@@ -583,6 +583,7 @@
     "editMusixmatchSettings": "Musixmatch सेटिंग्स संपादित करें",
     "enableMusixmatch": "Musixmatch Lyrics चालू करें",
     "musixmatchEnabled": "Musixmatch Lyrics चालू है",
+    "disableMusixmatch": "Musixmatch बोल बंद करें",
     "saveLyricsAutomaticallyDescription": "बोल पेज पर प्राप्त होने पर कौन से बोल अपने आप सहेजे जाएँ, चुनें।",
     "saveLyricsAutomaticallyInfo": "अपने आप डाउनलोड हुए बोल खराबी से बचाने के लिए वर्तमान गाना समाप्त होने के बाद सहेजे जाते हैं।",
     "saveLyricsInLrcFilesDescription": "मेटाडेटा संपादन का समर्थन करने वाले गानों के बोल LRC फ़ाइलों में सहेजें। यदि गाने की फ़ाइल मेटाडेटा संपादन का समर्थन नहीं करती तो Nemora बोल LRC फ़ाइल में सहेजेगी।",

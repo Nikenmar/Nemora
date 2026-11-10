@@ -553,6 +553,7 @@
     "editMusixmatchSettings": "Musixmatch 설정 편집",
     "enableMusixmatch": "Musixmatch Lyrics 활성화",
     "musixmatchEnabled": "Musixmatch Lyrics가 활성화되어 있습니다",
+    "disableMusixmatch": "Musixmatch 가사 끄기",
     "saveLyricsAutomaticallyDescription": "가사 페이지에서 가져올 때 자동으로 저장할 가사를 선택하세요.",
     "saveLyricsAutomaticallyInfo": "자동으로 다운로드한 가사는 손상을 막기 위해 현재 노래가 끝난 후 저장됩니다.",
     "saveLyricsInLrcFilesDescription": "메타데이터 편집을 지원하는 노래의 가사를 LRC 파일에 저장합니다. 노래 파일이 메타데이터 편집을 지원하지 않으면 Nemora가 가사를 LRC 파일에 저장합니다.",

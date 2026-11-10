@@ -643,6 +643,7 @@
     "editMusixmatchSettings": "Змінити налаштування Musixmatch",
     "enableMusixmatch": "Увімкнути тексти Musixmatch",
     "musixmatchEnabled": "Тексти Musixmatch увімкнено",
+    "disableMusixmatch": "Вимкнути тексти Musixmatch",
     "saveLyricsAutomaticallyDescription": "Виберіть, які тексти автоматично зберігати під час завантаження на сторінці тексту.",
     "saveLyricsAutomaticallyInfo": "Автоматично завантажені тексти зберігаються після закінчення поточної пісні, щоб уникнути пошкодження файлу.",
     "saveLyricsInLrcFilesDescription": "Зберігати тексти у файли LRC для пісень, що підтримують редагування метаданих. Якщо файл пісні не підтримує редагування метаданих, Nemora збереже текст у файл LRC.",

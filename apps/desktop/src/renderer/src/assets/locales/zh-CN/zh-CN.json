@@ -553,6 +553,7 @@
     "editMusixmatchSettings": "编辑 Musixmatch 设置",
     "enableMusixmatch": "启用 Musixmatch Lyrics",
     "musixmatchEnabled": "Musixmatch Lyrics 已启用",
+    "disableMusixmatch": "关闭 Musixmatch 歌词",
     "saveLyricsAutomaticallyDescription": "选择在歌词页面获取歌词时自动保存哪些歌词。",
     "saveLyricsAutomaticallyInfo": "自动下载的歌词会在当前歌曲结束后保存，以防止损坏。",
     "saveLyricsInLrcFilesDescription": "为支持元数据编辑的歌曲将歌词保存到 LRC 文件。如果歌曲文件不支持元数据编辑，Nemora 会将歌词保存到 LRC 文件。",

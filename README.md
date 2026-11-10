@@ -50,7 +50,7 @@ Nemora plays the music on your own computer: your files, your folders, your tags
 - **Headphone correction.** Pick your headphones from the AutoEQ list, or import a profile, on top of the equalizer.
 - **Smooth volume.** A perceptual curve like the Windows mixer, not a linear slider.
 - **Import from Spotify.** Paste a public playlist link and its tracks are matched against your library.
-- **Last.fm and Discord.** Scrobbling, now playing and loves, and your song as your Discord status.
+- **Discord status.** The song you play shows on your Discord profile.
 - **OBS widget.** A transparent now-playing overlay, served only to your own computer.
 - **Mini player, tag editor, drag a song out** into Explorer, a DAW or a chat.
 
@@ -69,7 +69,7 @@ Development builds keep their data in `%APPDATA%\Nemora-dev`, and `NEMORA_PROFIL
 
 ## Credits
 
-Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com), artist info from [Deezer](https://www.deezer.com) and [Genius](https://genius.com), scrobbling via [Last.fm](https://www.last.fm), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
+Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [React](https://react.dev). Audio by [Symphonia](https://github.com/pdeljanov/Symphonia) and [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch). Lyrics from [LRCLIB](https://lrclib.net) and [Musixmatch](https://www.musixmatch.com), artist and album info from [Deezer](https://www.deezer.com), [Last.fm](https://www.last.fm) and [Genius](https://genius.com), headphone profiles from [AutoEQ](https://github.com/jaakkopasanen/AutoEq). Every third-party licence is listed in **Settings › About › Open-source licenses**.
 
 ---
 

@@ -583,6 +583,7 @@
     "editMusixmatchSettings": "Musixmatch-Einstellungen bearbeiten",
     "enableMusixmatch": "Musixmatch Lyrics aktivieren",
     "musixmatchEnabled": "Musixmatch Lyrics ist aktiviert",
+    "disableMusixmatch": "Musixmatch-Songtexte ausschalten",
     "saveLyricsAutomaticallyDescription": "Wähle, welche Songtexte beim Abruf auf der Songtext-Seite automatisch gespeichert werden.",
     "saveLyricsAutomaticallyInfo": "Automatisch geladene Songtexte werden erst nach Ende des aktuellen Songs gespeichert, um Beschädigungen zu vermeiden.",
     "saveLyricsInLrcFilesDescription": "Songtexte für Songs mit Metadaten-Bearbeitung in LRC-Dateien speichern. Unterstützt die Songdatei keine Metadaten-Bearbeitung, speichert Nemora den Text in einer LRC-Datei.",

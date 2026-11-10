@@ -613,6 +613,7 @@
     "editMusixmatchSettings": "Editar configurações do Musixmatch",
     "enableMusixmatch": "Ativar Musixmatch Lyrics",
     "musixmatchEnabled": "Musixmatch Lyrics está ativado",
+    "disableMusixmatch": "Desativar as letras do Musixmatch",
     "saveLyricsAutomaticallyDescription": "Escolha quais letras salvar automaticamente ao buscá-las na página de letras.",
     "saveLyricsAutomaticallyInfo": "Letras baixadas automaticamente são salvas após o fim da música atual para evitar corrupção.",
     "saveLyricsInLrcFilesDescription": "Salve letras em arquivos LRC para músicas que permitem editar metadados. O Nemora salvará a letra em um arquivo LRC se o arquivo da música não permitir editar metadados.",
