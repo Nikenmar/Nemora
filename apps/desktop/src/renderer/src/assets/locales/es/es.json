@@ -713,7 +713,7 @@
     "importFromNora": "Importar desde Nora",
     "basedOnNora": "Nemora nació como fork de <NoraLink>Nora</NoraLink> de <SandakanLink>Sandakan Nipunajith</SandakanLink> y se publicó primero como <ForkLink>Nora CMR-Fork</ForkLink>. Desde entonces casi todo se ha reescrito; lo que aún viene de Nora figura en Licencias de código abierto.",
     "origins": "Orígenes",
-    "originsNote": "Empezó como un arreglo: en Nora, el demultiplexor de Chromium fallaba al reproducir FLAC. El arreglo se convirtió en un fork, y el fork en un reproductor propio, reconstruido sobre Tauri con el núcleo y el motor de audio en Rust. El nombre une Nora con Nemori, el alias musical de <Hyperlink>nikenmar</Hyperlink>.",
+    "originsNote": "Empezó como un arreglo: en Nora, el demultiplexor de Chromium fallaba al reproducir FLAC. El arreglo se convirtió en un fork, y el fork en un reproductor propio, reconstruido sobre Tauri con el núcleo y el motor de audio en Rust.",
     "noraRepo": "Repositorio de Nora de Sandakan",
     "sandakanProfile": "Perfil de GitHub de Sandakan",
     "cmrForkRepo": "El antiguo repositorio Nora CMR-Fork"

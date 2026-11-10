@@ -681,7 +681,7 @@
     "importFromNora": "Import from Nora",
     "basedOnNora": "Nemora began as a fork of <NoraLink>Nora</NoraLink> by <SandakanLink>Sandakan Nipunajith</SandakanLink> and was first released as <ForkLink>Nora CMR-Fork</ForkLink>. Most of it has been rewritten since; what still comes from Nora is credited under Open-source licenses.",
     "origins": "Origins",
-    "originsNote": "It started as a fix: in Nora, Chromium's demuxer crashed while playing FLAC. The fix grew into a fork, and the fork into a player of its own, rebuilt on Tauri with a core and an audio engine in Rust. The name joins Nora with Nemori, the music alias of <Hyperlink>nikenmar</Hyperlink>.",
+    "originsNote": "It started as a fix: in Nora, Chromium's demuxer crashed while playing FLAC. The fix grew into a fork, and the fork into a player of its own, rebuilt on Tauri with a core and an audio engine in Rust.",
     "noraRepo": "Sandakan's Nora repository",
     "sandakanProfile": "Sandakan's Github profile",
     "cmrForkRepo": "The former Nora CMR-Fork repository"

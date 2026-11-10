@@ -653,7 +653,7 @@
     "importFromNora": "Nora からインポート",
     "basedOnNora": "Nemora は <SandakanLink>Sandakan Nipunajith</SandakanLink> さんの <NoraLink>Nora</NoraLink> のフォークとして始まり、最初は <ForkLink>Nora CMR-Fork</ForkLink> として公開されました。その後ほとんどが書き直され、Nora から引き継いだ部分はオープンソースライセンスに記載しています。",
     "origins": "起源",
-    "originsNote": "始まりは修正でした。Nora では FLAC の再生中に Chromium のデマルチプレクサがクラッシュしていたのです。修正はフォークになり、フォークは独立したプレーヤーになって、Rust のコアとオーディオエンジンを備えて Tauri で作り直されました。名前は Nora と、<Hyperlink>nikenmar</Hyperlink> の音楽名義 Nemori を組み合わせたものです。",
+    "originsNote": "始まりは修正でした。Nora では FLAC の再生中に Chromium のデマルチプレクサがクラッシュしていたのです。修正はフォークになり、フォークは独立したプレーヤーになって、Rust のコアとオーディオエンジンを備えて Tauri で作り直されました。",
     "noraRepo": "Sandakan の Nora リポジトリ",
     "sandakanProfile": "Sandakan の GitHub プロフィール",
     "cmrForkRepo": "旧 Nora CMR-Fork リポジトリ"

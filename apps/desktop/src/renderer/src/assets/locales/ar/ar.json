@@ -803,7 +803,7 @@
     "importFromNora": "الاستيراد من Nora",
     "basedOnNora": "بدأ Nemora نسخةً مشتقة من <NoraLink>Nora</NoraLink> من تطوير <SandakanLink>Sandakan Nipunajith</SandakanLink>، وصدر أولًا باسم <ForkLink>Nora CMR-Fork</ForkLink>. ومنذ ذلك الحين أُعيدت كتابة معظمه؛ وما زال ما يأتي من Nora مذكورًا في رخص المصادر المفتوحة.",
     "origins": "الأصول",
-    "originsNote": "بدأ الأمر بإصلاح: في Nora كان مُفكِّك الحاويات في Chromium يتعطل عند تشغيل ملفات FLAC. تحوّل الإصلاح إلى نسخة مشتقة، ثم صارت النسخة مشغلًا مستقلًا أُعيد بناؤه على Tauri بنواة ومحرك صوت مكتوبين بلغة Rust. يجمع الاسم بين Nora وNemori، الاسم الموسيقي لـ <Hyperlink>nikenmar</Hyperlink>.",
+    "originsNote": "بدأ الأمر بإصلاح: في Nora كان مُفكِّك الحاويات في Chromium يتعطل عند تشغيل ملفات FLAC. تحوّل الإصلاح إلى نسخة مشتقة، ثم صارت النسخة مشغلًا مستقلًا أُعيد بناؤه على Tauri بنواة ومحرك صوت مكتوبين بلغة Rust.",
     "noraRepo": "مستودع Nora الخاص بـ Sandakan",
     "sandakanProfile": "ملف Sandakan على GitHub",
     "cmrForkRepo": "مستودع Nora CMR-Fork السابق"

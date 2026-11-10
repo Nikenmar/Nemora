@@ -371,18 +371,7 @@ const AboutSettings = () => {
                 {t('settingsPage.origins')}
               </div>
               <p className="max-w-prose text-xs font-light leading-relaxed text-ink opacity-80">
-                <Trans
-                  i18nKey="settingsPage.originsNote"
-                  components={{
-                    Hyperlink: (
-                      <Hyperlink
-                        link="https://github.com/nikenmar"
-                        linkTitle={t('settingsPage.sandakanGithubProfile')}
-                        className="font-normal underline"
-                      />
-                    )
-                  }}
-                />
+                {t('settingsPage.originsNote')}
               </p>
             </div>
           </div>
