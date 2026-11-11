@@ -714,6 +714,16 @@ input[type='checkbox']:checked ~ .checkmark .icon {
   }
 }
 
+/* The update card's bar while the size is unknown or the installer runs (UpdateCard). */
+@keyframes updateSweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
 @keyframes disappearToBottom {
   to {
     opacity: 0;

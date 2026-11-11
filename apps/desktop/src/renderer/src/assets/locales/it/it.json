@@ -1950,5 +1950,17 @@
     "down": "{{tierlist}}: vale come {{to}}, è in {{from}} ({{games}} duelli)",
     "apply": "Sposta in {{to}}",
     "dismiss": "Questo no"
+  },
+  "updateCard": {
+    "available": "Aggiornamento disponibile",
+    "youHave": "Hai la {{version}}",
+    "released": "uscita il {{date}}",
+    "whatsNew": "Novità",
+    "later": "Più tardi",
+    "updateNow": "Aggiorna ora",
+    "downloading": "Download… {{done}} di {{total}} MB",
+    "downloadingSize": "Download… {{done}} MB",
+    "installing": "Installazione. Nemora si chiude e si riapre da sé.",
+    "updating": "Aggiornamento in corso"
   }
 }

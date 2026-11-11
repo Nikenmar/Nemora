@@ -1870,5 +1870,17 @@
     "down": "{{tierlist}}: rates like {{to}}, placed in {{from}} ({{games}} duels)",
     "apply": "Move to {{to}}",
     "dismiss": "Not this one"
+  },
+  "updateCard": {
+    "available": "Update available",
+    "youHave": "You have {{version}}",
+    "released": "released {{date}}",
+    "whatsNew": "What's new",
+    "later": "Later",
+    "updateNow": "Update now",
+    "downloading": "Downloading… {{done}} of {{total}} MB",
+    "downloadingSize": "Downloading… {{done}} MB",
+    "installing": "Installing. Nemora closes and opens again by itself.",
+    "updating": "Updating"
   }
 }

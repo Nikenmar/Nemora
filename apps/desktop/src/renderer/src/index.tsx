@@ -334,9 +334,8 @@ ${reason.stack ?? ''}`
     //
     // Deliberately NOT awaited: it reaches the network, and nothing about
     // starting the player should wait on that. It is also deferred past first
-    // paint, because the confirmation is a native modal and one that appears
-    // while the window is still assembling reads as a fault rather than an
-    // offer.
+    // paint: an offer that appears while the window is still assembling reads
+    // as a fault rather than an offer.
     //
     // Skipped entirely while being benchmarked. A startup measurement that
     // waits for the CPU to go quiet would otherwise be timing a request to
@@ -345,10 +344,19 @@ ${reason.stack ?? ''}`
     const { invoke: invokeCommand } = await import('@tauri-apps/api/core');
     const benchmarking = await invokeCommand<boolean>('benchmark_mode').catch(() => false);
     if (!benchmarking) {
-      void import('@platform/updater').then(async ({ createTauriUpdater }) => {
+      void Promise.all([import('@platform/updater'), import('./other/updateOffer')]).then(async ([{ createTauriUpdater }, offer]) => {
         const { isInDevelopment } = window.api.properties;
         const updater = createTauriUpdater({
           isDevelopment: isInDevelopment,
+          // The offer and the download show in Nemora's own update card (UpdateCard).
+          confirm: (update) =>
+            offer.askToUpdate({
+              version: update.version,
+              currentVersion: update.currentVersion,
+              notes: update.body,
+              date: update.date
+            }),
+          onProgress: (progress) => offer.reportProgress(progress),
           logger: {
             debug: (message, data) => console.debug(message, data),
             info: (message, data) => console.info(message, data),
@@ -360,7 +368,10 @@ ${reason.stack ?? ''}`
         const result = await updater.checkForUpdates();
         // A failed check is reported, never folded into "you are up to date":
         // someone who cannot reach the server should know that.
-        if (result.status === 'failed') console.error('Update check failed.', result.error);
+        if (result.status === 'failed') {
+          console.error('Update check failed.', result.error);
+          offer.dismissUpdate();
+        }
       });
     }
   }

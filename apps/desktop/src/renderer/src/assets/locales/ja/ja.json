@@ -1794,5 +1794,17 @@
     "down": "{{tierlist}}: {{to}} 相当、{{from}} に配置 ({{games}} デュエル)",
     "apply": "{{to}} へ移動",
     "dismiss": "これは違う"
+  },
+  "updateCard": {
+    "available": "アップデートがあります",
+    "youHave": "現在のバージョン: {{version}}",
+    "released": "{{date}} 公開",
+    "whatsNew": "新機能",
+    "later": "後で",
+    "updateNow": "今すぐ更新",
+    "downloading": "ダウンロード中… {{done}} / {{total}} MB",
+    "downloadingSize": "ダウンロード中… {{done}} MB",
+    "installing": "インストール中。Nemora は自動で閉じて再び開きます。",
+    "updating": "更新中"
   }
 }

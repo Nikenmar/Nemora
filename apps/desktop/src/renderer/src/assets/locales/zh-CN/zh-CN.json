@@ -1794,5 +1794,17 @@
     "down": "{{tierlist}}：评分相当于 {{to}}，位于 {{from}} ({{games}} 场对决)",
     "apply": "移至 {{to}}",
     "dismiss": "不是这首"
+  },
+  "updateCard": {
+    "available": "有可用更新",
+    "youHave": "当前版本 {{version}}",
+    "released": "发布于 {{date}}",
+    "whatsNew": "新内容",
+    "later": "稍后",
+    "updateNow": "立即更新",
+    "downloading": "正在下载… {{done}} / {{total}} MB",
+    "downloadingSize": "正在下载… {{done}} MB",
+    "installing": "正在安装。Nemora 会自动关闭并重新打开。",
+    "updating": "正在更新"
   }
 }

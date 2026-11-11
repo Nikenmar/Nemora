@@ -1794,5 +1794,17 @@
     "down": "{{tierlist}}: {{to}} 수준, {{from}}에 배치됨 (듀얼 {{games}}회)",
     "apply": "{{to}}(으)로 이동",
     "dismiss": "이건 아님"
+  },
+  "updateCard": {
+    "available": "업데이트가 있습니다",
+    "youHave": "현재 {{version}}",
+    "released": "{{date}} 출시",
+    "whatsNew": "새로운 점",
+    "later": "나중에",
+    "updateNow": "지금 업데이트",
+    "downloading": "다운로드 중… {{done}} / {{total}} MB",
+    "downloadingSize": "다운로드 중… {{done}} MB",
+    "installing": "설치 중입니다. Nemora가 저절로 닫혔다가 다시 열립니다.",
+    "updating": "업데이트 중"
   }
 }

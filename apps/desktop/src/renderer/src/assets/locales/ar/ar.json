@@ -2184,5 +2184,17 @@
     "down": "{{tierlist}}: تقييمها مثل {{to}}، موضوعة في {{from}} ({{games}} مبارزة)",
     "apply": "نقل إلى {{to}}",
     "dismiss": "ليست هذه"
+  },
+  "updateCard": {
+    "available": "يتوفر تحديث",
+    "youHave": "لديك {{version}}",
+    "released": "صدر في {{date}}",
+    "whatsNew": "ما الجديد",
+    "later": "لاحقًا",
+    "updateNow": "حدّث الآن",
+    "downloading": "جارٍ التنزيل… {{done}} من {{total}} م.ب",
+    "downloadingSize": "جارٍ التنزيل… {{done}} م.ب",
+    "installing": "جارٍ التثبيت. سيُغلق Nemora ويُفتح من تلقاء نفسه.",
+    "updating": "جارٍ التحديث"
   }
 }

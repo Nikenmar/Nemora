@@ -1872,5 +1872,17 @@
     "down": "{{tierlist}}: {{to}} जैसा, {{from}} में रखा ({{games}} द्वंद्व)",
     "apply": "{{to}} में ले जाएँ",
     "dismiss": "यह नहीं"
+  },
+  "updateCard": {
+    "available": "अपडेट उपलब्ध है",
+    "youHave": "आपके पास {{version}} है",
+    "released": "{{date}} को जारी",
+    "whatsNew": "नया क्या है",
+    "later": "बाद में",
+    "updateNow": "अभी अपडेट करें",
+    "downloading": "डाउनलोड हो रहा है… {{total}} में से {{done}} MB",
+    "downloadingSize": "डाउनलोड हो रहा है… {{done}} MB",
+    "installing": "इंस्टॉल हो रहा है। Nemora अपने आप बंद होकर फिर खुलेगा।",
+    "updating": "अपडेट हो रहा है"
   }
 }

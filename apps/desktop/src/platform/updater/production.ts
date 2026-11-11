@@ -3,7 +3,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 
 import { persistSessionBeforeQuit } from '../api/window-controls';
-import type { UpdateProgress, UpdaterLogger } from './types';
+import type { AvailableUpdate, UpdateProgress, UpdaterLogger } from './types';
 import { UpdaterClient } from './updaterClient';
 
 const silentLogger: UpdaterLogger = {
@@ -17,6 +17,8 @@ export interface TauriUpdaterOptions {
   isDevelopment: boolean;
   logger?: UpdaterLogger;
   onProgress?(progress: UpdateProgress): void;
+  /** Asks in the app's own frame; without it the system's message box asks. */
+  confirm?(update: AvailableUpdate): Promise<boolean>;
 }
 
 /**
@@ -31,6 +33,7 @@ export function createTauriUpdater(options: TauriUpdaterOptions): UpdaterClient 
     {
       check,
       confirm: (update) =>
+        options.confirm?.(update) ??
         ask(
           `A new version of Nemora is available: v${update.version}\n\n` +
             `You are on v${update.currentVersion}. Nemora will download the update, close, ` +

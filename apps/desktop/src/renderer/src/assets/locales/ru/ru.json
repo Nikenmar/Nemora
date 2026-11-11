@@ -2028,5 +2028,17 @@
     "down": "{{tierlist}}: оценка как {{to}}, стоит в {{from}} (дуэлей: {{games}})",
     "apply": "Переместить в {{to}}",
     "dismiss": "Не эту"
+  },
+  "updateCard": {
+    "available": "Доступно обновление",
+    "youHave": "У вас {{version}}",
+    "released": "вышло {{date}}",
+    "whatsNew": "Что нового",
+    "later": "Позже",
+    "updateNow": "Обновить",
+    "downloading": "Загрузка… {{done}} из {{total}} МБ",
+    "downloadingSize": "Загрузка… {{done}} МБ",
+    "installing": "Установка. Nemora закроется и откроется сама.",
+    "updating": "Обновление"
   }
 }

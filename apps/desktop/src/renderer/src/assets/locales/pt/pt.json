@@ -1950,5 +1950,17 @@
     "down": "{{tierlist}}: avalia como {{to}}, está em {{from}} ({{games}} duelos)",
     "apply": "Mover para {{to}}",
     "dismiss": "Esta não"
+  },
+  "updateCard": {
+    "available": "Atualização disponível",
+    "youHave": "Você tem a {{version}}",
+    "released": "lançada em {{date}}",
+    "whatsNew": "Novidades",
+    "later": "Depois",
+    "updateNow": "Atualizar agora",
+    "downloading": "Baixando… {{done}} de {{total}} MB",
+    "downloadingSize": "Baixando… {{done}} MB",
+    "installing": "Instalando. O Nemora fecha e abre de novo sozinho.",
+    "updating": "Atualizando"
   }
 }

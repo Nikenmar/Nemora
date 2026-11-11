@@ -1872,5 +1872,17 @@
     "down": "{{tierlist}}: Wertung wie {{to}}, liegt in {{from}} ({{games}} Duelle)",
     "apply": "Nach {{to}} verschieben",
     "dismiss": "Diesen nicht"
+  },
+  "updateCard": {
+    "available": "Update verfügbar",
+    "youHave": "Du hast {{version}}",
+    "released": "erschienen am {{date}}",
+    "whatsNew": "Neu",
+    "later": "Später",
+    "updateNow": "Jetzt aktualisieren",
+    "downloading": "Wird geladen… {{done}} von {{total}} MB",
+    "downloadingSize": "Wird geladen… {{done}} MB",
+    "installing": "Wird installiert. Nemora schließt sich und startet von selbst neu.",
+    "updating": "Wird aktualisiert"
   }
 }

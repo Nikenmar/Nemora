@@ -38,6 +38,7 @@ import TitleBar from './components/TitleBar/TitleBar';
 import SongControlsContainer from './components/SongsControlsContainer/SongControlsContainer';
 import BodyAndSideBarContainer from './components/BodyAndSidebarContainer';
 import PromptMenu from './components/PromptMenu/PromptMenu';
+import UpdateCard from './components/UpdateCard/UpdateCard';
 import ContextMenu from './components/ContextMenu/ContextMenu';
 import './components/ErrorPrompt';
 import Img from './components/Img';
@@ -1506,6 +1507,7 @@ export default function App() {
             )}
             <ContextMenu />
             <PromptMenu />
+            <UpdateCard />
             <TitleBar />
             <BodyAndSideBarContainer />
             <SongControlsContainer />

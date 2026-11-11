@@ -7,6 +7,7 @@
 import { lazy, type ReactNode } from 'react';
 
 import { isBenchRun } from './bench';
+import { updateOfferStore } from './updateOffer';
 import storage from '../utils/localStorage';
 import { store } from '../store';
 import ErrorPrompt from '../components/ErrorPrompt';
@@ -87,6 +88,25 @@ export function registerShots(bridge: ShotsBridge) {
         requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur());
       },
       closePrompt: () => bridge.changePromptMenuData(false, null),
+      /** The update card (UpdateCard) with a sample offer, at its offer or download step. */
+      update: (phase: 'offer' | 'downloading' | 'installing' = 'offer') =>
+        updateOfferStore.setState(() => ({
+          version: '3.1.0',
+          currentVersion: '3.0.0',
+          date: '2026-12-01T12:00:00.000Z',
+          notes:
+            [
+              '## New',
+              '- Folders you can pin to the sidebar',
+              '- Lyrics in the mini player',
+              '- Smart Shuffle learns from the songs you replay',
+              '## Fixed',
+              '- The seek bar no longer jumps after a track change'
+            ].join('\n'),
+          phase,
+          downloadedBytes: phase === 'offer' ? 0 : 19.4 * 1024 * 1024,
+          totalBytes: 48.8 * 1024 * 1024
+        })),
       /** Sets a preference, as its switch in Settings would. */
       setPreference: <Key extends keyof Preferences>(key: Key, value: Preferences[Key]) =>
         storage.preferences.setPreferences(key, value)
