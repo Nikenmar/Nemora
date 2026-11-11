@@ -623,7 +623,7 @@
     "loveNora": "由 <Hyperlink>nikenmar (CMR)</Hyperlink> 用 <span>❤</span> 制作。",
     "sandakanGithubProfile": "nikenmar 的 GitHub 主页",
     "importFromNora": "从 Nora 导入",
-    "basedOnNora": "Nemora 起初是 <SandakanLink>Sandakan Nipunajith</SandakanLink> 的 <NoraLink>Nora</NoraLink> 的分支，最早以 <ForkLink>Nora CMR-Fork</ForkLink> 之名发布。此后几乎全部重写；仍来自 Nora 的部分已在开源许可证中注明。",
+    "basedOnNora": "Nemora 起初是 <SandakanLink>Sandakan Nipunajith</SandakanLink> 的 <NoraLink>Nora</NoraLink> 的分支，最早以 <ForkLink>Nora CMR-Fork</ForkLink> 之名发布。此后几乎全部重写。仍来自 Nora 的部分已在开源许可证中注明。",
     "origins": "起源",
     "originsNote": "一切始于一个修复：在 Nora 中，播放 FLAC 时 Chromium 的解复用器会崩溃。修复变成了分支，分支又成长为独立的播放器，基于 Tauri 重建，核心和音频引擎都用 Rust 编写。",
     "noraRepo": "Sandakan 的 Nora 仓库",

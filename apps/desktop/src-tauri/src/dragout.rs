@@ -71,7 +71,12 @@ pub async fn start_file_drag(app: AppHandle, paths: Vec<String>, artwork: Option
     // A path that no longer exists must not reach `DoDragDrop`: the drop target
     // would be handed a name it cannot open, and the failure would surface in
     // the OTHER application, where it looks like that app's bug.
-    let files: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).filter(|path| path.is_file()).collect();
+    //
+    let files: Vec<PathBuf> = paths
+        .into_iter()
+        .map(|path| file_of(&path))
+        .filter(|path| path.is_file())
+        .collect();
 
     if files.is_empty() {
         return Err("no existing file to drag".to_owned());
@@ -100,6 +105,12 @@ pub async fn start_file_drag(app: AppHandle, paths: Vec<String>, artwork: Option
     .map_err(|error| format!("could not start the drag: {error}"))
 }
 
+/// The file a path or a media URL names: the player bar has the playing song's media URL
+/// (`http://nemora.localhost/...`), the song lists a plain path.
+fn file_of(path: &str) -> PathBuf {
+    crate::protocol::local_path_from_asset_url(path).map_or_else(|| PathBuf::from(path), PathBuf::from)
+}
+
 /// Whether the primary mouse button is held right now (the right one when the buttons are swapped,
 /// as `DoDragDrop` itself reads it).
 #[cfg(windows)]
@@ -120,7 +131,18 @@ fn primary_button_down() -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{DRAG_IMAGE_EDGE, drag_image};
+    use super::{DRAG_IMAGE_EDGE, drag_image, file_of};
+
+    #[test]
+    fn the_player_bars_media_url_names_the_same_file_as_a_plain_path() {
+        // The player bar's menu used to hand over the media URL, which is no file, so its drag
+        // silently did nothing.
+        let path = std::path::Path::new(r"E:\Music\Jun & Co\01 - Wave To Me.flac");
+        let url = crate::view::asset_url(path);
+        assert!(url.starts_with("http://nemora.localhost/"), "{url}");
+        assert_eq!(file_of(&url), path);
+        assert_eq!(file_of(&path.to_string_lossy()), path);
+    }
 
     #[test]
     fn a_song_without_a_usable_cover_still_gets_a_ghost() {

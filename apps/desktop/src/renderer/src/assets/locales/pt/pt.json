@@ -683,7 +683,7 @@
     "loveNora": "Feito com <span>❤</span> por <Hyperlink>nikenmar (CMR)</Hyperlink>.",
     "sandakanGithubProfile": "Perfil de nikenmar no GitHub",
     "importFromNora": "Importar do Nora",
-    "basedOnNora": "O Nemora começou como um fork do <NoraLink>Nora</NoraLink> de <SandakanLink>Sandakan Nipunajith</SandakanLink> e foi lançado primeiro como <ForkLink>Nora CMR-Fork</ForkLink>. Desde então quase tudo foi reescrito; o que ainda vem do Nora está creditado em Licenças de código aberto.",
+    "basedOnNora": "O Nemora começou como um fork do <NoraLink>Nora</NoraLink> de <SandakanLink>Sandakan Nipunajith</SandakanLink> e foi lançado primeiro como <ForkLink>Nora CMR-Fork</ForkLink>. Desde então quase tudo foi reescrito. O que ainda vem do Nora está creditado em Licenças de código aberto.",
     "origins": "Origens",
     "originsNote": "Tudo começou com uma correção: no Nora, o demultiplexador do Chromium travava ao tocar FLAC. A correção virou um fork, e o fork virou um player próprio, reconstruído sobre o Tauri, com núcleo e motor de áudio em Rust.",
     "noraRepo": "Repositório do Nora de Sandakan",
