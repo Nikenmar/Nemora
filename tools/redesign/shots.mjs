@@ -35,6 +35,9 @@ const SOURCE = option('source', join(process.env.APPDATA ?? '', 'Nemora'));
 const THEMES = option('themes', 'dark,light').split(',');
 const ONLY = option('only', '').split(',').filter(Boolean);
 const PORT = Number(option('port', '9361'));
+// --scale 2 renders the view at twice its pixel density (the layout stays the same): crisp text for the
+// README pictures, which are cut and scaled down from these shots.
+const SCALE = Number(option('scale', '1'));
 const SKIP_EMPTY = process.argv.includes('--skip-empty') || Boolean(option('probe', '')) || Boolean(option('film', ''));
 /** `--probe file.js`: run that script in the app (after the library and queue are up) instead of shooting, and print what it returns, once per `--probe-widths`. */
 const PROBE = option('probe', '');
@@ -390,7 +393,7 @@ class Cdp {
     return reply.result.value;
   }
   async view({ width, height }) {
-    await this.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+    await this.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: SCALE, mobile: false });
   }
   async shoot(file) {
     const { data } = await this.send('Page.captureScreenshot', { format: 'png' });

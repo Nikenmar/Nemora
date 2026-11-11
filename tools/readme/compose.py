@@ -1,7 +1,7 @@
 """Builds the README pictures: the hero banner and one card per feature, from real shots of the app.
 
-  node tools/redesign/shots.mjs --label readme --skip-empty --only <the ids in SHOTS below>
-  python tools/readme/compose.py [--shots E:\\tmp\\nemora-shots\\readme\\png] [--only hero,shuffle] [--png]
+  node tools/redesign/shots.mjs --label readme2x --scale 2 --skip-empty --only <the ids in SHOTS below>
+  python tools/readme/compose.py [--shots E:\\tmp\\nemora-shots\\readme2x\\png] [--only hero,shuffle] [--png]
 
 Writes resources/readme/*.webp (and *.png next to them with --png). Needs Python with playwright and
 Pillow; renders in headless Edge (or Chromium), no window. Text is Geologica, the app's font, from
@@ -14,6 +14,8 @@ FONT = ROOT / "apps/desktop/src/renderer/src/assets/fonts/Geologica-latin.woff2"
 BRAND = ROOT / "resources/brand"
 OUT = ROOT / "resources/readme"
 W, H = 1600, 900
+# Rendered at 1.5x (2400 x 1350): sharp on a high-density screen at README width.
+SCALE = 1.5
 
 # Backgrounds: all from the brand blue, each card its own light.
 BG = {
@@ -95,8 +97,14 @@ html, body {{ margin: 0; width: {W}px; height: {H}px; overflow: hidden; font-fam
 .copy h2 {{ margin: 0; font-size: 76px; line-height: 1.02; font-weight: 600; letter-spacing: -0.025em; }}
 .copy p {{ margin: 0; font-size: 26px; line-height: 1.45; font-weight: 400; color: rgba(255,255,255,.82); max-width: 520px; }}
 .win {{ position: absolute; border-radius: 16px; overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 40px 90px rgba(3,8,30,.55), 0 12px 30px rgba(3,8,30,.35); }}
+  box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 50px 110px rgba(3,8,30,.6), 0 14px 34px rgba(3,8,30,.4); }}
 .win img {{ display: block; width: 100%; height: auto; }}
+/* a glass edge: light catching the top of the window */
+.win::after {{ content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 18%); }}
+/* the screen's own light spilling onto the backdrop */
+.glow {{ position: absolute; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(110,160,255,.42), rgba(70,120,240,.16) 55%, rgba(40,80,200,0)); }}
 .pill {{ display: inline-block; padding: 10px 20px; border-radius: 999px; font-size: 24px; font-weight: 500;
   background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }}
 """
@@ -107,7 +115,9 @@ def mark_svg():
 
 
 def windows(spec, shots):
-    return "".join(f'<div class="win" style="width:{w}px;left:{x}px;top:{y}px"><img src="{u}"></div>'
+    x, y, w = spec["shots"][0][3]
+    glow = f'<div class="glow" style="left:{x - w * 0.15}px;top:{y - w * 0.12}px;width:{w * 1.3}px;height:{w * 0.9}px"></div>'
+    return glow + "".join(f'<div class="win" style="width:{w}px;left:{x}px;top:{y}px"><img src="{u}"></div>'
                    for u, (_, _, _, (x, y, w)) in zip(shots, spec["shots"]))
 
 
@@ -139,7 +149,7 @@ def hero_html(shots):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--shots", default=r"E:\tmp\nemora-shots\readme\png")
+    ap.add_argument("--shots", default=r"E:\tmp\nemora-shots\readme2x\png")
     ap.add_argument("--only", default="")
     ap.add_argument("--png", action="store_true")
     a = ap.parse_args()
@@ -167,22 +177,25 @@ def main():
                     print(key, "missing", f.name)
                     break
                 if crop:
+                    # Crops are written in the 1600 x 900 layout; the shots may be denser (--scale).
+                    shot = Image.open(f)
+                    k = shot.width / 1600
                     cut = OUT / f"_crop-{key}-{len(files)}.png"
-                    Image.open(f).crop(crop).save(cut)
+                    shot.crop(tuple(round(v * k) for v in crop)).save(cut)
                     f = cut
                 files.append(f)
             if len(files) != len(spec["shots"]):
                 continue
             tmp.write_text(f"<!doctype html><html><head><meta charset='utf-8'><style>{css()}</style></head>"
                            f"<body>{fn([f.as_uri() for f in files])}</body></html>", encoding="utf-8")
-            pg = br.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
+            pg = br.new_page(viewport={"width": W, "height": H}, device_scale_factor=SCALE)
             pg.goto(tmp.as_uri())
             pg.evaluate("document.fonts.ready")
             pg.wait_for_function("[...document.images].every(i => i.complete && i.naturalWidth)")
             png = pg.screenshot()
             pg.close()
             im = Image.open(io.BytesIO(png)).convert("RGB")
-            im.save(OUT / f"{key}.webp", quality=88, method=6)
+            im.save(OUT / f"{key}.webp", quality=90, method=6)
             if a.png:
                 im.save(OUT / f"{key}.png")
             print(key, (OUT / f"{key}.webp").stat().st_size // 1024, "KiB")
