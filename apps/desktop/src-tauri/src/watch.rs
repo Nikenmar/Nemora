@@ -13,7 +13,9 @@ use tauri::{AppHandle, Manager};
 use crate::app::App;
 
 /// How long the folders must stay quiet before the rescan: copying a large album writes for a while.
-const QUIET: Duration = Duration::from_secs(2);
+/// A rescan of an unchanged 1 779-song library takes about 3 ms, so the wait is all there is; a
+/// second is enough for a copy to settle, and a file still being written is read again later.
+const QUIET: Duration = Duration::from_secs(1);
 
 #[derive(Default)]
 pub struct FolderWatch {
@@ -35,6 +37,23 @@ fn matters(event: &Event) -> bool {
         && event.paths.iter().any(|p| relevant(p))
 }
 
+/// What a rescan tells the view. The song lists listen for `songs/newSong` and `songs/deletedSong`
+/// (the plain `songs` alone left an open Songs page as it was, so a file dropped into a folder
+/// showed only once the page was opened again); artists, albums and genres for their own names.
+fn changed_kinds(report: &nemora_core::scan::ScanReport) -> Vec<&'static str> {
+    let mut kinds = vec!["songs", "artists", "albums", "genres", "userData/musicFolder"];
+    if report.added + report.restored > 0 {
+        kinds.extend(["songs/newSong", "genres/newGenre"]);
+    }
+    if report.missing > 0 {
+        kinds.extend(["songs/deletedSong", "genres/deletedGenre"]);
+    }
+    if report.updated > 0 {
+        kinds.push("songs/updatedSong");
+    }
+    kinds
+}
+
 /// Rescans after each burst of changes, once it has gone quiet.
 fn debounce(handle: AppHandle, changes: Receiver<()>) {
     while changes.recv().is_ok() {
@@ -42,7 +61,7 @@ fn debounce(handle: AppHandle, changes: Receiver<()>) {
         let app = handle.state::<App>();
         match app.scan() {
             Ok(report) if report.added + report.updated + report.restored + report.missing > 0 => {
-                crate::commands::notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
+                crate::commands::notify(&handle, &changed_kinds(&report));
             }
             Ok(_) => {}
             Err(error) => eprintln!("[nemora] rescan after a folder change failed: {error}"),
@@ -92,6 +111,16 @@ pub fn sync(handle: &AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_new_file_tells_the_song_lists() {
+        let added = nemora_core::scan::ScanReport { added: 1, ..Default::default() };
+        let kinds = changed_kinds(&added);
+        assert!(kinds.contains(&"songs/newSong"), "{kinds:?}");
+        assert!(!kinds.contains(&"songs/deletedSong"), "{kinds:?}");
+        let gone = nemora_core::scan::ScanReport { missing: 2, ..Default::default() };
+        assert!(changed_kinds(&gone).contains(&"songs/deletedSong"));
+    }
 
     #[test]
     fn only_audio_files_and_folders_matter() {
