@@ -28,6 +28,7 @@ import MultipleSelectionCheckbox from '../MultipleSelectionCheckbox';
 
 import { versionMenuItems } from '../../other/versionMenu';
 const AddSongsToPlaylistsPrompt = lazy(() => import('./AddSongsToPlaylistsPrompt'));
+const WhyThisSongPrompt = lazy(() => import('../WhyThisSongPrompt'));
 const BlacklistSongConfrimPrompt = lazy(() => import('./BlacklistSongConfirmPrompt'));
 const DeleteSongsFromSystemConfrimPrompt = lazy(
   () => import('./DeleteSongsFromSystemConfrimPrompt')
@@ -442,6 +443,17 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
       },
       // Versions (PLAN/18 D6), for one song at a time.
       ...(isAMultipleSelection ? [] : versionMenuItems(songId, title, t, changePromptMenuData, addNewNotifications, version)),
+      // Why this song? (PLAN/14 C1) wherever Smart Shuffle's reason shows under the song.
+      ...(isShuffleReasonShown && !isAMultipleSelection
+        ? [
+            {
+              label: t('smartShuffle.whyThisSong'),
+              iconName: 'auto_fix',
+              handlerFunction: () =>
+                changePromptMenuData(true, <WhyThisSongPrompt songId={songId} title={title} />, '!max-w-[34rem]')
+            }
+          ]
+        : []),
       {
         label: t(`common.${isAMultipleSelection ? 'unselect' : 'select'}`),
         iconName: 'checklist',
@@ -635,7 +647,8 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
     updateMultipleSelections,
     changeCurrentActivePage,
     path,
-    localStorageData?.preferences.doNotShowBlacklistSongConfirm
+    localStorageData?.preferences.doNotShowBlacklistSongConfirm,
+    isShuffleReasonShown
   ]);
 
   const contextMenuItemData: ContextMenuAdditionalData =
@@ -749,7 +762,7 @@ const Song = forwardRef((props: SongProp, ref: ForwardedRef<HTMLDivElement>) => 
             {isShuffleReasonShown && (
               <>
                 <span className="text-ink-faint"> · </span>
-                <ShuffleReason songId={songId} />
+                <ShuffleReason songId={songId} title={title} />
               </>
             )}
           </div>

@@ -81,6 +81,10 @@ export function registerShots(bridge: ShotsBridge) {
         if (!make) throw new Error(`no prompt called ${name}`);
         const [prompt, className] = make();
         bridge.changePromptMenuData(true, prompt, className);
+        // The dialog focuses its close button as it opens, and with no mouse used before that
+        // focus counts as a keyboard one, so its "Close" tooltip showed in every shot of a prompt.
+        // A person opening it by a click gets no tooltip; the shot should not either.
+        requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur());
       },
       closePrompt: () => bridge.changePromptMenuData(false, null),
       /** Sets a preference, as its switch in Settings would. */

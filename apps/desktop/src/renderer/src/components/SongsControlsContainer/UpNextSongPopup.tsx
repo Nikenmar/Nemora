@@ -184,7 +184,7 @@ const UpNextSongPopup = (props: Props) => {
         {isReasonShown && (
           <>
             <span className="opacity-60"> · </span>
-            <ShuffleReason songId={upNextSongData.songId} className={isSemiTransparent ? '!text-on-media/60' : ''} />
+            <ShuffleReason songId={upNextSongData.songId} title={upNextSongData.title} className={isSemiTransparent ? '!text-on-media/60' : ''} />
           </>
         )}
       </p>
