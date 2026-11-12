@@ -10,7 +10,11 @@
 
 </div>
 
-Nemora plays the music on your own computer: your files, your folders, your tags. No account, no stream, no ads. It is built around one idea, that a player you use every day should get to know your taste and show you what it learned.
+**Nemora is a music player for Windows, built for the library you have collected yourself.** Point it at your folders and it plays your FLAC, MP3, Opus and the rest through its own Rust audio engine: bit-perfect at full volume, gapless from one track to the next.
+
+Then it starts to learn. Every play, skip, replay, tier and duel shapes Smart Shuffle, which picks what comes next and tells you why. The same listening becomes statistics, a map of your taste and mixes made from it. And when you want a song to sound different, slow it down, speed it up or put it in a hall of reverb, and keep that version for later.
+
+Everything stays on your computer: no account, no ads, no tracking.
 
 ## Why Nemora
 
