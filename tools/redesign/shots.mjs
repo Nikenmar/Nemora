@@ -187,6 +187,12 @@ const SHOTS = [
   { id: '36m-home-today', surface: 'Home, Today: Continue and the mix of the day (PLAN/19)', setup: `S.go('Home'); for (let i = 0; i < 40 && !document.querySelector('.mix-of-the-day'); i++) await wait(250);`, settle: 1500 },
   { id: '36n-home-for-you', surface: 'Home, For you with its tabs, On repeat chosen', setup: `S.go('Home'); for (let i = 0; i < 40 && !document.querySelector('.for-you-container [role=tab]'); i++) await wait(250); const tabs = [...document.querySelectorAll('.for-you-container [role=tab]')]; (tabs.find((b) => /On repeat/.test(b.textContent)) ?? tabs[1])?.click(); await wait(800); document.querySelector('.for-you-container').scrollIntoView({ block: 'center' });`, settle: 1200 },
   { id: '36o-mix-page', surface: 'The mix of the day as a page, with why each song is in it', setup: `S.go('SmartList', { list: 'mix' }); for (let i = 0; i < 40 && !document.querySelector('.smart-list-row'); i++) await wait(250);`, settle: 1500 },
+  // The README's own shots (tools/readme/compose.py): see README_HIDDEN and README_SONGS above.
+  { id: 'r-home', surface: 'README: Home, Today and For you', setup: `S.closePrompt(); S.go('Home'); await readmeHome();`, settle: 1200 },
+  { id: 'r-tierlist', surface: 'README: a sample tierlist of well-known songs', setup: `S.closePrompt(); const ids = await readmeSongIds(); let tl = (await api.tierlistsData.getTierlistData([])).find((x) => x.name === 'Desert island'); if (!tl) { const pl = await api.playlistsData.addNewPlaylist('Desert island', ids); tl = (await api.tierlistsData.addTierlist('Desert island', [pl.playlist.playlistId], 'track')).tierlist; } const cut = [0, 5, 11, 17, 21]; tl.tiers = tl.tiers.slice(0, 4).map((tier, i) => ({ ...tier, items: ids.slice(cut[i], cut[i + 1]) })); await api.tierlistsData.saveTierlist(tl); S.go('Home'); await wait(600); S.go('TierlistEditor', { tierlistId: tl.tierlistId });`, settle: 2500 },
+  { id: 'r-sound', surface: 'README: Slowed & reverb panel over the sample tierlist (shoot after r-tierlist)', setup: `S.closePrompt(); const tl = (await api.tierlistsData.getTierlistData([])).find((x) => x.name === 'Desert island'); S.go('Home'); await wait(600); S.go('TierlistEditor', { tierlistId: tl.tierlistId }); await wait(2000); document.querySelector('.sound-btn').click(); await wait(500); [...document.querySelectorAll('.sound-panel button')].find((b) => b.textContent.trim() === 'Slowed')?.click(); await wait(200); [...document.querySelectorAll('.sound-panel button')].find((b) => b.textContent.trim() === '+ Reverb')?.click();`, settle: 1200 },
+  { id: 'r-search', surface: 'README: search with a typo, Did you mean', setup: `S.closePrompt(); S.go('Search', { keyword: 'smels like teen sprit' }); for (let i = 0; i < 40 && !document.querySelector('.most-relevant-results-container, .did-you-mean'); i++) await wait(250);`, settle: 1200 },
+  { id: 'r-duel', surface: 'README: a duel of two well-known songs', setup: `S.closePrompt(); S.go('Songs'); await wait(400); const ids = await readmeSongIds(); const [a, b] = [ids[2], ids[1]]; const side = (pair, id) => (pair.songA.songId === id ? pair.songA : pair.songB); const pair = { songA: side(await api.eloDuels.getDuelPair(a), a), songB: side(await api.eloDuels.getDuelPair(b), b) }; const real = api.eloDuels.getDuelPair; api.eloDuels.getDuelPair = async () => pair; document.querySelector('[data-shot=duel-dock]').click(); await wait(1500); api.eloDuels.getDuelPair = real;`, settle: 1500 },
   { id: '36y-update-offer', surface: 'Update card: a new version offered (a sample offer)', setup: `S.closePrompt(); S.go('Home'); await wait(800); S.update('offer');`, settle: 900 },
   { id: '36z-update-downloading', surface: 'Update card: the download under way (a sample)', setup: `S.go('Home'); await wait(800); S.update('downloading');`, settle: 900 },
   { id: '36x-settings-about', surface: 'Settings, About', setup: `S.closePrompt(); await wait(500); S.go('Settings'); for (let i = 0; i < 40 && !document.querySelector('.about-container'); i++) await wait(250); document.querySelector('.about-container').scrollIntoView({ block: 'start' });`, settle: 1200 },
@@ -219,6 +225,38 @@ const EMPTY_SHOTS = [
 /** Helpers available to every setup. */
 const HELPERS = `
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ----- the README's shots (tools/readme): the real app, with what a public page should not show left out
+// Songs the README does not show by name, and Home's Recently added row (small artists, not to be promoted).
+const README_HIDDEN = [];
+async function readmeHome() {
+  for (let i = 0; i < 40 && !document.querySelector('.mix-of-the-day'); i++) await wait(250);
+  await wait(700);
+  for (const row of document.querySelectorAll('.recently-added-songs-container, .recently-played-songs-container')) row.remove();
+  for (const grid of document.querySelectorAll('.for-you-container .songs-container, .for-you-container [class*=grid]')) {
+    for (const card of [...grid.children]) if (README_HIDDEN.some((r) => r.test(card.textContent))) card.remove();
+  }
+}
+// Well-known songs, for the README's sample tierlist and duel (title, artist).
+const README_SONGS = [
+  ['Smells Like Teen Spirit', 'Nirvana'], ['Where Is My Mind? (Remastered)', 'Pixies'], ['Little Dark Age', 'MGMT'],
+  ['Better Off Alone', 'Alice Deejay'], ['aruarian dance', 'Nujabes'], ['Chamber Of Reflection', 'Mac Demarco'],
+  ['Freaks', 'Surf Curse'], ["Jazz (We've Got)", 'A Tribe Called Quest'], ['I Wish (Radio Edit)', 'Skee-Lo'],
+  ['Key', 'C418'], ['Frostfall', 'Jeremy Soule'], ['Crimewave', 'Crystal Castles'], ['Mrs Magic', 'Strawberry Guy'],
+  ['Road to the West', 'Seatbelts'], ['children (nostalgia verision)', 'robert miles'], ['Poison Tree', 'Grouper'],
+  ['Feather', 'Nujabes'], ['Betty (Get Money)', 'Yung Gravy'], ['Mice on Venus', 'C418'], ['QKThr', 'Aphex Twin'],
+  ['Only Love Can Break Your Heart (Masters at Work Mix)', 'Saint Etienne'], ['Serenity', 'Capcom Sound Team'],
+  ['Elrond Half-elven', 'Bear McCreary'], ['Scatman (Sped Up)', 'Scatman John']
+];
+async function readmeSongIds() {
+  const songs = (await api.audioLibraryControls.getAllSongs('aToZ'))?.data ?? [];
+  const ids = [];
+  for (const [title, artist] of README_SONGS) {
+    const song = songs.find((x) => x.title === title && x.artists?.some((a) => a.name === artist));
+    if (song) ids.push(song.songId);
+  }
+  return ids;
+}
 // Motion (PLAN/14): finite animations only; looping ones (equalizer bars, spinners) are left alone.
 const finite = (a) => Number.isFinite(a.effect?.getComputedTiming?.().activeDuration ?? Infinity);
 async function untilAnimating(timeout = 1500) {

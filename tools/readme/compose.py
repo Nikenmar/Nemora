@@ -35,11 +35,11 @@ CARDS = [
          title="Smart Shuffle<br>that explains itself",
          text="It leans toward what you rate and how you listen, shows why each song comes next, and lets you steer it for the session."),
     dict(key="tierlists", bg="dawn", side="right",
-         shots=[("31-tierlist-editor", "dark", None, (60, 190, 840))],
+         shots=[("r-tierlist", "light", None, (60, 190, 840))],
          title="Rank your music<br>in tierlists",
          text="Drag songs into tiers, play a tierlist like a playlist, export it as an image. Your tiers feed Smart Shuffle."),
     dict(key="duels", bg="deep", side="left",
-         shots=[("34-duel", "dark", (421, 122, 1179, 778), (760, 120, 600)), ("33-songguessr", "dark", (543, 86, 1057, 814), (1150, 250, 380))],
+         shots=[("r-duel", "dark", (421, 122, 1179, 778), (760, 120, 600)), ("33-songguessr", "dark", (543, 86, 1057, 814), (1150, 250, 380))],
          title="Duels and<br>Song Guessr",
          text="A little bit of fun with your own library. Pick the better of two songs and an ELO rating sorts it by what you really choose. Or name a track from a tenth of a second."),
     dict(key="stats", bg="sky", side="right",
@@ -51,11 +51,11 @@ CARDS = [
          title="Your taste,<br>as a map",
          text="The whole library laid out by how you listen: islands of songs that belong together. Pick an area and play it."),
     dict(key="sound", bg="night", side="right",
-         shots=[("36k-sound-panel", "dark", None, (40, 170, 780)), ("36k-sound-panel", "dark", (1065, 363, 1398, 836), (560, 240, 340))],
+         shots=[("r-sound", "dark", None, (40, 170, 780)), ("r-sound", "dark", (1065, 363, 1397, 835), (560, 240, 340))],
          title="Slowed<br>+ reverb",
          text="Speed, pitch and a real reverb in the audio engine. Keep a sound as a version of the song, or switch the song itself to it."),
     dict(key="search", bg="dawn", side="left",
-         shots=[("36s-search-did-you-mean", "dark", (205, 0, 1600, 620), (760, 90, 820)), ("36q-search-in-lyrics", "dark", (624, 2, 1120, 44), (800, 500, 500)), ("36q-search-in-lyrics", "dark", (215, 680, 1600, 812), (720, 570, 820))],
+         shots=[("r-search", "dark", (205, 0, 1600, 620), (760, 90, 820)), ("36q-search-in-lyrics", "dark", (624, 2, 1120, 44), (800, 500, 500)), ("36q-search-in-lyrics", "dark", (215, 680, 1600, 812), (720, 570, 820))],
          title="Search that<br>gets you",
          text="Typos, any word order, Japanese readings, a wrong keyboard layout, even a line of the lyrics: it still finds the song."),
     dict(key="fullscreen", bg="ink", side="right",
@@ -67,11 +67,11 @@ CARDS = [
          title="Ask an AI<br>about your music",
          text="Connect Claude or another agent over MCP: it reads your library and stats, builds playlists, runs the queue. You choose how much it may do."),
     dict(key="yours", bg="sky", side="right",
-         shots=[("36m-home-today", "dark", None, (60, 340, 700)), ("37-accent-picker", "light", (458, 65, 1561, 520), (200, 120, 680))],
+         shots=[("r-search", "dark", None, (60, 340, 700)), ("37-accent-picker", "light", (458, 65, 1561, 520), (200, 120, 680))],
          title="Make it<br>yours",
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
-HERO = dict(key="hero", shots=[("36m-home-today", "dark", None, (800, 150, 1100))])
+HERO = dict(key="hero", shots=[("r-tierlist", "dark", None, (800, 150, 1100))])
 # Order in the README; the cards alternate sides from the first, mirrored where they were drawn the other way.
 ORDER = ["tierlists", "sound", "shuffle", "stats", "search", "duels", "tastemap", "fullscreen", "agents", "yours"]
 
