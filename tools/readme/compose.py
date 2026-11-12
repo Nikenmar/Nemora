@@ -1,6 +1,6 @@
 """Builds the README pictures: the hero banner and one card per feature, from real shots of the app.
 
-  node tools/redesign/shots.mjs --label readme2x --scale 2 --skip-empty --only <the ids in SHOTS below>
+  node tools/redesign/shots.mjs --label readme2x --scale 2 --readme --skip-empty --only <the ids in SHOTS below>
   python tools/readme/compose.py [--shots E:\\tmp\\nemora-shots\\readme2x\\png] [--only hero,shuffle] [--png]
 
 Writes resources/readme/*.webp (and *.png next to them with --png). Needs Python with playwright and
@@ -35,7 +35,7 @@ CARDS = [
          title="Smart Shuffle<br>that explains itself",
          text="It leans toward what you rate and how you listen, shows why each song comes next, and lets you steer it for the session."),
     dict(key="tierlists", bg="dawn", side="right",
-         shots=[("r-tierlist", "light", None, (60, 190, 840))],
+         shots=[("r-tierlist", "dark", None, (60, 190, 840))],
          title="Rank your music<br>in tierlists",
          text="Drag songs into tiers, play a tierlist like a playlist, export it as an image. Your tiers feed Smart Shuffle."),
     dict(key="duels", bg="deep", side="left",
@@ -55,7 +55,7 @@ CARDS = [
          title="Slowed<br>+ reverb",
          text="Speed, pitch and a real reverb in the audio engine. Keep a sound as a version of the song, or switch the song itself to it."),
     dict(key="search", bg="dawn", side="left",
-         shots=[("r-search", "dark", (205, 0, 1600, 620), (760, 90, 820)), ("36q-search-in-lyrics", "dark", (624, 2, 1120, 44), (800, 500, 500)), ("36q-search-in-lyrics", "dark", (215, 680, 1600, 812), (720, 570, 820))],
+         shots=[("r-search", "dark", (205, 0, 1600, 590), (760, 100, 820)), ("36q-search-in-lyrics", "dark", (624, 2, 1120, 44), (800, 500, 500)), ("36q-search-in-lyrics", "dark", (215, 680, 1600, 812), (720, 570, 820))],
          title="Search that<br>gets you",
          text="Typos, any word order, Japanese readings, a wrong keyboard layout, even a line of the lyrics: it still finds the song."),
     dict(key="fullscreen", bg="ink", side="right",
@@ -71,7 +71,7 @@ CARDS = [
          title="Make it<br>yours",
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
-HERO = dict(key="hero", shots=[("r-tierlist", "dark", None, (800, 150, 1100))])
+HERO = dict(key="hero", shots=[("r-home", "dark", None, (800, 150, 1100))])
 # Order in the README; the cards alternate sides from the first, mirrored where they were drawn the other way.
 ORDER = ["tierlists", "sound", "shuffle", "stats", "search", "duels", "tastemap", "fullscreen", "agents", "yours"]
 

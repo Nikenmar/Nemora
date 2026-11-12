@@ -189,10 +189,10 @@ const SHOTS = [
   { id: '36o-mix-page', surface: 'The mix of the day as a page, with why each song is in it', setup: `S.go('SmartList', { list: 'mix' }); for (let i = 0; i < 40 && !document.querySelector('.smart-list-row'); i++) await wait(250);`, settle: 1500 },
   // The README's own shots (tools/readme/compose.py): see README_HIDDEN and README_SONGS above.
   { id: 'r-home', surface: 'README: Home, Today and For you', setup: `S.closePrompt(); S.go('Home'); await readmeHome();`, settle: 1200 },
-  { id: 'r-tierlist', surface: 'README: a sample tierlist of well-known songs', setup: `S.closePrompt(); const ids = await readmeSongIds(); let tl = (await api.tierlistsData.getTierlistData([])).find((x) => x.name === 'Desert island'); if (!tl) { const pl = await api.playlistsData.addNewPlaylist('Desert island', ids); tl = (await api.tierlistsData.addTierlist('Desert island', [pl.playlist.playlistId], 'track')).tierlist; } const cut = [0, 5, 11, 17, 21]; tl.tiers = tl.tiers.slice(0, 4).map((tier, i) => ({ ...tier, items: ids.slice(cut[i], cut[i + 1]) })); await api.tierlistsData.saveTierlist(tl); S.go('Home'); await wait(600); S.go('TierlistEditor', { tierlistId: tl.tierlistId });`, settle: 2500 },
+  { id: 'r-tierlist', surface: 'README: a sample tierlist of well-known songs', setup: `S.closePrompt(); const ids = await readmeSongIds(); let tl = (await api.tierlistsData.getTierlistData([])).find((x) => x.name === 'Desert island'); if (!tl) { const pl = await api.playlistsData.addNewPlaylist('Desert island', ids); tl = (await api.tierlistsData.addTierlist('Desert island', [pl.playlist.playlistId], 'track')).tierlist; } const cut = [0, 5, 11, 17, 23]; tl.tiers = tl.tiers.slice(0, 4).map((tier, i) => ({ ...tier, items: ids.slice(cut[i], cut[i + 1]) })); await api.tierlistsData.saveTierlist(tl); S.go('Home'); await wait(600); S.go('TierlistEditor', { tierlistId: tl.tierlistId });`, settle: 2500 },
   { id: 'r-sound', surface: 'README: Slowed & reverb panel over the sample tierlist (shoot after r-tierlist)', setup: `S.closePrompt(); const tl = (await api.tierlistsData.getTierlistData([])).find((x) => x.name === 'Desert island'); S.go('Home'); await wait(600); S.go('TierlistEditor', { tierlistId: tl.tierlistId }); await wait(2000); document.querySelector('.sound-btn').click(); await wait(500); [...document.querySelectorAll('.sound-panel button')].find((b) => b.textContent.trim() === 'Slowed')?.click(); await wait(200); [...document.querySelectorAll('.sound-panel button')].find((b) => b.textContent.trim() === '+ Reverb')?.click();`, settle: 1200 },
-  { id: 'r-search', surface: 'README: search with a typo, Did you mean', setup: `S.closePrompt(); S.go('Search', { keyword: 'smels like teen sprit' }); for (let i = 0; i < 40 && !document.querySelector('.most-relevant-results-container, .did-you-mean'); i++) await wait(250);`, settle: 1200 },
-  { id: 'r-duel', surface: 'README: a duel of two well-known songs', setup: `S.closePrompt(); S.go('Songs'); await wait(400); const ids = await readmeSongIds(); const [a, b] = [ids[2], ids[1]]; const side = (pair, id) => (pair.songA.songId === id ? pair.songA : pair.songB); const pair = { songA: side(await api.eloDuels.getDuelPair(a), a), songB: side(await api.eloDuels.getDuelPair(b), b) }; const real = api.eloDuels.getDuelPair; api.eloDuels.getDuelPair = async () => pair; document.querySelector('[data-shot=duel-dock]').click(); await wait(1500); api.eloDuels.getDuelPair = real;`, settle: 1500 },
+  { id: 'r-search', surface: 'README: a Japanese title found from its reading with a typo, Did you mean', setup: `S.closePrompt(); S.go('Search', { keyword: 'yoru ni kakru' }); for (let i = 0; i < 40 && !document.querySelector('.most-relevant-results-container, .did-you-mean'); i++) await wait(250);`, settle: 1200 },
+  { id: 'r-duel', surface: 'README: a duel of two well-known songs', setup: `S.closePrompt(); S.go('Songs'); await wait(400); const songs = (await api.audioLibraryControls.getAllSongs('aToZ'))?.data ?? []; const id = (t) => songs.find((x) => x.title === t)?.songId; const [a, b] = [id('Little Dark Age'), id('Where Is My Mind? (Remastered)')]; const side = (pair, id) => (pair.songA.songId === id ? pair.songA : pair.songB); const pair = { songA: side(await api.eloDuels.getDuelPair(a), a), songB: side(await api.eloDuels.getDuelPair(b), b) }; const real = api.eloDuels.getDuelPair; api.eloDuels.getDuelPair = async () => pair; document.querySelector('[data-shot=duel-dock]').click(); await wait(1500); api.eloDuels.getDuelPair = real;`, settle: 1500 },
   { id: '36y-update-offer', surface: 'Update card: a new version offered (a sample offer)', setup: `S.closePrompt(); S.go('Home'); await wait(800); S.update('offer');`, settle: 900 },
   { id: '36z-update-downloading', surface: 'Update card: the download under way (a sample)', setup: `S.go('Home'); await wait(800); S.update('downloading');`, settle: 900 },
   { id: '36x-settings-about', surface: 'Settings, About', setup: `S.closePrompt(); await wait(500); S.go('Settings'); for (let i = 0; i < 40 && !document.querySelector('.about-container'); i++) await wait(250); document.querySelector('.about-container').scrollIntoView({ block: 'start' });`, settle: 1200 },
@@ -232,14 +232,14 @@ const README_HIDDEN = [];
 async function readmeHome() {
   for (let i = 0; i < 40 && !document.querySelector('.mix-of-the-day'); i++) await wait(250);
   await wait(700);
-  for (const row of document.querySelectorAll('.recently-added-songs-container, .recently-played-songs-container')) row.remove();
-  for (const grid of document.querySelectorAll('.for-you-container .songs-container, .for-you-container [class*=grid]')) {
+  document.querySelector('.recently-added-songs-container')?.remove();
+  for (const grid of document.querySelectorAll('.home-page .songs-container, .home-page .artists-container')) {
     for (const card of [...grid.children]) if (README_HIDDEN.some((r) => r.test(card.textContent))) card.remove();
   }
 }
 // Well-known songs, for the README's sample tierlist and duel (title, artist).
 const README_SONGS = [
-  ['Smells Like Teen Spirit', 'Nirvana'], ['Where Is My Mind? (Remastered)', 'Pixies'], ['Little Dark Age', 'MGMT'],
+  ['Where Is My Mind? (Remastered)', 'Pixies'], ['Little Dark Age', 'MGMT'],
   ['Better Off Alone', 'Alice Deejay'], ['aruarian dance', 'Nujabes'], ['Chamber Of Reflection', 'Mac Demarco'],
   ['Freaks', 'Surf Curse'], ["Jazz (We've Got)", 'A Tribe Called Quest'], ['I Wish (Radio Edit)', 'Skee-Lo'],
   ['Key', 'C418'], ['Frostfall', 'Jeremy Soule'], ['Crimewave', 'Crystal Castles'], ['Mrs Magic', 'Strawberry Guy'],
@@ -508,6 +508,7 @@ function prepareProfile(dir, copyFrom) {
     // follow whatever the user did last. A run that needs that state makes it itself.
     const copy = new DatabaseSync(join(dir, 'profile', 'nemora.db'));
     copy.exec("DELETE FROM settings_device WHERE key LIKE 'view.%' OR key LIKE 'queue.%'; DELETE FROM queue_items;");
+    if (README_PLAYS) seedReadmePlays(copy);
     copy.close();
     if (existsSync(join(copyFrom, 'covers'))) cpSync(join(copyFrom, 'covers'), join(dir, 'profile', 'covers'), { recursive: true });
   });
@@ -518,6 +519,33 @@ function prepareProfile(dir, copyFrom) {
  * and webview data): an app restart, for checks across one (PLAN/21 P21.4).
  */
 const REUSE = process.argv.includes('--reuse');
+
+/**
+ * `--readme`: the README's shots (r-*) play a set of songs first, in the COPY only: a few recent
+ * plays of well-known and everyday songs, newest first, so Home's Continue, Recently played and
+ * Recent artists show them rather than whatever the profile played last.
+ */
+const README_PLAYS = process.argv.includes('--readme');
+const README_PLAYED = [
+  ['Little Dark Age', 'MGMT'], ['Where Is My Mind? (Remastered)', 'Pixies'], ['夜に駆ける', 'YOASOBI'],
+  ['Chamber Of Reflection', 'Mac Demarco'], ['aruarian dance', 'Nujabes'], ['satellites', 'Øneheart'],
+  ['Freaks', 'Surf Curse'], ['Key', 'C418'], ['Better Off Alone', 'Alice Deejay'], ['Mrs Magic', 'Strawberry Guy'],
+  ['Crimewave', 'Crystal Castles'], ['Frostfall', 'Jeremy Soule']
+];
+function seedReadmePlays(db) {
+  const find = db.prepare(`SELECT v.song_id FROM track_variants v JOIN variant_artists a ON a.variant_id = v.variant_id
+    WHERE v.title = ? AND a.name = ? AND a.position = 0 LIMIT 1`);
+  const add = db.prepare(`INSERT OR REPLACE INTO play_events (event_id, device_id, seq, song_id, started_at, ended_at,
+    utc_offset_min, heard_ms, duration_ms, max_position_ms, end_reason) VALUES (?, 'readme', ?, ?, ?, ?, ?, 180000, 180000, 180000, 'finished')`);
+  const now = Date.now();
+  const offset = -new Date().getTimezoneOffset();
+  README_PLAYED.forEach(([title, artist], i) => {
+    const row = find.get(title, artist);
+    if (!row) return console.warn(`[readme] not in the library: ${title} - ${artist}`);
+    const started = now - (i + 1) * 4 * 60_000;
+    add.run(`readme:${i}`, 1_000_000 + i, row.song_id, started, started + 180_000, offset);
+  });
+}
 
 async function runOne(name, shots, copyFrom) {
   const dir = join(OUT, `run-${name}`);
