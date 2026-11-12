@@ -5,14 +5,17 @@
 <br>
 
 <a href="https://github.com/Nikenmar/Nemora/releases/latest">
+
   <img alt="Download Nemora for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=0b1640&color=1d4094">
+
 </a>
 
 </div>
 
-**Nemora is a music player for Windows, built for the library you have collected yourself.** Point it at your folders and it plays your FLAC, MP3, Opus and the rest through its own Rust audio engine: bit-perfect at full volume, gapless from one track to the next.
+**Nemora is a music player for your local library on Windows.**  
+Its own Rust audio engine plays every file bit-perfect at full volume and gapless from one track to the next.
 
-Then it starts to learn. Every play, skip, replay, tier and duel shapes Smart Shuffle, which picks what comes next and tells you why. The same listening becomes statistics, a map of your taste and mixes made from it. And when you want a song to sound different, slow it down, speed it up or put it in a hall of reverb, and keep that version for later.
+Then it learns. Every play, skip, replay, tier and duel shapes Smart Shuffle, which picks what comes next and tells you why. Your listening also becomes statistics, a map of your taste and daily mixes. Want a song to sound different? Slow it down, speed it up or add reverb, and keep that version.
 
 Everything stays on your computer: no account, no ads, no tracking.
 
