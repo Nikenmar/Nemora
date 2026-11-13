@@ -95,7 +95,7 @@ pub fn analyse(path: &Path) -> Result<Vec<u8>, DecodeError> {
 /// loudness), brightness (the top four bands' share of all band energy) and dynamics (how much the
 /// loudness moves: its standard deviation, scaled). None for an envelope without frames.
 pub fn features(envelope: &[u8]) -> Option<(f64, f64, f64)> {
-    let frames: Vec<&[u8]> = envelope.get(4..)?.chunks_exact(RECORD).collect();
+    let frames: Vec<&[u8]> = envelope.get(4..)?.as_chunks::<RECORD>().0.iter().map(|frame| &frame[..]).collect();
     if frames.is_empty() {
         return None;
     }

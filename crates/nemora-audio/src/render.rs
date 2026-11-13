@@ -146,8 +146,7 @@ mod tests {
         while source.fill(&mut live, 4096).unwrap() {}
         let music = live.len() / 2;
         let bytes = std::fs::read(&out).unwrap();
-        let file: Vec<f32> =
-            bytes[44..].chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+        let file: Vec<f32> = bytes[44..].as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c)).collect();
         // Longer by the factor, plus the tail.
         assert!((music as f64 / 44_100.0 - 2.0 / factor_of_semitones(-2.0)).abs() < 0.01);
         assert!(file.len() / 2 > music + 44_100, "the tail rings out after the music");

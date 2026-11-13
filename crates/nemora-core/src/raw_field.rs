@@ -163,7 +163,7 @@ fn txxx_is(body: &[u8], description: &str) -> bool {
     match encoding {
         0 | 3 => rest.split(|byte| *byte == 0).next() == Some(description.as_bytes()),
         1 | 2 => {
-            let mut units = rest.chunks_exact(2).map(|pair| [pair[0], pair[1]]);
+            let mut units = rest.as_chunks::<2>().0.iter().copied();
             let mut big_endian = *encoding == 2;
             let mut found = String::new();
             let mut first = true;
