@@ -17,8 +17,7 @@ fn a_rescan_of_a_real_library() {
     let db_path = PathBuf::from(std::env::var("NEMORA_TIMING_DB").expect("NEMORA_TIMING_DB"));
     let mut db = Db::open(&db_path).expect("open the copy");
     let covers = CoverStore::new(db_path.with_file_name("covers-timing"));
-    let roots: Vec<PathBuf> =
-        nemora_core::settings::music_folders(&db).unwrap().into_iter().map(|f| f.path).collect();
+    let roots: Vec<PathBuf> = nemora_core::settings::music_folders(&db).unwrap().into_iter().map(|f| f.path).collect();
     println!("roots {roots:?}");
     for run in 1..=3 {
         let t = Instant::now();

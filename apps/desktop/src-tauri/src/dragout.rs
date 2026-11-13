@@ -72,11 +72,7 @@ pub async fn start_file_drag(app: AppHandle, paths: Vec<String>, artwork: Option
     // would be handed a name it cannot open, and the failure would surface in
     // the OTHER application, where it looks like that app's bug.
     //
-    let files: Vec<PathBuf> = paths
-        .into_iter()
-        .map(|path| file_of(&path))
-        .filter(|path| path.is_file())
-        .collect();
+    let files: Vec<PathBuf> = paths.into_iter().map(|path| file_of(&path)).filter(|path| path.is_file()).collect();
 
     if files.is_empty() {
         return Err("no existing file to drag".to_owned());
