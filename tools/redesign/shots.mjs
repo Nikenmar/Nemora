@@ -242,7 +242,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ----- the README's shots (tools/readme): the real app, with what a public page should not show left out
 // Songs the README does not show by name (readme-hidden.local.txt), and Home's Recently added row.
-const README_HIDDEN = ${JSON.stringify(README_HIDDEN_PATTERNS)}.map((p) => new RegExp(p, 'i'));
+const README_HIDDEN = (window.__readmeHidden ?? []).map((p) => new RegExp(p, 'i'));
 async function readmeHome() {
   for (let i = 0; i < 40 && !document.querySelector('.mix-of-the-day'); i++) await wait(250);
   await wait(700);
@@ -441,6 +441,13 @@ class Cdp {
     });
   }
   async eval(body) {
+    // The README's hide-list goes in as a value (callFunctionOn's argument), never spliced into code.
+    const { result: page } = await this.send('Runtime.evaluate', { expression: 'window' });
+    await this.send('Runtime.callFunctionOn', {
+      objectId: page.objectId,
+      functionDeclaration: 'function (patterns) { this.__readmeHidden = patterns; }',
+      arguments: [{ value: README_HIDDEN_PATTERNS }]
+    });
     const expression = `(async () => { ${HELPERS}\nconst S = window.__nemoraShots, api = window.api, D = window.__shotData;\n${body}\n})()`;
     const reply = await this.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
     if (reply.exceptionDetails) throw new Error(reply.exceptionDetails.exception?.description ?? reply.exceptionDetails.text);
