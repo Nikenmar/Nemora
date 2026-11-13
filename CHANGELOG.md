@@ -2,6 +2,13 @@
 
 What changed in each Nemora release. The newest is first. Nemora shows the short version of these notes in Settings › About › What's new.
 
+## 3.0.0 hotfix1 · 2026-11-13
+
+- Choose folders in Add music folders opens the folder picker again, so a new install can add its music ([#1](https://github.com/Nikenmar/Nemora/issues/1))
+- Songs from a folder you add show on an open song list right away
+
+A fix on top of 3.0.0, nothing else changes. It installs as an update like any release.
+
 ## 3.0.0 · 2026-11-13
 
 - A new look with dark and light themes, eight accent colours and motion throughout

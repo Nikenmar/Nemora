@@ -428,8 +428,21 @@ export class NemoraRuntime {
     return call('library_folders', { folderPaths, sortType });
   }
 
-  getFolderStructures(): Promise<FolderStructure[]> {
-    return call('library_folder_structures');
+  /**
+   * Add music folders' "Choose folders": the folder dialog, as in 1.x, and each folder picked becomes
+   * a root the prompt lists (Nemora keeps whole folders, so no subfolders). Cancelled: an empty list
+   * and the prompt stays as it was. (It used to answer the folders already added, so a fresh
+   * profile, with none, got nothing and the dialog never opened: issue #1.)
+   */
+  async getFolderStructures(): Promise<FolderStructure[]> {
+    const chosen = await openDialog({ directory: true, multiple: true });
+    const roots = chosen == null ? [] : Array.isArray(chosen) ? chosen : [chosen];
+    const now = new Date();
+    return roots.map((path) => ({
+      path,
+      stats: { lastModifiedDate: now, lastChangedDate: now, fileCreatedDate: now, lastParsedDate: now },
+      subFolders: []
+    }));
   }
 
   /** The chosen folders become music folders; subfolder choices are 1.x's and not kept. */

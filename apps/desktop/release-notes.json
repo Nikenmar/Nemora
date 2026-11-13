@@ -1,154 +1,35 @@
 {
   "latestVersion": {
-    "version": "3.0.0-stable",
-    "releaseDate": "2026-11-13T12:00:00.000Z",
+    "version": "3.0.0-stable.hotfix1",
+    "releaseDate": "2026-11-13T18:00:00.000Z",
     "notes": {
-      "new": [
-        {
-          "note": "A new look: a calm frame around the library, dark and light themes, eight accent colours and five shades for the dark frame"
-        },
-        {
-          "note": "A top bar with search (Ctrl+K), a sidebar in groups with pinned playlists, and Settings in two columns"
-        },
-        {
-          "note": "Pages, covers and players move from one to the next, and Reduce motion keeps them still"
-        },
-        {
-          "note": "Smart Shuffle tells you why: a reason under each coming song, and Why this song? shows every part of the choice"
-        },
-        {
-          "note": "Steer Smart Shuffle for the session with Less of this artist, More like this and Not now"
-        },
-        {
-          "note": "Smart Shuffle learns from how you listen: replays, rewinds, your own picks and real skips, while quick browsing teaches it nothing"
-        },
-        {
-          "note": "Fairer rotation: a song just played rests for a few days, every song in a tier gets its turn, and forgotten favourites come back"
-        },
-        {
-          "note": "Duels that teach Smart Shuffle, and tier suggestions from your duels on the Tierlists page"
-        },
-        {
-          "note": "Smart Shuffle settings in groups with Classic and Recommended presets, plus night shuffle and energy flow to try"
-        },
-        {
-          "note": "Taste map under Stats: your library as islands of how you listen. Zoom in, pick an area and play it, or take a journey"
-        },
-        {
-          "note": "Slowed & reverb in the player bar: slower or faster, with or without the pitch, and reverb on top"
-        },
-        {
-          "note": "Versions: keep a sound as a song of its own, switch a song to it in place, or save it as a WAV with its tags and cover"
-        },
-        {
-          "note": "Headphone correction from the AutoEQ list or a profile you import"
-        },
-        {
-          "note": "For you on Home: Mix of the day, Rediscover, On repeat, This hour, Never heard and more, each a click from a playlist"
-        },
-        {
-          "note": "Lyrics for the whole library in the background if you want, search by a line of lyrics, and share a line as a picture"
-        },
-        {
-          "note": "Search reads Japanese titles from their readings, finds words typed together and offers Did you mean"
-        },
-        {
-          "note": "Insights on top of Stats: this week against the last, songs on the rise, songs out of rotation and your hours"
-        },
-        {
-          "note": "Duels by keyboard in series of 10, a song can move tier when a duel earns it, and the tierlist editor works by keyboard too"
-        },
-        {
-          "note": "Song Guessr and Duels are redesigned, and Song Guessr can quiz you on the songs Smart Shuffle knows least"
-        },
-        {
-          "note": "Visuals in Appearance: breathing cover light, a live equalizer and ambient full screen, all off until you turn them on"
-        },
-        {
-          "note": "The song page shows year, publisher, composer, ISRC, BPM, format, bit depth, sample rate and more"
-        },
-        {
-          "note": "Import from Spotify: paste a public playlist's link and its songs are matched against your library"
-        },
-        {
-          "note": "Nemora for AI agents: a local MCP server lets Claude, Codex, Cursor and others play and organise your music, at the access level you choose"
-        },
-        {
-          "note": "13 languages, and Same as system for new profiles"
-        },
-        {
-          "note": "Privacy in About lists every online request Nemora makes and when"
-        },
-        {
-          "note": "The song you were playing resumes where it stopped after a restart"
-        },
-        {
-          "note": "Updates come in Nemora's own card with what is new, and install only when you say so"
-        },
-        {
-          "note": "Nemora has its own logo"
-        }
-      ],
+      "new": [],
       "fixed": [
         {
-          "note": "Smart Shuffle over the whole library leans on your tiers and artists again (it had fallen back to plain random)"
+          "note": "Choose folders in Add music folders opens the folder picker again, so a new install can add its music"
         },
         {
-          "note": "The seek bar starts at 0 on a new song instead of showing the last song's position"
-        },
-        {
-          "note": "The heart fills when you like the playing song, from anywhere"
-        },
-        {
-          "note": "The main window no longer grows a little at every start"
-        },
-        {
-          "note": "An open menu closes when the page scrolls or the window resizes, as Windows menus do"
-        },
-        {
-          "note": "Drag the file out works reliably, from the player bar too"
-        },
-        {
-          "note": "A song copied into a music folder shows at once on an open Songs page"
-        },
-        {
-          "note": "Edit song tags from the player bar opens the song's own file"
-        },
-        {
-          "note": "Windows media controls keep working after a song without a title or cover"
-        },
-        {
-          "note": "Processed sound (a speed, reverb, the equalizer, a fade) that goes past full scale is held at 0 dBFS and the peak lamp lights. Untouched playback stays bit-perfect"
-        },
-        {
-          "note": "The OBS widget reads over any stream footage and changes songs smoothly"
-        }
-      ],
-      "removed": [
-        {
-          "note": "Musixmatch lyrics. Lyrics you already have stay, and new ones come from your files and LRCLIB"
-        },
-        {
-          "note": "Last.fm scrobbling and accounts. Artist and album descriptions from Last.fm stay"
-        },
-        {
-          "note": "Genius in the tag search"
-        },
-        {
-          "note": "Turkish and Vietnamese. A profile set to one of them follows the system language"
-        },
-        {
-          "note": "Three lyrics settings that did nothing (saving lyrics to .lrc files)"
-        }
-      ],
-      "knownIssues": [
-        {
-          "note": "Going back to 2.x or 1.x is not supported. Before updating the library database, Nemora keeps a copy of it in its backups folder"
+          "note": "Songs from a folder you add show on an open song list right away"
         }
       ]
     }
   },
   "versions": [
+    {
+      "version": "3.0.0-stable.hotfix1",
+      "releaseDate": "2026-11-13T18:00:00.000Z",
+      "notes": {
+        "new": [],
+        "fixed": [
+          {
+            "note": "Choose folders in Add music folders opens the folder picker again, so a new install can add its music"
+          },
+          {
+            "note": "Songs from a folder you add show on an open song list right away"
+          }
+        ]
+      }
+    },
     {
       "version": "3.0.0-stable",
       "releaseDate": "2026-11-13T12:00:00.000Z",

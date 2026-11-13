@@ -53,15 +53,17 @@ jobs:
           npx --prefix apps/desktop tsc --noEmit -p apps/desktop
 
       # The release's text is "## Nemora 3.0.0-stable", as every release before it, then this version's
-      # section of CHANGELOG.md (v3.0.0-stable -> "## 3.0.0"). It also goes into latest.json, where
-      # Nemora's update card shows its first lines (headings left out). The picture comes later.
+      # section of CHANGELOG.md (v3.0.0-stable -> "## 3.0.0", a hotfix v3.0.0-stable.hotfix1 ->
+      # "## 3.0.0 hotfix1"). It also goes into latest.json, where Nemora's update card shows its first
+      # lines (headings left out). The picture comes later.
       - name: Release notes from CHANGELOG.md
         id: notes
         shell: bash
         run: |
           full="${GITHUB_REF_NAME#v}"
           version="${full%-stable}"
-          section="$(awk -v head="## $version " 'index($0, head) == 1 { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md)"
+          version="${version/-stable./ }"
+          section="$(awk -v head="## $version · " 'index($0, head) == 1 { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md)"
           if [ -n "${section//[[:space:]]/}" ]; then
             {
               echo 'body<<NEMORA_NOTES_END'

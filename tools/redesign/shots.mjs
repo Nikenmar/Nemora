@@ -376,7 +376,8 @@ const artists = await api.artistsData.getArtistData([]);
 const genres = await api.genresData.getGenresData([]);
 const playlists = await api.playlistsData.getPlaylistData([]);
 const tierlists = await api.tierlistsData.getTierlistData([]).catch(() => []);
-const folders = await api.folderData.getFolderStructures();
+// The music folders already added (getFolderStructures opens the folder dialog since issue #1).
+const folders = await api.folderData.getFolderData([]);
 const word = (song?.title ?? 'a').split(/\\s+/).find((w) => w.length > 3) ?? 'love';
 return {
   songCount: songs.length,

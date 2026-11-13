@@ -1262,7 +1262,11 @@ pub async fn folders_add(handle: AppHandle, app: State<'_, App>, paths: Vec<Stri
     app.write(|db| roots.iter().try_for_each(|p| nemora_core::settings::add_music_folder(db, std::path::Path::new(p))))
         .map_err(fail)?;
     app.scan().map_err(fail)?;
-    notify(&handle, &["songs", "artists", "albums", "genres", "userData/musicFolder"]);
+    // songs/newSong too: the song lists listen for it, not for plain `songs` (as watch.rs tells them).
+    notify(
+        &handle,
+        &["songs", "songs/newSong", "artists", "albums", "genres", "genres/newGenre", "userData/musicFolder"],
+    );
     crate::watch::sync(&handle);
     let db = app.read();
     let ids: Vec<i64> = library::files(&db)
