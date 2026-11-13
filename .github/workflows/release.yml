@@ -52,6 +52,20 @@ jobs:
           cargo test --workspace --locked
           npx --prefix apps/desktop tsc --noEmit -p apps/desktop
 
+      # The release's text is this version's section of CHANGELOG.md (v3.0.0-stable -> "## 3.0.0").
+      # It also goes into latest.json, where Nemora's update card shows its first lines.
+      - name: Release notes from CHANGELOG.md
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          version="${version%-stable}"
+          {
+            echo 'body<<NEMORA_NOTES_END'
+            awk -v head="## $version " 'index($0, head) == 1 { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md
+            echo 'NEMORA_NOTES_END'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,7 +80,7 @@ jobs:
           args: --config src-tauri/tauri.mcp.json
           tagName: ${{ github.ref_name }}
           releaseName: 'Nemora __VERSION__'
-          releaseBody: 'See the assets below to download and install.'
+          releaseBody: ${{ steps.notes.outputs.body || 'See the assets below to download and install.' }}
           # Published by hand after the assets are checked: a draft cannot become the "latest" the
           # updater points at by accident.
           releaseDraft: true
