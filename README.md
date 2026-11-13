@@ -9,7 +9,7 @@ Smart Shuffle learns how you listen and tells you why each song comes next.
 
 <br>
 
-<a href="https://github.com/Nikenmar/Nemora/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=0b1640&color=1d4094"></a>&nbsp;
+<a href="https://github.com/Nikenmar/Nemora/releases/latest/download/Nemora_x64-setup.exe"><img alt="Download for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=0b1640&color=1d4094"></a>&nbsp;
 <a href="CHANGELOG.md"><img alt="What's new" src="https://img.shields.io/badge/What's%20new-0b1640?style=for-the-badge"></a>
 
 <br>

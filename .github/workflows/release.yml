@@ -91,3 +91,16 @@ jobs:
           prerelease: false
           # latest.json, from the signatures: what the updater endpoint in tauri.conf.json fetches.
           includeUpdaterJson: true
+
+      # The same installer once more under a name without the version, so the README's download
+      # button can point at releases/latest/download/Nemora_x64-setup.exe and always get the newest.
+      # The updater keeps using the versioned file and its .sig.
+      - name: Installer without the version in its name
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          exe="target/release/bundle/nsis/Nemora_${GITHUB_REF_NAME#v}_x64-setup.exe"
+          test -f "$exe" || { echo "no $exe"; exit 1; }
+          cp "$exe" Nemora_x64-setup.exe
+          gh release upload "$GITHUB_REF_NAME" Nemora_x64-setup.exe --clobber
