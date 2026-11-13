@@ -52,19 +52,23 @@ jobs:
           cargo test --workspace --locked
           npx --prefix apps/desktop tsc --noEmit -p apps/desktop
 
-      # The release's text is this version's section of CHANGELOG.md (v3.0.0-stable -> "## 3.0.0").
-      # It also goes into latest.json, where Nemora's update card shows its first lines.
+      # The release's text is "## Nemora 3.0.0-stable", as every release before it, then this version's
+      # section of CHANGELOG.md (v3.0.0-stable -> "## 3.0.0"). It also goes into latest.json, where
+      # Nemora's update card shows its first lines (headings left out).
       - name: Release notes from CHANGELOG.md
         id: notes
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          version="${version%-stable}"
-          {
-            echo 'body<<NEMORA_NOTES_END'
-            awk -v head="## $version " 'index($0, head) == 1 { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md
-            echo 'NEMORA_NOTES_END'
-          } >> "$GITHUB_OUTPUT"
+          full="${GITHUB_REF_NAME#v}"
+          version="${full%-stable}"
+          section="$(awk -v head="## $version " 'index($0, head) == 1 { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md)"
+          if [ -n "${section//[[:space:]]/}" ]; then
+            {
+              echo 'body<<NEMORA_NOTES_END'
+              printf '## Nemora %s\n%s\n' "$full" "$section"
+              echo 'NEMORA_NOTES_END'
+            } >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
