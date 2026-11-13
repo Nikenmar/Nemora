@@ -67,7 +67,7 @@ CARDS = [
          title="Ask an AI<br>about your music",
          text="Connect Claude or another agent over MCP: it reads your library and stats, builds playlists, runs the queue. You choose how much it may do."),
     dict(key="yours", bg="sky", side="right",
-         shots=[("r-search", "dark", None, (60, 340, 700)), ("37-accent-picker", "light", (458, 65, 1561, 520), (200, 120, 680))],
+         shots=[("r-home", "dark", None, (60, 340, 700)), ("37-accent-picker", "light", (458, 65, 1561, 520), (200, 120, 680))],
          title="Make it<br>yours",
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
