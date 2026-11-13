@@ -222,13 +222,27 @@ const EMPTY_SHOTS = [
   { id: 'e-stats', surface: 'Stats, empty', setup: `S.go('Stats');`, settle: 1500 }
 ];
 
+/**
+ * What the README's shots leave out: titles and artists of the library not to be shown on a public
+ * page, one pattern per line (a regular expression, case-insensitive; `#` starts a comment line).
+ * The list names the user's own library, so it lives in a gitignored file next to this one; without
+ * it nothing is left out.
+ */
+const README_HIDDEN_FILE = join(ROOT, 'tools', 'redesign', 'readme-hidden.local.txt');
+const README_HIDDEN_PATTERNS = existsSync(README_HIDDEN_FILE)
+  ? readFileSync(README_HIDDEN_FILE, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+  : [];
+if (process.argv.includes('--readme') && README_HIDDEN_PATTERNS.length === 0) {
+  console.warn(`[readme] no ${README_HIDDEN_FILE}: the README shots leave nothing out`);
+}
+
 /** Helpers available to every setup. */
 const HELPERS = `
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ----- the README's shots (tools/readme): the real app, with what a public page should not show left out
-// Songs the README does not show by name, and Home's Recently added row (small artists, not to be promoted).
-const README_HIDDEN = [];
+// Songs the README does not show by name (readme-hidden.local.txt), and Home's Recently added row.
+const README_HIDDEN = ${JSON.stringify(README_HIDDEN_PATTERNS)}.map((p) => new RegExp(p, 'i'));
 async function readmeHome() {
   for (let i = 0; i < 40 && !document.querySelector('.mix-of-the-day'); i++) await wait(250);
   await wait(700);

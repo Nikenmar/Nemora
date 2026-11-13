@@ -19,6 +19,9 @@ apps/desktop/src-tauri/binaries/
 # Real user profiles and real audio used by tests; they carry titles and paths.
 /fixtures/private/
 
+# What the README's shots leave out (tools/redesign/shots.mjs): it names the user's library.
+/tools/redesign/readme-hidden.local.txt
+
 # Editors and OS
 .idea/
 .vscode/

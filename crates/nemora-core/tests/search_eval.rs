@@ -1,20 +1,28 @@
-//! Search measured on the user's own library (PLAN/20 D1): every query of `data/search-eval.tsv`
-//! against a copy of a real profile (`NEMORA_REAL_DB`), scored as hit@1 and hit@5 per kind. The
-//! queries that hit@5 are written to `data/search-eval-hits.txt` with `NEMORA_EVAL_WRITE=1`; after
-//! that, a query listed there that misses fails the test, so a change to search can only add hits.
+//! Search measured on the user's own library (PLAN/20 D1): every query of
+//! `fixtures/private/search-eval.tsv` against a copy of a real profile (`NEMORA_REAL_DB`), scored
+//! as hit@1 and hit@5 per kind. The set names songs of that library, so it lives with the other
+//! private fixtures and is not committed; without it the test does nothing. The queries that hit@5
+//! are written to `fixtures/private/search-eval-hits.txt` with `NEMORA_EVAL_WRITE=1`; after that, a
+//! query listed there that misses fails the test, so a change to search can only add hits.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use nemora_core::db::Db;
 use nemora_core::search::{Filter, search};
 
-const SET: &str = include_str!("data/search-eval.tsv");
-const HITS: &str = "data/search-eval-hits.txt";
+fn private(name: &str) -> String {
+    format!("{}/../../fixtures/private/{name}", env!("CARGO_MANIFEST_DIR"))
+}
 
 #[test]
 #[ignore]
 fn search_on_the_real_library() {
     let Ok(path) = std::env::var("NEMORA_REAL_DB") else { return };
+    let Ok(set) = std::fs::read_to_string(private("search-eval.tsv")) else {
+        println!("no fixtures/private/search-eval.tsv: nothing to measure");
+        return;
+    };
+    let set = set.as_str();
     let db = Db::open(std::path::Path::new(&path)).unwrap();
     let corpus = nemora_core::library::search_corpus(&db).unwrap();
     let conn = rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -29,7 +37,7 @@ fn search_on_the_real_library() {
     let mut hits5: Vec<String> = Vec::new();
     let mut misses: Vec<String> = Vec::new();
     let mut slowest = std::time::Duration::ZERO;
-    for line in SET.lines().filter(|l| !l.starts_with('#') && !l.trim().is_empty()) {
+    for line in set.lines().filter(|l| !l.starts_with('#') && !l.trim().is_empty()) {
         let parts: Vec<&str> = line.split('\t').collect();
         let (query, kind, expected) = (parts[0], parts[1], parts[2]);
         let wanted: HashSet<&String> =
@@ -69,7 +77,7 @@ fn search_on_the_real_library() {
         println!("MISS {m}");
     }
 
-    let file = format!("{}/tests/{HITS}", env!("CARGO_MANIFEST_DIR"));
+    let file = private("search-eval-hits.txt");
     if std::env::var("NEMORA_EVAL_WRITE").is_ok() {
         std::fs::write(&file, hits5.join("\n") + "\n").unwrap();
     } else if let Ok(before) = std::fs::read_to_string(&file) {
