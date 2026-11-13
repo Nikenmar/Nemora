@@ -1220,6 +1220,7 @@
     "latest": "最新",
     "newFeaturesAndUpdates": "新機能とアップデート",
     "fixesAndImprovements": "修正と改善",
+    "removed": "削除された機能",
     "issuesAndBugs": "既知の問題とバグ",
     "developerUpdates": "開発者向けの更新"
   },

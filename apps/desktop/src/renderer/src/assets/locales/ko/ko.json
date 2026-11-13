@@ -1220,6 +1220,7 @@
     "latest": "최신",
     "newFeaturesAndUpdates": "새 기능 및 업데이트",
     "fixesAndImprovements": "수정 및 개선",
+    "removed": "제거된 기능",
     "issuesAndBugs": "알려진 문제 및 버그",
     "developerUpdates": "개발자 업데이트"
   },

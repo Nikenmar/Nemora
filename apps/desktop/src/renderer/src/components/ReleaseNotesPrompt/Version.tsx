@@ -12,6 +12,7 @@ interface VersionProp {
   notes: {
     new?: VersionNoteProps[];
     fixed?: VersionNoteProps[];
+    removed?: VersionNoteProps[];
     knownIssues?: VersionNoteProps[];
     developerUpdates?: VersionNoteProps[];
   };
@@ -89,6 +90,11 @@ const Version = (props: VersionProp) => {
         id={`${version}-fix`}
         title={t('releaseNotesPrompt.fixesAndImprovements')}
         notes={notes.fixed}
+      />
+      <NoteSection
+        id={`${version}-removed`}
+        title={t('releaseNotesPrompt.removed')}
+        notes={notes.removed}
       />
       <NoteSection
         id={`${version}-issue`}
