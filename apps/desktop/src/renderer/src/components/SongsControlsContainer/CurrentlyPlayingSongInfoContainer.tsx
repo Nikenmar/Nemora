@@ -194,7 +194,8 @@ const CurrentlyPlayingSongInfoContainer = () => {
           changeCurrentActivePage('SongTagsEditor', {
             songId,
             songArtworkPath: artworkPath,
-            songPath: path,
+            // The player plays a media URL; the tag editor reads and writes the file itself.
+            songPath: window.api.utils.localPathFromAssetUrl(path),
             isKnownSource
           })
       },
