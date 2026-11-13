@@ -2,27 +2,34 @@
 
 <img src="resources/readme/hero.webp" alt="Nemora. Your library, heard properly." width="100%">
 
+<h3>A music player for your local library on Windows</h3>
+
+Its own Rust audio engine plays every file bit-perfect and gapless.<br>
+Smart Shuffle learns how you listen and tells you why each song comes next.
+
 <br>
 
-<a href="https://github.com/Nikenmar/Nemora/releases/latest">
+<a href="https://github.com/Nikenmar/Nemora/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/Download%20for%20Windows-1d4094?style=for-the-badge"></a>&nbsp;
+<a href="CHANGELOG.md"><img alt="What's new" src="https://img.shields.io/badge/What's%20new-0b1640?style=for-the-badge"></a>
 
-  <img alt="Download Nemora for Windows" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=for-the-badge&label=Download%20for%20Windows&labelColor=0b1640&color=1d4094">
+<br>
 
-</a>
+[Why Nemora](#why-nemora) · [Features](#features) · [Download](#download) · [Building](#building) · [Credits](#credits)
+
+<img alt="Latest version" src="https://img.shields.io/github/v/release/Nikenmar/Nemora?style=flat-square&label=version&labelColor=0b1640&color=1d4094">
+<img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1d4094?style=flat-square&labelColor=0b1640">
+<img alt="13 languages" src="https://img.shields.io/badge/languages-13-1d4094?style=flat-square&labelColor=0b1640">
+<img alt="License" src="https://img.shields.io/github/license/Nikenmar/Nemora?style=flat-square&labelColor=0b1640&color=1d4094">
 
 </div>
 
-**Nemora is a music player for your local library on Windows.**  
-Its own Rust audio engine plays every file bit-perfect at full volume and gapless from one track to the next.
-
-Then it learns. Every play, skip, replay, tier and duel shapes Smart Shuffle, which picks what comes next and tells you why. Your listening also becomes statistics, a map of your taste and daily mixes. Want a song to sound different? Slow it down, speed it up or add reverb, and keep that version.
-
-Everything stays on your computer: no account, no ads, no tracking.
+<br>
 
 ## Why Nemora
 
 - **Its own audio engine.** Written in Rust, it decodes every file itself. At full volume with the equalizer flat, a file reaches Windows sample for sample. One track runs into the next without a gap.
-- **It learns how you listen.** Tierlists, duels, what you replay and what you skip all feed Smart Shuffle, and it tells you why each song comes next.
+- **It learns how you listen.** Every play, skip, replay, tier and duel shapes Smart Shuffle, which picks what comes next and tells you why. Your listening also becomes statistics, a map of your taste and daily mixes.
+- **Songs sound the way you want.** Slow a song down, speed it up or add reverb, and keep that version.
 - **Songs keep their history.** A song is recognised by its audio, not by its path or tags, so renaming, retagging or moving a file keeps every listen, rating and tier.
 - **Private by design.** No telemetry, no analytics, no account. Settings › About › Privacy lists every request Nemora makes and when.
 
@@ -58,7 +65,7 @@ Everything stays on your computer: no account, no ads, no tracking.
 - **Smooth volume.** A perceptual curve like the Windows mixer, not a linear slider.
 - **Import from Spotify.** Paste a public playlist link and its tracks are matched against your library.
 - **Discord status.** The song you play shows on your Discord profile.
-- **OBS widget.** A transparent now-playing overlay, served only to your own computer.
+- **OBS widget.** A transparent now-playing overlay.
 - **Mini player, tag editor, drag a song out** into Explorer, a DAW or a chat.
 
 ## Download
@@ -82,8 +89,8 @@ Made with [Rust](https://www.rust-lang.org), [Tauri](https://tauri.app) and [Rea
 
 <div align="center">
 
-Made by nikenmar, CMR
+Made by nikenmar
 
 <sub>All songs, artists, albums and cover art shown are the property of their respective owners and appear for illustration only.</sub>
 
-</div>
+</div>
