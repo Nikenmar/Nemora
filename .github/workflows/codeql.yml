@@ -1,12 +1,23 @@
 name: CodeQL
 
+# Once a week, on pull requests and by hand: not on every push to main, where the Rust analysis
+# alone took over 20 minutes per commit.
 on:
-  push:
-    branches: ['main']
   pull_request:
     branches: ['main']
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'resources/**'
+      - 'tools/**'
+      - '.github/**'
   schedule:
     - cron: '15 2 * * 3'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:

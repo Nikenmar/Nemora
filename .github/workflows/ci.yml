@@ -1,6 +1,38 @@
 name: CI
 
-on: [push, pull_request]
+# Branches only: a release tag runs its own check and test in release.yml. Nothing runs for a change
+# that no check reads (the README and CHANGELOG, pictures, docs, the README's tools, the other
+# workflows); crates/*/spec/*.md stays in, the schema tests read it.
+on:
+  push:
+    branches: ['**']
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'resources/**'
+      - 'tools/readme/**'
+      - 'tools/redesign/**'
+      - 'tools/bench/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/codeql.yml'
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'resources/**'
+      - 'tools/readme/**'
+      - 'tools/redesign/**'
+      - 'tools/bench/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/codeql.yml'
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the run still going for the older one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 # Bash, which stops at the first failing command. The Windows default, PowerShell, runs on past a
 # failing program and fails a step only on its last one: a broken fmt or clippy passed unseen.
