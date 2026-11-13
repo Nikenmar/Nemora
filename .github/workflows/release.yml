@@ -54,7 +54,7 @@ jobs:
 
       # The release's text is "## Nemora 3.0.0-stable", as every release before it, then this version's
       # section of CHANGELOG.md (v3.0.0-stable -> "## 3.0.0"). It also goes into latest.json, where
-      # Nemora's update card shows its first lines (headings left out).
+      # Nemora's update card shows its first lines (headings left out). The picture comes later.
       - name: Release notes from CHANGELOG.md
         id: notes
         shell: bash
@@ -104,3 +104,20 @@ jobs:
           test -f "$exe" || { echo "no $exe"; exit 1; }
           cp "$exe" Nemora_x64-setup.exe
           gh release upload "$GITHUB_REF_NAME" Nemora_x64-setup.exe --clobber
+
+      # The README's hero under the release's heading, as it was at this tag (an older release keeps
+      # its own picture). Added after the build, so latest.json's notes stay text: the update card
+      # in 3.0 shows every line that is not a heading.
+      - name: Picture in the release text
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body="$(gh release view "$GITHUB_REF_NAME" --json body --jq .body)"
+          case "$body" in "## "*) ;; *) echo "no heading, left as it is"; exit 0 ;; esac
+          {
+            printf '%s\n\n' "${body%%$'\n'*}"
+            printf '<img src="https://raw.githubusercontent.com/%s/%s/resources/readme/hero.webp" alt="Nemora" width="100%%">\n' "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
+            printf '%s\n' "${body#*$'\n'}"
+          } > release-notes.md
+          gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md
