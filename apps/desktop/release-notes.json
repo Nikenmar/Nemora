@@ -1,20 +1,43 @@
 {
   "latestVersion": {
-    "version": "3.0.0-stable.hotfix1",
-    "releaseDate": "2026-11-13T18:00:00.000Z",
+    "version": "3.0.1-stable",
+    "releaseDate": "2026-11-19T12:00:00.000Z",
     "notes": {
-      "new": [],
+      "new": [
+        {
+          "note": "Accent from the cover: a switch in Settings › Appearance gives buttons, the selection and progress the colour of the playing song's cover"
+        }
+      ],
       "fixed": [
         {
-          "note": "Choose folders in Add music folders opens the folder picker again, so a new install can add its music"
+          "note": "The window no longer scrolls away past the player and leaves an empty band under it"
         },
         {
-          "note": "Songs from a folder you add show on an open song list right away"
+          "note": "AI agents read a song's lyrics from its file too (an .lrc beside it or its tags), not only the lyrics Nemora already showed"
         }
       ]
     }
   },
   "versions": [
+    {
+      "version": "3.0.1-stable",
+      "releaseDate": "2026-11-19T12:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "Accent from the cover: a switch in Settings › Appearance gives buttons, the selection and progress the colour of the playing song's cover"
+          }
+        ],
+        "fixed": [
+          {
+            "note": "The window no longer scrolls away past the player and leaves an empty band under it"
+          },
+          {
+            "note": "AI agents read a song's lyrics from its file too (an .lrc beside it or its tags), not only the lyrics Nemora already showed"
+          }
+        ]
+      }
+    },
     {
       "version": "3.0.0-stable.hotfix1",
       "releaseDate": "2026-11-13T18:00:00.000Z",

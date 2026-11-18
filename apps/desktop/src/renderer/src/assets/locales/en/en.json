@@ -495,6 +495,8 @@
     "enableImageBasedDynamicThemes": "Cover light",
     "accentColor": "Accent colour",
     "accentColorDescription": "The colour of buttons, the selection, progress and links. Blue is Nemora's own; each other colour keeps its depth and contrast.",
+    "accentFromCover": "Take the colour from the playing song's cover",
+    "accentFromCoverDescription": "The accent follows the cover, as the cover light does; a grey cover gives graphite. The colour above shows while nothing plays.",
     "accentColors": {
       "blue": "Blue",
       "violet": "Violet",

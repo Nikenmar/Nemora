@@ -525,6 +525,8 @@
     "enableImageBasedDynamicThemes": "Lumière de pochette",
     "accentColor": "Couleur d'accent",
     "accentColorDescription": "La couleur des boutons, de la sélection, de la progression et des liens. Le bleu est celui de Nemora ; chaque autre couleur en garde la profondeur et le contraste.",
+    "accentFromCover": "Prendre la couleur de la pochette du morceau en cours",
+    "accentFromCoverDescription": "L'accent suit la pochette, comme la lumière de pochette ; une pochette grise donne du graphite. La couleur ci-dessus s'applique quand rien ne joue.",
     "accentColors": {
       "blue": "Bleu",
       "violet": "Violet",

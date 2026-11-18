@@ -496,6 +496,8 @@
     "enableImageBasedDynamicThemes": "Cover-Licht",
     "accentColor": "Akzentfarbe",
     "accentColorDescription": "Die Farbe von Schaltflächen, Auswahl, Fortschritt und Links. Blau ist Nemoras eigene Farbe; jede andere behält deren Tiefe und Kontrast.",
+    "accentFromCover": "Farbe vom Cover des laufenden Songs übernehmen",
+    "accentFromCoverDescription": "Der Akzent folgt dem Cover wie das Cover-Licht; ein graues Cover ergibt Graphit. Die Farbe oben gilt, solange nichts läuft.",
     "accentColors": {
       "blue": "Blau",
       "violet": "Violett",

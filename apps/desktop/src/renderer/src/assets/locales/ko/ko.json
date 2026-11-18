@@ -467,6 +467,8 @@
     "enableImageBasedDynamicThemes": "커버 조명",
     "accentColor": "강조 색상",
     "accentColorDescription": "버튼, 선택 항목, 진행률, 링크의 색상입니다. 파란색이 Nemora 고유의 색이며, 다른 색도 같은 깊이와 대비를 유지합니다.",
+    "accentFromCover": "재생 중인 곡의 커버에서 색 가져오기",
+    "accentFromCoverDescription": "강조 색이 커버 조명처럼 커버를 따라갑니다. 회색 커버는 그래파이트가 됩니다. 아무것도 재생하지 않을 때는 위의 색을 씁니다.",
     "accentColors": {
       "blue": "파랑",
       "violet": "보라",

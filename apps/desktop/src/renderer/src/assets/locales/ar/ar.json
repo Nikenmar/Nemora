@@ -612,6 +612,8 @@
     "enableImageBasedDynamicThemes": "ضوء الغلاف",
     "accentColor": "لون التمييز",
     "accentColorDescription": "لون الأزرار والتحديد والتقدم والروابط. الأزرق هو لون Nemora؛ ويحافظ كل لون آخر على عمقه وتباينه.",
+    "accentFromCover": "خذ اللون من غلاف الأغنية الجارية",
+    "accentFromCoverDescription": "يتبع لون التمييز الغلاف كما يفعل ضوء الغلاف، والغلاف الرمادي يعطي الجرافيت. يُستخدم اللون أعلاه حين لا يُشغَّل شيء.",
     "accentColors": {
       "blue": "أزرق",
       "violet": "بنفسجي",

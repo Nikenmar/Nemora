@@ -22,7 +22,8 @@ import { registerAgentBridge } from './other/agentBridge';
 import { applyCoverLight } from './other/coverLight';
 // Evaluated here as before; app/bootstrap.ts sets the playback clock.
 import './other/trackVisuals';
-import { applyAccent } from './other/accentPalette';
+import { applyAccent, applyCoverAccent } from './other/accentPalette';
+import { readCoverTone } from './other/coverTone';
 import { applyFrameShade } from './other/framePalette';
 import { withViewTransition } from './other/viewTransition';
 import { installSharedCovers } from './other/motion';
@@ -643,6 +644,39 @@ export default function App() {
   // The accent colour the user chose (Settings > Appearance); blue needs no override.
   const accentColor = useStore(store, (state) => state.localStorage.preferences.accentColor);
   useEffect(() => applyAccent(accentColor), [accentColor]);
+
+  // Accent from the cover (Settings > Appearance): the playing cover's tone over the chosen accent,
+  // read the way the cover light reads it, whether or not the cover light is on. The old accent
+  // stays until the new cover is read, so a song change never flashes the preset in between.
+  const isAccentFromCover = useStore(
+    store,
+    (state) => !!state.localStorage.preferences.isAccentFromCover
+  );
+  const playingArtwork = useStore(store, (state) => state.currentSongData?.artworkPath);
+  useEffect(() => {
+    if (!isAccentFromCover || !playingArtwork) {
+      applyCoverAccent(null);
+      return undefined;
+    }
+    let isLatest = true;
+    readCoverTone(playingArtwork)
+      .then((tone) => isLatest && applyCoverAccent(tone?.accent ?? null))
+      .catch(() => isLatest && applyCoverAccent(null));
+    return () => {
+      isLatest = false;
+    };
+  }, [isAccentFromCover, playingArtwork]);
+
+  // The window itself never scrolls: styles.css clips html, body and #root, and the page scrolls
+  // inside its own panel. The wheel cannot move a clipped viewport, but a scrollIntoView or a focus
+  // still can, so it is put back.
+  useEffect(() => {
+    const putBack = () => {
+      if (window.scrollX || window.scrollY) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    };
+    window.addEventListener('scroll', putBack, { passive: true });
+    return () => window.removeEventListener('scroll', putBack);
+  }, []);
 
   // The dark theme's frame (Settings > Appearance); black needs no override.
   const frameShade = useStore(store, (state) => state.localStorage.preferences.frameShade);
@@ -1479,7 +1513,7 @@ export default function App() {
               isReducedMotion
                 ? 'reduced-motion animate-none transition-none !delay-0 !duration-[0] [&.dialog-menu]:!backdrop-blur-none'
                 : ''
-            } grid !h-screen w-full grid-rows-[auto_1fr_auto] items-center overflow-y-hidden after:invisible after:absolute after:-z-10 after:grid after:h-full after:w-full after:place-items-center after:bg-shade/0 after:text-4xl after:font-medium after:text-on-media after:content-["Drop_your_song_here"] [&.blurred_#title-bar]:opacity-40 [&.fullscreen_#window-controls-container]:hidden [&.song-drop]:after:visible [&.song-drop]:after:z-20 [&.song-drop]:after:border-4 [&.song-drop]:after:border-dashed [&.song-drop]:after:border-ink-dim [&.song-drop]:after:bg-shade/70 [&.song-drop]:after:transition-[background,visibility,color] `}
+            } grid !h-screen w-full grid-rows-[auto_1fr_auto] items-center overflow-clip after:invisible after:absolute after:-z-10 after:grid after:h-full after:w-full after:place-items-center after:bg-shade/0 after:text-4xl after:font-medium after:text-on-media after:content-["Drop_your_song_here"] [&.blurred_#title-bar]:opacity-40 [&.fullscreen_#window-controls-container]:hidden [&.song-drop]:after:visible [&.song-drop]:after:z-20 [&.song-drop]:after:border-4 [&.song-drop]:after:border-dashed [&.song-drop]:after:border-ink-dim [&.song-drop]:after:bg-shade/70 [&.song-drop]:after:transition-[background,visibility,color] `}
             ref={AppRef}
             onDragEnter={addSongDropPlaceholder}
             onDragLeave={removeSongDropPlaceholder}

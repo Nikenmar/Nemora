@@ -188,8 +188,14 @@ html[lang='ar'] body * {
 }
 
 /* ? BASE */
+/* The window never scrolls; each page scrolls inside its own panel. `overflow-x: hidden` alone
+   made the vertical axis `auto`, so anything laid out past the bottom edge (the context menu,
+   hidden but still in place after it closed low in the window) let the wheel carry the whole app
+   up past the player once a page ran out of scroll. `clip` is no scroll container at all; the
+   viewport, which treats it as hidden, is held at 0 by App. */
 html {
   scroll-behavior: smooth;
+  overflow: clip;
 }
 
 * {
@@ -203,7 +209,7 @@ body,
 #root {
   width: 100%;
   height: 100vh;
-  overflow-x: hidden;
+  overflow: clip;
   background-color: rgb(var(--canvas));
   color: rgb(var(--ink));
   -webkit-font-smoothing: antialiased;

@@ -13,7 +13,13 @@ export interface CoverTone {
   primary: string;
   secondary: string;
   light: string;
+  /** The accent from this cover (Settings > Appearance), desktop only: the primary tone's hue, and
+   * its colourfulness from 0 (grey) to 1, so the accent is exactly as colourful as the light. */
+  accent: { hue: number; vividness: number };
 }
+
+/** Chroma at which a cover's tone counts as fully colourful for the accent. */
+const VIVID_CHROMA = 0.1;
 
 const SIDE = 32;
 const BINS = 36;
@@ -131,7 +137,12 @@ export function coverToneOf(pixels: Uint8ClampedArray): CoverTone | null {
   );
   const first = smooth.reduce((best, value, i) => (value > smooth[best] ? i : best), 0);
   if (amount <= 0 || smooth[first] <= 0) {
-    return { primary: grey(greyLight), secondary: grey(greyLight * 0.72), light: grey(0.72) };
+    return {
+      primary: grey(greyLight),
+      secondary: grey(greyLight * 0.72),
+      light: grey(0.72),
+      accent: { hue: 0, vividness: 0 }
+    };
   }
   let second: number | undefined;
   smooth.forEach((value, i) => {
@@ -163,7 +174,8 @@ export function coverToneOf(pixels: Uint8ClampedArray): CoverTone | null {
   const agree = 0.25 + 0.75 * smoothstep(0.015, 0.06, Math.hypot(meanA / count, meanB / count));
   const strength = amount * agree;
   const [hue, chroma] = cluster(first);
-  const primary = oklch(l, Math.min(chroma, 0.13) * strength, deepHue(hue));
+  const primaryChroma = Math.min(chroma, 0.13) * strength;
+  const primary = oklch(l, primaryChroma, deepHue(hue));
   let secondary: string;
   if (second !== undefined) {
     const [hue2, chroma2] = cluster(second);
@@ -172,7 +184,15 @@ export function coverToneOf(pixels: Uint8ClampedArray): CoverTone | null {
     // One colour: its neighbour on the wheel, a shade deeper, gives the corner some depth.
     secondary = oklch(l * 0.85, Math.min(chroma, 0.13) * strength, deepHue(hue + 22));
   }
-  return { primary, secondary, light: oklch(0.72, Math.min(chroma, 0.16) * strength, hue) };
+  return {
+    primary,
+    secondary,
+    light: oklch(0.72, Math.min(chroma, 0.16) * strength, hue),
+    accent: {
+      hue: (deepHue(hue) + 360) % 360,
+      vividness: Math.min(1, primaryChroma / VIVID_CHROMA)
+    }
+  };
 }
 
 function loadPixels(url: string): Promise<Uint8ClampedArray | null> {

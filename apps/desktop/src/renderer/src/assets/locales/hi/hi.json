@@ -496,6 +496,8 @@
     "enableImageBasedDynamicThemes": "कवर लाइट",
     "accentColor": "एक्सेंट रंग",
     "accentColorDescription": "बटन, चयन, प्रगति और लिंक का रंग। नीला Nemora का अपना है; बाकी रंग उसकी गहराई और कंट्रास्ट बनाए रखते हैं।",
+    "accentFromCover": "चल रहे गाने के कवर से रंग लें",
+    "accentFromCoverDescription": "एक्सेंट कवर लाइट की तरह कवर के साथ बदलता है; धूसर कवर से ग्रेफाइट मिलता है। जब कुछ नहीं चल रहा हो, ऊपर वाला रंग दिखता है।",
     "accentColors": {
       "blue": "नीला",
       "violet": "बैंगनी",

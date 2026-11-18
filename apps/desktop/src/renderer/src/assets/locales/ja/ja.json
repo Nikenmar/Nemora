@@ -467,6 +467,8 @@
     "enableImageBasedDynamicThemes": "カバーライト",
     "accentColor": "アクセントカラー",
     "accentColorDescription": "ボタン、選択、進行状況、リンクの色です。青は Nemora 本来の色で、他の色も同じ深みとコントラストを保ちます。",
+    "accentFromCover": "再生中の曲のカバーから色を取る",
+    "accentFromCoverDescription": "アクセントはカバーライトと同じようにカバーに合わせて変わります。灰色のカバーならグラファイトになります。何も再生していないときは上の色を使います。",
     "accentColors": {
       "blue": "青",
       "violet": "紫",

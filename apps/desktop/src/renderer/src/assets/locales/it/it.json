@@ -525,6 +525,8 @@
     "enableImageBasedDynamicThemes": "Luce della copertina",
     "accentColor": "Colore di accento",
     "accentColorDescription": "Il colore di pulsanti, selezione, avanzamento e link. Il blu è quello di Nemora; ogni altro colore ne conserva profondità e contrasto.",
+    "accentFromCover": "Prendi il colore dalla copertina del brano in riproduzione",
+    "accentFromCoverDescription": "L'accento segue la copertina, come la luce della copertina; una copertina grigia dà grafite. Il colore sopra vale quando non suona nulla.",
     "accentColors": {
       "blue": "Blu",
       "violet": "Viola",

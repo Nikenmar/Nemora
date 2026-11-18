@@ -93,13 +93,11 @@ function fromOklch(L: number, chroma: number, hue: number): Rgb {
 
 const BLUE_HUE = toOklch(BLUE.dark.accent)[2];
 
-/** One theme's accent tokens for a preset. */
-export function accentTokens(id: AccentId, theme: 'light' | 'dark'): Tokens {
-  const preset = ACCENT_PRESETS.find((p) => p.id === id) ?? ACCENT_PRESETS[0];
-  if (preset.id === 'blue') return BLUE[theme];
+/** Blue's tokens turned to `hue` (null: colourless) with their chroma scaled by `vividness`. */
+function turned(theme: 'light' | 'dark', hue: number | null, vividness = 1): Tokens {
   const turn = (rgb: Rgb): Rgb => {
     const [L, C, H] = toOklch(rgb);
-    return preset.hue === null ? fromOklch(L, 0, 0) : fromOklch(L, C, (H + preset.hue - BLUE_HUE + 360) % 360);
+    return hue === null ? fromOklch(L, 0, 0) : fromOklch(L, C * vividness, (H + hue - BLUE_HUE + 360) % 360);
   };
   const blue = BLUE[theme];
   return {
@@ -110,24 +108,73 @@ export function accentTokens(id: AccentId, theme: 'light' | 'dark'): Tokens {
   };
 }
 
+/** One theme's accent tokens for a preset. */
+export function accentTokens(id: AccentId, theme: 'light' | 'dark'): Tokens {
+  const preset = ACCENT_PRESETS.find((p) => p.id === id) ?? ACCENT_PRESETS[0];
+  if (preset.id === 'blue') return BLUE[theme];
+  return turned(theme, preset.hue);
+}
+
+/** The accent taken from a cover: its hue, and how colourful it is from 0 (grey) to 1. */
+export interface CoverAccent {
+  hue: number;
+  vividness: number;
+}
+
+/**
+ * One theme's accent tokens for a cover: the same palette turned to the cover's hue, so a cover
+ * accent is as deep and as readable as a preset; a grey cover gives graphite, a muted one a muted
+ * accent. */
+export function coverAccentTokens(cover: CoverAccent, theme: 'light' | 'dark'): Tokens {
+  return turned(theme, cover.hue, Math.min(1, Math.max(0, cover.vividness)));
+}
+
 let sheet: CSSStyleSheet | null = null;
+let chosen: AccentId = DEFAULT_ACCENT;
+let fromCover: CoverAccent | null = null;
+const listeners = new Set<() => void>();
 
 const declarations = (tokens: Tokens) =>
   Object.entries(tokens)
     .map(([name, rgb]) => `--${name}: ${rgb.join(' ')};`)
     .join(' ');
 
-/** Applies the chosen accent to the whole app; blue (or an unknown id) clears the override. */
-export function applyAccent(id?: string | null) {
-  const preset = ACCENT_PRESETS.find((p) => p.id === id);
+/** The accent tokens the app shows now: the playing cover's when that is on, else the chosen preset's. */
+export function appliedAccentTokens(theme: 'light' | 'dark'): Tokens {
+  return fromCover ? coverAccentTokens(fromCover, theme) : accentTokens(chosen, theme);
+}
+
+/** Calls `listener` whenever the shown accent changes; returns the function that stops it. */
+export function onAccentChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function render() {
   if (!sheet) {
     sheet = new CSSStyleSheet();
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   }
   sheet.replaceSync(
-    !preset || preset.id === DEFAULT_ACCENT
+    !fromCover && chosen === DEFAULT_ACCENT
       ? ''
-      : `:root:root, .light.light { ${declarations(accentTokens(preset.id, 'light'))} }
-.dark.dark { ${declarations(accentTokens(preset.id, 'dark'))} }`
+      : `:root:root, .light.light { ${declarations(appliedAccentTokens('light'))} }
+.dark.dark { ${declarations(appliedAccentTokens('dark'))} }`
   );
+  listeners.forEach((listener) => listener());
+}
+
+/** Applies the chosen accent to the whole app; blue (or an unknown id) clears the override. */
+export function applyAccent(id?: string | null) {
+  chosen = ACCENT_PRESETS.find((p) => p.id === id)?.id ?? DEFAULT_ACCENT;
+  render();
+}
+
+/**
+ * The accent from the playing song's cover (Settings > Appearance), over the chosen preset; null
+ * gives the preset back. */
+export function applyCoverAccent(cover: CoverAccent | null) {
+  if (fromCover?.hue === cover?.hue && fromCover?.vividness === cover?.vividness) return;
+  fromCover = cover;
+  render();
 }

@@ -1,6 +1,6 @@
 import type { ObsWidgetState, ObsWidgetUpNext } from '@platform/api';
 import { store } from '../store';
-import { accentTokens, type AccentId } from './accentPalette';
+import { appliedAccentTokens, onAccentChange } from './accentPalette';
 import { playingTag } from './soundTag';
 import { soundStore, versionStore } from './soundEffects';
 
@@ -55,11 +55,9 @@ const push = (): void => {
     playing: player.isCurrentSongPlaying,
     upNext,
     art: currentSongData.artworkPath || undefined,
-    // The widget draws over video in the black theme's colours, so it takes the dark echo.
-    accent: accentTokens(
-      (store.state.localStorage.preferences.accentColor ?? 'blue') as AccentId,
-      'dark'
-    ).echo.join(' ')
+    // The widget draws over video in the black theme's colours, so it takes the dark echo of the
+    // accent the app shows (the cover's, when the accent follows it).
+    accent: appliedAccentTokens('dark').echo.join(' ')
   };
 
   const fingerprint = JSON.stringify(state);
@@ -93,5 +91,7 @@ export const startObsWidgetFeed = (): void => {
   store.subscribe(push);
   soundStore.subscribe(push);
   versionStore.subscribe(push);
+  // A cover's accent arrives after the song does, once the cover is read.
+  onAccentChange(push);
   push();
 };

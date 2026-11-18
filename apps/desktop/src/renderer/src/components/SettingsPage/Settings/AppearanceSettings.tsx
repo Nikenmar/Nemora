@@ -200,6 +200,19 @@ const ThemeSettings = () => {
               {t(`settingsPage.accentColors.${accent}`)}
             </span>
           </div>
+          <div className="mt-4 pl-4">
+            <Checkbox
+              id="toggleAccentFromCover"
+              isChecked={!!preferences?.isAccentFromCover}
+              checkedStateUpdateFunction={(state) =>
+                storage.preferences.setPreferences('isAccentFromCover', state)
+              }
+              labelContent={t('settingsPage.accentFromCover')}
+            />
+            <div className="description ml-8 text-small text-ink-dim">
+              {t('settingsPage.accentFromCoverDescription')}
+            </div>
+          </div>
           {isDarkMode && (
             <>
               <div className="description mt-5">{t('settingsPage.frameShadeDescription')}</div>

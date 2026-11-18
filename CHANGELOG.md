@@ -2,6 +2,14 @@
 
 What changed in each Nemora release. The newest is first. Nemora shows the short version of these notes in Settings › About › What's new.
 
+## 3.0.1 · 2026-11-19
+
+- Accent from the cover: a new switch in Settings › Appearance gives buttons, the selection and progress the colour of the playing song's cover
+- The window no longer scrolls away past the player and leaves an empty band under it
+- AI agents read a song's lyrics from its file too (an .lrc beside it or its tags), not only the lyrics Nemora already showed
+
+A small update on top of 3.0. It installs as an update like any release.
+
 ## 3.0.0 hotfix1 · 2026-11-13
 
 - Choose folders in Add music folders opens the folder picker again, so a new install can add its music ([#1](https://github.com/Nikenmar/Nemora/issues/1))

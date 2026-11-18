@@ -467,6 +467,8 @@
     "enableImageBasedDynamicThemes": "封面光效",
     "accentColor": "强调色",
     "accentColorDescription": "按钮、选择、进度和链接的颜色。蓝色是 Nemora 的专属色；其他颜色都保持相同的深度和对比度。",
+    "accentFromCover": "使用正在播放歌曲封面的颜色",
+    "accentFromCoverDescription": "强调色像封面光效一样跟随封面，灰色封面会得到石墨色。未播放时使用上方选择的颜色。",
     "accentColors": {
       "blue": "蓝色",
       "violet": "紫色",

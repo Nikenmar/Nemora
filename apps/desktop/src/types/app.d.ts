@@ -563,6 +563,9 @@ declare global {
     isLyricsLibraryEnabled?: boolean;
     /** The accent colour, an id of ACCENT_PRESETS (other/accentPalette.ts); blue when unset. */
     accentColor?: string;
+    /** The accent follows the playing song's cover (other/accentPalette.ts applyCoverAccent); the
+     * chosen accent shows while nothing plays. Off unless switched on. */
+    isAccentFromCover?: boolean;
     /** The dark theme's frame, an id of FRAME_SHADES (other/framePalette.ts); black when unset. */
     frameShade?: string;
     autoTranslateLyrics: boolean;

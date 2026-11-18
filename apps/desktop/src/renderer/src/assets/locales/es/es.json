@@ -525,6 +525,8 @@
     "enableImageBasedDynamicThemes": "Luz de carátula",
     "accentColor": "Color de acento",
     "accentColorDescription": "El color de los botones, la selección, el progreso y los enlaces. El azul es el propio de Nemora; los demás mantienen su profundidad y contraste.",
+    "accentFromCover": "Tomar el color de la carátula de la canción en curso",
+    "accentFromCoverDescription": "El acento sigue a la carátula, como la luz de carátula; una carátula gris da grafito. El color de arriba se usa mientras no suena nada.",
     "accentColors": {
       "blue": "Azul",
       "violet": "Violeta",

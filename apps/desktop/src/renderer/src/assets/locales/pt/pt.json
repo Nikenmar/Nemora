@@ -525,6 +525,8 @@
     "enableImageBasedDynamicThemes": "Luz da capa",
     "accentColor": "Cor de destaque",
     "accentColorDescription": "A cor dos botões, da seleção, do progresso e dos links. O azul é a cor do Nemora; as demais mantêm sua profundidade e contraste.",
+    "accentFromCover": "Usar a cor da capa da música tocando",
+    "accentFromCoverDescription": "O destaque acompanha a capa, como a luz da capa; uma capa cinza dá grafite. A cor acima vale enquanto nada toca.",
     "accentColors": {
       "blue": "Azul",
       "violet": "Violeta",
