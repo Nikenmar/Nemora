@@ -108,7 +108,7 @@ A pair of songs for a duel, as Nemora picks them (songs whose rating is least su
 
 ### `get_lyrics` (read)
 
-A song's lyrics as Nemora keeps them, synced (LRC with times) or plain, and where they came from. Only lyrics already in the library; nothing is looked up online.
+A song's lyrics, synced (LRC with times) or plain, and where they came from: the library's own, else the song's file (an .lrc beside it, or its tags). Nothing is looked up online and nothing is written.
 
 | Parameter | Type | Meaning |
 |---|---|---|

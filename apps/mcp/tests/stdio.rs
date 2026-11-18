@@ -114,6 +114,8 @@ fn an_agent_reads_the_library_and_nothing_is_written() {
     std::fs::create_dir_all(&music).unwrap();
     song(&music.join("a.flac"), 440, "Reverie", "Mika Nakashima");
     song(&music.join("b.flac"), 660, "Бродяга", "Кино");
+    // Lyrics only in a file beside the song, as most libraries have them: none are stored.
+    std::fs::write(music.join("a.lrc"), "[00:01.00]from the file\n[00:02.50]second line\n").unwrap();
     let profile = root.join("profile");
     std::fs::create_dir_all(&profile).unwrap();
     {
@@ -164,12 +166,24 @@ fn an_agent_reads_the_library_and_nothing_is_written() {
     let id = songs[0]["songId"].as_str().unwrap().to_owned();
     let found = server.call("search", json!({ "query": "brodyaga" }));
     assert_eq!(found["structuredContent"]["songs"][0]["title"], "Бродяга", "{found}");
+    let other = found["structuredContent"]["songs"][0]["songId"].as_str().unwrap().to_owned();
 
     let detail = server.call("get_song", json!({ "song_id": id }));
     let detail = &detail["structuredContent"];
     assert_eq!(detail["song"]["artists"][0], "Mika Nakashima");
     assert_eq!(detail["file"]["format"], "FLAC");
     assert_eq!(detail["stats"]["plays"], 0);
+    assert_eq!(detail["hasLyrics"], true, "the .lrc beside the file counts");
+
+    // Lyrics the library never stored are read from the song's file (and still not written).
+    let lyrics = server.call("get_lyrics", json!({ "song_id": id }));
+    let lyrics = &lyrics["structuredContent"];
+    assert_eq!(lyrics["source"], "lrc_file", "{lyrics}");
+    assert_eq!(lyrics["synced"], true);
+    assert!(lyrics["text"].as_str().unwrap().contains("from the file"));
+    let none = server.call("get_lyrics", json!({ "song_id": other }));
+    assert_eq!(none["isError"], true);
+    assert!(none["content"][0]["text"].as_str().unwrap().contains("No lyrics"));
 
     let page = server.call("list_songs", json!({ "scope": "artist:Кино" }));
     assert_eq!(page["structuredContent"]["total"], 1);

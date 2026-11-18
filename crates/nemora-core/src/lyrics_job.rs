@@ -89,10 +89,7 @@ pub fn fill(
         return Ok(Ok(Outcome::Skipped));
     }
     let Some(song) = lyrics::lookup(db, song_id)? else { return Ok(Ok(Outcome::Skipped)) };
-    let path = std::path::Path::new(&song.uri);
-    let local =
-        lyrics::from_lrc_file(path).map(|t| (t, "lrc_file")).or_else(|| lyrics::from_tags(path).map(|t| (t, "tags")));
-    if let Some((text, source)) = local {
+    if let Some((text, source)) = lyrics::in_files(std::path::Path::new(&song.uri)) {
         lyrics::save(db, song_id, &text, source)?;
         return Ok(Ok(Outcome::Local(source)));
     }
@@ -191,6 +188,26 @@ mod tests {
         assert_eq!(fill(&db, &b, NOW + 31 * DAY_MS, &mut found).unwrap(), Ok(Outcome::Found));
         assert_eq!(lyrics::stored(&db, &b).unwrap().unwrap().1, "lrclib");
         assert_eq!(progress(&db).unwrap(), (3, 3));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// `lyrics::find_offline` (the MCP's get_lyrics): a file's own lyrics are found without being
+    /// stored, stored ones win, and nothing found is no lyrics.
+    #[test]
+    fn lyrics_read_offline_come_from_the_file_and_nothing_is_stored() {
+        let dir = std::env::temp_dir().join(format!("nemora-lyrics-offline-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = library(&dir);
+        let (a, b, c) = ("a".repeat(26), "b".repeat(26), "c".repeat(26));
+        assert_eq!(
+            lyrics::find_offline(&db, &a).unwrap(),
+            Some(("[00:01.00]from the file\n".to_owned(), "lrc_file".to_owned()))
+        );
+        assert_eq!(lyrics::stored(&db, &a).unwrap(), None, "reading kept nothing");
+        assert_eq!(lyrics::find_offline(&db, &b).unwrap(), None);
+        lyrics::save(&db, &c, "my own words", "user").unwrap();
+        assert_eq!(lyrics::find_offline(&db, &c).unwrap(), Some(("my own words".to_owned(), "user".to_owned())));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

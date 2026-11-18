@@ -545,6 +545,24 @@ pub mod lrclib {
     }
 }
 
+/// The lyrics a song's own file carries: the `.lrc` file next to it, else its tags; with the source
+/// they would be stored under.
+pub fn in_files(song_path: &std::path::Path) -> Option<(String, &'static str)> {
+    from_lrc_file(song_path).map(|t| (t, "lrc_file")).or_else(|| from_tags(song_path).map(|t| (t, "tags")))
+}
+
+/// The lyrics of a song as text with their source, read without writing: stored ones, else what
+/// its file carries ([`in_files`]). For a reader that must not change the library (the MCP's read
+/// tools open it read-only). The app keeps lyrics only once they were shown, so most songs whose
+/// file has lyrics have none stored.
+pub fn find_offline(db: &crate::db::Db, song_id: &str) -> crate::Result<Option<(String, String)>> {
+    if let Some(found) = stored(db, song_id)? {
+        return Ok(Some(found));
+    }
+    let Some(song) = lookup(db, song_id)? else { return Ok(None) };
+    Ok(in_files(std::path::Path::new(&song.uri)).map(|(text, source)| (text, source.to_owned())))
+}
+
 /// The lyrics of a song: stored ones, else the `.lrc` file next to it, else its tags, else (when
 /// `network` is allowed) LRCLIB. Whatever is found is stored with its source.
 pub fn get(db: &crate::db::Db, song_id: &str, network: bool) -> crate::Result<Option<(Lyrics, String)>> {
@@ -552,10 +570,7 @@ pub fn get(db: &crate::db::Db, song_id: &str, network: bool) -> crate::Result<Op
         return Ok(Some((parse(&text), source)));
     }
     let Some(song) = lookup(db, song_id)? else { return Ok(None) };
-    let path = std::path::Path::new(&song.uri);
-    let found = from_lrc_file(path)
-        .map(|t| (t, "lrc_file"))
-        .or_else(|| from_tags(path).map(|t| (t, "tags")))
+    let found = in_files(std::path::Path::new(&song.uri))
         .or_else(|| if network { song.fetch_online().map(|t| (t, "lrclib")) } else { None });
     match found {
         Some((text, source)) => {

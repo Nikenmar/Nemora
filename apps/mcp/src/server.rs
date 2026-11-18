@@ -177,6 +177,7 @@ pub struct SongDetail {
     /// Its own sound (Switch version), if it has one.
     #[serde(skip_serializing_if = "Option::is_none")]
     switched_sound: Option<String>,
+    /// Lyrics in the library or in the song's own file (`get_lyrics` reads them).
     has_lyrics: bool,
     /// What the file says beyond the library's row.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -438,7 +439,7 @@ pub struct LyricsOut {
     synced: bool,
     /// Where they came from: tags, lrc_file, lrclib, musixmatch, user.
     source: String,
-    /// The lyrics as stored (LRC when synced).
+    /// The lyrics (LRC when synced).
     text: String,
 }
 
@@ -452,6 +453,8 @@ pub struct Summary {
     playlists: i64,
     total_hours: f64,
     plays_all_time: i64,
+    /// Songs whose lyrics the library keeps (shown once, fetched, or written); lyrics only in a
+    /// song's file are not counted here, `get_lyrics` still reads them.
     songs_with_lyrics: i64,
     /// The profile folder read.
     profile: String,
@@ -598,7 +601,7 @@ impl Nemora {
             .into_iter()
             .find(|(s, _)| *s == id)
             .map(|(_, sound)| nemora_core::song_sound::encode(&sound));
-        let has_lyrics = nemora_core::lyrics::stored(&db, &id).map_err(err)?.is_some();
+        let has_lyrics = nemora_core::lyrics::find_offline(&db, &id).map_err(err)?.is_some();
         let file = row.path.as_deref().and_then(|path| {
             let d = nemora_core::tags::read_details(std::path::Path::new(path)).ok()?;
             Some(FileOut {
@@ -889,15 +892,15 @@ impl Nemora {
     }
 
     #[tool(
-        description = "A song's lyrics as Nemora keeps them, synced (LRC with times) or plain, and where they came from. Only lyrics already in the library; nothing is looked up online.",
+        description = "A song's lyrics, synced (LRC with times) or plain, and where they came from: the library's own, else the song's file (an .lrc beside it, or its tags). Nothing is looked up online and nothing is written.",
         annotations(title = "Get lyrics", read_only_hint = true, open_world_hint = false)
     )]
     fn get_lyrics(&self, Parameters(p): Parameters<SongParams>) -> Result<Json<LyricsOut>, String> {
         let db = self.db()?;
         let id = song_of(&p.song_id).to_owned();
-        let (text, source) = nemora_core::lyrics::stored(&db, &id)
-            .map_err(err)?
-            .ok_or_else(|| format!("No lyrics in the library for {id}."))?;
+        let (text, source) = nemora_core::lyrics::find_offline(&db, &id).map_err(err)?.ok_or_else(|| {
+            format!("No lyrics for {id}: none in the library, no .lrc beside its file and none in its tags.")
+        })?;
         Ok(Json(LyricsOut { synced: nemora_core::lyrics::is_synced(&text), song_id: id, source, text }))
     }
 }
