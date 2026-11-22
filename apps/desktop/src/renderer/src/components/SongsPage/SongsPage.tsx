@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import { lazy, useCallback, useContext, useEffect, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -186,7 +187,7 @@ const SongsPage = () => {
       className="main-container appear-from-bottom songs-list-container !h-full overflow-hidden !pb-0"
       focusable
       onKeyDown={(e) => {
-        if (e.ctrlKey && e.key === 'a') {
+        if (isSelectAll(e)) {
           e.stopPropagation();
           selectAllHandler();
         }

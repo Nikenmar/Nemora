@@ -47,9 +47,15 @@ struct Server {
 
 impl Server {
     fn start(profile: &Path) -> Self {
+        Self::start_as(profile, json!({ "name": "test", "version": "1" }))
+    }
+
+    fn start_as(profile: &Path, client_info: Value) -> Self {
         let mut child = Command::new(env!("CARGO_BIN_EXE_nemora-mcp"))
             .arg("--profile")
             .arg(profile)
+            // Never the user's own Nemora, should it be running.
+            .env("NEMORA_AGENT_PIPE", format!("nemora-mcp-test-{}", std::process::id()))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -60,7 +66,7 @@ impl Server {
         let mut server = Self { child, input, output, next: 0 };
         let init = server.request(
             "initialize",
-            json!({ "protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": { "name": "test", "version": "1" } }),
+            json!({ "protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": client_info }),
         );
         assert_eq!(init["serverInfo"]["name"], "nemora");
         assert!(
@@ -208,6 +214,46 @@ fn an_agent_reads_the_library_and_nothing_is_written() {
     drop(server);
 
     assert_eq!(std::fs::read(&db_path).unwrap(), before, "the library's file did not change");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn reever_reads_with_a_level_of_its_own() {
+    let root = temp_dir("reever");
+    let set = |key: &str, level: &str| {
+        let db = nemora_core::db::Db::open(&root.join("nemora.db")).unwrap();
+        nemora_core::settings::set_device(&db, key, &json!(level)).unwrap();
+    };
+    let reever = || json!({ "name": "reever", "title": "Reever", "version": "1" });
+    let error = |reply: &Value| {
+        assert_eq!(reply["isError"], true, "{reply}");
+        reply["content"][0]["text"].as_str().unwrap().to_owned()
+    };
+
+    // Agents turned off: another agent reads nothing, Reever reads with its default, control.
+    set("agent.access", "off");
+    let mut agent = Server::start(&root);
+    assert!(error(&agent.call("library_summary", json!({}))).contains("turned agents off"));
+    let status = agent.call("app_status", json!({}));
+    assert_eq!(status["structuredContent"]["running"], false, "{status}");
+    assert_eq!(status["structuredContent"]["access"], "off", "{status}");
+    drop(agent);
+    let mut voice = Server::start_as(&root, reever());
+    let summary = voice.call("library_summary", json!({}));
+    assert_eq!(summary["structuredContent"]["songs"], 0, "{summary}");
+    assert_eq!(voice.call("app_status", json!({}))["structuredContent"]["access"], "control");
+    drop(voice);
+
+    // Reever turned off, agents allowed: the other way round.
+    set("agent.access", "control");
+    set("agent.access.reever", "off");
+    let mut voice = Server::start_as(&root, reever());
+    assert!(error(&voice.call("search", json!({ "query": "rain" }))).contains("turned Reever off"));
+    assert_eq!(voice.call("app_status", json!({}))["structuredContent"]["access"], "off");
+    drop(voice);
+    let mut agent = Server::start(&root);
+    assert_eq!(agent.call("library_summary", json!({}))["structuredContent"]["songs"], 0);
+    drop(agent);
     let _ = std::fs::remove_dir_all(&root);
 }
 

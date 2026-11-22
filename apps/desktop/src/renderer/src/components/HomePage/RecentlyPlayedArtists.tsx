@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSelectAllHandler from '../../hooks/useSelectAllHandler';
@@ -49,7 +50,7 @@ const RecentlyPlayedArtists = (props: Props) => {
           className="artists-list-container appear-from-bottom max-h-full flex-col pb-8"
           focusable
           onKeyDown={(e) => {
-            if (e.ctrlKey && e.key === 'a') {
+            if (isSelectAll(e)) {
               e.stopPropagation();
               selectAllHandler();
             }

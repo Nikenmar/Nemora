@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import { type ForwardedRef, forwardRef, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -51,7 +52,7 @@ const RecentlyAddedSongs = forwardRef((props: Props, ref: ForwardedRef<HTMLDivEl
       className="recently-added-songs-container appear-from-bottom h-fit max-h-full w-full flex-col pb-8"
       focusable
       onKeyDown={(e) => {
-        if (e.ctrlKey && e.key === 'a') {
+        if (isSelectAll(e)) {
           e.stopPropagation();
           selectAllHandler();
         }

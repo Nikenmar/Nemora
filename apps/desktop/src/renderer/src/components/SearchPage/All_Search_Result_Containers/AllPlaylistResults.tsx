@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import { Playlist } from '../../PlaylistsPage/Playlist';
 import useSelectAllHandler from '../../../hooks/useSelectAllHandler';
 import SecondaryContainer from '../../SecondaryContainer';
@@ -20,7 +21,7 @@ const AllPlaylistResults = (prop: Props) => {
       className="playlists-container flex h-full flex-wrap"
       focusable
       onKeyDown={(e) => {
-        if (e.ctrlKey && e.key === 'a') {
+        if (isSelectAll(e)) {
           e.stopPropagation();
           selectAllHandler();
         }

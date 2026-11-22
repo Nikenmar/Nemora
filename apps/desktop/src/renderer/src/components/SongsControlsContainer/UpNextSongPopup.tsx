@@ -142,7 +142,7 @@ const UpNextSongPopup = (props: Props) => {
       } ${className}`}
     >
       <p className="truncate">
-        <span className="font-medium text-echo">
+        <span className="font-medium text-cover-echo">
           {t('player.upNext')}
         </span>{' '}
         <span
@@ -155,7 +155,7 @@ const UpNextSongPopup = (props: Props) => {
         {upNextSongData.artists && upNextSongData.artists.length > 0 && (
           <>
             {' '}
-            <span className="font-medium text-echo">
+            <span className="font-medium text-cover-echo">
               {t('player.by')}
             </span>{' '}
             <span
@@ -194,7 +194,7 @@ const UpNextSongPopup = (props: Props) => {
         size="sm"
         // 20 px button on a 14 px line: the negative margins keep the row from growing when it appears,
         // so the title above does not jump.
-        className="!-my-[3px] !mr-0 ml-1 !hidden !h-5 !w-5 shrink-0 !text-echo group-hover/nextSong:!flex"
+        className="!-my-[3px] !mr-0 ml-1 !hidden !h-5 !w-5 shrink-0 !text-cover-echo group-hover/nextSong:!flex"
         clickHandler={() => setUpNextSongData(undefined)}
       />
     </div>

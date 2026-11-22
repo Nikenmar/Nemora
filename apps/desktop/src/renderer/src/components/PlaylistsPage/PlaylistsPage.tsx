@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import { lazy, useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -136,7 +137,7 @@ const PlaylistsPage = () => {
       }
       focusable
       onKeyDown={(e) => {
-        if (e.ctrlKey && e.key === 'a') {
+        if (isSelectAll(e)) {
           e.stopPropagation();
           selectAllHandler();
         }

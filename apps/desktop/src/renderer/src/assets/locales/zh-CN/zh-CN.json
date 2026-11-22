@@ -308,6 +308,8 @@
     "title": "AI 智能体",
     "intro": "让 AI 智能体 (Claude、Codex、Cursor、Gemini 等) 使用 Nemora：回答有关你的音乐和统计的问题、播放、创建队列和播放列表。它通过 Nemora 旁边的小程序 nemora-mcp 连接，不会向网络开放任何内容。它读取的内容会发送给该智能体的提供方。",
     "accessTitle": "智能体可以做什么",
+    "reeverTitle": "Reever",
+    "reeverHint": "Reever 的语音指令有单独的权限级别，不受上方设置的限制。",
     "level": {
       "off": "无",
       "read": "读取",

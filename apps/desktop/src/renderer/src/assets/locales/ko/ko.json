@@ -308,6 +308,8 @@
     "title": "AI 에이전트",
     "intro": "AI 에이전트(Claude, Codex, Cursor, Gemini 등)가 Nemora를 사용하게 합니다. 음악과 통계에 대해 답하고, 재생하고, 대기열과 재생목록을 만듭니다. Nemora 옆의 작은 프로그램 nemora-mcp를 통해 연결되며 네트워크에는 아무것도 열리지 않습니다. 에이전트가 읽은 내용은 해당 에이전트 제공사로 전송됩니다.",
     "accessTitle": "에이전트가 할 수 있는 일",
+    "reeverTitle": "Reever",
+    "reeverHint": "Reever의 음성 명령에는 별도의 단계가 있으며, 위의 설정은 적용되지 않습니다.",
     "level": {
       "off": "없음",
       "read": "읽기",

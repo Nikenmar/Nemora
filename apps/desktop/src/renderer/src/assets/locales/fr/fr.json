@@ -354,6 +354,8 @@
     "title": "Agents IA",
     "intro": "Laissez un agent IA (Claude, Codex, Cursor, Gemini et d'autres) utiliser Nemora : répondre sur votre musique et vos statistiques, lire, créer des files et des playlists. Il se connecte via nemora-mcp, un petit programme à côté de Nemora ; rien n'est ouvert sur le réseau. Ce qu'il lit va au fournisseur de l'agent.",
     "accessTitle": "Ce que les agents peuvent faire",
+    "reeverTitle": "Reever",
+    "reeverHint": "Les commandes vocales de Reever ont leur propre niveau : celui du dessus ne les limite pas.",
     "level": {
       "off": "Rien",
       "read": "Lecture",

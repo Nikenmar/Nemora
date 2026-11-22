@@ -331,6 +331,8 @@
     "title": "KI-Agenten",
     "intro": "Lass einen KI-Agenten (Claude, Codex, Cursor, Gemini und andere) Nemora nutzen: Fragen zu deiner Musik und Statistik beantworten, abspielen, Warteschlangen und Playlists erstellen. Er verbindet sich über nemora-mcp, ein kleines Programm neben Nemora; nichts wird zum Netzwerk hin geöffnet. Was er liest, geht an den Anbieter des Agenten.",
     "accessTitle": "Was Agenten dürfen",
+    "reeverTitle": "Reever",
+    "reeverHint": "Die Sprachbefehle von Reever haben eine eigene Stufe: Die Einstellung darüber gilt für sie nicht.",
     "level": {
       "off": "Nichts",
       "read": "Lesen",

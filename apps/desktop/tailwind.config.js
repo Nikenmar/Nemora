@@ -37,6 +37,9 @@ export const theme = {
       'on-accent': 'rgb(var(--on-accent) / <alpha-value>)',
       'accent-soft': 'rgb(var(--accent-soft) / <alpha-value>)',
       echo: 'rgb(var(--echo) / <alpha-value>)',
+      // The echo of the playing song's cover, whatever the accent (accentPalette.ts); the accent's
+      // echo while nothing plays.
+      'cover-echo': 'rgb(var(--cover-echo, var(--echo)) / <alpha-value>)',
       danger: 'rgb(var(--danger) / <alpha-value>)',
       'danger-soft': 'rgb(var(--danger-soft) / <alpha-value>)',
       success: 'rgb(var(--success) / <alpha-value>)',

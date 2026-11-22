@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import { useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Artist } from '../../ArtistPage/Artist';
@@ -61,7 +62,7 @@ const ArtistsSearchResultsContainer = (props: Props) => {
       }`}
       focusable
       onKeyDown={(e) => {
-        if (e.ctrlKey && e.key === 'a') {
+        if (isSelectAll(e)) {
           e.stopPropagation();
           selectAllHandler();
         }

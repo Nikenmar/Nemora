@@ -3067,7 +3067,7 @@ dependencies = [
 
 [[package]]
 name = "nemora-audio"
-version = "3.0.1-stable"
+version = "3.0.2-stable"
 dependencies = [
  "cc",
  "cpal",
@@ -3081,7 +3081,7 @@ dependencies = [
 
 [[package]]
 name = "nemora-core"
-version = "3.0.1-stable"
+version = "3.0.2-stable"
 dependencies = [
  "any_ascii",
  "blake3",
@@ -3107,7 +3107,7 @@ dependencies = [
 
 [[package]]
 name = "nemora-desktop"
-version = "3.0.1-stable"
+version = "3.0.2-stable"
 dependencies = [
  "discord-rich-presence",
  "drag",
@@ -3143,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "nemora-mcp"
-version = "3.0.1-stable"
+version = "3.0.2-stable"
 dependencies = [
  "nemora-core",
  "rmcp",

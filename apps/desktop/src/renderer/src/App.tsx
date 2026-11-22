@@ -22,7 +22,7 @@ import { registerAgentBridge } from './other/agentBridge';
 import { applyCoverLight } from './other/coverLight';
 // Evaluated here as before; app/bootstrap.ts sets the playback clock.
 import './other/trackVisuals';
-import { applyAccent, applyCoverAccent } from './other/accentPalette';
+import { applyAccent, applyCoverAccent, applyPlayingCover, type CoverAccent } from './other/accentPalette';
 import { readCoverTone } from './other/coverTone';
 import { applyFrameShade } from './other/framePalette';
 import { withViewTransition } from './other/viewTransition';
@@ -645,23 +645,31 @@ export default function App() {
   const accentColor = useStore(store, (state) => state.localStorage.preferences.accentColor);
   useEffect(() => applyAccent(accentColor), [accentColor]);
 
-  // Accent from the cover (Settings > Appearance): the playing cover's tone over the chosen accent,
-  // read the way the cover light reads it, whether or not the cover light is on. The old accent
-  // stays until the new cover is read, so a song change never flashes the preset in between.
+  // The playing cover's tone, read the way the cover light reads it, whether or not the cover light
+  // is on. The player's "Up next" and "by" always take its colour; the accent takes it too when it
+  // follows the cover (Settings > Appearance), over the chosen one. The old colours stay until the
+  // new cover is read, so a song change never flashes the preset in between.
   const isAccentFromCover = useStore(
     store,
     (state) => !!state.localStorage.preferences.isAccentFromCover
   );
   const playingArtwork = useStore(store, (state) => state.currentSongData?.artworkPath);
   useEffect(() => {
-    if (!isAccentFromCover || !playingArtwork) {
+    if (!isAccentFromCover) applyCoverAccent(null);
+    if (!playingArtwork) {
       applyCoverAccent(null);
+      applyPlayingCover(null);
       return undefined;
     }
     let isLatest = true;
+    const show = (cover: CoverAccent | null) => {
+      if (!isLatest) return;
+      applyPlayingCover(cover);
+      applyCoverAccent(isAccentFromCover ? cover : null);
+    };
     readCoverTone(playingArtwork)
-      .then((tone) => isLatest && applyCoverAccent(tone?.accent ?? null))
-      .catch(() => isLatest && applyCoverAccent(null));
+      .then((tone) => show(tone?.accent ?? null))
+      .catch(() => show(null));
     return () => {
       isLatest = false;
     };

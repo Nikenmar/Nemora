@@ -1,24 +1,55 @@
 {
   "latestVersion": {
-    "version": "3.0.1-stable",
-    "releaseDate": "2026-11-19T12:00:00.000Z",
+    "version": "3.0.2-stable",
+    "releaseDate": "2026-11-22T19:00:00.000Z",
     "notes": {
       "new": [
         {
-          "note": "Accent from the cover: a switch in Settings › Appearance gives buttons, the selection and progress the colour of the playing song's cover"
+          "note": "Up next and by under the playing song take the colour of its cover whatever the accent, in the OBS widget too"
+        },
+        {
+          "note": "Ctrl+K puts the cursor in the search field, as the hint in it says"
+        },
+        {
+          "note": "Reever, a voice launcher, has an access level of its own in Settings › AI agents, so holding AI agents back does not silence your voice commands"
         }
       ],
       "fixed": [
         {
-          "note": "The window no longer scrolls away past the player and leaves an empty band under it"
+          "note": "Keyboard shortcuts work on any keyboard layout: Ctrl+A, Ctrl+H, Ctrl+S and the rest on a Russian one too"
         },
         {
-          "note": "AI agents read a song's lyrics from its file too (an .lrc beside it or its tags), not only the lyrics Nemora already showed"
+          "note": "In a text field, Ctrl+arrows move and select by word and Ctrl+Y redoes, instead of skipping songs, changing the volume or the theme"
         }
       ]
     }
   },
   "versions": [
+    {
+      "version": "3.0.2-stable",
+      "releaseDate": "2026-11-22T19:00:00.000Z",
+      "notes": {
+        "new": [
+          {
+            "note": "Up next and by under the playing song take the colour of its cover whatever the accent, in the OBS widget too"
+          },
+          {
+            "note": "Ctrl+K puts the cursor in the search field, as the hint in it says"
+          },
+          {
+            "note": "Reever, a voice launcher, has an access level of its own in Settings › AI agents, so holding AI agents back does not silence your voice commands"
+          }
+        ],
+        "fixed": [
+          {
+            "note": "Keyboard shortcuts work on any keyboard layout: Ctrl+A, Ctrl+H, Ctrl+S and the rest on a Russian one too"
+          },
+          {
+            "note": "In a text field, Ctrl+arrows move and select by word and Ctrl+Y redoes, instead of skipping songs, changing the volume or the theme"
+          }
+        ]
+      }
+    },
     {
       "version": "3.0.1-stable",
       "releaseDate": "2026-11-19T12:00:00.000Z",

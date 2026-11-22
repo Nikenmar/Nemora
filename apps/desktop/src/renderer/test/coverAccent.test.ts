@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { accentTokens, coverAccentTokens } from '../src/other/accentPalette';
+import {
+  accentTokens,
+  applyAccent,
+  applyCoverAccent,
+  applyPlayingCover,
+  coverAccentTokens,
+  coverEchoTokens
+} from '../src/other/accentPalette';
 import { coverToneOf } from '../src/other/coverTone';
 
 const luminance = ([r, g, b]: number[]) => {
@@ -36,6 +43,27 @@ describe('the accent from the cover', () => {
       }
     }
     expect(lowest).toBeGreaterThan(7);
+  });
+
+  it('gives "Up next" the playing cover\'s echo whatever the accent, and the accent\'s with no cover', () => {
+    const red = { hue: 25, vividness: 1 };
+    applyAccent('violet');
+    applyCoverAccent(null);
+    applyPlayingCover(null);
+    expect(coverEchoTokens('dark')).toEqual(accentTokens('violet', 'dark').echo);
+
+    // The accent stays violet; only the labels follow the cover.
+    applyPlayingCover(red);
+    for (const theme of ['light', 'dark'] as const) {
+      expect(coverEchoTokens(theme)).toEqual(coverAccentTokens(red, theme).echo);
+    }
+    const sheet = document.adoptedStyleSheets.at(-1)!;
+    const css = [...sheet.cssRules].map((rule) => rule.cssText).join('\n');
+    expect(css).toContain('--cover-echo');
+    expect(css).toContain(`--echo: ${accentTokens('violet', 'dark').echo.join(' ')}`);
+
+    applyAccent('blue');
+    applyPlayingCover(null);
   });
 
   it('reads a grey cover as no colour and a red one as a vivid red', () => {

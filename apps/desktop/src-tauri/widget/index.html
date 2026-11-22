@@ -44,7 +44,7 @@
       }
 
       :root {
-        /* The black theme's tokens (styles.css). `--echo` follows the accent the user chose: the
+        /* The black theme's tokens (styles.css). `--echo` ("Up next", "by") follows the playing cover: the
            renderer sends it with every state. */
         --ink: 239 240 243;
         /* Not the app's ink-dim grey: over a stream the background is anything at all, and a mid
@@ -426,7 +426,7 @@
         let failures = 0;
 
         const apply = (state) => {
-          // The accent the user chose in Nemora; blue when an older app sends none.
+          // The colour of "Up next" and "by": the playing cover's, as in the player; blue when an older app sends none.
           if (state.accent) document.documentElement.style.setProperty('--echo', state.accent);
           else document.documentElement.style.removeProperty('--echo');
           const visible = Boolean(state.title) && !(hideWhenPaused && !state.playing);

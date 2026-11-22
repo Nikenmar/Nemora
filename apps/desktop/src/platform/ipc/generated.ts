@@ -6,6 +6,11 @@ export type AgentSettings = AgentSettings_Serialize | AgentSettings_Deserialize;
 export type AgentSettings_Deserialize = {
 	/**  off, read, control or full. */
 	access: string,
+	/**
+	 *  Reever's own level (off, read, control or full) once Reever has used Nemora; `None` hides
+	 *  its row.
+	 */
+	reever?: string | null,
 	/**  `nemora-mcp.exe` beside the app, when it is there. */
 	mcpPath?: string | null,
 	pipe: string,
@@ -16,6 +21,11 @@ export type AgentSettings_Deserialize = {
 export type AgentSettings_Serialize = {
 	/**  off, read, control or full. */
 	access: string,
+	/**
+	 *  Reever's own level (off, read, control or full) once Reever has used Nemora; `None` hides
+	 *  its row.
+	 */
+	reever: string | null,
 	/**  `nemora-mcp.exe` beside the app, when it is there. */
 	mcpPath: string | null,
 	pipe: string,
@@ -990,8 +1000,8 @@ export type WidgetStateInput_Deserialize = {
 	 */
 	art?: string | null,
 	/**
-	 *  The chosen accent's echo for the black theme, as `r g b`, so the widget's "Up next" matches
-	 *  the player's; the widget falls back to blue without it.
+	 *  The colour of the widget's "Up next" and "by", as `r g b`: the playing cover's echo for the
+	 *  black theme, as the player shows them; the widget falls back to blue without it.
 	 */
 	accent?: string | null,
 };
@@ -1018,8 +1028,8 @@ export type WidgetStateInput_Serialize = {
 	 */
 	art: string | null,
 	/**
-	 *  The chosen accent's echo for the black theme, as `r g b`, so the widget's "Up next" matches
-	 *  the player's; the widget falls back to blue without it.
+	 *  The colour of the widget's "Up next" and "by", as `r g b`: the playing cover's echo for the
+	 *  black theme, as the player shows them; the widget falls back to blue without it.
 	 */
 	accent: string | null,
 };
@@ -1029,6 +1039,7 @@ export interface IpcCommands {
   agent_log_clear: { args: Record<string, never>; ret: null };
   agent_reply: { args: { requestId: number; result?: Value | null; error?: string | null; }; ret: null };
   agent_set_access: { args: { access: string; }; ret: null };
+  agent_set_reever_access: { args: { access: string; }; ret: null };
   agent_settings: { args: Record<string, never>; ret: AgentSettings_Serialize };
   agent_setup: { args: { target: string; }; ret: SetupDone_Serialize };
   agent_targets: { args: Record<string, never>; ret: AgentTarget[] };

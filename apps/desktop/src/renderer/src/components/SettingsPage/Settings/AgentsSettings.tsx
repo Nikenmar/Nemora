@@ -37,6 +37,13 @@ const AgentsSettings = () => {
       .catch((error: unknown) => notify(String(error), 'error'));
   };
 
+  // Reever, the voice launcher, is held to a level of its own (agent.rs `is_reever`).
+  const setReeverAccess = (access: Access) => {
+    ipc('agent_set_reever_access', { access })
+      .then(load)
+      .catch((error: unknown) => notify(String(error), 'error'));
+  };
+
   const command = settings?.mcpPath ? `"${settings.mcpPath}"` : null;
   const copy = (text: string) =>
     navigator.clipboard
@@ -61,6 +68,8 @@ const AgentsSettings = () => {
   };
 
   const access = (settings?.access ?? 'control') as Access;
+  // Shown once Reever has used Nemora; nobody else sees the row.
+  const reever = (settings?.reever ?? null) as Access | null;
   return (
     <li className="main-container agents-settings-container mb-16">
       <div className="title-container mb-4 mt-1 flex items-center text-title font-semibold text-ink">
@@ -78,6 +87,19 @@ const AgentsSettings = () => {
           options={LEVELS.map((level) => ({ value: level, label: t(`agentsSettings.level.${level}`) }))}
         />
         <p className="mt-2 text-small text-ink-dim">{t(`agentsSettings.levelHint.${access}`)}</p>
+
+        {reever && (
+          <div className="mt-4">
+            <h4 className="mb-1 text-body font-medium text-ink">{t('agentsSettings.reeverTitle')}</h4>
+            <p className="mb-2 text-small text-ink-dim">{t('agentsSettings.reeverHint')}</p>
+            <Segmented
+              label={t('agentsSettings.reeverTitle')}
+              value={reever}
+              onChange={setReeverAccess}
+              options={LEVELS.map((level) => ({ value: level, label: t(`agentsSettings.level.${level}`) }))}
+            />
+          </div>
+        )}
       </section>
 
       <section className="mb-5">

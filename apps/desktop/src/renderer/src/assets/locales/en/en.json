@@ -330,6 +330,8 @@
     "title": "AI agents",
     "intro": "Let an AI agent (Claude, Codex, Cursor, Gemini and others) use Nemora: answer about your music and statistics, play, build queues and playlists. It connects through nemora-mcp, a small program beside Nemora; nothing is opened to the network. What it reads goes to the agent's own provider.",
     "accessTitle": "What agents may do",
+    "reeverTitle": "Reever",
+    "reeverHint": "Reever's voice commands have a level of their own: the one above does not limit them.",
     "level": {
       "off": "Nothing",
       "read": "Read",

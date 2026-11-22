@@ -132,6 +132,8 @@ export function coverAccentTokens(cover: CoverAccent, theme: 'light' | 'dark'): 
 let sheet: CSSStyleSheet | null = null;
 let chosen: AccentId = DEFAULT_ACCENT;
 let fromCover: CoverAccent | null = null;
+/** The playing song's cover, whatever the accent: "Up next" and "by" take its echo (`--cover-echo`). */
+let playingCover: CoverAccent | null = null;
 const listeners = new Set<() => void>();
 
 const declarations = (tokens: Tokens) =>
@@ -144,7 +146,14 @@ export function appliedAccentTokens(theme: 'light' | 'dark'): Tokens {
   return fromCover ? coverAccentTokens(fromCover, theme) : accentTokens(chosen, theme);
 }
 
-/** Calls `listener` whenever the shown accent changes; returns the function that stops it. */
+/**
+ * The colour of the player's "Up next" and "by": the playing cover's echo whether or not the accent
+ * follows the cover, the shown accent's echo while no cover is read. */
+export function coverEchoTokens(theme: 'light' | 'dark'): Rgb {
+  return playingCover ? coverAccentTokens(playingCover, theme).echo : appliedAccentTokens(theme).echo;
+}
+
+/** Calls `listener` whenever the shown accent or the playing cover's echo changes; returns the function that stops it. */
 export function onAccentChange(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -155,11 +164,15 @@ function render() {
     sheet = new CSSStyleSheet();
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
   }
+  const accent = (theme: 'light' | 'dark') =>
+    !fromCover && chosen === DEFAULT_ACCENT ? '' : declarations(appliedAccentTokens(theme));
+  const echo = (theme: 'light' | 'dark') =>
+    playingCover ? `--cover-echo: ${coverAccentTokens(playingCover, theme).echo.join(' ')};` : '';
   sheet.replaceSync(
-    !fromCover && chosen === DEFAULT_ACCENT
+    !accent('dark') && !playingCover
       ? ''
-      : `:root:root, .light.light { ${declarations(appliedAccentTokens('light'))} }
-.dark.dark { ${declarations(appliedAccentTokens('dark'))} }`
+      : `:root:root, .light.light { ${accent('light')} ${echo('light')} }
+.dark.dark { ${accent('dark')} ${echo('dark')} }`
   );
   listeners.forEach((listener) => listener());
 }
@@ -176,5 +189,12 @@ export function applyAccent(id?: string | null) {
 export function applyCoverAccent(cover: CoverAccent | null) {
   if (fromCover?.hue === cover?.hue && fromCover?.vividness === cover?.vividness) return;
   fromCover = cover;
+  render();
+}
+
+/** The playing song's cover, read whatever the accent; null while nothing plays or no cover is read. */
+export function applyPlayingCover(cover: CoverAccent | null) {
+  if (playingCover?.hue === cover?.hue && playingCover?.vividness === cover?.vividness) return;
+  playingCover = cover;
   render();
 }

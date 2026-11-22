@@ -68,8 +68,8 @@ pub struct WidgetStateInput {
     /// The renderer's `artworkPath`: a `http://nemora.localhost/...` URL for a
     /// local file, a remote `https://` URL for online artwork, or nothing.
     pub art: Option<String>,
-    /// The chosen accent's echo for the black theme, as `r g b`, so the widget's "Up next" matches
-    /// the player's; the widget falls back to blue without it.
+    /// The colour of the widget's "Up next" and "by", as `r g b`: the playing cover's echo for the
+    /// black theme, as the player shows them; the widget falls back to blue without it.
     #[serde(default)]
     pub accent: Option<String>,
 }

@@ -1,4 +1,5 @@
 /* eslint-disable promise/catch-or-return */
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import TitleContainer from "../TitleContainer";
 import EmptyState from "../ui/EmptyState";
 import {
@@ -286,7 +287,7 @@ const CurrentQueuePage = () => {
       className="current-queue-container appear-from-bottom relative !h-full overflow-hidden !pb-0"
       focusable
       onKeyDown={(e) => {
-        if (e.ctrlKey && e.key === "a") {
+        if (isSelectAll(e)) {
           e.stopPropagation();
           selectAllHandler();
         }

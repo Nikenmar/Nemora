@@ -24,6 +24,27 @@ pub(crate) fn agent(ctx: &RequestContext<RoleServer>) -> String {
         .unwrap_or_else(|| "an agent".into())
 }
 
+/// Reever, the user's voice launcher (client name `reever`, title `Reever`), has an access level of
+/// its own, as the app decides (`agent::is_reever` in the desktop app). A convenience, not a
+/// security boundary: any client could call itself Reever.
+pub(crate) fn is_reever(agent: &str) -> bool {
+    agent.trim().eq_ignore_ascii_case("reever")
+}
+
+/// The setting that holds this agent's level, as the app keeps it.
+pub(crate) fn access_key(agent: &str) -> &'static str {
+    if is_reever(agent) { "agent.access.reever" } else { "agent.access" }
+}
+
+/// Said when the agent's level is `off`, as the app says it.
+pub(crate) fn turned_off(agent: &str) -> String {
+    if is_reever(agent) {
+        "The user has turned Reever off in Nemora (Settings, AI agents, Reever).".into()
+    } else {
+        "The user has turned agents off in Nemora (Settings, AI agents).".into()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NowPlaying {
@@ -212,7 +233,8 @@ pub struct WaitParams {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct AppStatus {
     running: bool,
-    /// What the user lets agents do: off, read, control or full.
+    /// What the user lets this agent do: off, read, control or full (Reever has a level of its
+    /// own). Read from the library while Nemora is closed.
     access: Option<String>,
     version: Option<String>,
 }
@@ -247,7 +269,7 @@ impl Nemora {
     )]
     async fn app_status(&self, ctx: RequestContext<RoleServer>) -> Result<Json<AppStatus>, String> {
         if !pipe::running().await {
-            return Ok(Json(AppStatus { running: false, access: None, version: None }));
+            return Ok(Json(AppStatus { running: false, access: self.access_while_closed(), version: None }));
         }
         let status = pipe::call("app.status", json!({}), &agent(&ctx), false).await?;
         Ok(Json(AppStatus {

@@ -41,6 +41,13 @@ The user chooses in Settings, AI agents; the agent cannot raise it.
 - **full**: also tag edits (a dry run first) and moving files to the recycle bin, each after
   the user agreed.
 
+`app_status` tells an agent its level, `off` included, and with Nemora closed too.
+
+Reever, the user's voice launcher (MCP client name `reever`, title `Reever`), has a level of its
+own, in Settings, AI agents, Reever (shown once Reever has used Nemora; control by default), so
+that holding agents back does not silence the user's voice. It is known by its client name only:
+a convenience, not a security boundary.
+
 Every change shows a notice in Nemora with the agent's name and goes into the agents' log
 (Settings, AI agents; the latest 200). Playlist and favourite changes can be undone by the agent
 (`undo_last_change`, the latest 50).

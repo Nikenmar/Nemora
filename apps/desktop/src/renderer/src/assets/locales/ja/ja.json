@@ -308,6 +308,8 @@
     "title": "AI エージェント",
     "intro": "AI エージェント (Claude、Codex、Cursor、Gemini など) に Nemora を使わせます。音楽や統計についての回答、再生、キューやプレイリストの作成ができます。Nemora の横にある小さなプログラム nemora-mcp を通じて接続し、ネットワークには何も公開しません。エージェントが読んだ内容はそのエージェントの提供元に送られます。",
     "accessTitle": "エージェントにできること",
+    "reeverTitle": "Reever",
+    "reeverHint": "Reever の音声コマンドには専用のレベルがあり、上の設定の影響を受けません。",
     "level": {
       "off": "なし",
       "read": "読み取り",

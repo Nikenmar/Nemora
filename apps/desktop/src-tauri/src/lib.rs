@@ -279,6 +279,7 @@ pub fn run() {
             agent::agent_reply,
             agent::agent_settings,
             agent::agent_set_access,
+            agent::agent_set_reever_access,
             agent::agent_log_clear,
             agent_setup::agent_targets,
             agent_setup::agent_setup,

@@ -2,6 +2,16 @@
 
 What changed in each Nemora release. The newest is first. Nemora shows the short version of these notes in Settings › About › What's new.
 
+## 3.0.2 · 2026-11-22
+
+- Keyboard shortcuts work on any keyboard layout: Ctrl+A, Ctrl+H, Ctrl+S and the rest on a Russian one too
+- In a text field, Ctrl+arrows move and select by word and Ctrl+Y redoes, instead of skipping songs, changing the volume or the theme
+- Ctrl+K puts the cursor in the search field, as the hint in it says
+- Up next and by under the playing song take the colour of its cover whatever the accent, in the OBS widget too
+- Reever, a voice launcher, has an access level of its own in Settings › AI agents, so holding AI agents back does not silence your voice commands
+
+A small update on top of 3.0.1. It installs as an update like any release.
+
 ## 3.0.1 · 2026-11-19
 
 - Accent from the cover: a new switch in Settings › Appearance gives buttons, the selection and progress the colour of the playing song's cover

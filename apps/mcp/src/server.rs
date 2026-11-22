@@ -6,14 +6,17 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use nemora_core::db::Db;
 use nemora_core::library::{self, NameSort, SongRow, SongScope, SongSort};
 use rmcp::handler::server::router::tool::ToolRouter;
+use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::wrapper::{Json, Parameters};
 use rmcp::model::{
-    Implementation, ListResourcesResult, PaginatedRequestParams, ReadResourceRequestParams, ReadResourceResponse,
-    ReadResourceResult, Resource, ResourceContents, ServerCapabilities, ServerConfig,
+    CallToolRequestParams, CallToolResponse, Implementation, ListResourcesResult, PaginatedRequestParams,
+    ReadResourceRequestParams, ReadResourceResponse, ReadResourceResult, Resource, ResourceContents,
+    ServerCapabilities, ServerConfig,
 };
 use rmcp::service::RequestContext;
 use rmcp::{ErrorData, RoleServer, ServerHandler, tool, tool_handler, tool_router};
@@ -25,6 +28,10 @@ use crate::docs;
 #[derive(Clone)]
 pub struct Nemora {
     profile: PathBuf,
+    /// The agent being served (`control::agent`), noted by `call_tool` and `read_resource`: its
+    /// access level is the one `db` checks (Reever has its own). Over stdio one process serves one
+    /// client.
+    client: Arc<Mutex<Option<String>>>,
     tool_router: ToolRouter<Self>,
 }
 
@@ -462,9 +469,27 @@ pub struct Summary {
 
 // ----- the tools -------------------------------------------------------------------------------
 
+/// The level the library holds for this agent (`control` when the user never set one).
+fn stored_access(db: &Db, agent: &str) -> String {
+    nemora_core::settings::device(db, crate::control::access_key(agent))
+        .ok()
+        .flatten()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "control".into())
+}
+
 impl Nemora {
     pub fn new(profile: PathBuf) -> Self {
-        Self { profile, tool_router: crate::control::router() }
+        Self { profile, client: Arc::default(), tool_router: crate::control::router() }
+    }
+
+    /// Notes who is asking, before a tool or a resource is served.
+    fn serving(&self, ctx: &RequestContext<RoleServer>) {
+        *self.client.lock().unwrap_or_else(|e| e.into_inner()) = Some(crate::control::agent(ctx));
+    }
+
+    fn client(&self) -> String {
+        self.client.lock().unwrap_or_else(|e| e.into_inner()).clone().unwrap_or_else(|| "an agent".into())
     }
 
     pub(crate) fn db(&self) -> Result<Db, String> {
@@ -477,11 +502,18 @@ impl Nemora {
         }
         let db = Db::open_read_only(&path).map_err(|e| format!("The library could not be opened: {e}"))?;
         // The user's choice holds with Nemora closed too: agents off means no reading either.
-        let access = nemora_core::settings::device(&db, "agent.access").ok().flatten();
-        if access.as_ref().and_then(|v| v.as_str()) == Some("off") {
-            return Err("The user has turned agents off in Nemora (Settings, AI agents).".into());
+        let client = self.client();
+        if stored_access(&db, &client) == "off" {
+            return Err(crate::control::turned_off(&client));
         }
         Ok(db)
+    }
+
+    /// This agent's level as the library holds it, for `app_status` while Nemora is closed.
+    pub(crate) fn access_while_closed(&self) -> Option<String> {
+        let path = crate::profile::database(&self.profile);
+        let db = path.exists().then(|| Db::open_read_only(&path).ok()).flatten()?;
+        Some(stored_access(&db, &self.client()))
     }
 
     fn summary(&self) -> Result<Summary, String> {
@@ -934,6 +966,17 @@ impl ServerHandler for Nemora {
             .with_instructions(docs::INSTRUCTIONS)
     }
 
+    // What the macro would write, after noting who is asking.
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, ErrorData> {
+        self.serving(&context);
+        let tcc = ToolCallContext::new(self, request, context);
+        self.tool_router.call(tcc).await
+    }
+
     async fn list_resources(
         &self,
         _request: Option<PaginatedRequestParams>,
@@ -947,8 +990,9 @@ impl ServerHandler for Nemora {
     async fn read_resource(
         &self,
         request: ReadResourceRequestParams,
-        _context: RequestContext<RoleServer>,
+        context: RequestContext<RoleServer>,
     ) -> Result<ReadResourceResponse, ErrorData> {
+        self.serving(&context);
         if request.uri == "nemora://library/summary" {
             let summary = self.summary().map_err(|e| ErrorData::internal_error(e, None))?;
             let text =

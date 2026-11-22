@@ -4,7 +4,9 @@ import type { TFunction } from 'i18next';
 
 import type { AppUpdateContextType } from '../contexts/AppUpdateContext';
 import storage from '../utils/localStorage';
+import { isTypingIn, shortcutKey } from '../utils/shortcutKey';
 import { store } from '../store';
+import { FOCUS_SEARCH_EVENT } from '../components/TitleBar/TitleBarSearch';
 import { player } from './bootstrap';
 import { AppShortcutsPrompt } from './lazyScreens';
 
@@ -62,6 +64,7 @@ export const handleKeyboardShortcut = (e: KeyboardEvent, handlers: ShortcutHandl
     'n',
     'q',
     'f',
+    'k',
     '[',
     ']',
     '\\',
@@ -70,18 +73,25 @@ export const handleKeyboardShortcut = (e: KeyboardEvent, handlers: ShortcutHandl
   const shiftCombinations = ['ArrowRight', 'ArrowLeft'];
   const altCombinations = ['ArrowRight', 'ArrowLeft', 'Home'];
   const functionCombinations = ['F12', 'F5'];
+  // With Ctrl, the keys a text field edits with.
+  const textEditingKeys = [
+    ...['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Backspace', 'Delete'],
+    ...['a', 'c', 'v', 'x', 'y', 'z']
+  ];
   // Typing in a field keeps its keys: Space is a space there, Shift+arrows select text. Only
   // Ctrl and Alt combinations and the function keys still reach the app.
-  const target = e.target as HTMLElement | null;
-  const isTyping =
-    !!target?.closest('input, textarea, select, [contenteditable="true"]') &&
-    !(target instanceof HTMLInputElement && ['checkbox', 'radio', 'range', 'button'].includes(target.type));
+  const isTyping = isTypingIn(e.target);
   if (isTyping && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key)) return;
+  // Whatever the layout: Ctrl+A on a Russian one says `ф` (utils/shortcutKey).
+  const key = shortcutKey(e);
+  // The field's own editing keys stay the field's: Ctrl+arrows move and select by word (they skip
+  // songs and set the volume elsewhere), Ctrl+Y redoes (it changes the theme elsewhere).
+  if (isTyping && e.ctrlKey && textEditingKeys.includes(key)) return;
   // A modal window (a game, a prompt) owns its plain keys: Space there never plays the song.
   if (document.querySelector('dialog[open]') && !e.ctrlKey && !e.altKey && !functionCombinations.includes(e.key))
     return;
   if (
-    (e.ctrlKey && ctrlCombinations.some((x) => e.key === x)) ||
+    (e.ctrlKey && ctrlCombinations.some((x) => key === x)) ||
     (e.shiftKey && shiftCombinations.some((x) => e.key === x)) ||
     (e.altKey && altCombinations.some((x) => e.key === x)) ||
     functionCombinations.some((x) => e.key === x) ||
@@ -90,35 +100,37 @@ export const handleKeyboardShortcut = (e: KeyboardEvent, handlers: ShortcutHandl
     e.preventDefault();
 
   // ctrl combinations
-  if (e.ctrlKey && e.key === 'ArrowUp')
+  if (e.ctrlKey && key === 'ArrowUp')
     updateVolume(player.volume + 0.05 <= 1 ? player.volume * 100 + 5 : 100);
-  else if (e.ctrlKey && e.key === 'ArrowDown')
+  else if (e.ctrlKey && key === 'ArrowDown')
     updateVolume(player.volume - 0.05 >= 0 ? player.volume * 100 - 5 : 0);
-  else if (e.ctrlKey && e.key === 'm') toggleMutedState(!store.state.player.volume.isMuted);
-  else if (e.ctrlKey && e.key === 'ArrowRight') handleSkipForwardClick();
-  else if (e.ctrlKey && e.key === 'ArrowLeft') handleSkipBackwardClick();
-  else if (e.ctrlKey && e.key === 's') toggleShuffling();
-  else if (e.ctrlKey && e.key === 't') toggleRepeat();
-  else if (e.ctrlKey && e.key === 'h') toggleIsFavorite();
-  else if (e.ctrlKey && e.key === 'y') window.api.theme.changeAppTheme();
-  else if (e.ctrlKey && e.key === 'l') {
+  else if (e.ctrlKey && key === 'm') toggleMutedState(!store.state.player.volume.isMuted);
+  else if (e.ctrlKey && key === 'ArrowRight') handleSkipForwardClick();
+  else if (e.ctrlKey && key === 'ArrowLeft') handleSkipBackwardClick();
+  else if (e.ctrlKey && key === 's') toggleShuffling();
+  else if (e.ctrlKey && key === 't') toggleRepeat();
+  else if (e.ctrlKey && key === 'h') toggleIsFavorite();
+  else if (e.ctrlKey && key === 'y') window.api.theme.changeAppTheme();
+  else if (e.ctrlKey && key === 'l') {
     const currentlyActivePage =
       store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex];
     // Leaving Lyrics goes back to the page it was opened from, as the player's lyrics button does.
     if (currentlyActivePage.pageTitle !== 'Lyrics') changeCurrentActivePage('Lyrics');
     else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
     else changeCurrentActivePage('Home');
-  } else if (e.ctrlKey && e.key === 'n')
+  } else if (e.ctrlKey && key === 'n')
     updatePlayerType(store.state.playerType === 'mini' ? 'normal' : 'mini');
-  else if (e.ctrlKey && e.key === 'q') {
+  else if (e.ctrlKey && key === 'q') {
     const currentlyActivePage =
       store.state.navigationHistory.history[store.state.navigationHistory.pageHistoryIndex];
     if (currentlyActivePage.pageTitle !== 'CurrentQueue') changeCurrentActivePage('CurrentQueue');
     // Leaving the queue goes back to the page it was opened from, as Lyrics does.
     else if (store.state.navigationHistory.pageHistoryIndex > 0) updatePageHistoryIndex('decrement');
     else changeCurrentActivePage('Home');
-  } else if (e.ctrlKey && e.key === 'f') changeCurrentActivePage('Search');
-  else if (e.ctrlKey && e.key === ']') {
+  } else if (e.ctrlKey && (key === 'k' || key === 'f'))
+    // The top bar's search field takes the focus; focusing it opens the Search page.
+    window.dispatchEvent(new Event(FOCUS_SEARCH_EVENT));
+  else if (e.ctrlKey && key === ']') {
     let updatedPlaybackRate = store.state.localStorage.playback.playbackRate || 1;
 
     if (updatedPlaybackRate + 0.05 > 4) updatedPlaybackRate = 4;
@@ -136,7 +148,7 @@ export const handleKeyboardShortcut = (e: KeyboardEvent, handlers: ShortcutHandl
         })
       }
     ]);
-  } else if (e.ctrlKey && e.key === '[') {
+  } else if (e.ctrlKey && key === '[') {
     let updatedPlaybackRate = store.state.localStorage.playback.playbackRate || 1;
 
     if (updatedPlaybackRate - 0.05 < 0.25) updatedPlaybackRate = 0.25;
@@ -154,7 +166,7 @@ export const handleKeyboardShortcut = (e: KeyboardEvent, handlers: ShortcutHandl
         })
       }
     ]);
-  } else if (e.ctrlKey && e.key === '\\') {
+  } else if (e.ctrlKey && key === '\\') {
     storage.setItem('playback', 'playbackRate', 1);
     addNewNotifications([
       {
@@ -163,7 +175,7 @@ export const handleKeyboardShortcut = (e: KeyboardEvent, handlers: ShortcutHandl
         content: t('notifications.playbackRateReset')
       }
     ]);
-  } else if (e.ctrlKey && e.key === '/') changePromptMenuData(true, <AppShortcutsPrompt />);
+  } else if (e.ctrlKey && key === '/') changePromptMenuData(true, <AppShortcutsPrompt />);
   // default combinations
   else if (e.code === 'Escape') toggleMultipleSelections(false);
   else if (e.code === 'Space') toggleSongPlayback();

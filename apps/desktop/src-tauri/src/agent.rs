@@ -5,7 +5,8 @@
 //!
 //! - **Local only, this user**: the pipe refuses remote clients and is named after the user.
 //! - **The app decides**: every method has an access level, checked here against the user's setting
-//!   (`agent.access`: off, read, control - the default -, full); an agent cannot raise it.
+//!   (`agent.access`: off, read, control - the default -, full); an agent cannot raise it. Reever,
+//!   the user's voice launcher, has a level of its own (`agent.access.reever`, see [`is_reever`]).
 //! - **The view acts** for what lives there (playback, the queue, pages): the request goes to the
 //!   webview as an event, which answers through `agent_reply`.
 //! - **A log** (`agent.log`, the latest 200) of what agents changed, shown in Settings.
@@ -27,6 +28,10 @@ use crate::commands::{Res, fail};
 /// Overrides the pipe's name (tests and the stand, which must not take the user's).
 pub const PIPE_ENV: &str = "NEMORA_AGENT_PIPE";
 const ACCESS_KEY: &str = "agent.access";
+/// Reever's own level, apart from the other agents' (nemora-mcp reads it too: `control::access_key`).
+const REEVER_ACCESS_KEY: &str = "agent.access.reever";
+/// Set the first time Reever knocks: from then on Settings shows its own row.
+const REEVER_SEEN_KEY: &str = "agent.reever.seen";
 const LOG_KEY: &str = "agent.log";
 const LOG_LIMIT: usize = 200;
 const VIEW_TIMEOUT: Duration = Duration::from_secs(10);
@@ -65,7 +70,9 @@ impl Level {
 /// What a method needs; `None`: no such method.
 pub fn level_of(method: &str) -> Option<Level> {
     Some(match method {
-        "app.status" | "view.now" | "view.queue" | "view.wait_change" => Level::Read,
+        // Answered at any level, `off` included: it is how an agent learns what it may do.
+        "app.status" => Level::Off,
+        "view.now" | "view.queue" | "view.wait_change" => Level::Read,
         "view.play" | "view.pause" | "view.resume" | "view.next" | "view.previous" | "view.seek" | "view.volume"
         | "view.mute" | "view.repeat" | "view.shuffle" | "view.queue_add" | "view.queue_remove" | "view.queue_move"
         | "view.queue_clear" | "view.open" | "view.notify" => Level::Control,
@@ -93,12 +100,43 @@ pub struct Agents {
     waiting: Mutex<HashMap<u64, oneshot::Sender<Result<Value, String>>>>,
 }
 
+/// Reever, the user's voice launcher, is checked against a level of its own, so that holding AI
+/// agents back (Read, Nothing) does not silence the user's own voice. It is known by the name its
+/// MCP client gives (`clientInfo` name `reever` or title `Reever`), which nemora-mcp passes on as
+/// the agent. A convenience, not a security boundary: the pipe is local and this user's alone, and
+/// any client could call itself Reever.
+pub fn is_reever(agent: &str) -> bool {
+    agent.trim().eq_ignore_ascii_case("reever")
+}
+
+fn level_at(app: &App, key: &str) -> Option<Level> {
+    nemora_core::settings::device(&app.read(), key).ok().flatten().and_then(|v| v.as_str().and_then(Level::parse))
+}
+
+/// What the user lets agents do.
 pub fn access(app: &App) -> Level {
-    nemora_core::settings::device(&app.read(), ACCESS_KEY)
-        .ok()
-        .flatten()
-        .and_then(|v| v.as_str().and_then(Level::parse))
-        .unwrap_or(Level::Control)
+    level_at(app, ACCESS_KEY).unwrap_or(Level::Control)
+}
+
+/// What the user lets this agent do: Reever's own level, or the one for every agent.
+pub fn access_for(app: &App, agent: &str) -> Level {
+    if is_reever(agent) { level_at(app, REEVER_ACCESS_KEY).unwrap_or(Level::Control) } else { access(app) }
+}
+
+fn mark_reever_seen(app: &App) {
+    if nemora_core::settings::device(&app.read(), REEVER_SEEN_KEY).ok().flatten().is_none() {
+        let _ = app.write_quiet(|db| nemora_core::settings::set_device(db, REEVER_SEEN_KEY, &Value::Bool(true)));
+    }
+}
+
+/// Reever's level for Settings, once Reever has knocked or the user has set one; `None` keeps its
+/// row hidden from everyone who does not use it.
+fn reever_setting(app: &App) -> Option<Level> {
+    let read = app.read();
+    let seen = nemora_core::settings::device(&read, REEVER_SEEN_KEY).ok().flatten().is_some();
+    drop(read);
+    let set = level_at(app, REEVER_ACCESS_KEY);
+    if seen || set.is_some() { Some(set.unwrap_or(Level::Control)) } else { None }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -209,18 +247,24 @@ async fn serve(_handle: AppHandle) -> std::io::Result<()> {
 async fn dispatch(handle: &AppHandle, request: Request) -> Result<Value, String> {
     let app = handle.state::<App>();
     let need = level_of(&request.method).ok_or_else(|| format!("Nemora knows no method `{}`.", request.method))?;
-    let allowed = access(&app);
+    let agent = request.agent.clone().unwrap_or_else(|| "an agent".to_owned());
+    let reever = is_reever(&agent);
+    if reever {
+        mark_reever_seen(&app);
+    }
+    let allowed = access_for(&app, &agent);
     if allowed < need {
+        let (who, place) =
+            if reever { ("Reever", "Settings, AI agents, Reever") } else { ("agents", "Settings, AI agents") };
         return Err(match allowed {
-            Level::Off => "The user has turned agents off in Nemora (Settings, AI agents).".to_owned(),
+            Level::Off => format!("The user has turned {who} off in Nemora ({place})."),
             _ => format!(
-                "Nemora lets agents {} only; this needs `{}`. The user can change it in Settings, AI agents.",
+                "Nemora lets {who} {} only; this needs `{}`. The user can change it in {place}.",
                 allowed.name(),
                 need.name()
             ),
         });
     }
-    let agent = request.agent.clone().unwrap_or_else(|| "an agent".to_owned());
     let result = match request.method.as_str() {
         "app.status" => Ok(json!({ "version": env!("CARGO_PKG_VERSION"), "access": allowed.name() })),
         method if method.starts_with("view.") => {
@@ -288,6 +332,9 @@ pub fn agent_reply(
 pub struct AgentSettings {
     /// off, read, control or full.
     pub access: String,
+    /// Reever's own level (off, read, control or full) once Reever has used Nemora; `None` hides
+    /// its row.
+    pub reever: Option<String>,
     /// `nemora-mcp.exe` beside the app, when it is there.
     pub mcp_path: Option<String>,
     pub pipe: String,
@@ -311,6 +358,7 @@ pub fn agent_settings(app: State<'_, App>) -> Res<AgentSettings> {
     log.reverse();
     Ok(AgentSettings {
         access: access(&app).name().to_owned(),
+        reever: reever_setting(&app).map(|level| level.name().to_owned()),
         mcp_path: mcp_path().map(|p| p.display().to_string()),
         pipe: pipe_name(),
         log,
@@ -326,6 +374,14 @@ pub fn agent_set_access(app: State<'_, App>, access: String) -> Res<()> {
 
 #[tauri::command]
 #[cfg_attr(test, specta::specta)]
+pub fn agent_set_reever_access(app: State<'_, App>, access: String) -> Res<()> {
+    let level = Level::parse(&access).ok_or_else(|| fail("access is off, read, control or full"))?;
+    app.write_quiet(|db| nemora_core::settings::set_device(db, REEVER_ACCESS_KEY, &Value::from(level.name())))
+        .map_err(fail)
+}
+
+#[tauri::command]
+#[cfg_attr(test, specta::specta)]
 pub fn agent_log_clear(app: State<'_, App>) -> Res<()> {
     app.write_quiet(|db| nemora_core::settings::set_device(db, LOG_KEY, &json!([]))).map_err(fail)
 }
@@ -337,12 +393,60 @@ mod tests {
     #[test]
     fn levels_order_and_every_method_has_one() {
         assert!(Level::Off < Level::Read && Level::Read < Level::Control && Level::Control < Level::Full);
+        assert_eq!(level_of("app.status"), Some(Level::Off), "an agent turned off still learns that it is");
         assert_eq!(level_of("view.now"), Some(Level::Read));
         assert_eq!(level_of("view.play"), Some(Level::Control));
         assert_eq!(level_of("delete.everything"), None);
         for name in ["off", "read", "control", "full"] {
             assert_eq!(Level::parse(name).map(Level::name), Some(name));
         }
+    }
+
+    #[test]
+    fn reever_is_known_by_its_client_name() {
+        for name in ["Reever", "reever", " REEVER "] {
+            assert!(is_reever(name), "{name}");
+        }
+        for name in ["Claude Code", "an agent", "reever-39", "Reever Agent", ""] {
+            assert!(!is_reever(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn reever_has_a_level_of_its_own() {
+        let dir = std::env::temp_dir().join(format!("nemora-agent-levels-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let app = App::open(&dir).unwrap();
+        let set = |key: &str, level: &str| {
+            app.write_quiet(|db| nemora_core::settings::set_device(db, key, &Value::from(level))).unwrap();
+        };
+
+        assert_eq!(access_for(&app, "Claude Code"), Level::Control);
+        assert_eq!(access_for(&app, "Reever"), Level::Control);
+        assert_eq!(reever_setting(&app), None, "no row for Reever until it knocks");
+
+        // Agents held back: Reever keeps its default.
+        set(ACCESS_KEY, "read");
+        assert_eq!(access_for(&app, "Claude Code"), Level::Read);
+        assert_eq!(access_for(&app, "Reever"), Level::Control);
+        set(ACCESS_KEY, "off");
+        assert_eq!(access_for(&app, "reever"), Level::Control);
+
+        mark_reever_seen(&app);
+        mark_reever_seen(&app);
+        assert_eq!(reever_setting(&app), Some(Level::Control));
+
+        // And the other way round: Reever turned off, agents untouched.
+        set(ACCESS_KEY, "full");
+        set(REEVER_ACCESS_KEY, "off");
+        assert_eq!(access_for(&app, "Reever"), Level::Off);
+        assert_eq!(access_for(&app, "Claude Code"), Level::Full);
+        assert_eq!(access(&app), Level::Full);
+        assert_eq!(reever_setting(&app), Some(Level::Off));
+
+        drop(app);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

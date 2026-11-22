@@ -1,3 +1,4 @@
+import { shortcutKey } from '@renderer/utils/shortcutKey';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppUpdateContext } from '../../contexts/AppUpdateContext';
@@ -43,8 +44,8 @@ export default function MiniPlayer(props: MiniPlayerProps) {
   const manageKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
       if (e.ctrlKey) {
-        if (e.key === 'l') setIsLyricsVisible((prevState) => !prevState);
-        if (e.key === 'n') updatePlayerType('normal');
+        if (shortcutKey(e) === 'l') setIsLyricsVisible((prevState) => !prevState);
+        if (shortcutKey(e) === 'n') updatePlayerType('normal');
       }
     },
     [updatePlayerType]

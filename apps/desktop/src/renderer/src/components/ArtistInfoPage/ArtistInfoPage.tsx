@@ -1,3 +1,4 @@
+import { isSelectAll } from '@renderer/utils/shortcutKey';
 import {
   useCallback,
   useContext,
@@ -468,7 +469,7 @@ const ArtistInfoPage = () => {
           className="main-container albums-list-container relative [&>*]:z-10"
           focusable
           onKeyDown={(e) => {
-            if (e.ctrlKey && e.key === "a") {
+            if (isSelectAll(e)) {
               e.stopPropagation();
               selectAllHandlerForAlbums();
             }
@@ -524,7 +525,7 @@ const ArtistInfoPage = () => {
           className="main-container songs-list-container relative h-full pb-4 [&>*]:z-10"
           focusable
           onKeyDown={(e) => {
-            if (e.ctrlKey && e.key === "a") {
+            if (isSelectAll(e)) {
               e.stopPropagation();
               selectAllHandlerForSongs();
             }
