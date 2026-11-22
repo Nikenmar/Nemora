@@ -18,7 +18,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, openSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DatabaseSync, backup } from 'node:sqlite';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -34,6 +34,8 @@ const EXE = option('exe', join(ROOT, 'target', 'debug', 'nemora.exe'));
 const SOURCE = option('source', join(process.env.APPDATA ?? '', 'Nemora'));
 const THEMES = option('themes', 'dark,light').split(',');
 const ONLY = option('only', '').split(',').filter(Boolean);
+/** `--shots-file file.mjs`: surfaces of the caller's own (its default export, entries shaped like SHOTS'), shot after SHOTS in the library run. */
+const SHOTS_FILE = option('shots-file', '');
 const PORT = Number(option('port', '9361'));
 // --scale 2 renders the view at twice its pixel density (the layout stays the same): crisp text for the
 // README pictures, which are cut and scaled down from these shots.
@@ -780,9 +782,10 @@ h1{font-size:22px;margin:0 0 20px}h2{font-size:15px;margin:28px 0 8px}h2 span{co
 
 if (!existsSync(EXE)) throw new Error(`no build at ${EXE}: run \`npm run tauri -- build --debug --no-bundle\` in apps/desktop`);
 mkdirSync(OUT, { recursive: true });
-const failures = [...(await runOne('library', SHOTS, SOURCE))];
+const EXTRA_SHOTS = SHOTS_FILE ? (await import(pathToFileURL(SHOTS_FILE).href)).default : [];
+const failures = [...(await runOne('library', [...SHOTS, ...EXTRA_SHOTS], SOURCE))];
 if (!SKIP_EMPTY) failures.push(...(await runOne('empty', EMPTY_SHOTS, null)));
-if (!PROBE && !FILM) contactSheet([{ id: '07-loading', surface: 'Loading (first frame)', themes: ['dark'] }, ...SHOTS, ...(SKIP_EMPTY ? [] : EMPTY_SHOTS)]);
+if (!PROBE && !FILM) contactSheet([{ id: '07-loading', surface: 'Loading (first frame)', themes: ['dark'] }, ...SHOTS, ...EXTRA_SHOTS, ...(SKIP_EMPTY ? [] : EMPTY_SHOTS)]);
 console.log(`Shots in ${OUT}\\index.html`);
 if (failures.length) {
   console.log(`\n${failures.length} failed:\n${failures.join('\n')}`);
