@@ -2,6 +2,7 @@
 
   node tools/redesign/shots.mjs --label readme2x --scale 2 --readme --skip-empty --only <the ids in SHOTS below>
   python tools/readme/compose.py [--shots E:\\tmp\\nemora-shots\\readme2x\\png] [--only hero,shuffle] [--png]
+  python tools/readme/compose.py --only reever --reever-art E:\\tmp\\reever-readme-art   (the "Works with Reever" card; REEVER says what the folder holds)
 
 Writes resources/readme/*.webp (and *.png next to them with --png). Needs Python with playwright and
 Pillow; renders in headless Edge (or Chromium), no window. Text is Geologica, the app's font, from
@@ -72,6 +73,17 @@ CARDS = [
          text="Light and dark themes, eight accent colours, five frame shades, thirteen languages."),
 ]
 HERO = dict(key="hero", shots=[("r-home", "dark", None, (800, 150, 1100))])
+# "Works with Reever": a shorter card after the last one, Reever's mascot and the voice commands it takes
+# for Nemora (Reever's docs/nemora.md). Its art comes from --reever-art, a folder outside this repository:
+# mascot-portal.png, a still of the mascot as Reever itself draws it (its own web mascot code, Reever
+# 5fefc2a^ skin/mascot.js + skin/orb.js: listening, the voice at 0.4, in front of its open portal,
+# portal_out frame 8 with its sparks, transparent, the portal centred), and icon.png (Reever's
+# design/reever-icon.png). Reever's phosphor green is its accent.
+REEVER = dict(key="reever", w=1600, h=640, shots=[],
+              # the still's portal: centred, its diameter this share of the still's width (r 96 of 328)
+              portal_share=2 * 96 / 328, portal=(905, 322, 400),
+              bubbles=[("Reever, play song Night Dancer", 1120, 128), ("Reever, previous track", 1166, 236),
+                       ("Reever, shuffle", 1142, 344), ("Reever, like this song", 1120, 452)])
 # Order in the README; the cards alternate sides from the first, mirrored where they were drawn the other way.
 ORDER = ["tierlists", "sound", "shuffle", "stats", "search", "duels", "tastemap", "fullscreen", "agents", "yours"]
 
@@ -86,12 +98,12 @@ def oriented(c, side):
 SHOTS = sorted({s[0] for c in CARDS + [HERO] for s in c["shots"]})
 
 
-def css():
+def css(w=W, h=H):
     return f"""
 @font-face {{ font-family: G; src: url('{FONT.as_uri()}') format('woff2'); font-weight: 100 900; }}
 * {{ box-sizing: border-box; }}
-html, body {{ margin: 0; width: {W}px; height: {H}px; overflow: hidden; font-family: G, sans-serif; color: #fff; }}
-.card {{ position: relative; width: {W}px; height: {H}px; overflow: hidden; }}
+html, body {{ margin: 0; width: {w}px; height: {h}px; overflow: hidden; font-family: G, sans-serif; color: #fff; }}
+.card {{ position: relative; width: {w}px; height: {h}px; overflow: hidden; }}
 .mark {{ position: absolute; opacity: .07; }}
 .copy {{ position: absolute; top: 0; bottom: 0; width: 560px; display: flex; flex-direction: column; justify-content: center; gap: 28px; }}
 .copy h2 {{ margin: 0; font-size: 76px; line-height: 1.02; font-weight: 600; letter-spacing: -0.025em; }}
@@ -147,11 +159,61 @@ def hero_html(shots):
 </div>"""
 
 
+REEVER_CSS = """
+.reever { background:
+    radial-gradient(28% 56% at 56.5% 50%, rgba(39, 230, 170, .22), rgba(39, 230, 170, 0) 70%),
+    radial-gradient(120% 120% at 85% 10%, #2a5fd0 0%, #163a8f 38%, #0b1640 75%, #070b1f 100%); }
+.reever .copy { left: 110px; width: 600px; gap: 24px; }
+.reever .copy h2 { font-size: 68px; line-height: 1.03; }
+.reever .copy p { font-size: 24px; max-width: 540px; }
+.works { display: inline-flex; align-self: flex-start; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: 999px;
+  font-size: 22px; font-weight: 500; background: rgba(255,255,255,.10); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.works img { width: 34px; height: 34px; }
+/* the sparks fade out with the distance instead of ending at the still's edge */
+.still { position: absolute; -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent 82%); }
+.bubble { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 22px;
+  font-size: 22px; font-weight: 500; white-space: nowrap; background: rgba(12, 22, 60, .62);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 18px 40px rgba(3,8,30,.45); }
+.bubble .wave { display: flex; align-items: center; gap: 3px; height: 22px; }
+.bubble .wave i { display: block; width: 4px; border-radius: 2px; background: #27e6aa; }
+.bubble b { font-weight: 600; color: #c8ffec; }
+"""
+
+
+def reever_html(art):
+    """`art`: the folder with Reever's mascot still and icon (--reever-art)."""
+    def bubble(text, left, top):
+        word, rest = text.split(",", 1)
+        wave = "".join(f'<i style="height:{h}px"></i>' for h in (8, 16, 22, 12, 18, 7))
+        return f'<div class="bubble" style="left:{left}px;top:{top}px"><span class="wave">{wave}</span><span><b>{word},</b>{rest}</span></div>'
+
+    from PIL import Image
+    still = art / "mascot-portal.png"
+    sw, sh = Image.open(still).size
+    cx, cy, d = REEVER["portal"]
+    w = d / REEVER["portal_share"]
+    h = w * sh / sw
+    icon = (art / "icon.png").as_uri()
+    return f"""
+<div class="card reever">
+  <img class="mark" src="{mark_svg()}" style="width:900px;left:-330px;bottom:-330px;opacity:.06">
+  <div class="copy">
+    <span class="works"><img src="{icon}">Works with Reever</span>
+    <h2>Control music<br>with your voice</h2>
+    <p>Reever, a voice launcher for Windows, plays songs, artists, albums and playlists in Nemora, skips, shuffles and likes. Just say it.</p>
+  </div>
+  <img class="still" src="{still.as_uri()}" style="width:{w:.1f}px;height:{h:.1f}px;left:{cx - w / 2:.1f}px;top:{cy - h / 2:.1f}px">
+  {''.join(bubble(*b) for b in REEVER['bubbles'])}
+</div>"""
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--shots", default=r"E:\tmp\nemora-shots\readme2x\png")
     ap.add_argument("--only", default="")
     ap.add_argument("--png", action="store_true")
+    # The "Works with Reever" card's art (see REEVER); without it the card is left as it is.
+    ap.add_argument("--reever-art", default="")
     a = ap.parse_args()
     shots_dir = pathlib.Path(a.shots)
     only = set(filter(None, a.only.split(",")))
@@ -162,6 +224,9 @@ def main():
     by_key = {c["key"]: c for c in CARDS}
     cards = [oriented(by_key[k], "right" if i % 2 == 0 else "left") for i, k in enumerate(ORDER)]
     jobs = [("hero", hero_html, HERO)] + [(c["key"], (lambda c: lambda s: card_html(c, s))(c), c) for c in cards]
+    if a.reever_art and (not only or "reever" in only):
+        art = pathlib.Path(a.reever_art)
+        jobs.append(("reever", lambda _s: reever_html(art), REEVER))
     with sync_playwright() as p:
         try:
             br = p.chromium.launch(channel="msedge", headless=True)
@@ -186,9 +251,11 @@ def main():
                 files.append(f)
             if len(files) != len(spec["shots"]):
                 continue
-            tmp.write_text(f"<!doctype html><html><head><meta charset='utf-8'><style>{css()}</style></head>"
+            w, h = spec.get("w", W), spec.get("h", H)
+            style = css(w, h) + (REEVER_CSS if key == "reever" else "")
+            tmp.write_text(f"<!doctype html><html><head><meta charset='utf-8'><style>{style}</style></head>"
                            f"<body>{fn([f.as_uri() for f in files])}</body></html>", encoding="utf-8")
-            pg = br.new_page(viewport={"width": W, "height": H}, device_scale_factor=SCALE)
+            pg = br.new_page(viewport={"width": w, "height": h}, device_scale_factor=SCALE)
             pg.goto(tmp.as_uri())
             pg.evaluate("document.fonts.ready")
             pg.wait_for_function("[...document.images].every(i => i.complete && i.naturalWidth)")

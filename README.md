@@ -54,6 +54,8 @@ Smart Shuffle learns how you listen and tells you why each song comes next.
 
 <img src="resources/readme/yours.webp" alt="Themes, accent colours and languages" width="100%">
 
+<a href="https://github.com/reteren/Reever"><img src="resources/readme/reever.webp" alt="Works with Reever: control music with your voice" width="100%"></a>
+
 ### And more
 
 - **For you.** The mix of the day, Rediscover (songs you love but have not heard in a while), On repeat, Never heard, each one a click from a playlist.
